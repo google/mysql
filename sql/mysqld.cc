@@ -1205,8 +1205,10 @@ static void __cdecl kill_server(int sig_ptr)
   if (sig != MYSQL_KILL_SIGNAL &&
       sig != 0)
     unireg_abort(1);				/* purecov: inspected */
-  else
+  else {
+    DBUG_LEAVE;
     unireg_end();
+  }
 
   /* purecov: begin deadcode */
 #ifdef __NETWARE__
