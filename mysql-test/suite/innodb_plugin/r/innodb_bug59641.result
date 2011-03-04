@@ -55,3 +55,4 @@ a	b
 16	16
 32	128
 DROP TABLE t;
+set global innodb_file_format_max=Antelope;
