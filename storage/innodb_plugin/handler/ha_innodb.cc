@@ -206,6 +206,10 @@ static ulong	innobase_active_counter	= 0;
 
 static hash_table_t*	innobase_open_tables;
 
+/* Minimum time interval in seconds before some of the InnoDB status
+counters are updated during SHOW STATUS. */
+long innobase_min_status_update_time_interval = 30;
+
 #ifdef __NETWARE__	/* some special cleanup for NetWare */
 bool nw_panic = FALSE;
 #endif
@@ -483,6 +487,8 @@ static SHOW_VAR innodb_status_variables[]= {
   (char*) &export_vars.innodb_hash_searches,		  SHOW_LONG},
   {"adaptive_hash_misses",
   (char*) &export_vars.innodb_hash_nonsearches,		  SHOW_LONG},
+  {"buffer_pool_hit_rate",
+  (char*) &export_vars.innodb_buffer_pool_hit_rate,	 SHOW_DOUBLE},
   {"buffer_pool_pages_data",
   (char*) &export_vars.innodb_buffer_pool_pages_data,	  SHOW_LONG},
   {"buffer_pool_pages_dirty",
@@ -10835,6 +10841,14 @@ static MYSQL_SYSVAR_BOOL(status_file, innobase_create_status_file,
   "Enable SHOW INNODB STATUS output in the innodb_status.<pid> file",
   NULL, NULL, FALSE);
 
+static MYSQL_SYSVAR_LONG(status_update_interval,
+  innobase_min_status_update_time_interval,
+  PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
+  "Minimum time interval in seconds before InnoDB status counters "
+  "are updated during SHOW STATUS. "
+  "InnoDB counters are always updated during SHOW INNODB STATUS.",
+  NULL, NULL, 30, 0, 3600, 0);
+
 static MYSQL_SYSVAR_BOOL(stats_on_metadata, innobase_stats_on_metadata,
   PLUGIN_VAR_OPCMDARG,
   "Enable statistics gathering for metadata commands such as SHOW TABLE STATUS (on by default)",
@@ -11068,6 +11082,7 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(stats_method),
   MYSQL_SYSVAR(replication_delay),
   MYSQL_SYSVAR(status_file),
+  MYSQL_SYSVAR(status_update_interval),
   MYSQL_SYSVAR(strict_mode),
   MYSQL_SYSVAR(support_xa),
   MYSQL_SYSVAR(sync_spin_loops),
