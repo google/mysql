@@ -481,6 +481,10 @@ innobase_commit_low(
 	trx_t*	trx);	/*!< in: transaction handle */
 
 static SHOW_VAR innodb_status_variables[]= {
+  {"adaptive_hash_hits",
+  (char*) &export_vars.innodb_hash_searches,		  SHOW_LONG},
+  {"adaptive_hash_misses",
+  (char*) &export_vars.innodb_hash_nonsearches,		  SHOW_LONG},
   {"buffer_pool_pages_data",
   (char*) &export_vars.innodb_buffer_pool_pages_data,	  SHOW_LONG},
   {"buffer_pool_pages_dirty",
@@ -533,6 +537,14 @@ static SHOW_VAR innodb_status_variables[]= {
   (char*) &export_vars.innodb_dblwr_writes,		  SHOW_LONG},
   {"have_atomic_builtins",
   (char*) &export_vars.innodb_have_atomic_builtins,	  SHOW_BOOL},
+  {"ibuf_merged_records",
+  (char*) &export_vars.innodb_ibuf_merged_records,	  SHOW_LONG},
+  {"ibuf_merges",
+  (char*) &export_vars.innodb_ibuf_merges,		  SHOW_LONG},
+  {"ibuf_inserts",
+  (char*) &export_vars.innodb_ibuf_inserts,		  SHOW_LONG},
+  {"ibuf_size",
+  (char*) &export_vars.innodb_ibuf_size,		  SHOW_LONG},
   {"log_waits",
   (char*) &export_vars.innodb_log_waits,		  SHOW_LONG},
   {"log_write_requests",
