@@ -423,6 +423,9 @@ UNIV_INTERN const char* srv_io_thread_function[SRV_MAX_N_IO_THREADS];
 
 UNIV_INTERN time_t	srv_last_monitor_time;
 
+/* Last time innodb status were updated via show status */
+UNIV_INTERN time_t	srv_last_innodb_status_time = 0;
+
 UNIV_INTERN mutex_t	srv_innodb_monitor_mutex;
 
 /* Mutex for locking srv_monitor_file */
@@ -472,6 +475,10 @@ intervals. Following macros define thresholds for these conditions. */
 #define SRV_PEND_IO_THRESHOLD	(PCT_IO(3))
 #define SRV_RECENT_IO_ACTIVITY	(PCT_IO(5))
 #define SRV_PAST_IO_ACTIVITY	(PCT_IO(200))
+
+/* Minimum time interval in seconds before some of the InnoDB status
+counters are updated during SHOW STATUS. */
+extern long innobase_min_status_update_time_interval;
 
 /*
 	IMPLEMENTATION OF THE SERVER MAIN PROGRAM
@@ -1888,6 +1895,9 @@ void
 srv_export_innodb_status(void)
 /*==========================*/
 {
+	long		time_elapsed;
+	time_t		current_time;
+
 	mutex_enter(&srv_innodb_monitor_mutex);
 
 	export_vars.innodb_data_pending_reads
@@ -1969,6 +1979,13 @@ srv_export_innodb_status(void)
 	export_vars.innodb_rows_inserted = srv_n_rows_inserted;
 	export_vars.innodb_rows_updated = srv_n_rows_updated;
 	export_vars.innodb_rows_deleted = srv_n_rows_deleted;
+
+	current_time = time(NULL);
+	time_elapsed = difftime(current_time, srv_last_innodb_status_time);
+	if (time_elapsed >= innobase_min_status_update_time_interval) {
+		buf_print_io(NULL);
+		srv_last_innodb_status_time = current_time;
+	}
 
 	mutex_exit(&srv_innodb_monitor_mutex);
 }

@@ -3431,103 +3431,114 @@ buf_print_io(
 
 	buf_pool_mutex_enter();
 
-	fprintf(file,
-		"Buffer pool size   %lu\n"
-		"Free buffers       %lu\n"
-		"Database pages     %lu\n"
-		"Old database pages %lu\n"
-		"Modified db pages  %lu\n"
-		"Pending reads %lu\n"
-		"Pending writes: LRU %lu, flush list %lu, single page %lu\n",
-		(ulong) buf_pool->curr_size,
-		(ulong) UT_LIST_GET_LEN(buf_pool->free),
-		(ulong) UT_LIST_GET_LEN(buf_pool->LRU),
-		(ulong) buf_pool->LRU_old_len,
-		(ulong) UT_LIST_GET_LEN(buf_pool->flush_list),
-		(ulong) buf_pool->n_pend_reads,
-		(ulong) buf_pool->n_flush[BUF_FLUSH_LRU]
-		+ buf_pool->init_flush[BUF_FLUSH_LRU],
-		(ulong) buf_pool->n_flush[BUF_FLUSH_LIST]
-		+ buf_pool->init_flush[BUF_FLUSH_LIST],
-		(ulong) buf_pool->n_flush[BUF_FLUSH_SINGLE_PAGE]);
+	if (file) {
+		fprintf(file,
+			"Buffer pool size   %lu\n"
+			"Free buffers       %lu\n"
+			"Database pages     %lu\n"
+			"Old database pages %lu\n"
+			"Modified db pages  %lu\n"
+			"Pending reads %lu\n"
+			"Pending writes: LRU %lu, flush list %lu, single page %lu\n",
+			(ulong) buf_pool->curr_size,
+			(ulong) UT_LIST_GET_LEN(buf_pool->free),
+			(ulong) UT_LIST_GET_LEN(buf_pool->LRU),
+			(ulong) buf_pool->LRU_old_len,
+			(ulong) UT_LIST_GET_LEN(buf_pool->flush_list),
+			(ulong) buf_pool->n_pend_reads,
+			(ulong) buf_pool->n_flush[BUF_FLUSH_LRU]
+			+ buf_pool->init_flush[BUF_FLUSH_LRU],
+			(ulong) buf_pool->n_flush[BUF_FLUSH_LIST]
+			+ buf_pool->init_flush[BUF_FLUSH_LIST],
+			(ulong) buf_pool->n_flush[BUF_FLUSH_SINGLE_PAGE]);
+	}
 
 	current_time = time(NULL);
 	time_elapsed = 0.001 + difftime(current_time,
 					buf_pool->last_printout_time);
 
-	fprintf(file,
-		"Pages made young %lu, not young %lu\n"
-		"%.2f youngs/s, %.2f non-youngs/s\n"
-		"Pages read %lu, created %lu, written %lu\n"
-		"%.2f reads/s, %.2f creates/s, %.2f writes/s\n",
-		(ulong) buf_pool->stat.n_pages_made_young,
-		(ulong) buf_pool->stat.n_pages_not_made_young,
-		(buf_pool->stat.n_pages_made_young
-		 - buf_pool->old_stat.n_pages_made_young)
-		/ time_elapsed,
-		(buf_pool->stat.n_pages_not_made_young
-		 - buf_pool->old_stat.n_pages_not_made_young)
-		/ time_elapsed,
-		(ulong) buf_pool->stat.n_pages_read,
-		(ulong) buf_pool->stat.n_pages_created,
-		(ulong) buf_pool->stat.n_pages_written,
-		(buf_pool->stat.n_pages_read
-		 - buf_pool->old_stat.n_pages_read)
-		/ time_elapsed,
-		(buf_pool->stat.n_pages_created
-		 - buf_pool->old_stat.n_pages_created)
-		/ time_elapsed,
-		(buf_pool->stat.n_pages_written
-		 - buf_pool->old_stat.n_pages_written)
-		/ time_elapsed);
+	if (file) {
+		fprintf(file,
+			"Pages made young %lu, not young %lu\n"
+			"%.2f youngs/s, %.2f non-youngs/s\n"
+			"Pages read %lu, created %lu, written %lu\n"
+			"%.2f reads/s, %.2f creates/s, %.2f writes/s\n",
+			(ulong) buf_pool->stat.n_pages_made_young,
+			(ulong) buf_pool->stat.n_pages_not_made_young,
+			(buf_pool->stat.n_pages_made_young
+			 - buf_pool->old_stat.n_pages_made_young)
+			/ time_elapsed,
+			(buf_pool->stat.n_pages_not_made_young
+			 - buf_pool->old_stat.n_pages_not_made_young)
+			/ time_elapsed,
+			(ulong) buf_pool->stat.n_pages_read,
+			(ulong) buf_pool->stat.n_pages_created,
+			(ulong) buf_pool->stat.n_pages_written,
+			(buf_pool->stat.n_pages_read
+			 - buf_pool->old_stat.n_pages_read)
+			/ time_elapsed,
+			(buf_pool->stat.n_pages_created
+			 - buf_pool->old_stat.n_pages_created)
+			/ time_elapsed,
+			(buf_pool->stat.n_pages_written
+			 - buf_pool->old_stat.n_pages_written)
+			/ time_elapsed);
+	}
 
 	n_gets_diff = buf_pool->stat.n_page_gets - buf_pool->old_stat.n_page_gets;
 
 	if (n_gets_diff) {
-		fprintf(file,
-			"Buffer pool hit rate %lu / 1000,"
-			" young-making rate %lu / 1000 not %lu / 1000\n",
+		ulong buf_pool_hit_per_k =
 			(ulong)
 			(1000 - ((1000 * (buf_pool->stat.n_pages_read
 					  - buf_pool->old_stat.n_pages_read))
 				 / (buf_pool->stat.n_page_gets
-				    - buf_pool->old_stat.n_page_gets))),
-			(ulong)
-			(1000 * (buf_pool->stat.n_pages_made_young
-				 - buf_pool->old_stat.n_pages_made_young)
-			 / n_gets_diff),
-			(ulong)
-			(1000 * (buf_pool->stat.n_pages_not_made_young
-				 - buf_pool->old_stat.n_pages_not_made_young)
-			 / n_gets_diff));
+				    - buf_pool->old_stat.n_page_gets)));
+		export_vars.innodb_buffer_pool_hit_rate =
+			(double)buf_pool_hit_per_k / 1000.0;
+		if (file) {
+			fprintf(file,
+				"Buffer pool hit rate %lu / 1000,"
+				" young-making rate %lu / 1000 not %lu / 1000\n",
+				buf_pool_hit_per_k,
+				(ulong)
+				(1000 * (buf_pool->stat.n_pages_made_young
+					 - buf_pool->old_stat.n_pages_made_young)
+				 / n_gets_diff),
+				(ulong)
+				(1000 * (buf_pool->stat.n_pages_not_made_young
+					 - buf_pool->old_stat.n_pages_not_made_young)
+				 / n_gets_diff));
+		}
 	} else {
-		fputs("No buffer pool page gets since the last printout\n",
-		      file);
+		export_vars.innodb_buffer_pool_hit_rate = 1.0;
+		if (file) {
+			fputs("No buffer pool page gets since the last printout\n",
+			      file);
+		}
 	}
 
-	/* Statistics about read ahead algorithm */
-	fprintf(file, "Pages read ahead %.2f/s,"
-		" evicted without access %.2f/s,"
-		" Random read ahead %.2f/s\n",
-		(buf_pool->stat.n_ra_pages_read
-		- buf_pool->old_stat.n_ra_pages_read)
-		/ time_elapsed,
-		(buf_pool->stat.n_ra_pages_evicted
-		- buf_pool->old_stat.n_ra_pages_evicted)
-		/ time_elapsed,
-		(buf_pool->stat.n_ra_pages_read_rnd
-		- buf_pool->old_stat.n_ra_pages_read_rnd)
-		/ time_elapsed);
+	if (file) {
+		/* Statistics about read ahead algorithm */
+		fprintf(file, "Pages read ahead %.2f/s,"
+			" evicted without access %.2f/s\n",
+			(buf_pool->stat.n_ra_pages_read
+			- buf_pool->old_stat.n_ra_pages_read)
+			/ time_elapsed,
+			(buf_pool->stat.n_ra_pages_evicted
+			- buf_pool->old_stat.n_ra_pages_evicted)
+			/ time_elapsed);
 
-	/* Print some values to help us with visualizing what is
-	happening with LRU eviction. */
-	fprintf(file,
-		"LRU len: %lu, unzip_LRU len: %lu\n"
-		"I/O sum[%lu]:cur[%lu], unzip sum[%lu]:cur[%lu]\n",
-		UT_LIST_GET_LEN(buf_pool->LRU),
-		UT_LIST_GET_LEN(buf_pool->unzip_LRU),
-		buf_LRU_stat_sum.io, buf_LRU_stat_cur.io,
-		buf_LRU_stat_sum.unzip, buf_LRU_stat_cur.unzip);
+		/* Print some values to help us with visualizing what is
+		happening with LRU eviction. */
+		fprintf(file,
+			"LRU len: %lu, unzip_LRU len: %lu\n"
+			"I/O sum[%lu]:cur[%lu], unzip sum[%lu]:cur[%lu]\n",
+			UT_LIST_GET_LEN(buf_pool->LRU),
+			UT_LIST_GET_LEN(buf_pool->unzip_LRU),
+			buf_LRU_stat_sum.io, buf_LRU_stat_cur.io,
+			buf_LRU_stat_sum.unzip, buf_LRU_stat_cur.unzip);
+	}
 
 	buf_refresh_io_stats();
 	buf_pool_mutex_exit();
