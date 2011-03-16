@@ -1897,6 +1897,7 @@ srv_export_innodb_status(void)
 {
 	long		time_elapsed;
 	time_t		current_time;
+	ibool		ret;
 
 	mutex_enter(&srv_innodb_monitor_mutex);
 
@@ -1984,6 +1985,15 @@ srv_export_innodb_status(void)
 	time_elapsed = difftime(current_time, srv_last_innodb_status_time);
 	if (time_elapsed >= innobase_min_status_update_time_interval) {
 		buf_print_io(NULL);
+		// Tricky stuff: lock_print_info_summary grabs the
+		// kernel mutex while lock_print_info_all_transactions
+		// assumes the kernel mutex is held and releases it
+		// before returning.
+		ret = lock_print_info_summary(NULL /* file */,
+                                              FALSE /* nowait */);
+		if (ret) {
+			lock_print_info_all_transactions(NULL /* file */);
+		}
 		srv_last_innodb_status_time = current_time;
 	}
 

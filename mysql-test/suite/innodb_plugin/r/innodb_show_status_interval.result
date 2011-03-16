@@ -1,0 +1,157 @@
+drop table if exists t1;
+create table t1 (i int not null, v int not null, index (i)) Engine=InnoDB;
+insert into t1 values (1,1);
+default elapsed time is 30
+name=Innodb_transaction_count
+diff=0 is expected to be zero
+sleeping 30 seconds....
+30 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+29 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+28 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+27 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+26 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+25 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+24 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+23 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+22 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+21 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+20 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+19 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+18 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+17 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+16 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+15 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+14 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+13 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+12 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+11 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+10 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+9 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+8 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+7 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+6 seconds left ...
+select * from t1;
+i	v
+1	1
+diff=0 compared to original value
+5 seconds left ...
+select * from t1;
+i	v
+1	1
+4 seconds left ...
+select * from t1;
+i	v
+1	1
+3 seconds left ...
+select * from t1;
+i	v
+1	1
+2 seconds left ...
+select * from t1;
+i	v
+1	1
+1 seconds left ...
+select * from t1;
+i	v
+1	1
+Awake after sleeping 30 seconds....
+sleeping extra 5 seconds to make sure counter got updated ....
+diff=30 compared original value
+diff=0 compared to expected value
+drop table t1;

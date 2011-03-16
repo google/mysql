@@ -1,0 +1,77 @@
+-- source include/not_embedded.inc
+-- source include/have_innodb.inc
+
+# Initialise
+--disable_warnings
+drop table if exists t1;
+--enable_warnings
+
+# warm up with some operations
+create table t1 (i int not null, v int not null, index (i)) Engine=InnoDB;
+insert into t1 values (1,1);
+
+# get the interval from variables
+let $elapsed=query_get_value(show variables like 'innodb_status_update_interval', Value, 1);
+
+echo default elapsed time is $elapsed;
+
+# some cushion seconds to pad before/after elapsed time,
+# to make sure that operations got finished.
+let $cushion=5;
+
+# show status like 'Innodb_transaction_count';
+
+let $name=query_get_value(show status like 'Innodb_transaction_count', Variable_name, 1);
+let $value=query_get_value(show status like 'Innodb_transaction_count', Value, 1);
+echo name=$name;
+
+let $expected_value=$value;
+
+# show status like 'Innodb_transaction_count';
+let $curvalue=query_get_value(show status like 'Innodb_transaction_count', Value, 1);
+
+let $diff=`select $curvalue-$value`;
+echo diff=$diff is expected to be zero;
+
+echo sleeping $elapsed seconds....;
+let $countdown=$elapsed;
+
+while ($countdown)
+{
+  let $curvalue=query_get_value(show status like 'Innodb_transaction_count', Value, 1);
+
+  echo $countdown seconds left ...;
+
+  # make a trx,
+  select * from t1;
+  inc $expected_value;
+
+  let $before_cushion=`select $countdown > $cushion`;
+  # only make sure that value stays unchanged
+  # all but last $cushion seconds
+  if ($before_cushion)
+  {
+    let $diff=`select $curvalue - $value`;
+    echo diff=$diff compared to original value;
+  }
+
+  sleep 1;
+  dec $countdown;
+}
+
+echo Awake after sleeping $elapsed seconds....;
+
+echo sleeping extra $cushion seconds to make sure counter got updated ....;
+exec sleep $cushion;
+
+# now get the value and check again
+let $curvalue=query_get_value(show status like 'Innodb_transaction_count', Value, 1);
+
+let $diff=`select $curvalue - $value`;
+echo diff=$diff compared original value;
+
+let $diff=`select $curvalue - $expected_value`;
+echo diff=$diff compared to expected value;
+
+# clean up
+drop table t1;
