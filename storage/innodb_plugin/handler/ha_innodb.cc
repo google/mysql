@@ -589,6 +589,12 @@ static SHOW_VAR innodb_status_variables[]= {
   (char*) &export_vars.innodb_rows_read,		  SHOW_LONG},
   {"rows_updated",
   (char*) &export_vars.innodb_rows_updated,		  SHOW_LONG},
+  {"transaction_count",
+  (char*) &export_vars.innodb_transaction_count,	  SHOW_LONG},
+  {"transaction_purge_count",
+  (char*) &export_vars.innodb_transaction_purge_count,	  SHOW_LONG},
+  {"transaction_purge_lag",
+  (char*) &export_vars.innodb_transaction_purge_lag,	  SHOW_LONG},
   {NullS, NullS, SHOW_LONG}
 };
 

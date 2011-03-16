@@ -4471,6 +4471,16 @@ lock_print_info_summary(
 		return(FALSE);
 	}
 
+	if (file == NULL) {
+		export_vars.innodb_transaction_purge_count =
+			(ulong) ut_dulint_get_low(purge_sys->purge_trx_no);
+		export_vars.innodb_transaction_count =
+			(ulong) ut_dulint_get_low(trx_sys->max_trx_id);
+		export_vars.innodb_transaction_purge_lag =
+			(ulong) trx_sys->rseg_history_len;
+		return(TRUE);
+	}
+
 	if (lock_deadlock_found) {
 		fputs("------------------------\n"
 		      "LATEST DETECTED DEADLOCK\n"
@@ -4520,19 +4530,21 @@ lock_print_info_all_transactions(
 	mtr_t	mtr;
 	trx_t*	trx;
 
-	fprintf(file, "LIST OF TRANSACTIONS FOR EACH SESSION:\n");
+	if (file) {
+		fprintf(file, "LIST OF TRANSACTIONS FOR EACH SESSION:\n");
 
-	/* First print info on non-active transactions */
+		/* First print info on non-active transactions */
 
-	trx = UT_LIST_GET_FIRST(trx_sys->mysql_trx_list);
+		trx = UT_LIST_GET_FIRST(trx_sys->mysql_trx_list);
 
-	while (trx) {
-		if (trx->conc_state == TRX_NOT_STARTED) {
-			fputs("---", file);
-			trx_print(file, trx, 600);
+		while (trx) {
+			if (trx->conc_state == TRX_NOT_STARTED) {
+				fputs("---", file);
+				trx_print(file, trx, 600);
+			}
+
+			trx = UT_LIST_GET_NEXT(mysql_trx_list, trx);
 		}
-
-		trx = UT_LIST_GET_NEXT(mysql_trx_list, trx);
 	}
 
 loop:
@@ -4559,34 +4571,36 @@ loop:
 	}
 
 	if (nth_lock == 0) {
-		fputs("---", file);
-		trx_print(file, trx, 600);
+		if (file) {
+			fputs("---", file);
+			trx_print(file, trx, 600);
 
-		if (trx->read_view) {
-			fprintf(file,
-				"Trx read view will not see trx with"
-				" id >= " TRX_ID_FMT
-				", sees < " TRX_ID_FMT "\n",
-				TRX_ID_PREP_PRINTF(
-					trx->read_view->low_limit_id),
-				TRX_ID_PREP_PRINTF(
-					trx->read_view->up_limit_id));
-		}
-
-		if (trx->que_state == TRX_QUE_LOCK_WAIT) {
-			fprintf(file,
-				"------- TRX HAS BEEN WAITING %lu SEC"
-				" FOR THIS LOCK TO BE GRANTED:\n",
-				(ulong) difftime(time(NULL),
-						 trx->wait_started));
-
-			if (lock_get_type_low(trx->wait_lock) == LOCK_REC) {
-				lock_rec_print(file, trx->wait_lock);
-			} else {
-				lock_table_print(file, trx->wait_lock);
+			if (trx->read_view) {
+				fprintf(file,
+					"Trx read view will not see trx with"
+					" id >= " TRX_ID_FMT
+					", sees < " TRX_ID_FMT "\n",
+					TRX_ID_PREP_PRINTF(
+						trx->read_view->low_limit_id),
+					TRX_ID_PREP_PRINTF(
+						trx->read_view->up_limit_id));
 			}
 
-			fputs("------------------\n", file);
+			if (trx->que_state == TRX_QUE_LOCK_WAIT) {
+				fprintf(file,
+					"------- TRX HAS BEEN WAITING %lu SEC"
+					" FOR THIS LOCK TO BE GRANTED:\n",
+					(ulong) difftime(time(NULL),
+							 trx->wait_started));
+
+				if (lock_get_type_low(trx->wait_lock) == LOCK_REC) {
+					lock_rec_print(file, trx->wait_lock);
+				} else {
+					lock_table_print(file, trx->wait_lock);
+				}
+
+				fputs("------------------\n", file);
+			}
 		}
 	}
 

@@ -656,6 +656,9 @@ struct export_var_struct{
 	ulint innodb_rows_inserted;		/*!< srv_n_rows_inserted */
 	ulint innodb_rows_updated;		/*!< srv_n_rows_updated */
 	ulint innodb_rows_deleted;		/*!< srv_n_rows_deleted */
+	ulint innodb_transaction_count;
+	ulint innodb_transaction_purge_count;
+	ulint innodb_transaction_purge_lag;
 };
 
 /** The server system struct */
