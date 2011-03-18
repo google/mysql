@@ -13,13 +13,6 @@ set global event_scheduler=1;
 
 let $engine_type= MyISAM;
 
-set binlog_format=row;
-
-# Embedded server doesn't support binlogging
---source include/rpl_events.inc
-
-set binlog_format=statement;
-
 # Embedded server doesn't support binlogging
 --source include/rpl_events.inc
 
