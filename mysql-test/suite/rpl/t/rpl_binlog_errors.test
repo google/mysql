@@ -189,9 +189,14 @@ SET GLOBAL debug="-d,error_unique_log_filename";
 -- let $binlog_start= query_get_value(SHOW MASTER STATUS, Position, 1)
 -- let $binlog_file= query_get_value(SHOW MASTER STATUS, File, 1)
 
-# 53 is the size of the incident event, so we start from 22 bytes before the
-# current position
--- let $binlog_start = `SELECT $binlog_start - 53`
+# Compute the size of the incident event based on the enabled options and then
+# subtract that from the current position.
+-- let $binlog_header_size = 19
+if (`SELECT @@rpl_hierarchical = '1'`)
+{
+-- let $binlog_header_size = `SELECT $binlog_header_size + 8`
+}
+-- let $binlog_start = `SELECT $binlog_start - $binlog_header_size - 34`
 FLUSH LOGS;
 -- replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR $binlog_start <binlog_start> $binlog_file BINLOG_FILE
 -- replace_column 2 # 4 # 5 #
