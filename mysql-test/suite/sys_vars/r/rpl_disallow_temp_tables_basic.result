@@ -1,0 +1,36 @@
+include/master-slave.inc
+[connection master]
+set global rpl_disallow_temp_tables=ON;
+set session rpl_disallow_temp_tables=ON;
+grant SUPER, CREATE TEMPORARY TABLES on *.* to 'superman'@'localhost';
+grant CREATE TEMPORARY TABLES on *.* to 'clark_kent'@'localhost';
+show global variables like 'rpl_disallow_temp_tables';
+Variable_name	Value
+rpl_disallow_temp_tables	ON
+show session variables like 'rpl_disallow_temp_tables';
+Variable_name	Value
+rpl_disallow_temp_tables	ON
+create temporary table t1 (a int);
+ERROR HY000: The MariaDB server is running with the --rpl-disallow-temp-tables option so it cannot execute this statement
+create temporary table t1 (a int);
+create temporary table t1 (a int);
+ERROR HY000: The MariaDB server is running with the --rpl-disallow-temp-tables option so it cannot execute this statement
+set session rpl_disallow_temp_tables=OFF;
+show session variables like 'rpl_disallow_temp_tables';
+Variable_name	Value
+rpl_disallow_temp_tables	OFF
+create temporary table t1 (a int);
+create temporary table t1 (a int);
+ERROR HY000: The MariaDB server is running with the --rpl-disallow-temp-tables option so it cannot execute this statement
+set session rpl_disallow_temp_tables=OFF;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+show session variables like 'rpl_disallow_temp_tables';
+Variable_name	Value
+rpl_disallow_temp_tables	ON
+create temporary table t1 (a int);
+ERROR HY000: The MariaDB server is running with the --rpl-disallow-temp-tables option so it cannot execute this statement
+set global rpl_disallow_temp_tables= OFF;
+set session rpl_disallow_temp_tables= OFF;
+drop user 'superman'@'localhost';
+drop user 'clark_kent'@'localhost';
+include/rpl_end.inc

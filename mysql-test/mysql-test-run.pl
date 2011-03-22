@@ -5360,6 +5360,7 @@ sub mysqld_arguments ($$$) {
   }
 
   my $found_skip_core= 0;
+  my $found_rpl_disallow_temp_tables= 0;
   foreach my $arg ( @$extra_opts )
   {
     # Skip --defaults-file option since it's handled above.
@@ -5379,6 +5380,10 @@ sub mysqld_arguments ($$$) {
     {
       ; # Dont add --skip-log-bin when mysqld have --log-slave-updates in config
     }
+    elsif ($arg eq "--rpl-disallow-temp-tables")
+    {
+      $found_rpl_disallow_temp_tables= 1;
+    }
     else
     {
       mtr_add_arg($args, "%s", $arg);
@@ -5394,6 +5399,13 @@ sub mysqld_arguments ($$$) {
   # Facility stays disabled if timeout value is zero.
   mtr_add_arg($args, "--loose-debug-sync-timeout=%s",
               $opt_debug_sync_timeout) unless $opt_user_args;
+
+  # Defafult tests to standard MySQL behavior of allowing temporary tables
+  # in replication unless the .opt file explicitly requests it.
+  if ( !$found_rpl_disallow_temp_tables )
+  {
+    mtr_add_arg($args, "--skip-rpl-disallow-temp-tables");
+  }
 
   return $args;
 }

@@ -1,0 +1,79 @@
+-- source include/master-slave.inc
+
+#
+# Set up.
+#
+let $disallow_prev= query_get_value(show global variables like 'rpl_disallow_temp_tables', Value, 1);
+set global rpl_disallow_temp_tables=ON;
+set session rpl_disallow_temp_tables=ON;
+
+grant SUPER, CREATE TEMPORARY TABLES on *.* to 'superman'@'localhost';
+grant CREATE TEMPORARY TABLES on *.* to 'clark_kent'@'localhost';
+
+connect (superman_con,localhost,superman,,);
+connect (clark_kent_con,localhost,clark_kent,,);
+
+#
+# Option should be ON.
+#
+show global variables like 'rpl_disallow_temp_tables';
+show session variables like 'rpl_disallow_temp_tables';
+
+#
+# On the master, creation should fail.
+#
+connection master;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+create temporary table t1 (a int);
+
+#
+# On the slave, creation should succeed.
+#
+connection slave;
+
+create temporary table t1 (a int);
+
+#
+# SUPER users should be able to override.
+#
+connection superman_con;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+create temporary table t1 (a int);
+
+set session rpl_disallow_temp_tables=OFF;
+show session variables like 'rpl_disallow_temp_tables';
+
+create temporary table t1 (a int);
+
+#
+# Non-SUPER users should not be able to override.
+#
+connection clark_kent_con;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+create temporary table t1 (a int);
+
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+set session rpl_disallow_temp_tables=OFF;
+show session variables like 'rpl_disallow_temp_tables';
+
+--error ER_OPTION_PREVENTS_STATEMENT
+create temporary table t1 (a int);
+
+#
+# Clean up.
+#
+connection master;
+
+eval set global rpl_disallow_temp_tables= $disallow_prev;
+eval set session rpl_disallow_temp_tables= $disallow_prev;
+
+disconnect superman_con;
+disconnect clark_kent_con;
+
+drop user 'superman'@'localhost';
+drop user 'clark_kent'@'localhost';
+
+--source include/rpl_end.inc

@@ -608,6 +608,7 @@ typedef struct system_variables
   my_bool old_passwords;
   my_bool big_tables;
   my_bool query_cache_strip_comments;
+  my_bool rpl_disallow_temp_tables;
 
   plugin_ref table_plugin;
 

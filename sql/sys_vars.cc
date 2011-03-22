@@ -2530,6 +2530,14 @@ static Sys_var_ulong Sys_div_precincrement(
        SESSION_VAR(div_precincrement), CMD_LINE(REQUIRED_ARG),
        VALID_RANGE(0, DECIMAL_MAX_SCALE), DEFAULT(4), BLOCK_SIZE(1));
 
+static Sys_var_mybool Sys_rpl_disallow_temp_tables(
+       "rpl_disallow_temp_tables",
+       "When ON, disallows CREATE TEMPORARY TABLE statements if those "
+       "statements will result in events being written to the binlog.",
+       SESSION_VAR(rpl_disallow_temp_tables), CMD_LINE(OPT_ARG),
+       DEFAULT(TRUE), NO_MUTEX_GUARD, NOT_IN_BINLOG,
+       ON_CHECK(check_has_super));
+
 static Sys_var_ulong Sys_rpl_recovery_rank(
        "rpl_recovery_rank", "Unused, will be removed",
        GLOBAL_VAR(rpl_recovery_rank), CMD_LINE(REQUIRED_ARG),

@@ -2801,6 +2801,18 @@ case SQLCOM_PREPARE:
     }
   case SQLCOM_CREATE_TABLE:
   {
+#ifdef HAVE_REPLICATION
+    if (thd->variables.rpl_disallow_temp_tables &&
+        (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE) &&
+        mysql_bin_log.is_open() &&
+        (thd->variables.option_bits & OPTION_BIN_LOG))
+    {
+      res = 1;
+      my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+               "--rpl-disallow-temp-tables");
+      break;
+    }
+#endif /* HAVE_REPLICATION */
     DBUG_ASSERT(first_table == all_tables && first_table != 0);
     bool link_to_local;
     TABLE_LIST *create_table= first_table;
