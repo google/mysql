@@ -382,6 +382,7 @@ struct system_variables
 
   my_bool old_alter_table;
   my_bool old_passwords;
+  my_bool rpl_disallow_temp_tables;
 
   /*
     If true, use multi-range read for quick range, which allows

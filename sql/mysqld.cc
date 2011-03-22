@@ -6391,7 +6391,8 @@ enum options_mysqld
   OPT_USE_MRR_FOR_QUICK_RANGE,
   OPT_ALLOW_DEFAULT_MRR_BKA,
   OPT_MAPPED_USERS,
-  OPT_NO_LOCAL_INFILE_IF_REPL
+  OPT_NO_LOCAL_INFILE_IF_REPL,
+  OPT_RPL_DISALLOW_TEMP_TABLES
 };
 
 
@@ -8138,6 +8139,11 @@ thread is in the relay logs.",
    "Use the mapped_user table to map users to roles.",
    &opt_mapped_user, &opt_mapped_user, 0, GET_BOOL, NO_ARG,
    my_bool(0), 0, 0, 0, 0, 0},
+  {"rpl-disallow-temp-tables", OPT_RPL_DISALLOW_TEMP_TABLES,
+   "When ON, disallows CREATE TEMPORARY TABLE statements if those statements "
+   "will result in events being written to the binlog.",
+   &global_system_variables.rpl_disallow_temp_tables,
+   0, 0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 

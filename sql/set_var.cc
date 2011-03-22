@@ -595,6 +595,9 @@ static sys_var_ulonglong_ptr    sys_rpl_hierarchical_cache_frequency(
 static sys_var_const            sys_rpl_hierarchical_slave_recovery(
     &vars, "rpl_hierarchical_slave_recovery", OPT_GLOBAL, SHOW_BOOL,
     (uchar*) &rpl_hierarchical_slave_recovery);
+static sys_var_thd_bool         sys_rpl_disallow_temp_tables(
+    &vars, "rpl_disallow_temp_tables",
+    &SV::rpl_disallow_temp_tables, true /* must_be_super */);
 static sys_var_const            sys_rpl_event_checksums(&vars,
                                                         "rpl_event_checksums",
                                                         OPT_GLOBAL, SHOW_BOOL,

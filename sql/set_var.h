@@ -398,16 +398,20 @@ public:
 class sys_var_thd :public sys_var
 {
 public:
-  sys_var_thd(const char *name_arg, 
+  sys_var_thd(const char *name_arg,
               sys_after_update_func func= NULL,
-              Binlog_status_enum binlog_status= NOT_IN_BINLOG)
-    :sys_var(name_arg, func, binlog_status)
+              Binlog_status_enum binlog_status= NOT_IN_BINLOG,
+              bool must_be_super= false)
+      :sys_var(name_arg, func, binlog_status), requires_super_val(must_be_super)
   {}
   bool check_type(enum_var_type type) { return 0; }
   bool check_default(enum_var_type type)
   {
     return type == OPT_GLOBAL && !option_limits;
   }
+  virtual bool requires_super() const { return requires_super_val; }
+private:
+  bool requires_super_val;
 };
 
 
@@ -488,12 +492,16 @@ class sys_var_thd_bool :public sys_var_thd
 {
 public:
   my_bool SV::*offset;
-  sys_var_thd_bool(sys_var_chain *chain, const char *name_arg, my_bool SV::*offset_arg)
-    :sys_var_thd(name_arg), offset(offset_arg)
+  sys_var_thd_bool(sys_var_chain *chain, const char *name_arg,
+                   my_bool SV::*offset_arg, my_bool must_be_super= false)
+      :sys_var_thd(name_arg, NULL, NOT_IN_BINLOG, must_be_super),
+       offset(offset_arg)
   { chain_sys_var(chain); }
-  sys_var_thd_bool(sys_var_chain *chain, const char *name_arg, my_bool SV::*offset_arg,
-		   sys_after_update_func func)
-    :sys_var_thd(name_arg,func), offset(offset_arg)
+  sys_var_thd_bool(sys_var_chain *chain, const char *name_arg,
+                   my_bool SV::*offset_arg, sys_after_update_func func,
+                   my_bool must_be_super= false)
+      :sys_var_thd(name_arg,func, NOT_IN_BINLOG, must_be_super),
+       offset(offset_arg)
   { chain_sys_var(chain); }
   bool update(THD *thd, set_var *var);
   void set_default(THD *thd, enum_var_type type);
