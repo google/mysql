@@ -1584,6 +1584,7 @@ get_addon_fields(THD *thd, Field **ptabfield, uint sortlength, uint *plength)
   uint fields= 0;
   uint null_fields= 0;
   MY_BITMAP *read_set= (*ptabfield)->table->read_set;
+  bool must_use_new_sort = false;
 
   /*
     If there is a reference to a field in the query add it
@@ -1605,16 +1606,36 @@ get_addon_fields(THD *thd, Field **ptabfield, uint sortlength, uint *plength)
     length+= field->max_packed_col_length(field->pack_length());
     if (field->maybe_null())
       null_fields++;
+
+    // handler::rnd_pos must work to use the old filesort algorithm.
+    // Be paranoid and don't assume that the path from field to file is set.
+    if (field->table && field->table->file &&
+        (field->table->file->ha_table_flags() & HA_NO_RND_POS)) {
+      must_use_new_sort = true;
+    }
+
     fields++;
   } 
   if (!fields)
     return 0;
   length+= (null_fields+7)/8;
 
-  if (length+sortlength > thd->variables.max_length_for_sort_data ||
+  // The old filesort sorts (key, rowid) and then fetches rows by rowid.
+  // The new filesort sorts all columns to avoid fetching rows by rowid.
+  // The old filesort uses handler::rnd_pos to determine rowids. Some handlers
+  // do not support that method and set the flag HA_NO_RND_POS to indicate
+  // that. If my_malloc fails here, the old sort will always be used. In the
+  // worst case, that will cause a query to fail at runtime when HA_NO_RND_POS
+  // is ignored.
+  if ((!must_use_new_sort &&
+       length+sortlength > thd->variables.max_length_for_sort_data) ||
       !(addonf= (SORT_ADDON_FIELD *) my_malloc(sizeof(SORT_ADDON_FIELD)*
-                                               (fields+1), MYF(MY_WME))))
+                                               (fields+1), MYF(MY_WME)))) {
+    statistic_increment(old_filesorts, &LOCK_status);
     return 0;
+  } else {
+    statistic_increment(new_filesorts, &LOCK_status);
+  }
 
   *plength= length;
   length= (null_fields+7)/8;

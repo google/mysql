@@ -33,6 +33,9 @@
 
 #include "../storage/myisam/ha_myisam.h"
 
+/* Google Addition */
+#include "googlestats.h"
+
 #include "rpl_injector.h"
 #include "repl_hier_cache.h"
 
@@ -620,6 +623,11 @@ ulong opt_reserved_super_connections;
 */
 ulong max_long_data_size;
 uint  max_user_connections= 0;
+
+/* Google addition */
+ulong old_filesorts= 0;
+ulong new_filesorts= 0;
+
 /**
   Limit of the total number of prepared statements in the server.
   Is necessary to protect the server against out-of-memory attacks.
@@ -709,6 +717,7 @@ SHOW_COMP_OPTION have_ssl, have_symlink, have_dlopen, have_query_cache;
 SHOW_COMP_OPTION have_geometry, have_rtree_keys;
 SHOW_COMP_OPTION have_crypt, have_compress;
 SHOW_COMP_OPTION have_community_features;
+SHOW_COMP_OPTION have_googlestats;
 
 my_bool opt_update_connection_privs;
 my_bool opt_allow_delayed_write;
@@ -3168,7 +3177,7 @@ const char *load_default_groups[]= {
 #ifdef WITH_NDBCLUSTER_STORAGE_ENGINE
 "mysql_cluster",
 #endif
-"mysqld","server", MYSQL_BASE_VERSION, 0, 0};
+"mysqld","server", MYSQL_BASE_VERSION, "googlestats", 0, 0};
 
 #if defined(__WIN__) && !defined(EMBEDDED_LIBRARY)
 static const int load_default_groups_sz=
@@ -4257,6 +4266,13 @@ a file name for --log-bin-index option", opt_binlog_index_name);
   {
     sql_print_error("Can't init databases");
     unireg_abort(1);
+  }
+
+  /* Initialize GoogleStats cache */
+  // TODO(seanrees): make this more modularly loaded (LOAD PLUGIN).
+  if (googlestats_init())
+  {
+    sql_print_error("googlestats_init failed");
   }
 
 #ifdef WITH_CSV_STORAGE_ENGINE
@@ -8553,6 +8569,10 @@ SHOW_VAR status_vars[]= {
 #endif
   {"Slow_launch_threads",      (char*) &slow_launch_threads,    SHOW_LONG},
   {"Slow_queries",             (char*) offsetof(STATUS_VAR, long_query_count), SHOW_LONG_STATUS},
+  /* TODO(seanrees): Have we used these in the last year? If this TODO is still
+   * here on 2012-06-30, it's OK to delete Sort_filesort_{new,old}. */
+  {"Sort_filesort_new",        (char*) &new_filesorts, SHOW_LONG},
+  {"Sort_filesort_old",        (char*) &old_filesorts, SHOW_LONG},
   {"Sort_merge_passes",	       (char*) offsetof(STATUS_VAR, filesort_merge_passes), SHOW_LONG_STATUS},
   {"Sort_range",	       (char*) offsetof(STATUS_VAR, filesort_range_count), SHOW_LONG_STATUS},
   {"Sort_rows",		       (char*) offsetof(STATUS_VAR, filesort_rows), SHOW_LONG_STATUS},
@@ -8929,6 +8949,7 @@ static int mysql_init_variables(void)
 #if !defined(my_pthread_setprio) && !defined(HAVE_PTHREAD_SETSCHEDPARAM)
   opt_specialflag |= SPECIAL_NO_PRIOR;
 #endif
+  have_googlestats=SHOW_OPTION_YES;
 
 #if defined(__WIN__) || defined(__NETWARE__)
   /* Allow Win32 and NetWare users to move MySQL anywhere */

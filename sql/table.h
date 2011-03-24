@@ -917,6 +917,30 @@ struct st_table {
       file->extra(HA_EXTRA_NO_KEYREAD);
     }
   }
+
+  // These are valid when this table is a googlestats table and
+  // googlestats_version_query_id == query_id. They are set in open_tables
+  // for stats tables. Previously, they were computed in the table
+  // handler, but that is not safe because it requires a call to
+  // open_and_lock_tables() and the locking implementation does not support
+  //   open_and_lock_tables() -- for all tables in the query
+  //   open_and_lock_tables() -- for CommittedStatsVersion (CSV)
+  //   unlock()               -- for CommittedStatsVersion (CSV)
+  //   unlock()               -- for all tables in the query
+  // Therefore, the following is done
+  //   call open_and_lock_tables() -- for all tables in the query
+  //   ... open_tables() -> for all tables in the query
+  //          if a googlestats table, then
+  //                        open_and_lock_tables() CSV
+  //                        query CSV
+  //                        unlock() CSV
+  //   ... lock_tables() -> for all tables in the query
+  // See open_tables() for the code.
+  //
+  // TODO(seanrees): -- move this to memory associated with the table handler instance
+  query_id_t    googlestats_version_query_id;
+  int           googlestats_version_num;
+  longlong      googlestats_version_hash;
 };
 
 enum enum_schema_table_state
