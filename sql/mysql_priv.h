@@ -1977,6 +1977,10 @@ extern ulong opt_binlog_rows_event_max_size;
 extern ulong rpl_recovery_rank, thread_cache_size, thread_pool_size;
 extern ulong back_log;
 #endif /* MYSQL_SERVER */
+/* Google Additions */
+#ifdef MYSQL_SERVER
+extern ulong old_filesorts, new_filesorts;
+#endif
 #if defined MYSQL_SERVER || defined INNODB_COMPATIBILITY_HOOKS
 extern ulong MYSQL_PLUGIN_IMPORT specialflag;
 #endif /* MYSQL_SERVER || INNODB_COMPATIBILITY_HOOKS */

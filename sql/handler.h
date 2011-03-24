@@ -128,6 +128,8 @@
 */
 #define HA_BINLOG_ROW_CAPABLE  (LL(1) << 34)
 #define HA_BINLOG_STMT_CAPABLE (LL(1) << 35)
+/* Indicates no support for rnd_pos and force the new filesort */
+#define HA_NO_RND_POS          (LL(1) << 36)
 
 /*
   Set of all binlog flags. Currently only contain the capabilities
@@ -142,6 +144,8 @@
 #define HA_READ_RANGE           8       /* can find all records in a range */
 #define HA_ONLY_WHOLE_INDEX	16	/* Can't use part key searches */
 #define HA_KEYREAD_ONLY         64	/* Support HA_EXTRA_KEYREAD */
+/* Does not support index_last using a prefix of the key */
+#define HA_NO_READ_PREFIX_LAST  128
 
 /*
   bits in alter_table_flags:
@@ -215,7 +219,7 @@
   (yes, the sum is deliberately inaccurate)
   TODO remove the limit, use dynarrays
 */
-#define MAX_HA 15
+#define MAX_HA 16
 
 /*
   Parameters for open() (in register form->filestat)
@@ -270,6 +274,7 @@ enum legacy_db_type
   DB_TYPE_EXAMPLE_DB, DB_TYPE_ARCHIVE_DB, DB_TYPE_CSV_DB,
   DB_TYPE_FEDERATED_DB,
   DB_TYPE_BLACKHOLE_DB,
+  DB_TYPE_GOOGLESTATS,
   DB_TYPE_PARTITION_DB,
   DB_TYPE_BINLOG,
   DB_TYPE_SOLID,
