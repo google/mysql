@@ -8,6 +8,9 @@
 # error but not deadlock error; that is ok as code deals with the two
 # errors in exactly the same way.
 
+# Test intentionally replays the same transactions on the slave multiple times
+# thus is incompatible with rpl_hierarchical.
+--source include/not_rpl_hierarchical.inc
 --source include/master-slave.inc
 
 # 0) Prepare tables and data

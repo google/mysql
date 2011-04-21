@@ -3,6 +3,10 @@
 # for relay logs too).
 # Test of manual relay log rotation with FLUSH LOGS.
 
+# Test intentionally replays the same transactions on the slave mutliple times
+# thus is incompatible with rpl_hierarchical.
+--source include/not_rpl_hierarchical.inc
+
 # Requires statement logging
 -- source include/master-slave.inc
 
