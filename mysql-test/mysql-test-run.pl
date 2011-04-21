@@ -4454,6 +4454,9 @@ sub mysqld_arguments ($$$) {
   # Check if "extra_opt" contains skip-log-bin
   my $skip_binlog= grep(/^(--|--loose-)skip-log-bin/, @$extra_opts);
 
+  # Check if "extra_opt" contains rpl-hierarchical
+  my $rpl_hierarchical= grep(/^--rpl-hierarchical/, @$extra_opts);
+
   # Indicate to mysqld it will be debugged in debugger
   if ( $glob_debugger )
   {
@@ -4476,6 +4479,11 @@ sub mysqld_arguments ($$$) {
            $mysqld->option("log-slave-updates"))
     {
       ; # Dont add --skip-log-bin when mysqld have --log-slave-updates in config
+    }
+    elsif ($rpl_hierarchical and
+           (mtr_match_prefix($arg, "--replicate-same-server-")))
+    {
+      ; # Don't add options incompatible with rpl-hierarchical.
     }
     else
     {
