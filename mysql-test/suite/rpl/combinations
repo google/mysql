@@ -6,3 +6,10 @@ binlog-format=statement
 
 [mix]
 binlog-format=mixed
+
+[hierarchical]
+binlog-format=statement
+log-slave-updates
+rpl-hierarchical
+# Value of 1 to catch bugs in the cache.
+rpl-hierarchical-cache-frequency=1
