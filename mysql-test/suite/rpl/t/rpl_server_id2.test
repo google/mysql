@@ -1,6 +1,9 @@
 # This test checks that a slave DOES execute queries originating
 # from itself, if running with --replicate-same-server-id.
 
+# rpl_hierarchical does not support --replicate-same-server-id.
+--source include/not_rpl_hierarchical.inc
+
 source include/master-slave.inc;
 connection slave;
 create table t1 (n int);
