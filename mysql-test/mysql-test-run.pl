@@ -4485,7 +4485,9 @@ sub mysqld_arguments ($$$) {
       ; # Dont add --skip-log-bin when mysqld have --log-slave-updates in config
     }
     elsif ($rpl_hierarchical and
-           (mtr_match_prefix($arg, "--replicate-same-server-")))
+           (mtr_match_prefix($arg, "--binlog-do-db") or
+            mtr_match_prefix($arg, "--binlog-ignore-db") or
+            mtr_match_prefix($arg, "--replicate-same-server-")))
     {
       ; # Don't add options incompatible with rpl-hierarchical.
     }

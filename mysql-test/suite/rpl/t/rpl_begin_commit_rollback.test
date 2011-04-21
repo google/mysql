@@ -1,3 +1,5 @@
+# --binlog-do-db / --binlog-ignore-db is not compatible with rpl_hierarchical.
+source include/not_rpl_hierarchical.inc;
 source include/master-slave.inc;
 source include/have_innodb.inc;
 source include/have_binlog_format_statement.inc;

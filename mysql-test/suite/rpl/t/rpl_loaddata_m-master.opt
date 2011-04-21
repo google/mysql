@@ -1,1 +1,1 @@
---binlog_ignore_db=test
+--binlog-ignore-db=test

@@ -6,6 +6,8 @@
 # (e.g., american) will not be replicated. 
 #
 
+# --binlog-do-db / --binlog-ignore-db is not compatible with rpl_hierarchical.
+source include/not_rpl_hierarchical.inc;
 source include/master-slave.inc;
 
 # Bug#6391 (binlog-do-db rules ignored)
