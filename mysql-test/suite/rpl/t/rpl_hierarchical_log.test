@@ -1,6 +1,5 @@
 # Requires statement logging
--- source include/have_binlog_format_statement.inc
--- source include/not_rpl_hierarchical.inc
+-- source include/have_rpl_hierarchical.inc
 -- source include/master-slave.inc
 let $engine_type=MyISAM;
 -- source extra/rpl_tests/rpl_log.test

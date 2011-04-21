@@ -1,2 +1,2 @@
-source include/not_rpl_hierarchical.inc;
+source include/have_rpl_hierarchical.inc;
 source extra/rpl_tests/rpl_loaddata_map.inc;
