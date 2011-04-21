@@ -7,6 +7,9 @@
 # Change: Test rewritten to remove show binlog events
 #         and to test the option better + Cleanup
 ######################################################
+
+# --binlog-do-db / --binlog-ignore-db is not compatible with rpl_hierarchical.
+-- source include/not_rpl_hierarchical.inc
 -- source include/master-slave.inc
 
 --disable_warnings
