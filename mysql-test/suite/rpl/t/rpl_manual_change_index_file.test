@@ -1,3 +1,8 @@
+# rpl_hierarchical makes the server more resilent to manual editing of the
+# index file because it re-writes the file on close of the binlog to update
+# the group_id.
+source include/not_rpl_hierarchical.inc;
+
 source include/master-slave.inc;
 
 #
