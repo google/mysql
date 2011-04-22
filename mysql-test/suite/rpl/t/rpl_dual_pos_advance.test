@@ -6,6 +6,9 @@
 # of their server id).
 # It also will test BUG#13861.
 
+# rpl_hierarchical does not support circular replication.
+--source include/not_rpl_hierarchical.inc
+
 source include/have_innodb.inc;
 
 --let $rpl_topology= 1->2->1

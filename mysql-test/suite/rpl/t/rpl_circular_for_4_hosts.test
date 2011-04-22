@@ -12,6 +12,9 @@
 # WL#3754
 # BUG#49978
 
+# rpl_hierarchical does not support circular replication.
+--source include/not_rpl_hierarchical.inc
+
 --source include/have_innodb.inc
 
 # Set up circular ring and new names for servers

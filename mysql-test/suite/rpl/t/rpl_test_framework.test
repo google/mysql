@@ -19,6 +19,8 @@
 # tables (see include/rpl_test_framework.inc for details).
 --source include/have_binlog_format_statement.inc
 
+# rpl_hierarchical does not support circular replication.
+--source include/not_rpl_hierarchical.inc
 
 --echo ==== Create t1 on all servers. ====
 if ($mtr_supports_more_than_10_servers)
