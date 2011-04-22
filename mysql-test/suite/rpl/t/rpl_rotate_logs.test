@@ -1,6 +1,9 @@
 # This test uses chmod, can't be run with root permissions
 -- source include/not_as_root.inc
 
+# rpl_hierarchical does not support creating temporary tables on the master.
+--source include/not_rpl_hierarchical.inc
+
 -- source include/have_log_bin.inc
 
 #

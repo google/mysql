@@ -3,15 +3,11 @@
 --echo # EXISTS ... SELECT' behaviour
 --echo #
 
-# rpl_hierarchical does not support creating temporary tables on the master.
---source include/not_rpl_hierarchical.inc
+--source include/have_rpl_hierarchical.inc
 
 source include/master-slave.inc;
 source include/have_binlog_format_statement.inc;
 
-source extra/rpl_tests/rpl_stm_create_if_not_exists.test;
-
-let $is_temporary=1;
 source extra/rpl_tests/rpl_stm_create_if_not_exists.test;
 
 --source include/rpl_end.inc

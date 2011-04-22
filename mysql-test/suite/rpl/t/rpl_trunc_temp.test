@@ -18,6 +18,8 @@
 #
 # Bug in this test: BUG#37493: rpl_trunc_temp.test nondeterministic
 
+# rpl_hierarchical does not support creating temporary tables on the master.
+--source include/not_rpl_hierarchical.inc
 
 # Requires statement-based logging since temporary tables are not
 # logged in row-based logging

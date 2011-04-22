@@ -3,6 +3,9 @@
 # Currently statement based due to bug 12345
 --source include/have_binlog_format_mixed_or_statement.inc
 
+# rpl_hierarchical does not support creating temporary tables on the master.
+--source include/not_rpl_hierarchical.inc
+
 source include/master-slave.inc;
 
 # Test replication of auto_increment
