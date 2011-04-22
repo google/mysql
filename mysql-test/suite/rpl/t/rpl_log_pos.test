@@ -16,6 +16,8 @@ source include/show_master_status.inc;
 sync_slave_with_master;
 source include/stop_slave.inc;
 
+let $slave_exec_pos= query_get_value(SHOW SLAVE STATUS, Exec_Master_Log_Pos, 1);
+
 --replace_result 75 MASTER_LOG_POS
 change master to master_log_pos=75;
 let $status_items= Read_Master_Log_Pos;
@@ -34,8 +36,8 @@ create table t1 (n int);
 insert into t1 values (1),(2),(3);
 save_master_pos;
 connection slave;
---replace_result 4 MASTER_LOG_POS
-change master to master_log_pos=4;
+--replace_result $slave_exec_pos MASTER_LOG_POS
+eval change master to master_log_pos=$slave_exec_pos;
 start slave;
 sync_with_master;
 select * from t1 ORDER BY n;
