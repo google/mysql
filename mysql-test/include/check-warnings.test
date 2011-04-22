@@ -18,7 +18,8 @@ set debug="";
 
 use mtr;
 
-create temporary table error_log (
+# table gets cleaned up (i.e., dropped) in include/mtr_warnings.sql
+create table error_log (
   row int auto_increment primary key,
   suspicious int default 1,
   file_name varchar(255),

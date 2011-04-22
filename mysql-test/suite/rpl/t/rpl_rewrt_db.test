@@ -1,5 +1,9 @@
 # TBF - difference in row level logging
 -- source include/have_binlog_format_mixed_or_statement.inc
+
+# rpl_hierarchical does not support creating temporary tables on the master.
+--source include/not_rpl_hierarchical.inc
+
 -- source include/master-slave.inc
 
 --disable_warnings

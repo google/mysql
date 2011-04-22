@@ -1,3 +1,6 @@
+# rpl_hierarchical does not support creating temporary tables on the master.
+--source include/not_rpl_hierarchical.inc
+
 source include/master-slave.inc;
 source include/have_innodb.inc;
 
