@@ -19,6 +19,10 @@
 # 2. For non-transactional engines slave should stop on
 # start position of the group.
 #############################################################
+
+# This test is incompatible with rpl_hierarchical. See
+# http://bugs.mysql.com/60955
+--source include/not_rpl_hierarchical.inc
 --source include/have_innodb.inc
 --source include/master-slave.inc
 --echo
