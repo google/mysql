@@ -196,6 +196,10 @@ if (`SELECT @@rpl_hierarchical = '1'`)
 {
 -- let $binlog_header_size = `SELECT $binlog_header_size + 8`
 }
+if (`SELECT @@rpl_event_checksums = '1'`)
+{
+-- let $binlog_header_size = `SELECT $binlog_header_size + 4`
+}
 -- let $binlog_start = `SELECT $binlog_start - $binlog_header_size - 34`
 FLUSH LOGS;
 -- replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR $binlog_start <binlog_start> $binlog_file BINLOG_FILE

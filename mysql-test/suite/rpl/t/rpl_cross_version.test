@@ -14,6 +14,10 @@
 --source include/not_rpl_hierarchical.inc
 --source include/master-slave.inc
 
+# This test uses an old LOAD DATA event format which isn't supported by
+# --rpl-event-checksums.
+--source include/not_event_checksums.inc
+
 # The test is disabled for windows due to 
 # Bug #42879 CHANGE MASTER RELAY_LOG_FILE=path fails on windows
 # Todo: release it from not_windows
