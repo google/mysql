@@ -1,0 +1,133 @@
+include/master-slave.inc
+[connection master]
+set timestamp=1000000000;
+set binlog_group_id=952, master_server_id=1 with reset;
+create table t1 (a int primary key, b char(32));
+
+--- From start of log until 955 ---
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+use test/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+SET @@session.pseudo_thread_id=999999999/*!*/;
+SET @@session.foreign_key_checks=1, @@session.sql_auto_is_null=1, @@session.unique_checks=1, @@session.autocommit=1/*!*/;
+SET @@session.sql_mode=0/*!*/;
+SET @@session.auto_increment_increment=1, @@session.auto_increment_offset=1/*!*/;
+/*!\C latin1 *//*!*/;
+SET @@session.character_set_client=8,@@session.collation_connection=8,@@session.collation_server=8/*!*/;
+SET @@session.lc_time_names=0/*!*/;
+SET @@session.collation_database=DEFAULT/*!*/;
+create table t1 (a int primary key, b char(32))
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (954, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (955, 'This is some testing text')
+/*!*/;
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+
+--- From 967 until 972 ---
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+use test/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+SET @@session.pseudo_thread_id=999999999/*!*/;
+SET @@session.foreign_key_checks=1, @@session.sql_auto_is_null=1, @@session.unique_checks=1, @@session.autocommit=1/*!*/;
+SET @@session.sql_mode=0/*!*/;
+SET @@session.auto_increment_increment=1, @@session.auto_increment_offset=1/*!*/;
+/*!\C latin1 *//*!*/;
+SET @@session.character_set_client=8,@@session.collation_connection=8,@@session.collation_server=8/*!*/;
+SET @@session.lc_time_names=0/*!*/;
+SET @@session.collation_database=DEFAULT/*!*/;
+insert into t1 values (967, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (968, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (969, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (970, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (971, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (972, 'This is some testing text')
+/*!*/;
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+
+--- From 985 until end of log ---
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+use test/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+SET @@session.pseudo_thread_id=999999999/*!*/;
+SET @@session.foreign_key_checks=1, @@session.sql_auto_is_null=1, @@session.unique_checks=1, @@session.autocommit=1/*!*/;
+SET @@session.sql_mode=0/*!*/;
+SET @@session.auto_increment_increment=1, @@session.auto_increment_offset=1/*!*/;
+/*!\C latin1 *//*!*/;
+SET @@session.character_set_client=8,@@session.collation_connection=8,@@session.collation_server=8/*!*/;
+SET @@session.lc_time_names=0/*!*/;
+SET @@session.collation_database=DEFAULT/*!*/;
+insert into t1 values (985, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (986, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (987, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (988, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (989, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (990, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (991, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (992, 'This is some testing text')
+/*!*/;
+SET TIMESTAMP=1000000000/*!*/;
+insert into t1 values (993, 'This is some testing text')
+/*!*/;
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+
+--- Start is after last ID ---
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+
+--- End before first ID ---
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+drop table t1;
+include/rpl_end.inc

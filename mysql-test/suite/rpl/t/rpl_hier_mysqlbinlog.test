@@ -1,0 +1,54 @@
+# Test the new --start-group-id and --stop-group-id options of mysqlbinlog
+
+--source include/have_rpl_hierarchical.inc
+--source include/master-slave.inc
+
+# we need this for getting fixed timestamps inside of this test
+set timestamp=1000000000;
+
+# Set master to use non-default starting group_id for better verification.
+let $group_id= 952;
+eval set binlog_group_id=$group_id, master_server_id=1 with reset;
+inc $group_id; # first trans will have ID one greater than that set.
+
+create table t1 (a int primary key, b char(32));
+inc $group_id; # create table used an ID
+--disable_query_log
+let $i= 40;
+while ($i)
+{
+  eval insert into t1 values ($group_id, 'This is some testing text');
+  dec $i;
+  inc $group_id;
+}
+--enable_query_log
+
+let $MYSQLD_DATADIR= `select @@datadir;`;
+
+--disable_query_log
+select "--- From start of log until 955 ---" as "";
+--enable_query_log
+--exec $MYSQL_BINLOG --stop-group-id=955 --short-form --local-load=$MYSQLTEST_VARDIR/tmp/ $MYSQLD_DATADIR/master-bin.000002
+
+--disable_query_log
+select "--- From 967 until 972 ---" as "";
+--enable_query_log
+--exec $MYSQL_BINLOG --start-group-id=967 --stop-group-id=972 --short-form --local-load=$MYSQLTEST_VARDIR/tmp/ $MYSQLD_DATADIR/master-bin.000002 $MYSQLD_DATADIR/master-bin.000003
+
+--disable_query_log
+select "--- From 985 until end of log ---" as "";
+--enable_query_log
+--exec $MYSQL_BINLOG --start-group-id=985 --short-form --local-load=$MYSQLTEST_VARDIR/tmp/ $MYSQLD_DATADIR/master-bin.000003
+
+--disable_query_log
+select "--- Start is after last ID ---" as "";
+--enable_query_log
+--exec $MYSQL_BINLOG --start-group-id=10000 --short-form --local-load=$MYSQLTEST_VARDIR/tmp/ $MYSQLD_DATADIR/master-bin.000002
+
+--disable_query_log
+select "--- End before first ID ---" as "";
+--enable_query_log
+--exec $MYSQL_BINLOG --stop-group-id=500 --short-form --local-load=$MYSQLTEST_VARDIR/tmp/ $MYSQLD_DATADIR/master-bin.000002
+
+drop table t1;
+--source include/rpl_end.inc

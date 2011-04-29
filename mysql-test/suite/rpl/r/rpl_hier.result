@@ -1,0 +1,279 @@
+include/rpl_init.inc [topology=1->2, 1->3]
+call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+ which couldn't be found in the bin logs\.");
+call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+, but server_id from the slave doesn't match that found in the bin log\. Slave appea.*");
+call mtr.add_suppression("Slave SQL thread encountered ev->group_id==[0-9]+ < last processed ID==[0-9]+. Stopping replication. Error_code: 1642");
+create table t1 (a int, b char(32));
+drop table t1;
+zero
+0
+set binlog_group_id=1007, master_server_id=1;
+create table t1 (a int, b char(32));
+zero
+0
+include/stop_slave.inc
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+set binlog_group_id=0, master_server_id=2 with reset;
+drop table t1;
+start slave until master_log_file='master-bin.000003', master_log_pos=106;
+include/wait_for_slave_sql_to_stop.inc
+include/stop_slave.inc
+change master to connect_using_group_id;
+include/start_slave.inc
+select count(*) from t1;
+count(*)
+48
+set binlog_group_id=1800, master_server_id=34;
+show binlog info for 0;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 500;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1006;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1007;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1008;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1031;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1056;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1057;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1800;
+Log_name	Pos	Server_ID
+#	#	34
+show binlog info for 1900;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+set global rpl_hierarchical_cache_frequency=0;
+show binlog info for 0;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 500;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1006;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1007;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1008;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1031;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1056;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1057;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1800;
+Log_name	Pos	Server_ID
+#	#	34
+show binlog info for 1900;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+set global rpl_hierarchical_cache_frequency=50;
+show binlog info for 0;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 500;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1006;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1007;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1008;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1031;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1056;
+Log_name	Pos	Server_ID
+#	#	1
+show binlog info for 1057;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1800;
+Log_name	Pos	Server_ID
+#	#	34
+show binlog info for 1900;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+include/stop_slave.inc
+include/stop_slave.inc
+purge binary logs before now();
+show binlog info for 1056;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1800;
+Log_name	Pos	Server_ID
+#	#	34
+set binlog_group_id=1850, master_server_id=1;
+purge binary logs to 'second_log';
+show binlog info for 1800;
+ERROR HY000: Error when executing command SHOW BINLOG INFO FOR: Failed to find matching binlog group.
+show binlog info for 1850;
+Log_name	Pos	Server_ID
+#	#	1
+reset master;
+flush logs;
+purge binary logs before now();
+set binlog_group_id=19, master_server_id=1;
+ERROR HY000: This operation requires the WITH RESET option.
+set binlog_group_id=19, master_server_id=1 with reset;
+create table t2 (a int, b char(32));
+drop table t2;
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+start slave;
+include/wait_for_slave_sql_error.inc [errno=1642]
+Last_SQL_Error = 'Slave SQL thread encountered ev->group_id==20 < last processed ID==1056. Stopping replication.'
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+start slave;
+include/wait_for_slave_sql_error.inc [errno=1642]
+Last_SQL_Error = 'Slave SQL thread encountered ev->group_id==20 < last processed ID==1056. Stopping replication.'
+include/stop_slave_io.inc
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+set binlog_group_id=2000, master_server_id=1 with reset;
+include/stop_slave_io.inc
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+set binlog_group_id=2000, master_server_id=1 with reset;
+set binlog_group_id=2000, master_server_id=1 with reset;
+change master to connect_using_group_id;
+include/start_slave.inc
+change master to connect_using_group_id;
+include/start_slave.inc
+create table t3 (a int, b char(32));
+include/stop_slave.inc
+change master to MASTER_PORT=SLAVE_MYPORT, MASTER_LOG_FILE='start_file', MASTER_LOG_POS=start_pos;
+include/start_slave.inc
+select count(*) from t3;
+count(*)
+136
+include/stop_slave.inc
+change master to MASTER_HOST='';
+drop table t3;
+set binlog_group_id=2000, master_server_id=1 with reset;
+change master to MASTER_HOST='127.0.0.1', MASTER_USER='root',
+MASTER_PASSWORD='', MASTER_PORT=SLAVE_MYPORT, CONNECT_USING_GROUP_ID;
+include/start_slave.inc
+select count(*) from t3;
+count(*)
+136
+select count(*) from t3;
+count(*)
+136
+include/stop_slave.inc
+change master to MASTER_HOST='';
+change master to MASTER_HOST='127.0.0.1', MASTER_USER='root',
+MASTER_PASSWORD='', MASTER_PORT=MASTER_MYPORT, CONNECT_USING_GROUP_ID;
+include/start_slave.inc
+include/stop_slave.inc
+change master to master_port=MASTER_MYPORT, connect_using_group_id;
+Connect_Using_Group_ID = 'Yes'
+include/start_slave.inc
+select count(*) from t3;
+count(*)
+144
+Connect_Using_Group_ID = 'No'
+include/stop_slave.inc
+include/start_slave.inc
+select count(*) from t3;
+count(*)
+152
+include/stop_slave.inc
+change master to master_host='';
+insert into t3 values (9, 'This is some testing text');
+change master to master_host='127.0.0.1', master_port=MASTER_MYPORT, connect_using_group_id;
+start slave io_thread;
+include/wait_for_slave_io_error.inc [errno=1236]
+Last_IO_Error = 'Got fatal error 1236 from master when reading data from binary log: 'Slave trying to connect using group_id = 2154 which couldn't be found in the bin logs.''
+include/stop_slave_io.inc
+Warnings:
+Note	1255	Slave already has been stopped
+insert into t3 values (9, 'This is some testing text');
+change master to master_host='127.0.0.1', master_port=MASTER_MYPORT, connect_using_group_id;
+start slave io_thread;
+include/wait_for_slave_io_error.inc [errno=1236]
+Last_IO_Error = 'Got fatal error 1236 from master when reading data from binary log: 'Slave trying to connect using group_id = 2154, but server_id from the slave doesn't match that found in the bin log. Slave appea''
+include/wait_for_slave_io_to_stop.inc
+set binlog_group_id=MASTER_GROUP_ID, master_server_id=1;
+include/start_slave.inc
+include/stop_slave.inc
+set binlog_group_id=2500, master_server_id=1;
+create table t4(a int);
+show binlog info for 2500;
+Log_name	Pos	Server_ID
+#	#	1
+set binlog_group_id=2500, master_server_id=1;
+change master to connect_using_group_id;
+include/start_slave.inc
+create temporary table t7 (f int);
+ERROR HY000: The MySQL server is running with the --rpl-hierarchical option so it cannot execute this statement
+create temporary table t7 (f int);
+insert into t7 values (1), (2), (3);
+include/stop_slave.inc
+set binlog_group_id=9223372036854775807, master_server_id=1;
+show master status;
+File	#
+Position	#
+Binlog_Do_DB	
+Binlog_Ignore_DB	
+Group_ID	9223372036854775807
+set binlog_group_id=9223372036854775808, master_server_id=1;
+show master status;
+File	#
+Position	#
+Binlog_Do_DB	
+Binlog_Ignore_DB	
+Group_ID	9223372036854775808
+set binlog_group_id=9223372036854775809, master_server_id=1;
+show master status;
+File	#
+Position	#
+Binlog_Do_DB	
+Binlog_Ignore_DB	
+Group_ID	9223372036854775809
+create table t5 (a int, b char(32));
+change master to connect_using_group_id;
+include/start_slave.inc
+select count(*) from t5;
+count(*)	16
+select 9223372036854775826 - 9223372036854775826 as zero;
+zero	0
+set binlog_group_id=18446744073709551614, master_server_id=1;
+show master status;
+File	#
+Position	#
+Binlog_Do_DB	
+Binlog_Ignore_DB	
+Group_ID	18446744073709551614
+set binlog_group_id=18446744073709551615, master_server_id=1;
+show master status;
+File	#
+Position	#
+Binlog_Do_DB	
+Binlog_Ignore_DB	
+Group_ID	18446744073709551615
+set binlog_group_id=9223372036854775826, master_server_id=1 with reset;
+include/stop_slave.inc
+change master to master_log_file='master-bin.000001', connect_using_group_id;
+ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use
+change master to master_log_pos=4, connect_using_group_id;
+ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use
+change master to relay_log_file='slave-bin.000001', connect_using_group_id;
+ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use
+change master to relay_log_pos=4, connect_using_group_id;
+ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+Connect_Using_Group_ID = 'No'
+change master to connect_using_group_id;
+Connect_Using_Group_ID = 'Yes'
+change master to master_user='test2';
+Connect_Using_Group_ID = 'Yes'
+change master to master_log_file='master-bin.000001';
+Connect_Using_Group_ID = 'No'
+change master to master_user='root', connect_using_group_id;
+include/start_slave.inc
+drop table t1, t3, t4, t5;
+set global rpl_hierarchical_cache_frequency=1;
+include/rpl_end.inc

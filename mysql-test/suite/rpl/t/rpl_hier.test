@@ -1,0 +1,609 @@
+--source include/have_rpl_hierarchical.inc
+
+--let $rpl_server_count= 3
+--let $rpl_topology= 1->2, 1->3
+--source include/rpl_init.inc
+
+# Save value for cleanup at the end
+let $cache_frequency= query_get_value(show variables like 'rpl_hierarchical_cache_frequency', Value, 1);
+
+# Suppress expected errors
+call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+ which couldn't be found in the bin logs\.");
+call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+, but server_id from the slave doesn't match that found in the bin log\. Slave appea.*");
+call mtr.add_suppression("Slave SQL thread encountered ev->group_id==[0-9]+ < last processed ID==[0-9]+. Stopping replication. Error_code: 1642");
+
+#
+# Slave's binlog should only contain events from the master.
+#
+connection server_1;
+save_master_pos;
+connection server_2;
+sync_with_master;
+let $begin_pos= query_get_value(show master status, Position, 1);
+create table t1 (a int, b char(32));
+--disable_query_log
+let $i= 16;
+while ($i)
+{
+  eval insert into t1 values ($i, 'This is some testing text');
+  dec $i;
+}
+--enable_query_log
+drop table t1;
+let $end_pos= query_get_value(show master status, Position, 1);
+--disable_query_log
+eval select $begin_pos - $end_pos as zero;
+--enable_query_log
+
+#
+# Events in slaves' binlogs should have the same group_id as on the master.
+#
+connection server_1;
+# Set master to use non-default starting group_id for better verification.
+set binlog_group_id=1007, master_server_id=1;
+create table t1 (a int, b char(32));
+--disable_query_log
+let $i= 48;
+while ($i)
+{
+  eval insert into t1 values ($i, 'This is some testing text');
+  dec $i;
+}
+--enable_query_log
+let $master_group_id= query_get_value(show master status, Group_ID, 1);
+save_master_pos;
+
+connection server_2;
+sync_with_master;
+let $server_2_group_id= query_get_value(show slave status, Exec_Master_Group_ID, 1);
+--disable_query_log
+eval select $master_group_id - $server_2_group_id as zero;
+--enable_query_log
+
+#
+# Rotate events don't have a group_id. Test edge case of slave stopping
+# just after executing a rotate and verify that it can start back up again
+# when connecting to the master using the group_id.
+#
+connection server_2;
+--source include/stop_slave.inc
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+set binlog_group_id=0, master_server_id=2 with reset;
+drop table t1;
+start slave until master_log_file='master-bin.000003', master_log_pos=106;
+--source include/wait_for_slave_sql_to_stop.inc
+--source include/stop_slave.inc
+change master to connect_using_group_id;
+--source include/start_slave.inc
+sync_with_master;
+select count(*) from t1;
+
+#
+# Test some scenarios around 'show binlog info for' before we reset master.
+#
+connection server_1;
+
+# Setting id will cause a log rotate
+set binlog_group_id=1800, master_server_id=34;
+
+--error 1220
+show binlog info for 0;
+--error 1220
+show binlog info for 500;
+--error 1220
+show binlog info for 1006;
+--replace_column 1 # 2 #
+show binlog info for 1007;
+--replace_column 1 # 2 #
+show binlog info for 1008;
+--replace_column 1 # 2 #
+show binlog info for 1031;
+--replace_column 1 # 2 #
+show binlog info for 1056;
+--error 1220
+show binlog info for 1057;
+# Should have a different server_id because we set it above.
+--replace_column 1 # 2 #
+show binlog info for 1800;
+--error 1220
+show binlog info for 1900;
+
+# Disable the hierarchical cache and verify same lookups
+set global rpl_hierarchical_cache_frequency=0;
+
+--error 1220
+show binlog info for 0;
+--error 1220
+show binlog info for 500;
+--error 1220
+show binlog info for 1006;
+--replace_column 1 # 2 #
+show binlog info for 1007;
+--replace_column 1 # 2 #
+show binlog info for 1008;
+--replace_column 1 # 2 #
+show binlog info for 1031;
+--replace_column 1 # 2 #
+show binlog info for 1056;
+--error 1220
+show binlog info for 1057;
+# Should have a different server_id because we set it above.
+--replace_column 1 # 2 #
+show binlog info for 1800;
+--error 1220
+show binlog info for 1900;
+
+# Re-enable the hierarchical cache and verify same lookups
+set global rpl_hierarchical_cache_frequency=50;
+
+--error 1220
+show binlog info for 0;
+--error 1220
+show binlog info for 500;
+--error 1220
+show binlog info for 1006;
+--replace_column 1 # 2 #
+show binlog info for 1007;
+--replace_column 1 # 2 #
+show binlog info for 1008;
+--replace_column 1 # 2 #
+show binlog info for 1031;
+--replace_column 1 # 2 #
+show binlog info for 1056;
+--error 1220
+show binlog info for 1057;
+# Should have a different server_id because we set it above.
+--replace_column 1 # 2 #
+show binlog info for 1800;
+--error 1220
+show binlog info for 1900;
+
+#
+# Test cache doesn't blow up when purging logs
+#
+connection server_2;
+--source include/stop_slave.inc
+
+connection server_3;
+sync_with_master;
+--source include/stop_slave.inc
+
+connection server_1;
+# purge logs from before we set id to 1800 and caused a rotate
+sleep 1;
+purge binary logs before now();
+--error 1220
+show binlog info for 1056;
+--replace_column 1 # 2 #
+show binlog info for 1800;
+
+set binlog_group_id=1850, master_server_id=1;
+let $second_log= query_get_value(show binary logs, Log_name, 2);
+--replace_result $second_log second_log
+eval purge binary logs to '$second_log';
+
+--error 1220
+show binlog info for 1800;
+--replace_column 1 # 2 #
+show binlog info for 1850;
+
+# Make sure cache is updated correctly on reset master
+reset master;
+flush logs;
+sleep 1;
+purge binary logs before now();
+
+#
+# Slave should stop replicating if it encounters a group_id less than its
+# current value.
+#
+connection server_1;
+
+# Changing group_id to be lower than the current requires 'with reset'.
+--error 1641
+set binlog_group_id=19, master_server_id=1;
+set binlog_group_id=19, master_server_id=1 with reset;
+create table t2 (a int, b char(32));
+drop table t2;
+
+connection server_2;
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+start slave;
+--let $show_slave_sql_error= 1
+--let $slave_sql_errno= 1642
+--source include/wait_for_slave_sql_error.inc
+
+connection server_3;
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+start slave;
+--let $show_slave_sql_error= 1
+--let $slave_sql_errno= 1642
+--source include/wait_for_slave_sql_error.inc
+
+#
+# Get slaves back up and running
+#
+connection server_2;
+--source include/stop_slave_io.inc
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+set binlog_group_id=2000, master_server_id=1 with reset;
+
+connection server_3;
+--source include/stop_slave_io.inc
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+set binlog_group_id=2000, master_server_id=1 with reset;
+
+connection server_1;
+set binlog_group_id=2000, master_server_id=1 with reset;
+save_master_pos;
+
+connection server_2;
+change master to connect_using_group_id;
+--source include/start_slave.inc
+sync_with_master;
+
+connection server_3;
+change master to connect_using_group_id;
+--source include/start_slave.inc
+sync_with_master;
+
+#
+# Fake a failover using group_ids. Uses 'show binlog info for'.
+#
+connection server_1;
+create table t3 (a int, b char(32));
+
+#
+# Perform lots of inserts because we want 'show binlog info for' to have
+# to read multiple blocks (4K) from the master's current bin log in order
+# to test locking code specific to that code path.
+#
+--disable_query_log
+let $i= 128;
+while ($i)
+{
+  eval insert into t3 values ($i, 'This is some testing text');
+  dec $i;
+}
+--enable_query_log
+save_master_pos;
+
+connection server_3;
+sync_with_master;
+--source include/stop_slave.inc
+let $server_3_group_id= query_get_value(show slave status, Exec_Master_Group_ID, 1);
+
+connection server_1;
+--disable_query_log
+let $i= 8;
+while ($i)
+{
+  eval insert into t3 values ($i, 'This is some testing text');
+  dec $i;
+}
+--enable_query_log
+save_master_pos;
+
+connection server_2;
+sync_with_master;
+let $start_file= query_get_value(show binlog info for $server_3_group_id, Log_name, 1);
+let $start_pos= query_get_value(show binlog info for $server_3_group_id, Pos, 1);
+save_master_pos;
+
+connection server_3;
+--replace_result $SLAVE_MYPORT SLAVE_MYPORT $start_file start_file $start_pos start_pos
+eval change master to MASTER_PORT=$SLAVE_MYPORT, MASTER_LOG_FILE='$start_file', MASTER_LOG_POS=$start_pos;
+--source include/start_slave.inc
+sync_with_master;
+select count(*) from t3;
+
+#
+# rpl_hierarhical allows replication from same server_id to support failover +
+# restore scenarios. Test that.
+#
+connection server_2;
+--source include/stop_slave.inc
+change master to MASTER_HOST='';
+save_master_pos;
+
+connection server_1;
+drop table t3;
+set binlog_group_id=2000, master_server_id=1 with reset;
+
+#
+# This time connect using just group_id.
+#
+--replace_result $SLAVE_MYPORT SLAVE_MYPORT
+eval change master to MASTER_HOST='127.0.0.1', MASTER_USER='root',
+  MASTER_PASSWORD='', MASTER_PORT=$SLAVE_MYPORT, CONNECT_USING_GROUP_ID;
+
+#
+# server_1 now replicating from server_2 and it has to play events which have
+# the same server_id as server_1, which should succeed.
+#
+--source include/start_slave.inc
+sync_with_master;
+
+# Verify table contents
+select count(*) from t3;
+connection server_2;
+select count(*) from t3;
+
+#
+# Fail back so server_2 is replicating from server_1.
+#
+connection server_1;
+--source include/stop_slave.inc
+change master to MASTER_HOST='';
+
+connection server_2;
+--replace_result $MASTER_MYPORT MASTER_MYPORT
+eval change master to MASTER_HOST='127.0.0.1', MASTER_USER='root',
+  MASTER_PASSWORD='', MASTER_PORT=$MASTER_MYPORT, CONNECT_USING_GROUP_ID;
+--source include/start_slave.inc
+
+#
+# Failover again, moving server_3 back to replicating from master.
+#
+connection server_3;
+--source include/stop_slave.inc
+connection server_1;
+--disable_query_log
+let $i= 8;
+while ($i)
+{
+  eval insert into t3 values ($i, 'This is some testing text');
+  dec $i;
+}
+--enable_query_log
+save_master_pos;
+
+connection server_3;
+--replace_result $MASTER_MYPORT MASTER_MYPORT
+eval change master to master_port=$MASTER_MYPORT, connect_using_group_id;
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+--source include/start_slave.inc
+sync_with_master;
+select count(*) from t3;
+
+#
+# After successfully connecting using group_id, the slave should then start
+# connecting with log and pos as it is more efficient. Verify that it is off
+# and that reconnection works.
+#
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+--source include/stop_slave.inc
+connection server_1;
+--disable_query_log
+let $i= 8;
+while ($i)
+{
+  eval insert into t3 values ($i, 'This is some testing text');
+  dec $i;
+}
+--enable_query_log
+save_master_pos;
+
+connection server_3;
+--source include/start_slave.inc
+sync_with_master;
+select count(*) from t3;
+
+#
+# Test trying to connect to master when master doesn't have matching group_id
+#
+connection server_2;
+sync_with_master;
+--source include/stop_slave.inc
+change master to master_host='';
+# Move server_2 into the future w.r.t. server_1
+insert into t3 values (9, 'This is some testing text');
+
+# Change master itself will succeed ...
+--replace_result $MASTER_MYPORT MASTER_MYPORT
+eval change master to master_host='127.0.0.1', master_port=$MASTER_MYPORT, connect_using_group_id;
+
+# ... but IO thread will fail when it tries to connect.
+start slave io_thread;
+--let $show_slave_io_error= 1
+--let $slave_io_errno= 1236
+--source include/wait_for_slave_io_error.inc
+--source include/stop_slave_io.inc
+
+#
+# Now test the automatic alternate future detection done as part of connecting
+#
+connection server_1;
+# Create an alternate future on server_1. server_1 and server_2 both have same
+# group_id for insert of 9, but the server_ids don't match.
+insert into t3 values (9, 'This is some testing text');
+save_master_pos;
+
+connection server_2;
+# Change master itself will succeed ...
+--replace_result $MASTER_MYPORT MASTER_MYPORT
+eval change master to master_host='127.0.0.1', master_port=$MASTER_MYPORT, connect_using_group_id;
+
+# ... but IO thread will fail when it tries to connect.
+start slave io_thread;
+--let $slave_io_errno= 1236
+--source include/wait_for_slave_io_error.inc
+--source include/wait_for_slave_io_to_stop.inc
+
+#
+# Fix so server_2 and server_3 both replicating from server_1.
+#
+let $master_group_id= query_get_value(show master status, Group_ID, 1);
+
+--replace_result $master_group_id MASTER_GROUP_ID
+eval set binlog_group_id=$master_group_id, master_server_id=1;
+--source include/start_slave.inc
+sync_with_master;
+
+connection server_3;
+sync_with_master;
+
+#
+# When using 'SET BINLOG_GROUP_ID' no events show up in the bin log with
+# the matching value. Make sure that 'SHOW BINLOG INFO FOR' works and the
+# slave can still connect with that value.
+#
+connection server_2;
+--source include/stop_slave.inc
+
+connection server_1;
+set binlog_group_id=2500, master_server_id=1;
+create table t4(a int);
+--disable_query_log
+let $1= 25;
+while ($1)
+{
+ eval insert into t4 values($1);
+ dec $1;
+}
+--enable_query_log
+# Verify can SHOW BINLOG INFO FOR 2500
+--replace_column 1 # 2 #
+show binlog info for 2500;
+save_master_pos;
+
+connection server_2;
+# Verify slave can connect
+set binlog_group_id=2500, master_server_id=1;
+change master to connect_using_group_id;
+--source include/start_slave.inc
+sync_with_master;
+
+connection server_3;
+sync_with_master;
+
+#
+# Test creation of temp tables on a master is disallowed when rpl_hierarchical is ON.
+#
+connection server_1;
+
+# On the master, creation should fail.
+--error ER_OPTION_PREVENTS_STATEMENT
+create temporary table t7 (f int);
+
+# Switch to a slave, where creation should succeed because with
+# rpl_hierarchical statements generated on the slave get filtered
+# before being written to the bin log.
+connection server_2;
+create temporary table t7 (f int);
+insert into t7 values (1), (2), (3);
+
+#
+# There is some conversion between ulonglong and longlong so test out that
+# functionality by using a value with the high bit set.
+#
+# 2^63 == 9223372036854775808
+# 2^64 - 1 == 18446744073709551615
+#
+connection server_2;
+--source include/stop_slave.inc
+
+connection server_1;
+set binlog_group_id=9223372036854775807, master_server_id=1;
+--vertical_results
+--replace_column 1 # 2 #
+show master status;
+
+set binlog_group_id=9223372036854775808, master_server_id=1;
+--vertical_results
+--replace_column 1 # 2 #
+show master status;
+
+set binlog_group_id=9223372036854775809, master_server_id=1;
+--vertical_results
+--replace_column 1 # 2 #
+show master status;
+
+# Let's actually replicate some events with these group_ids.
+create table t5 (a int, b char(32));
+--disable_query_log
+let $i= 16;
+while ($i)
+{
+  eval insert into t5 values ($i, 'This is some testing text');
+  dec $i;
+}
+--enable_query_log
+let $master_group_id= query_get_value(show master status, Group_ID, 1);
+save_master_pos;
+
+connection server_2;
+change master to connect_using_group_id;
+--source include/start_slave.inc
+sync_with_master;
+select count(*) from t5;
+let $server_2_group_id= query_get_value(show slave status, Exec_Master_Group_ID, 1);
+eval select $master_group_id - $server_2_group_id as zero;
+
+connection server_2;
+set binlog_group_id=18446744073709551614, master_server_id=1;
+--vertical_results
+--replace_column 1 # 2 #
+show master status;
+
+set binlog_group_id=18446744073709551615, master_server_id=1;
+--vertical_results
+--replace_column 1 # 2 #
+show master status;
+
+# Fix replication
+eval set binlog_group_id=$server_2_group_id, master_server_id=1 with reset;
+
+#
+# Test change master to fails when called with incompatible options.
+#
+connection server_2;
+--source include/stop_slave.inc
+--error 1149
+change master to master_log_file='master-bin.000001', connect_using_group_id;
+--error 1149
+change master to master_log_pos=4, connect_using_group_id;
+--error 1149
+change master to relay_log_file='slave-bin.000001', connect_using_group_id;
+--error 1149
+change master to relay_log_pos=4, connect_using_group_id;
+
+#
+# Verify connect_using_group_id getting set correctly.
+#
+let $master_user= query_get_value(show slave status, Master_User, 1);
+change master to master_log_file='master-bin.000001', master_log_pos=4;
+# Should be 'No'.
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+
+change master to connect_using_group_id;
+# Should be 'Yes'.
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+
+change master to master_user='test2';
+# Should still be 'Yes'.
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+
+change master to master_log_file='master-bin.000001';
+# Should now be 'No'.
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+
+# Fix replication
+eval change master to master_user='$master_user', connect_using_group_id;
+
+#
+# Cleanup
+#
+connection server_2;
+--source include/start_slave.inc
+
+connection server_1;
+drop table t1, t3, t4, t5;
+eval set global rpl_hierarchical_cache_frequency=$cache_frequency;
+--source include/rpl_end.inc
