@@ -1,0 +1,13 @@
+include/master-slave.inc
+[connection master]
+show binlog info for 1;
+ERROR HY000: The MySQL server is running with the --skip-rpl-hierarchical option so it cannot execute this statement
+include/stop_slave.inc
+change master to connect_using_group_id;
+ERROR HY000: The MySQL server is running with the --skip-rpl-hierarchical option so it cannot execute this statement
+include/start_slave.inc
+set binlog_group_id=1000, master_server_id=1;
+ERROR HY000: The MySQL server is running with the --skip-rpl-hierarchical option so it cannot execute this statement
+set binlog_group_id=1000, master_server_id=1 with reset;
+ERROR HY000: The MySQL server is running with the --skip-rpl-hierarchical option so it cannot execute this statement
+include/rpl_end.inc

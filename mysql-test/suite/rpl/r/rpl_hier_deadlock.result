@@ -1,0 +1,6 @@
+include/master-slave.inc
+[connection master]
+create table t1 (a int, b char(32));
+include/check_slave_no_error.inc
+drop table t1;
+include/rpl_end.inc

@@ -1,0 +1,23 @@
+# Tests the fix for a deadlock which used to exist between
+# SHOW SLAVE STATUS and the replication SQL thread when
+# rpl_hierarchical was enabled.
+
+--source include/have_rpl_hierarchical.inc
+--source include/have_debug.inc
+--source include/master-slave.inc
+
+connection master;
+create table t1 (a int, b char(32));
+save_master_pos;
+
+sleep 1;
+connection slave;
+
+# check_slave_no_error runs multiple SHOW SLAVE STATUSes
+--source include/check_slave_no_error.inc
+sync_with_master;
+
+# cleanup
+connection master;
+drop table t1;
+--source include/rpl_end.inc

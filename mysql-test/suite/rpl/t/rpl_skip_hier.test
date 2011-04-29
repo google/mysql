@@ -1,0 +1,32 @@
+--source include/not_rpl_hierarchical.inc
+--source include/master-slave.inc
+
+#
+# Test that 'show binlog info for' doesn't work when running with
+# --skip-rpl-hierarchical.
+#
+connection master;
+--error 1290
+show binlog info for 1;
+
+#
+# Test that 'change master to connect_using_group_id' doesn't work
+# when running with --skip-rpl-hierarchical
+#
+connection slave;
+--source include/stop_slave.inc
+--error 1290
+change master to connect_using_group_id;
+--source include/start_slave.inc
+
+#
+# Test that 'set binlog_group_id=...' doesn't work when running
+# with --skip-rpl-hierarchical.
+#
+connection master;
+--error 1290
+set binlog_group_id=1000, master_server_id=1;
+--error 1290
+set binlog_group_id=1000, master_server_id=1 with reset;
+
+--source include/rpl_end.inc
