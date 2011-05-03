@@ -4970,6 +4970,8 @@ int MYSQL_BIN_LOG::write_cache(IO_CACHE *cache, bool lock_log, bool sync_log)
   long val;
   uchar header[LOG_EVENT_HEADER_LEN];
 
+  DBUG_EXECUTE_IF("half_binlogged_transaction", length-= 100;);
+
   /*
     The events in the buffer have incorrect end_log_pos data
     (relative to beginning of group rather than absolute),
@@ -5214,6 +5216,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
 
       if ((write_error= write_cache(cache, false, false)))
         goto err;
+      DBUG_EXECUTE_IF("half_binlogged_transaction", goto DBUG_skip_commit;);
 
       if (commit_event && commit_event->write(&log_file))
         goto err;
@@ -5221,6 +5224,9 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
       if (incident && write_incident(thd, FALSE))
         goto err;
 
+#ifndef DBUG_OFF
+DBUG_skip_commit:
+#endif
       if (flush_and_sync())
         goto err;
       DBUG_EXECUTE_IF("half_binlogged_transaction", DBUG_SUICIDE(););
