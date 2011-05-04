@@ -1,0 +1,69 @@
+#
+# Tests the persistence and restoration of group_ids from the index file.
+#
+--source include/have_rpl_hierarchical.inc
+--source include/master-slave.inc
+
+# Start with some non-default group_id value.
+
+#
+# A clean restart should not alter the ID.
+#
+let $expected_id= 1209;
+eval set binlog_group_id=$expected_id, master_server_id=1;
+--let $rpl_server_number= 1
+--source include/rpl_restart_server.inc
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+#
+# Test persistence of group_ids with high bit set
+#
+let $expected_id= 9223372036854775807;
+eval set binlog_group_id=$expected_id, master_server_id=1;
+--let $rpl_server_number= 1
+--source include/rpl_restart_server.inc
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+let $expected_id= 9223372036854775808;
+eval set binlog_group_id=$expected_id, master_server_id=1;
+--let $rpl_server_number= 1
+--source include/rpl_restart_server.inc
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+let $expected_id= 9223372036854775809;
+eval set binlog_group_id=$expected_id, master_server_id=1;
+--let $rpl_server_number= 1
+--source include/rpl_restart_server.inc
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+let $expected_id= 18446744073709551614;
+eval set binlog_group_id=$expected_id, master_server_id=1;
+--let $rpl_server_number= 1
+--source include/rpl_restart_server.inc
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+let $expected_id= 18446744073709551615;
+eval set binlog_group_id=$expected_id, master_server_id=1;
+--let $rpl_server_number= 1
+--source include/rpl_restart_server.inc
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+--source include/rpl_end.inc
