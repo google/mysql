@@ -1,0 +1,55 @@
+include/master-slave.inc
+[connection master]
+call mtr.add_suppression("Error in Log_event::read_log_event()");
+set binlog_group_id=1209, master_server_id=1;
+create table t1 (a int primary key) engine=innodb;
+set session debug="d,crash_commit_after_prepare";
+insert into t1 values (1);
+ERROR HY000: Lost connection to MySQL server during query
+zero
+0
+set session debug="d,crash_commit_after_log";
+insert into t1 values (2);
+ERROR HY000: Lost connection to MySQL server during query
+zero
+0
+set session debug="d,crash_commit_before_unlog";
+insert into t1 values (3);
+ERROR HY000: Lost connection to MySQL server during query
+zero
+0
+include/stop_slave.inc
+set session debug="d,half_binlogged_transaction";
+begin;
+insert into t1 values (4);
+insert into t1 values (5);
+insert into t1 values (6);
+insert into t1 values (7);
+commit;
+ERROR HY000: Lost connection to MySQL server during query
+zero
+0
+purge binary logs to 'MASTER_LOG_FILE';
+change master to master_host='';
+change master to master_host='127.0.0.1', master_user='root',
+master_password='', master_port=SLAVE_MYPORT, connect_using_group_id;
+include/start_slave.inc
+Connect_Using_Group_ID = 'No'
+zero
+0
+set global debug="d,crash_commit_after_log";
+insert into t1 values (8);
+zero
+0
+zero
+0
+Connect_Using_Group_ID = 'No'
+insert into t1 values (9);
+insert into t1 values (10);
+include/stop_slave.inc
+change master to master_host='';
+change master to master_host='127.0.0.1', master_user='root',
+master_password='', master_port=MASTER_MYPORT, connect_using_group_id;
+include/start_slave.inc
+drop table t1;
+include/rpl_end.inc

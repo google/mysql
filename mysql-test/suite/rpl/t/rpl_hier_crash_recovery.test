@@ -1,0 +1,204 @@
+#
+# Crash recovery tests for rpl_hierarchical.
+#
+
+--source include/have_rpl_hierarchical.inc
+--source include/have_debug.inc
+--source include/have_innodb.inc
+--source include/master-slave.inc
+
+# This test intentionally corrupts the bin log of the master.
+call mtr.add_suppression("Error in Log_event::read_log_event()");
+
+# Start with some non-default group_id value.
+let $expected_id= 1209;
+connection master;
+eval set binlog_group_id=$expected_id, master_server_id=1;
+
+# Need a table
+create table t1 (a int primary key) engine=innodb;
+--inc $expected_id
+
+#
+# If server crashes before event flushed to log, group_id should not be
+# consumed.
+#
+set session debug="d,crash_commit_after_prepare";
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+
+--error 2013
+insert into t1 values (1);
+
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+#
+# If server crashes after event flushed to log, group_id should be
+# consumed.
+#
+set session debug="d,crash_commit_after_log";
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+
+--error 2013
+insert into t1 values (2);
+--inc $expected_id
+
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+#
+# If server crashes after event committed in InnoDB, group_id should
+# be consumed.
+#
+set session debug="d,crash_commit_before_unlog";
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+
+--error 2013
+insert into t1 values (3);
+--inc $expected_id
+
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+# Next test corrupts the bin log so stop slave to prevent it hitting
+# an error.
+sync_slave_with_master;
+--source include/stop_slave.inc
+
+# If server crashes in the middle of writing a transaction to the bin
+# log, before writing the COMMIT, group_id should not be consumed.
+connection master;
+set session debug="d,half_binlogged_transaction";
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+
+begin;
+insert into t1 values (4);
+insert into t1 values (5);
+insert into t1 values (6);
+insert into t1 values (7);
+--error 2013
+commit;
+
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+# Delete corrupt bin log.
+let $purge_to= query_get_value(show master status, File, 1);
+--replace_result $purge_to MASTER_LOG_FILE
+eval purge binary logs to '$purge_to';
+
+#
+# Test that crash recovery of the slave correctly recovers:
+#   1) The group_id.
+#   2) The server_id corresponding to the recovered group_id.
+#   3) Slave SQL thread continues from correct group_id.
+#
+connection slave;
+change master to master_host='';
+save_master_pos;
+
+connection master;
+--replace_result $SLAVE_MYPORT SLAVE_MYPORT
+eval change master to master_host='127.0.0.1', master_user='root',
+  master_password='', master_port=$SLAVE_MYPORT, connect_using_group_id;
+--source include/start_slave.inc
+sync_with_master;
+
+# Verify connect_using_group_id has turned itself off after successfully
+# connecting.
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+
+let $current_server_id= query_get_value(show binlog info for $expected_id, Server_ID, 1);
+--disable_query_log
+eval select 1 - $current_server_id as zero;
+--enable_query_log
+
+set global debug="d,crash_commit_after_log";
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+
+connection slave;
+insert into t1 values (8);
+--inc $expected_id
+
+connection master;
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+# Verify correct group_id recovered.
+let $current_id= query_get_value(show master status, Group_ID, 1);
+--disable_query_log
+eval select $expected_id - $current_id as zero;
+--enable_query_log
+
+# Verify correct server_id recovered.
+let $current_server_id= query_get_value(show binlog info for $expected_id, Server_ID, 1);
+--disable_query_log
+eval select 2 - $current_server_id as zero;
+--enable_query_log
+
+# Verify connect_using_group_id turned itself on as part of crash recovery.
+--let $status_items= Connect_Using_Group_ID
+--source include/show_slave_status.inc
+
+connection slave;
+insert into t1 values (9);
+--inc $expected_id
+insert into t1 values (10);
+--inc $expected_id
+save_master_pos;
+
+connection master;
+sync_with_master;
+
+--source include/stop_slave.inc
+change master to master_host='';
+save_master_pos;
+
+connection slave;
+--replace_result $MASTER_MYPORT MASTER_MYPORT
+eval change master to master_host='127.0.0.1', master_user='root',
+  master_password='', master_port=$MASTER_MYPORT, connect_using_group_id;
+--source include/start_slave.inc
+sync_with_master;
+
+#
+# Cleanup
+#
+connection server_1;
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+--connection default
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+connection master;
+drop table t1;
+--source include/rpl_end.inc
+
