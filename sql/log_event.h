@@ -215,7 +215,6 @@ struct sql_ex_info
 
  ****************************************************************************/
 
-#define LOG_EVENT_HEADER_LEN 19     /* the fixed header length */
 #define OLD_HEADER_LEN       13     /* the fixed header length in 3.23 */
 /*
    Fixed header length, where 4.x and 5.0 agree. That is, 5.0 may have a longer
@@ -224,7 +223,10 @@ struct sql_ex_info
    event's ID, LOG_EVENT_HEADER_LEN will be something like 26, but
    LOG_EVENT_MINIMAL_HEADER_LEN will remain 19.
 */
-#define LOG_EVENT_MINIMAL_HEADER_LEN 19
+#define LOG_EVENT_MINIMAL_HEADER_LEN 19u
+
+/* Header size written depends on some options. */
+#define LOG_EVENT_HEADER_LEN         (LOG_EVENT_MINIMAL_HEADER_LEN)
 
 /* event-specific post-header sizes */
 // where 3.23, 4.x and 5.0 agree
@@ -1000,6 +1002,8 @@ public:
                     bool is_more);
   void print_base64(IO_CACHE* file, PRINT_EVENT_INFO* print_event_info,
                     bool is_more);
+  void print_hexdump(IO_CACHE *file, my_off_t hexdump_from, uchar *ptr,
+                     my_off_t size);
 #endif
 
   static void *operator new(size_t size)
@@ -1040,6 +1044,7 @@ public:
     return my_time(0);
   }
 #endif
+  virtual uint get_header_size() { return LOG_EVENT_HEADER_LEN; }
   virtual Log_event_type get_type_code() = 0;
   virtual bool is_valid() const = 0;
   void set_artificial_event() { flags |= LOG_EVENT_ARTIFICIAL_F; }
@@ -2187,6 +2192,7 @@ public:
 #ifndef MYSQL_CLIENT
   Start_log_event_v3();
 #ifdef HAVE_REPLICATION
+  uint get_header_size() { return LOG_EVENT_MINIMAL_HEADER_LEN; }
   void pack_info(Protocol* protocol);
 #endif /* HAVE_REPLICATION */
 #else
@@ -2639,6 +2645,7 @@ public:
 		   uint ident_len_arg,
 		   ulonglong pos_arg, uint flags);
 #ifdef HAVE_REPLICATION
+  uint get_header_size() { return LOG_EVENT_MINIMAL_HEADER_LEN; }
   void pack_info(Protocol* protocol);
 #endif /* HAVE_REPLICATION */
 #else
