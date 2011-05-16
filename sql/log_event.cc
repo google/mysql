@@ -672,7 +672,12 @@ const char* Log_event::get_type_str()
 
 #ifndef MYSQL_CLIENT
 Log_event::Log_event(THD* thd_arg, uint16 flags_arg, bool using_trans)
-  :log_pos(0), temp_buf(0), exec_time(0), flags(flags_arg), thd(thd_arg)
+  :log_pos(0),
+  temp_buf(0),
+  exec_time(0),
+  data_written(0),
+  flags(flags_arg),
+  thd(thd_arg)
 {
   server_id=	thd->server_id;
   when=		thd->start_time;
@@ -688,8 +693,13 @@ Log_event::Log_event(THD* thd_arg, uint16 flags_arg, bool using_trans)
 */
 
 Log_event::Log_event()
-  :temp_buf(0), exec_time(0), flags(0), cache_stmt(0),
-   thd(0)
+  :log_pos(0),
+  temp_buf(0),
+  exec_time(0),
+  data_written(0),
+  flags(0),
+  cache_stmt(0),
+  thd(0)
 {
   server_id=	::server_id;
   /*
@@ -697,7 +707,6 @@ Log_event::Log_event()
     my_init() is called
   */
   when=		0;
-  log_pos=	0;
 }
 #endif /* !MYSQL_CLIENT */
 
@@ -708,7 +717,9 @@ Log_event::Log_event()
 
 Log_event::Log_event(const char* buf,
                      const Format_description_log_event* description_event)
-  :temp_buf(0), cache_stmt(0)
+  :temp_buf(0),
+  data_written(0),
+  cache_stmt(0)
 {
 #ifndef MYSQL_CLIENT
   thd = 0;
@@ -771,7 +782,7 @@ Log_event::Log_event(const char* buf,
     */
     return;
   }
-  /* otherwise, go on with reading the header from buf (nothing now) */
+  /* otherwise, go on with reading the header from buf. */
 }
 
 #ifndef MYSQL_CLIENT
@@ -906,7 +917,7 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
   DBUG_ENTER("Log_event::write_header");
 
   /* Store number of bytes that will be written by this event */
-  data_written= event_data_length + sizeof(header);
+  data_written= event_data_length + get_header_size();
 
   /*
     log_pos != 0 if this is relay-log event. In this case we should not
@@ -968,7 +979,7 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
   int4store(header+ LOG_POS_OFFSET, log_pos);
   int2store(header+ FLAGS_OFFSET, flags);
 
-  DBUG_RETURN(my_b_safe_write(file, header, sizeof(header)) != 0);
+  DBUG_RETURN(my_b_safe_write(file, header, get_header_size()) != 0);
 }
 
 
@@ -1359,6 +1370,7 @@ void Log_event::print_header(IO_CACHE* file,
                              bool is_more __attribute__((unused)))
 {
   char llbuff[22];
+  char emit_buf[256];                           // Enough for storing one line
   my_off_t hexdump_from= print_event_info->hexdump_from;
   DBUG_ENTER("Log_event::print_header");
 
@@ -1367,6 +1379,11 @@ void Log_event::print_header(IO_CACHE* file,
   my_b_printf(file, " server id %lu  end_log_pos %s ", (ulong) server_id,
               llstr(log_pos,llbuff));
 
+  if ((get_type_code() != FORMAT_DESCRIPTION_EVENT) &&
+      (get_type_code() != ROTATE_EVENT))
+  {
+  }
+
   /* mysqlbinlog --hexdump */
   if (print_event_info->hexdump_from)
   {
@@ -1374,19 +1391,13 @@ void Log_event::print_header(IO_CACHE* file,
     uchar *ptr= (uchar*)temp_buf;
     my_off_t size=
       uint4korr(ptr + EVENT_LEN_OFFSET) - LOG_EVENT_MINIMAL_HEADER_LEN;
-    my_off_t i;
 
-    /* Header len * 4 >= header len * (2 chars + space + extra space) */
-    char *h, hex_string[LOG_EVENT_MINIMAL_HEADER_LEN*4]= {0};
-    char *c, char_string[16+1]= {0};
-
-    /* Pretty-print event common header if header is exactly 19 bytes */
-    if (print_event_info->common_header_len == LOG_EVENT_MINIMAL_HEADER_LEN)
+    /* Pretty-print event common header if header is 19 bytes or larger. */
+    if (print_event_info->common_header_len >= LOG_EVENT_MINIMAL_HEADER_LEN)
     {
-      char emit_buf[256];               // Enough for storing one line
       my_b_printf(file, "# Position  Timestamp   Type   Master ID        "
                   "Size      Master Pos    Flags \n");
-      size_t const bytes_written=
+      size_t bytes_written=
         my_snprintf(emit_buf, sizeof(emit_buf),
                     "# %8.8lx %02x %02x %02x %02x   %02x   "
                     "%02x %02x %02x %02x   %02x %02x %02x %02x   "
@@ -1399,59 +1410,80 @@ void Log_event::print_header(IO_CACHE* file,
       my_b_write(file, (uchar*) emit_buf, bytes_written);
       ptr += LOG_EVENT_MINIMAL_HEADER_LEN;
       hexdump_from += LOG_EVENT_MINIMAL_HEADER_LEN;
-    }
 
-    /* Rest of event (without common header) */
-    for (i= 0, c= char_string, h=hex_string;
-	 i < size;
-	 i++, ptr++)
-    {
-      my_snprintf(h, 4, "%02x ", *ptr);
-      h += 3;
-
-      *c++= my_isalnum(&my_charset_bin, *ptr) ? *ptr : '.';
-
-      if (i % 16 == 15)
+      /* There can only be more header if the event isn't one of these. */
+      if ((get_type_code() != FORMAT_DESCRIPTION_EVENT) &&
+          (get_type_code() != ROTATE_EVENT))
       {
-        /*
-          my_b_printf() does not support full printf() formats, so we
-          have to do it this way.
-
-          TODO: Rewrite my_b_printf() to support full printf() syntax.
-         */
-        char emit_buf[256];
-        size_t const bytes_written=
-          my_snprintf(emit_buf, sizeof(emit_buf),
-                      "# %8.8lx %-48.48s |%16s|\n",
-                      (unsigned long) (hexdump_from + (i & 0xfffffff0)),
-                      hex_string, char_string);
-        DBUG_ASSERT(static_cast<size_t>(bytes_written) < sizeof(emit_buf));
-	my_b_write(file, (uchar*) emit_buf, bytes_written);
-	hex_string[0]= 0;
-	char_string[0]= 0;
-	c= char_string;
-	h= hex_string;
       }
-      else if (i % 8 == 7) *h++ = ' ';
     }
-    *c= '\0';
 
-    if (hex_string[0])
+    print_hexdump(file, hexdump_from, ptr, size);
+    my_b_printf(file, "# ");
+  }
+  DBUG_VOID_RETURN;
+}
+
+/*
+  Log_event::print_hexdump()
+*/
+
+void Log_event::print_hexdump(IO_CACHE *file, my_off_t hexdump_from, uchar *ptr,
+                              my_off_t size)
+{
+  my_off_t i;
+  DBUG_ENTER("Log_event::print_hexdump");
+
+  /* Header len * 4 >= header len * (2 chars + space + extra space) */
+  char *h, hex_string[LOG_EVENT_MINIMAL_HEADER_LEN * 4]= { 0 };
+  char *c, char_string[16 + 1]= { 0 };
+
+  /* Rest of event (without common header). */
+  for (i= 0, c= char_string, h= hex_string;
+       i < size;
+       i++, ptr++)
+  {
+    my_snprintf(h, 4, "%02x ", *ptr);
+    h+= 3;
+
+    *c++= my_isalnum(&my_charset_bin, *ptr) ? *ptr : '.';
+
+    if (i % 16 == 15)
     {
+      /*
+        my_b_printf() does not support full printf() formats, so we
+        have to do it this way.
+
+        TODO: Rewrite my_b_printf() to support full printf() syntax.
+      */
       char emit_buf[256];
       size_t const bytes_written=
         my_snprintf(emit_buf, sizeof(emit_buf),
-                    "# %8.8lx %-48.48s |%s|\n",
+                    "# %8.8lx %-48.48s |%16s|\n",
                     (unsigned long) (hexdump_from + (i & 0xfffffff0)),
                     hex_string, char_string);
       DBUG_ASSERT(static_cast<size_t>(bytes_written) < sizeof(emit_buf));
       my_b_write(file, (uchar*) emit_buf, bytes_written);
+      hex_string[0]= 0;
+      char_string[0]= 0;
+      c= char_string;
+      h= hex_string;
     }
-    /*
-      need a # to prefix the rest of printouts for example those of
-      Rows_log_event::print_helper().
-    */
-    my_b_write(file, reinterpret_cast<const uchar*>("# "), 2);
+    else if (i % 8 == 7) *h++= ' ';
+  }
+  *c= '\0';
+
+  if (hex_string[0])
+  {
+    /* Non-full last line. */
+    char emit_buf[256];
+    size_t const bytes_written=
+      my_snprintf(emit_buf, sizeof(emit_buf),
+                  "# %8.8lx %-48.48s |%s|\n",
+                  (unsigned long) (hexdump_from + (i & 0xfffffff0)),
+                  hex_string, char_string);
+    DBUG_ASSERT(static_cast<size_t>(bytes_written) < sizeof(emit_buf));
+    my_b_write(file, (uchar*) emit_buf, bytes_written);
   }
   DBUG_VOID_RETURN;
 }
@@ -3589,7 +3621,13 @@ Start_log_event_v3::Start_log_event_v3(const char* buf,
                                        *description_event)
   :Log_event(buf, description_event)
 {
-  buf+= description_event->common_header_len;
+  /*
+    The size of the common header for the Rotate_log_event,
+    Start_log_event_v3, and the Format_description_log_event has to be
+    fixed at LOG_EVENT_MINIMAL_HEADER_LEN and should not be read from
+    the description log event supplied.
+  */
+  buf+= LOG_EVENT_MINIMAL_HEADER_LEN;
   binlog_version= uint2korr(buf+ST_BINLOG_VER_OFFSET);
   memcpy(server_version, buf+ST_SERVER_VER_OFFSET,
 	 ST_SERVER_VER_LEN);
@@ -3879,7 +3917,13 @@ Format_description_log_event(const char* buf,
                              description_event)
   :Start_log_event_v3(buf, description_event), event_type_permutation(0)
 {
-  DBUG_ENTER("Format_description_log_event::Format_description_log_event(char*,...)");
+  DBUG_ENTER("Format_description_log_event(char*,...)");
+  /*
+    The size of the common header for the Rotate_log_event,
+    Start_log_event_v3, and the Format_description_log_event has to be
+    fixed at LOG_EVENT_MINIMAL_HEADER_LEN and should not be read from
+    the description log event supplied.
+  */
   buf+= LOG_EVENT_MINIMAL_HEADER_LEN;
   if ((common_header_len=buf[ST_COMMON_HEADER_LEN_OFFSET]) < OLD_HEADER_LEN)
     DBUG_VOID_RETURN; /* sanity check */
@@ -4012,7 +4056,7 @@ bool Format_description_log_event::write(IO_CACHE* file)
   if (!dont_set_created)
     created= when= get_time();
   int4store(buff + ST_CREATED_OFFSET,created);
-  buff[ST_COMMON_HEADER_LEN_OFFSET]= LOG_EVENT_HEADER_LEN;
+  buff[ST_COMMON_HEADER_LEN_OFFSET]= common_header_len;
   memcpy((char*) buff+ST_COMMON_HEADER_LEN_OFFSET+1, (uchar*) post_header_len,
          LOG_EVENT_TYPES);
   return (write_header(file, sizeof(buff)) ||
@@ -4999,10 +5043,16 @@ Rotate_log_event::Rotate_log_event(const char* buf, uint event_len,
   :Log_event(buf, description_event) ,new_log_ident(0), flags(DUP_NAME)
 {
   DBUG_ENTER("Rotate_log_event::Rotate_log_event(char*,...)");
-  // The caller will ensure that event_len is what we have at EVENT_LEN_OFFSET
-  uint8 header_size= description_event->common_header_len;
+  /*
+    The size of the common header for the Rotate_log_event,
+    Start_log_event_v3, and the Format_description_log_event has to be
+    fixed at LOG_EVENT_MINIMAL_HEADER_LEN and should not be read from
+    the description log event supplied.
+  */
+  uint8 header_size= LOG_EVENT_MINIMAL_HEADER_LEN;
   uint8 post_header_len= description_event->post_header_len[ROTATE_EVENT-1];
   uint ident_offset;
+  // The caller will ensure that event_len is what we have at EVENT_LEN_OFFSET.
   if (event_len < header_size)
     DBUG_VOID_RETURN;
   buf += header_size;

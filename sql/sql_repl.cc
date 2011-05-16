@@ -58,7 +58,7 @@ static int fake_rotate_event(NET* net, String* packet, char* log_file_name,
                              ulonglong position, const char** errmsg)
 {
   DBUG_ENTER("fake_rotate_event");
-  char header[LOG_EVENT_HEADER_LEN], buf[ROTATE_HEADER_LEN+100];
+  char header[LOG_EVENT_MINIMAL_HEADER_LEN], buf[ROTATE_HEADER_LEN + 100];
   /*
     'when' (the timestamp) is set to 0 so that slave could distinguish between
     real and fake Rotate events (if necessary)
@@ -68,7 +68,8 @@ static int fake_rotate_event(NET* net, String* packet, char* log_file_name,
 
   char* p = log_file_name+dirname_length(log_file_name);
   uint ident_len = (uint) strlen(p);
-  ulong event_len = ident_len + LOG_EVENT_HEADER_LEN + ROTATE_HEADER_LEN;
+  ulong event_len= ident_len + LOG_EVENT_MINIMAL_HEADER_LEN +
+    ROTATE_HEADER_LEN;
   int4store(header + SERVER_ID_OFFSET, server_id);
   int4store(header + EVENT_LEN_OFFSET, event_len);
   int2store(header + FLAGS_OFFSET, LOG_EVENT_ARTIFICIAL_F);
