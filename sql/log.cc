@@ -4004,6 +4004,7 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
 {
   int error= 0, close_on_error= FALSE;
   char new_name[FN_REFLEN], *new_name_ptr, *old_name, *file_to_open;
+  File duped_file= -1;
 
   DBUG_ENTER("MYSQL_BIN_LOG::new_file_impl");
   if (!is_open())
@@ -4053,6 +4054,21 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
 
   if (log_type == LOG_BIN)
   {
+    /*
+      Previously close() would clear the in-use bit but it has been changed
+      to not do so because the in-use bit shouldn't get cleared until the
+      rotate to a new log has been successful. Thus, if close() would have
+      cleared the in-use bit, then we now need to do so here. open() and
+      close() both check for WRITE_CACHE, which effectively means that only
+      the bin log gets the bit set and then cleared.
+    */
+    if (log_file.type == WRITE_CACHE &&
+        (duped_file= my_dup(log_file.file, MYF(MY_WME))) < 0)
+    {
+      sql_print_error("MYSQL_LOG::new_file failed to duplicate file desc.");
+      goto end;
+    }
+
     if (!no_auto_events)
     {
       /*
@@ -4112,6 +4128,25 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
     my_printf_error(ER_CANT_OPEN_FILE, ER(ER_CANT_OPEN_FILE), 
                     MYF(ME_FATALERROR), file_to_open, error);
     close_on_error= TRUE;
+  }
+  else if (duped_file >= 0)
+  {
+    /* clearing LOG_EVENT_BINLOG_IN_USE_F. */
+    my_off_t offset= BIN_LOG_HEADER_SIZE + FLAGS_OFFSET;
+    uchar flags= 0;
+    if (my_pwrite(duped_file, &flags, 1, offset, MYF(MY_NABP)) ||
+        my_sync(duped_file, MYF(MY_WME)) ||
+        my_close(duped_file, MYF(MY_WME)))
+    {
+      /*
+        Complain about the error, but nothing really to do in response. The
+        in-use bit may have been left on, but there's already a new file
+        anyway so the only effect of the stale bit is that mysqlbinlog will
+        write output about it not being closed cleanly.
+      */
+      sql_print_error("MYSQL_LOG::new_file got failure while trying to "
+                      "clear in-use bit of old log.");
+    }
   }
 
   my_free(old_name,MYF(0));
@@ -5296,17 +5331,35 @@ void MYSQL_BIN_LOG::close(uint exiting)
     /* don't pwrite in a file opened with O_APPEND - it doesn't work */
     if (log_file.type == WRITE_CACHE && log_type == LOG_BIN)
     {
-      my_off_t offset= BIN_LOG_HEADER_SIZE + FLAGS_OFFSET;
-      my_off_t org_position= my_tell(log_file.file, MYF(0));
-      uchar flags= 0;            // clearing LOG_EVENT_BINLOG_IN_USE_F
-      my_pwrite(log_file.file, &flags, 1, offset, MYF(0));
       /*
-        Restore position so that anything we have in the IO_cache is written
-        to the correct position.
-        We need the seek here, as my_pwrite() is not guaranteed to keep the
-        original position on system that doesn't support pwrite().
+        If doing a rotate, do not clear the in-use bit now. new_file() will
+        clear it after the new file is opened. Thus, if a crash occurs
+        between now and the new file being successfully opened, the server
+        is still able to detect an unclean shutdown.
+
+        Note that LOG_CLOSE_TO_BE_OPENED is also passed from reset_logs(). It
+        doesn't matter in that case if the bit is cleared because the file
+        is going to get deleted right after anyway.
       */
-      my_seek(log_file.file, org_position, MY_SEEK_SET, MYF(0));
+      if (!(exiting & LOG_CLOSE_TO_BE_OPENED))
+      {
+        /* clearing LOG_EVENT_BINLOG_IN_USE_F. */
+        my_off_t offset= BIN_LOG_HEADER_SIZE + FLAGS_OFFSET;
+        my_off_t org_position= my_tell(log_file.file, MYF(0));
+        uchar flags= 0;
+        if (my_pwrite(log_file.file, &flags, 1, offset, MYF(MY_NABP)))
+        {
+          sql_print_error("MYSQL_LOG::close got failure from my_pwrite "
+                          "while trying to clear in-use bit.");
+        }
+        /*
+          Restore position so that anything we have in the IO_cache is written
+          to the correct position.
+          We need the seek here, as my_pwrite() is not guaranteed to keep the
+          original position on system that doesn't support pwrite().
+        */
+        my_seek(log_file.file, org_position, MY_SEEK_SET, MYF(0));
+      }
     }
 
     /* this will cleanup IO_CACHE, sync and close the file */
