@@ -248,6 +248,11 @@ class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG
   pthread_mutex_t LOCK_prep_xids;
   pthread_cond_t  COND_prep_xids;
   pthread_cond_t update_cond;
+  pthread_mutex_t LOCK_reset_logs;
+  pthread_cond_t  COND_no_dump_thd;
+  pthread_cond_t  COND_no_reset_thd;
+  uint dump_thd_count;
+  bool resetting_logs;
   ulonglong bytes_written;
   IO_CACHE index_file;
   char index_file_name[FN_REFLEN];
@@ -424,6 +429,11 @@ public:
   inline void unlock_index() { pthread_mutex_unlock(&LOCK_index);}
   inline IO_CACHE *get_index_file() { return &index_file;}
   inline uint32 get_open_count() { return open_count; }
+
+  bool enter_dump_thread(THD *thd);
+  bool exit_dump_thread(THD *thd);
+  bool prepare_for_reset_logs(THD *thd);
+  bool complete_reset_logs(THD *thd);
 };
 
 class Log_event_handler
