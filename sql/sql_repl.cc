@@ -365,6 +365,8 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
 #ifndef DBUG_OFF
   int left_events = max_binlog_dump_events;
 #endif
+  bool call_exit_dump_thread= false;
+
   int old_max_allowed_packet= thd->variables.max_allowed_packet;
   DBUG_ENTER("mysql_binlog_send");
   DBUG_PRINT("enter",("log_ident: '%s'  pos: %ld", log_ident, (long) pos));
@@ -392,6 +394,21 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
     my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
     goto err;
   }
+
+  /*
+    Let bin log know that a dump thread is active. Must be done before
+    find_log_pos & open_binlog.
+  */
+  if (mysql_bin_log.enter_dump_thread(thd))
+  {
+    errmsg= "Could not satisify conditions to enter Binlog Dump thread.";
+    if (thd->killed)
+      my_errno= thd->killed_errno();
+    else
+      my_errno= ER_UNKNOWN_ERROR;
+    goto err;
+  }
+  call_exit_dump_thread= true;
 
   name=search_file_name;
   if (log_ident[0])
@@ -718,6 +735,11 @@ impossible position";
 	  }
 	  if (!thd->killed)
 	  {
+            DBUG_EXECUTE_IF("binlog_dump_sleep_before_wait",
+                            sql_print_information(
+                              "mysql_binlog_send sleeping before wait.");
+                            sleep(3););
+
 	    /* Note that the following call unlocks lock_log */
 	    mysql_bin_log.wait_for_update(thd, 0);
 	  }
@@ -820,6 +842,7 @@ end:
   thd->current_linfo = 0;
   pthread_mutex_unlock(&LOCK_thread_count);
   thd->variables.max_allowed_packet= old_max_allowed_packet;
+  mysql_bin_log.exit_dump_thread(thd);
   DBUG_VOID_RETURN;
 
 err:
@@ -840,6 +863,8 @@ err:
   thd->variables.max_allowed_packet= old_max_allowed_packet;
 
   my_message(my_errno, errmsg, MYF(0));
+  if (call_exit_dump_thread)
+    mysql_bin_log.exit_dump_thread(thd);
   DBUG_VOID_RETURN;
 }
 
@@ -1175,6 +1200,29 @@ void kill_zombie_dump_threads(uint32 slave_server_id)
   }
 }
 
+/*
+  Kill all Binlog_dump threads. Called by MYSQL_LOG::reset_logs in order
+  to make sure that none are reading from the logs before deleting them.
+*/
+void kill_all_dump_threads()
+{
+  THD *tmp;
+  /* Need this lock for unlinking from list. */
+  (void) pthread_mutex_lock(&LOCK_thread_count);
+
+  I_List_iterator<THD> it(threads);
+  while ((tmp= it++))
+  {
+    if (tmp->command == COM_BINLOG_DUMP)
+    {
+      pthread_mutex_lock(&tmp->LOCK_thd_data);
+      tmp->awake(THD::KILL_CONNECTION);
+      pthread_mutex_unlock(&tmp->LOCK_thd_data);
+    }
+  }
+  (void) pthread_mutex_unlock(&LOCK_thread_count);
+}
+
 
 /**
   Execute a CHANGE MASTER statement.
@@ -1440,7 +1488,20 @@ int reset_master(THD* thd)
                ER(ER_FLUSH_MASTER_BINLOG_CLOSED), MYF(ME_BELL+ME_WAITTANG));
     return 1;
   }
-  return mysql_bin_log.reset_logs(thd);
+
+  if (mysql_bin_log.prepare_for_reset_logs(thd))
+  {
+    if (thd->killed)
+      thd->send_kill_message();
+    else
+      my_message(ER_LOG_PURGE_UNKNOWN_ERR,
+                 ER(ER_LOG_PURGE_UNKNOWN_ERR), MYF(0));
+    return 1;
+  }
+
+  int result= mysql_bin_log.reset_logs(thd);
+  (void) mysql_bin_log.complete_reset_logs(thd);
+  return result;
 }
 
 int cmp_master_pos(const char* log_file_name1, ulonglong log_pos1,
@@ -1980,5 +2041,3 @@ static void start_failover(THD *thd)
 }
 
 #endif /* HAVE_REPLICATION */
-
-

@@ -2661,10 +2661,16 @@ const char *MYSQL_LOG::generate_name(const char *log_name,
 
 
 MYSQL_BIN_LOG::MYSQL_BIN_LOG()
-  :bytes_written(0), prepared_xids(0), file_id(1), open_count(1),
-   need_start_event(TRUE),
-   is_relay_log(0),
-   description_event_for_exec(0), description_event_for_queue(0)
+  :dump_thd_count(0),
+  resetting_logs(FALSE),
+  bytes_written(0),
+  prepared_xids(0),
+  file_id(1),
+  open_count(1),
+  need_start_event(TRUE),
+  is_relay_log(0),
+  description_event_for_exec(0),
+  description_event_for_queue(0)
 {
   /*
     We don't want to initialize locks here as such initialization depends on
@@ -2691,6 +2697,9 @@ void MYSQL_BIN_LOG::cleanup()
     (void) pthread_mutex_destroy(&LOCK_log);
     (void) pthread_mutex_destroy(&LOCK_index);
     (void) pthread_cond_destroy(&update_cond);
+    (void) pthread_mutex_destroy(&LOCK_reset_logs);
+    (void) pthread_cond_destroy(&COND_no_dump_thd);
+    (void) pthread_cond_destroy(&COND_no_reset_thd);
   }
   DBUG_VOID_RETURN;
 }
@@ -2714,6 +2723,9 @@ void MYSQL_BIN_LOG::init_pthread_objects()
   (void) pthread_mutex_init(&LOCK_log, MY_MUTEX_INIT_SLOW);
   (void) pthread_mutex_init(&LOCK_index, MY_MUTEX_INIT_SLOW);
   (void) pthread_cond_init(&update_cond, 0);
+  (void) pthread_mutex_init(&LOCK_reset_logs, MY_MUTEX_INIT_FAST);
+  (void) pthread_cond_init(&COND_no_dump_thd, 0);
+  (void) pthread_cond_init(&COND_no_reset_thd, 0);
 }
 
 
@@ -5938,6 +5950,193 @@ void init_audit_log_filter(const char *comma_list)
   }
   free(buf);
 }
+
+
+/*
+  Called by mysql_binlog_send to notify MYSQL_LOG that a new dump
+  thread has become active.
+*/
+
+bool MYSQL_BIN_LOG::enter_dump_thread(THD *thd)
+{
+  const char *old_msg;
+  bool error= false;
+
+  pthread_mutex_lock(&LOCK_reset_logs);
+  old_msg= thd->enter_cond(&COND_no_reset_thd, &LOCK_reset_logs,
+                           "Waiting for all RESET MASTERs to complete.");
+
+  /* Don't allow a dump thread to spin up until all resets are complete. */
+  while (resetting_logs)
+  {
+    pthread_cond_wait(&COND_no_reset_thd, &LOCK_reset_logs);
+    if (thd->killed)
+    {
+      error= true;
+      goto err;
+    }
+  }
+
+  ++dump_thd_count;
+
+err:
+  thd->exit_cond(old_msg);
+
+  return error;
+}
+
+
+/*
+  Called by mysql_binlog_send to notify MYSQL_LOG that a dump
+  thread has ceased to be active. Must be called if enter_dump_thread
+  was called and it returned success (i.e. 0).
+*/
+
+bool MYSQL_BIN_LOG::exit_dump_thread(THD *thd)
+{
+  bool error= false;
+
+  pthread_mutex_lock(&LOCK_reset_logs);
+
+  if (dump_thd_count <= 0)
+  {
+    sql_print_error("exit_dump_thread called when enter_dump_thread wasn't "
+                    "or returned error.");
+    DBUG_ASSERT(false);
+    error= true;
+  }
+  else if (!(--dump_thd_count))
+  {
+    pthread_cond_broadcast(&COND_no_dump_thd);
+  }
+
+  pthread_mutex_unlock(&LOCK_reset_logs);
+
+  return error;
+}
+
+
+/*
+  Called by callers of mysql_bin_log.reset_logs() prior to the reset_logs
+  call. Ensures that all Binlog Dump threads have exited and that only
+  a single thread can be 'prepared' to reset at a time.
+
+  Not needed before calls to reset_logs which operate on the relay logs,
+  only the bin log.
+*/
+
+bool MYSQL_BIN_LOG::prepare_for_reset_logs(THD *thd)
+{
+  const char *old_msg;
+  bool error= false;
+
+  /*
+    LOCK_log can't be owned. If a Binlog Dump thread is currently in
+    wait_for_update it would lead to a deadlock when kill_all_dump_threads
+    calls awake() on it.
+  */
+  safe_mutex_assert_not_owner(&LOCK_log);
+
+  /*
+    LOCK_index can't be owned because it could lead to taking
+    LOCK_log and LOCK_index in the opposite order from all other callers.
+  */
+  safe_mutex_assert_not_owner(&LOCK_index);
+
+  pthread_mutex_lock(&LOCK_reset_logs);
+  old_msg= thd->enter_cond(&COND_no_reset_thd, &LOCK_reset_logs,
+                           "Waiting for all RESET MASTERs to complete.");
+
+  /* Don't allow more than one reset_logs at a time. */
+  while (resetting_logs)
+  {
+    pthread_cond_wait(&COND_no_reset_thd, &LOCK_reset_logs);
+    if (thd->killed)
+    {
+      error= true;
+      goto err2;
+    }
+  }
+  resetting_logs= true;
+
+  thd->proc_info= "Waiting for all Binlog Dump threads to exit.";
+  thd->mysys_var->current_cond= &COND_no_dump_thd;
+
+  /* Wait for all dump threads to exit. */
+  while (dump_thd_count)
+  {
+    timeval now;
+    timespec timeout;
+    int retcode;
+
+    /* Give them a helping hand toward exiting. */
+    kill_all_dump_threads();
+
+    /*
+      The dump threads may miss the wake up if they weren't yet in
+      wait_for_update and they don't check thd->killed before getting
+      there. So, wait for 1 sec and if threads haven't exited, kick
+      them again.
+    */
+    if (gettimeofday(&now, NULL))
+    {
+      error= true;
+      goto err1;
+    }
+    timeout.tv_sec= now.tv_sec + 1;
+    timeout.tv_nsec= now.tv_usec * 1000;
+    retcode= pthread_cond_timedwait(&COND_no_dump_thd, &LOCK_reset_logs,
+                                    &timeout);
+    if (thd->killed || (retcode && retcode != ETIMEDOUT))
+    {
+      error= true;
+      goto err1;
+    }
+  }
+
+  thd->exit_cond(old_msg);
+
+  return false;
+
+err1:
+  resetting_logs= false;
+  pthread_cond_broadcast(&COND_no_reset_thd);
+err2:
+  thd->exit_cond(old_msg);
+
+  return error;
+}
+
+
+/*
+  Called by callers of mysql_bin_log.reset_logs() after the reset_logs
+  call. Must be called if prepare_for_reset_logs was called and it
+  returned success (i.e. 0).
+*/
+bool MYSQL_BIN_LOG::complete_reset_logs(THD *thd)
+{
+  bool error= false;
+
+  pthread_mutex_lock(&LOCK_reset_logs);
+
+  if (!resetting_logs)
+  {
+    sql_print_error("complete_reset_logs called when prepare_for_reset_logs "
+                    "wasn't or returned error.");
+    DBUG_ASSERT(false);
+    error= true;
+  }
+  else
+  {
+    resetting_logs= false;
+    pthread_cond_broadcast(&COND_no_reset_thd);
+  }
+
+  pthread_mutex_unlock(&LOCK_reset_logs);
+
+  return error;
+}
+
 
 #ifdef __NT__
 static void print_buffer_to_nt_eventlog(enum loglevel level, char *buff,
