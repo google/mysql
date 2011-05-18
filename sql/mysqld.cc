@@ -566,8 +566,13 @@ const char *opt_binlog_format= binlog_format_names[opt_binlog_format_id];
 #ifdef HAVE_INITGROUPS
 volatile sig_atomic_t calling_initgroups= 0; /**< Used in SIGSEGV handler. */
 #endif
-uint mysqld_port, test_flags, select_errors, dropping_tables, ha_open_options;
+char *mysqld_ports_str;
+/* Value must match sscanf() in read_mysqld_ports()! */
+#define MAX_MYSQLD_PORTS 10
+uint mysqld_ports[MAX_MYSQLD_PORTS];
+uint test_flags, select_errors, dropping_tables, ha_open_options;
 uint mysqld_port_timeout;
+ulong bogus_socket_ready;
 uint delay_key_write_options, protocol_version;
 uint lower_case_table_names;
 uint tc_heuristic_recover= 0;
@@ -796,7 +801,8 @@ static char *opt_audit_log_filter;
 int orig_argc;
 char **orig_argv;
 
-static my_socket unix_sock,ip_sock;
+static my_socket unix_sock;
+static my_socket ip_socks[MAX_MYSQLD_PORTS];
 struct rand_struct sql_rand; ///< used by sql_class.cc:THD::THD()
 
 #ifndef EMBEDDED_LIBRARY
@@ -935,6 +941,17 @@ static void end_ssl();
 ** Code to end mysqld
 ****************************************************************************/
 
+/* Client function of close_connections() only.  */
+static void shutdown_socket(my_socket &sock)
+{
+  if (sock != INVALID_SOCKET)
+  {
+    (void) mysql_socket_shutdown(sock, SHUT_RDWR);
+    (void) closesocket(sock);
+    sock= INVALID_SOCKET;
+  }
+}
+
 static void close_connections(void)
 {
 #ifdef EXTRA_DEBUG
@@ -985,12 +1002,13 @@ static void close_connections(void)
   DBUG_PRINT("quit",("Closing sockets"));
   if (!opt_disable_networking )
   {
-    if (ip_sock != INVALID_SOCKET)
+    for (int i= 0;
+         (i < MAX_MYSQLD_PORTS) && (ip_socks[i] != INVALID_SOCKET);
+         i++)
     {
-      (void) mysql_socket_shutdown(ip_sock, SHUT_RDWR);
-      (void) closesocket(ip_sock);
-      ip_sock= INVALID_SOCKET;
+      shutdown_socket(ip_socks[i]);
     }
+
   }
 #ifdef __NT__
   if (hPipe != INVALID_HANDLE_VALUE && opt_enable_named_pipe)
@@ -1017,13 +1035,8 @@ static void close_connections(void)
   }
 #endif
 #ifdef HAVE_SYS_UN_H
-  if (unix_sock != INVALID_SOCKET)
-  {
-    (void) mysql_socket_shutdown(unix_sock, SHUT_RDWR);
-    (void) closesocket(unix_sock);
-    (void) unlink(mysqld_unix_port);
-    unix_sock= INVALID_SOCKET;
-  }
+  shutdown_socket(unix_sock);
+  (void) unlink(mysqld_unix_port);
 #endif
   end_thr_alarm(0);			 // Abort old alarms.
 
@@ -1121,43 +1134,43 @@ static void close_connections(void)
   DBUG_VOID_RETURN;
 }
 
-
-static void close_server_sock()
-{
+/* Helper function for close_server_sock() only.  */
 #ifdef HAVE_CLOSE_SERVER_SOCK
-  DBUG_ENTER("close_server_sock");
-  my_socket tmp_sock;
-  tmp_sock=ip_sock;
+static void close_server_sock_helper(my_socket &sock, const char *sock_name)
+{
+  my_socket tmp_sock= sock;
+
   if (tmp_sock != INVALID_SOCKET)
   {
-    ip_sock=INVALID_SOCKET;
-    DBUG_PRINT("info",("calling shutdown on TCP/IP socket"));
-    VOID(mysql_socket_shutdown(tmp_sock, SHUT_RDWR));
+    sock=INVALID_SOCKET;
+    DBUG_PRINT("info",("calling shutdown on %s socket", sock_name));
+
+    VOID(shutdown(tmp_sock, SHUT_RDWR));
 #if defined(__NETWARE__)
     /*
       The following code is disabled for normal systems as it causes MySQL
       to hang on AIX 4.3 during shutdown
     */
-    DBUG_PRINT("info",("calling closesocket on TCP/IP socket"));
+    DBUG_PRINT("info",("calling closesocket on %s socket", sock_name));
     VOID(closesocket(tmp_sock));
 #endif
   }
-  tmp_sock=unix_sock;
-  if (tmp_sock != INVALID_SOCKET)
+}
+#endif /*HAVE_CLOSE_SERVER_SOCK*/
+
+static void close_server_sock()
+{
+#ifdef HAVE_CLOSE_SERVER_SOCK
+  DBUG_ENTER("close_server_sock");
+  for (int i= 0;
+       (i < MAX_MYSQLD_PORTS) && (ip_socks[i] != INVALID_SOCKET);
+       i++)
   {
-    unix_sock=INVALID_SOCKET;
-    DBUG_PRINT("info",("calling shutdown on unix socket"));
-    VOID(mysql_socket_shutdown(tmp_sock, SHUT_RDWR));
-#if defined(__NETWARE__)
-    /*
-      The following code is disabled for normal systems as it may cause MySQL
-      to hang on AIX 4.3 during shutdown
-    */
-    DBUG_PRINT("info",("calling closesocket on unix/IP socket"));
-    VOID(closesocket(tmp_sock));
-#endif
-    VOID(unlink(mysqld_unix_port));
+    close_server_sock_helper(ip_socks[i], "TCP/IP");
   }
+  close_server_sock_helper(unix_sock, "unix/IP");
+
+  VOID(unlink(mysqld_unix_port));
   DBUG_VOID_RETURN;
 #endif
 }
@@ -1583,10 +1596,11 @@ static void clean_up_mutexes()
 #ifndef EMBEDDED_LIBRARY
 static void set_ports()
 {
+  static char mysqld_ports_str_buffer[12];
   char	*env;
-  if (!mysqld_port && !opt_disable_networking)
+  if (!mysqld_ports[0] && !opt_disable_networking)
   {					// Get port if not from commandline
-    mysqld_port= MYSQL_PORT;
+    mysqld_ports[0]= MYSQL_PORT;
 
     /*
       if builder specifically requested a default port, use that
@@ -1601,10 +1615,14 @@ static void set_ports()
 #if MYSQL_PORT_DEFAULT == 0
     struct  servent *serv_ptr;
     if ((serv_ptr= getservbyname("mysql", "tcp")))
-      mysqld_port= ntohs((u_short) serv_ptr->s_port); /* purecov: inspected */
+      mysqld_ports[0]=
+          ntohs((u_short) serv_ptr->s_port);    /* purecov: inspected */
 #endif
     if ((env = getenv("MYSQL_TCP_PORT")))
-      mysqld_port= (uint) atoi(env);		/* purecov: inspected */
+      mysqld_ports[0]= (uint) atoi(env);        /* purecov: inspected */
+    if (!sprintf(mysqld_ports_str_buffer, "%u", mysqld_ports[0]))
+      sql_print_warning("unable to sprintf mysqld_ports");
+    mysqld_ports_str= mysqld_ports_str_buffer;
   }
   if (!mysqld_unix_port)
   {
@@ -1746,30 +1764,83 @@ static void set_root(const char *path)
 #endif
 }
 
-static void network_init(void)
+static void read_mysqld_ports(void)
 {
-  struct sockaddr_in	IPaddr;
-#ifdef HAVE_SYS_UN_H
-  struct sockaddr_un	UNIXaddr;
-#endif
-  int	arg=1;
-  int   ret;
+  // Clear just to be sure.
+  for (int i= 0; i < MAX_MYSQLD_PORTS; i++)
+    mysqld_ports[i]= 0;
+
+  if (!mysqld_ports_str || !mysqld_ports_str[0]) return;
+
+  // Count commas to determine how many ports to expect.
+  int commas= 0;
+  char *p= mysqld_ports_str;
+
+  while (*p)
+  {
+    if (*p == ',')
+    {
+      commas++;
+    }
+    else if ((*p < '0') || (*p > '9'))
+    {
+      sql_print_error("Character error in mysqld_ports '%s'.",
+                      mysqld_ports_str);
+      unireg_abort(1);
+    }
+    p++;
+  }
+
+  int expected_ports= commas + 1;
+  if (expected_ports > MAX_MYSQLD_PORTS)
+  {
+    sql_print_error("Number of ports (%d) in mysqld_ports '%s' exceeds "
+                    "maximum (%d).",
+                    expected_ports, mysqld_ports_str, MAX_MYSQLD_PORTS);
+    unireg_abort(1);
+  }
+
+  // Needs to match #define MAX_MYSQLD_PORTS.
+  int count= sscanf(mysqld_ports_str,
+                    "%u,%u,%u,%u,%u,%u,%u,%u,%u,%u",
+                    &(mysqld_ports[0]),
+                    &(mysqld_ports[1]),
+                    &(mysqld_ports[2]),
+                    &(mysqld_ports[3]),
+                    &(mysqld_ports[4]),
+                    &(mysqld_ports[5]),
+                    &(mysqld_ports[6]),
+                    &(mysqld_ports[7]),
+                    &(mysqld_ports[8]),
+                    &(mysqld_ports[9]));
+
+  if (count != expected_ports)
+  {
+    sql_print_error("Number of ports (%d) in mysqld_ports '%s' does not "
+                    "match expected number (%d).",
+                    count, mysqld_ports_str, expected_ports);
+    unireg_abort(1);
+  }
+}
+
+static void socket_init(my_socket *sock, const uint port)
+{
+  struct sockaddr_in IPaddr;
+  uint  retry;
   uint  waited;
   uint  this_wait;
-  uint  retry;
-  DBUG_ENTER("network_init");
+  int   ret;
+  int   arg= 1;
+
+  DBUG_ENTER("socket_init");
+
   LINT_INIT(ret);
 
-  if (thread_scheduler.init())
-    unireg_abort(1);			/* purecov: inspected */
-
-  set_ports();
-
-  if (mysqld_port != 0 && !opt_disable_networking && !opt_bootstrap)
+  if (port != 0 && !opt_disable_networking && !opt_bootstrap)
   {
-    DBUG_PRINT("general",("IP Socket is %d",mysqld_port));
-    ip_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (ip_sock == INVALID_SOCKET)
+    DBUG_PRINT("general", ("IP Socket is %u", port));
+    *sock= socket(AF_INET, SOCK_STREAM, 0);
+    if (*sock == INVALID_SOCKET)
     {
       DBUG_PRINT("error",("Got error: %d from socket()",socket_errno));
       sql_perror(ER(ER_IPSOCK_ERROR));		/* purecov: tested */
@@ -1778,14 +1849,14 @@ static void network_init(void)
     bzero((char*) &IPaddr, sizeof(IPaddr));
     IPaddr.sin_family = AF_INET;
     IPaddr.sin_addr.s_addr = my_bind_addr;
-    IPaddr.sin_port = (unsigned short) htons((unsigned short) mysqld_port);
+    IPaddr.sin_port = (unsigned short) htons((unsigned short) port);
 
 #ifndef __WIN__
     /*
       We should not use SO_REUSEADDR on windows as this would enable a
       user to open two mysqld servers with the same TCP/IP port.
     */
-    (void) setsockopt(ip_sock,SOL_SOCKET,SO_REUSEADDR,(char*)&arg,sizeof(arg));
+    (void) setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, (char*)&arg, sizeof(arg));
 #endif /* __WIN__ */
     /*
       Sometimes the port is not released fast enough when stopping and
@@ -1797,12 +1868,12 @@ static void network_init(void)
     */
     for (waited= 0, retry= 1; ; retry++, waited+= this_wait)
     {
-      if (((ret= bind(ip_sock, my_reinterpret_cast(struct sockaddr *) (&IPaddr),
+      if (((ret= bind(*sock, my_reinterpret_cast(struct sockaddr *) (&IPaddr),
                       sizeof(IPaddr))) >= 0) ||
           (socket_errno != SOCKET_EADDRINUSE) ||
           (waited >= mysqld_port_timeout))
         break;
-      sql_print_information("Retrying bind on TCP/IP port %u", mysqld_port);
+      sql_print_information("Retrying bind on TCP/IP port %u", port);
       this_wait= retry * retry / 3 + 1;
       sleep(this_wait);
     }
@@ -1810,17 +1881,42 @@ static void network_init(void)
     {
       DBUG_PRINT("error",("Got error: %d from bind",socket_errno));
       sql_perror("Can't start server: Bind on TCP/IP port");
-      sql_print_error("Do you already have another mysqld server running on port: %d ?",mysqld_port);
+      sql_print_error("Do you already have another mysqld server running on port: %u ?", port);
       unireg_abort(1);
     }
-    if (listen(ip_sock,(int) back_log) < 0)
+    if (listen(*sock, (int) back_log) < 0)
     {
       sql_perror("Can't start server: listen() on TCP/IP port");
-      sql_print_error("listen() on TCP/IP failed with error %d",
-		      socket_errno);
+      sql_print_error("listen() on TCP/IP (Port %u) failed with error %d",
+                      port, socket_errno);
       unireg_abort(1);
     }
+
   }
+  DBUG_VOID_RETURN;
+}
+
+static void network_init(void)
+{
+#ifdef HAVE_SYS_UN_H
+  struct sockaddr_un UNIXaddr;
+#endif
+
+  int arg=1;
+
+  DBUG_ENTER("network_init");
+
+  if (thread_scheduler.init())
+    unireg_abort(1);                            /* purecov: inspected */
+
+  read_mysqld_ports();
+  set_ports();
+
+  for (int i= 0; (i < MAX_MYSQLD_PORTS) && mysqld_ports[i]; i++)
+  {
+    socket_init(&(ip_socks[i]), mysqld_ports[i]);
+  }
+
 
 #ifdef __NT__
   /* create named pipe */
@@ -4784,7 +4880,7 @@ we force server id to 2, but this MySQL server will not act as a slave.");
   sql_print_information(ER(ER_STARTUP),my_progname,server_version,
                         ((unix_sock == INVALID_SOCKET) ? (char*) ""
                                                        : mysqld_unix_port),
-                         mysqld_port,
+                         mysqld_ports_str,
                          MYSQL_COMPILATION_COMMENT);
 #if defined(_WIN32) && !defined(EMBEDDED_LIBRARY)
   Service.SetRunning();
@@ -5268,7 +5364,7 @@ inline void kill_broken_server()
 #if !defined(__NETWARE__)
       unix_sock == INVALID_SOCKET ||
 #endif
-      (!opt_disable_networking && ip_sock == INVALID_SOCKET))
+      (!opt_disable_networking && ip_socks[0] == INVALID_SOCKET))
   {
     select_thread_in_use = 0;
     /* The following call will never return */
@@ -5287,12 +5383,14 @@ pthread_handler_t handle_connections_sockets(void *arg __attribute__((unused)))
 {
   my_socket sock,new_sock;
   uint error_count=0;
-  uint max_used_connection= (uint) (max(ip_sock,unix_sock)+1);
+  uint max_used_connection= 0;
   fd_set readFDs,clientFDs;
   THD *thd;
   struct sockaddr_in cAddr;
-  int ip_flags=0,socket_flags=0,flags;
+  int ip_flags[MAX_MYSQLD_PORTS];
+  int socket_flags=0,flags;
   st_vio *vio_tmp;
+  bool is_ip_sock= false;
   DBUG_ENTER("handle_connections_sockets");
 
   LINT_INIT(new_sock);
@@ -5300,24 +5398,36 @@ pthread_handler_t handle_connections_sockets(void *arg __attribute__((unused)))
   (void) my_pthread_getprio(pthread_self());		// For debugging
 
   FD_ZERO(&clientFDs);
-  if (ip_sock != INVALID_SOCKET)
+  for (int i= 0; i < MAX_MYSQLD_PORTS; i++)
   {
-    FD_SET(ip_sock,&clientFDs);
-#ifdef HAVE_FCNTL
-    ip_flags = fcntl(ip_sock, F_GETFL, 0);
-#endif
+      ip_flags[i]= 0;
   }
+
+  for (int i= 0;
+       (i < MAX_MYSQLD_PORTS) && (ip_socks[i] != INVALID_SOCKET);
+       i++)
+  {
+    FD_SET(ip_socks[i], &clientFDs);
+#ifdef HAVE_FCNTL
+    ip_flags[i]= fcntl(ip_socks[i], F_GETFL, 0);
+#endif
+    max_used_connection= (uint) max(max_used_connection, (uint) ip_socks[i]);
+  }
+
 #ifdef HAVE_SYS_UN_H
   FD_SET(unix_sock,&clientFDs);
 #ifdef HAVE_FCNTL
   socket_flags=fcntl(unix_sock, F_GETFL, 0);
 #endif
+  max_used_connection= (uint) max(max_used_connection, (uint) unix_sock);
 #endif
+  ++max_used_connection;
 
   DBUG_PRINT("general",("Waiting for connections."));
   MAYBE_BROKEN_SYSCALL;
   while (!abort_loop)
   {
+    is_ip_sock= false;
     readFDs=clientFDs;
 #ifdef HPUX10
     if (select(max_used_connection,(int*) &readFDs,0,0,0) < 0)
@@ -5350,8 +5460,24 @@ pthread_handler_t handle_connections_sockets(void *arg __attribute__((unused)))
     else
 #endif
     {
-      sock = ip_sock;
-      flags= ip_flags;
+      for (int i= 0;
+           (i < MAX_MYSQLD_PORTS) && (ip_socks[i] != INVALID_SOCKET);
+           i++)
+      {
+        if (FD_ISSET(ip_socks[i], &readFDs))
+        {
+          sock= ip_socks[i];
+          flags= ip_flags[i];
+          is_ip_sock= true;
+          break;
+        }
+      }
+      if (!is_ip_sock)
+      {
+        /* Not one of our listeners, that is strange. */
+        ++bogus_socket_ready;
+        continue;
+      }
     }
 
 #if !defined(NO_FCNTL_NONBLOCK)
@@ -5404,7 +5530,7 @@ pthread_handler_t handle_connections_sockets(void *arg __attribute__((unused)))
 
 #ifdef HAVE_LIBWRAP
     {
-      if (sock == ip_sock)
+      if (is_ip_sock)
       {
 	struct request_info req;
 	signal(SIGCHLD, SIG_DFL);
@@ -6646,14 +6772,14 @@ each time the SQL thread starts.",
   {"pid-file", OPT_PID_FILE, "Pid file used by safe_mysqld.",
    &pidfile_name_ptr, &pidfile_name_ptr, 0, GET_STR,
    REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
-  {"port", 'P', "Port number to use for connection or 0 for default to, in "
+  {"port", 'P', "Port number(s) to use for connection or 0 for default to, in "
    "order of preference, my.cnf, $MYSQL_TCP_PORT, "
 #if MYSQL_PORT_DEFAULT == 0
    "/etc/services, "
 #endif
    "built-in default (" STRINGIFY_ARG(MYSQL_PORT) ").",
-   &mysqld_port,
-   &mysqld_port, 0, GET_UINT, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+   &mysqld_ports_str,
+   &mysqld_ports_str, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"port-open-timeout", OPT_PORT_OPEN_TIMEOUT,
    "Maximum time in seconds to wait for the port to become free. "
    "(Default: No wait).", &mysqld_port_timeout,
@@ -8047,6 +8173,7 @@ SHOW_VAR status_vars[]= {
   {"Aborted_connects",         (char*) &aborted_connects,       SHOW_LONG},
   {"Binlog_cache_disk_use",    (char*) &binlog_cache_disk_use,  SHOW_LONG},
   {"Binlog_cache_use",         (char*) &binlog_cache_use,       SHOW_LONG},
+  {"Bogus_socket_ready",       (char*) &bogus_socket_ready,     SHOW_LONG},
   {"Bytes_received",           (char*) offsetof(STATUS_VAR, bytes_received), SHOW_LONGLONG_STATUS},
   {"Bytes_sent",               (char*) offsetof(STATUS_VAR, bytes_sent), SHOW_LONGLONG_STATUS},
   {"Com",                      (char*) com_status_vars, SHOW_ARRAY},
@@ -8277,6 +8404,7 @@ static int mysql_init_variables(void)
 {
   int error;
   /* Things reset to zero */
+  bogus_socket_ready= 0;
   opt_skip_slave_start= opt_reckless_slave = 0;
   mysql_home[0]= pidfile_name[0]= log_error_file[0]= 0;
   myisam_test_invalid_symlink= test_if_data_home_dir;
@@ -8357,7 +8485,11 @@ static int mysql_init_variables(void)
   if (error)
     return 1;
   opt_specialflag= SPECIAL_ENGLISH;
-  unix_sock= ip_sock= INVALID_SOCKET;
+  unix_sock= INVALID_SOCKET;
+  for (int i= 0; i < MAX_MYSQLD_PORTS; i++)
+  {
+    ip_socks[i]= INVALID_SOCKET;
+  }
   mysql_home_ptr= mysql_home;
   pidfile_name_ptr= pidfile_name;
   log_error_file_ptr= log_error_file;
@@ -8851,7 +8983,11 @@ mysqld_get_one_option(int optid,
     return 1;
 #endif
     opt_disable_networking=1;
-    mysqld_port=0;
+    for (int i= 0; i < MAX_MYSQLD_PORTS; i++)
+    {
+      mysqld_ports[i]= 0;
+    }
+    mysqld_ports_str= (char*) "";
     break;
   case (int) OPT_SKIP_SHOW_DB:
     opt_skip_show_db=1;
