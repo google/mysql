@@ -1,0 +1,14 @@
+SHOW VARIABLES LIKE "repl_port";
+Variable_name	Value
+repl_port	REPL_PORT
+GRANT REPLICATION SLAVE ON *.* TO 'testrepl';
+CREATE USER 'baduser';
+SHOW VARIABLES LIKE "repl_port";
+Variable_name	Value
+repl_port	REPL_PORT
+connect(127.0.0.1,baduser,,test,REPL_PORT,MASTER_MYSOCK);
+ERROR 42000: not authorized for repl_port
+connect(127.0.0.1,notauser,,test,REPL_PORT,MASTER_MYSOCK);
+ERROR 28000: Access denied for user 'notauser'@'localhost' (using password: NO)
+DROP USER 'testrepl';
+DROP USER 'baduser';

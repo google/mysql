@@ -893,6 +893,34 @@ my_bool vio_peer_is_remote(Vio *vio)
 }
 
 
+my_bool vio_local_addr(Vio *vio, char *buf, uint16 *port)
+{
+  DBUG_ENTER("vio_local_addr");
+  DBUG_PRINT("enter", ("Client socked fd: %d",
+             (int)mysql_socket_getfd(vio->mysql_socket)));
+  if (vio->localhost)
+  {
+    strmov(buf, "127.0.0.1");
+    *port= 0;
+  }
+  else
+  {
+    struct sockaddr_in *addr= (struct sockaddr_in *) &(vio->local);
+    size_socket addrLen= sizeof(vio->local);
+    if (mysql_socket_getsockname(vio->mysql_socket,
+                                 (struct sockaddr *) addr, &addrLen) != 0)
+    {
+      DBUG_PRINT("exit", ("getsockname gave error: %d", socket_errno));
+      DBUG_RETURN(1);
+    }
+    inet_ntop(AF_INET, &addr->sin_addr, buf, INET_ADDRSTRLEN);
+    *port= ntohs(addr->sin_port);
+  }
+  DBUG_PRINT("exit", ("addr: %s", buf));
+  DBUG_RETURN(0);
+}
+
+
 /**
   Retrieve the amount of data that can be read from a socket.
 

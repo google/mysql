@@ -2286,16 +2286,16 @@ static Sys_var_charptr Sys_plugin_dir(
        READ_ONLY GLOBAL_VAR(opt_plugin_dir_ptr), CMD_LINE(REQUIRED_ARG),
        IN_FS_CHARSET, DEFAULT(0));
 
-static Sys_var_uint Sys_port(
+static Sys_var_charptr Sys_port(
        "port",
-       "Port number to use for connection or 0 to default to, "
+       "Port number(s) to use for connection or 0 to default to, "
        "my.cnf, $MYSQL_TCP_PORT, "
 #if MYSQL_PORT_DEFAULT == 0
        "/etc/services, "
 #endif
        "built-in default (" STRINGIFY_ARG(MYSQL_PORT) "), whatever comes first",
-       READ_ONLY GLOBAL_VAR(mysqld_port), CMD_LINE(REQUIRED_ARG, 'P'),
-       VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1));
+       READ_ONLY GLOBAL_VAR(mysqld_ports_str), CMD_LINE(REQUIRED_ARG, 'P'),
+       IN_SYSTEM_CHARSET, DEFAULT(0));
 
 static Sys_var_ulong Sys_preload_buff_size(
        "preload_buffer_size",
@@ -3063,6 +3063,12 @@ static Sys_var_mybool Sys_rpl_crash_on_binlog_io_error(
        "or bogus event while reading the active binlog the processes will crash.",
        READ_ONLY GLOBAL_VAR(rpl_crash_on_binlog_io_error), CMD_LINE(OPT_ARG),
        DEFAULT(FALSE));
+
+static Sys_var_uint Sys_repl_port(
+       "repl_port",
+       "Listen port for replication",
+       READ_ONLY GLOBAL_VAR(mysqld_repl_port), CMD_LINE(OPT_ARG),
+       VALID_RANGE(0, UINT_MAX), DEFAULT(0), BLOCK_SIZE(1));
 #endif
 
 static Sys_var_mybool Sys_query_cache_wlock_invalidate(

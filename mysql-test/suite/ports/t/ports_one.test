@@ -1,0 +1,12 @@
+--source include/not_embedded.inc
+
+# Test the port in the --port list.
+connect (conn1,127.0.0.1,root,,test,$MYPORT1);
+--replace_result $MYPORT1 MYPORT1
+SHOW VARIABLES LIKE "port";
+disconnect conn1;
+
+# Test a port that is not in --port list.
+--replace_result $MASTER_MYSOCK MASTER_MYSOCK $MYPORT2 MYPORT2
+--error 2003
+connect (conn1,127.0.0.1,root,,test,$MYPORT2);

@@ -13412,6 +13412,35 @@ static int do_auth_once(THD *thd, const LEX_STRING *auth_plugin_name,
 }
 
 
+#ifdef HAVE_REPLICATION
+
+/*
+  Check if the thd is using the repl_port.
+
+  SYNOPSIS
+    is_using_repl_port(thd)
+
+  RETURN VALUE
+    0 OK; not using the prioritized replication port
+    1 OK; using the replication port
+*/
+
+static int is_using_repl_port(THD *thd)
+{
+  NET *net= &thd->net;
+  char ipaddr[30];
+  uint16 local_port;
+
+  if (0 == mysqld_repl_port)
+    return 0;
+
+  vio_local_addr(net->vio, ipaddr, &local_port);
+  return (local_port == mysqld_repl_port) ? 1 : 0;
+}
+
+#endif  // HAVE_REPLICATION
+
+
 /**
   Perform the handshake, authorize the client and update thd sctx variables.
 
@@ -13674,6 +13703,13 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
       DBUG_PRINT("info", ("in failover mode"));
       my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
                  "failover in progress", MYF(0));
+      DBUG_RETURN(1);
+    }
+
+    if (is_using_repl_port(thd))
+    {
+      my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
+                 "not authorized for repl_port", MYF(0));
       DBUG_RETURN(1);
     }
   }

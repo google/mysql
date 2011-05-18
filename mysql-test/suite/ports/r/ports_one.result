@@ -1,0 +1,5 @@
+SHOW VARIABLES LIKE "port";
+Variable_name	Value
+port	MYPORT1
+connect(127.0.0.1,root,,test,MYPORT2,MASTER_MYSOCK);
+ERROR HY000: Can't connect to MySQL server on '127.0.0.1' (111 "Connection refused")

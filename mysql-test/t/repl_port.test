@@ -1,0 +1,35 @@
+# repl_port
+
+--source include/not_embedded.inc
+
+connect (conn1,127.0.0.1,root,,test,$REPL_PORT);
+--replace_result $REPL_PORT REPL_PORT
+SHOW VARIABLES LIKE "repl_port";
+disconnect conn1;
+
+# create temp user with repl permissions
+# and a temp user with no permissions.
+--connection default
+GRANT REPLICATION SLAVE ON *.* TO 'testrepl';
+CREATE USER 'baduser';
+
+# we should be able to connect with said user.
+connect (conn1,127.0.0.1,testrepl,,test,$REPL_PORT);
+--replace_result $REPL_PORT REPL_PORT
+SHOW VARIABLES LIKE "repl_port";
+disconnect conn1;
+
+# we don't have repl permissions, so we should fail.
+--replace_result $MASTER_MYSOCK MASTER_MYSOCK $REPL_PORT REPL_PORT
+--error 1227
+connect (conn1,127.0.0.1,baduser,,test,$repl_port);
+
+# user does not exist, we should fail.
+--replace_result $MASTER_MYSOCK MASTER_MYSOCK $REPL_PORT REPL_PORT
+--error 1045
+connect (conn1,127.0.0.1,notauser,,test,$repl_port);
+
+# clean up our db state
+--connection default
+DROP USER 'testrepl';
+DROP USER 'baduser';

@@ -180,6 +180,7 @@ my @DEFAULT_SUITES= qw(
     parts-
     percona-
     plugins-
+    ports-
     roles-
     rpl-
     sys_vars-
@@ -3374,8 +3375,8 @@ sub kill_leftovers ($) {
 sub check_ports_free ($)
 {
   my $bthread= shift;
-  my $portbase = $bthread * 10 + 10000;
-  for ($portbase..$portbase+9){
+  my $portbase = $bthread * 20 + 10000;
+  for ($portbase..$portbase+19){
     if (mtr_ping_port($_)){
       mtr_report(" - 'localhost:$_' was not free");
       return 0; # One port was not free
@@ -6441,7 +6442,7 @@ Options to control what test suites or cases to run
 Options that specify ports
 
   mtr-port-base=#       Base for port numbers, ports from this number to
-  port-base=#           number+9 are reserved. Should be divisible by 10;
+  port-base=#           number+19 are reserved. Should be divisible by 20;
                         if not it will be rounded down. May be set with
                         environment variable MTR_PORT_BASE. If this value is
                         set and is not "auto", it overrides build-thread.

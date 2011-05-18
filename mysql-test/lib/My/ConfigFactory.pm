@@ -239,6 +239,7 @@ my @mysqld_rules=
  { 'pid-file' => \&fix_pidfile },
  { '#host' => \&fix_host },
  { 'port' => \&fix_port },
+ { 'repl_port' => \&fix_port },
  { 'socket' => \&fix_socket },
  { '#log-error' => \&fix_log_error },
  { 'general-log' => 1 },
@@ -449,6 +450,7 @@ sub post_check_embedded_group {
      '#log-error', # Embedded server writes stderr to mysqltest's log file
      'slave-net-timeout', # Embedded server are not build with replication
      'shared-memory-base-name', # No shared memory for embedded
+     'repl_port',
     );
 
   foreach my $option ( $mysqld->options(), $first_mysqld->options() ) {

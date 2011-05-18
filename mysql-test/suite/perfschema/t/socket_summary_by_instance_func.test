@@ -157,6 +157,7 @@ if(!$success)
    --echo # abort
    exit;
 }
+let $my_rules= COUNT(*) = 2;
 let $part=
 FROM performance_schema.socket_summary_by_instance
 WHERE EVENT_NAME LIKE '%server_tcpip_socket';
@@ -638,6 +639,7 @@ if(`SELECT NOT ( $my_rules ) $part `)
    --echo # abort
    exit;
 }
+let $my_rules= COUNT(*) = 2;
 let $part=
 FROM performance_schema.socket_summary_by_instance
 WHERE EVENT_NAME LIKE '%server_tcpip_socket';
@@ -1321,11 +1323,15 @@ if(0)
 let $my_rules=
 COUNT_MISC  > 0;
 let $part=
-FROM mysqltest.socket_summary_by_instance_detail
+FROM mysqltest.socket_summary_by_instance_detail detail
 WHERE OBJECT_INSTANCE_BEGIN <> @default_object_instance_begin
   AND statement LIKE ('%Connect%$my_localhost%')
   AND EVENT_NAME LIKE ('%server_tcpip_socket%')
-  AND NOT ( $my_rules );
+  AND NOT ( $my_rules )
+  AND $MASTER_MYPORT = (
+        SELECT PORT FROM performance_schema.socket_instances instances
+         WHERE detail.event_name = instances.event_name
+           and detail.object_instance_begin = instances.object_instance_begin);
 if(`SELECT COUNT(*) $part `)
 {
    --enable_query_log

@@ -146,7 +146,10 @@ extern ulong tc_log_page_waits;
 extern my_bool relay_log_purge, opt_innodb_safe_binlog, opt_innodb;
 extern my_bool relay_log_recovery;
 extern uint test_flags,select_errors,ha_open_options;
-extern uint protocol_version, mysqld_port, dropping_tables;
+extern uint protocol_version;
+extern char *mysqld_ports_str;
+extern uint dropping_tables;
+extern uint mysqld_repl_port;
 extern ulong delay_key_write_options;
 extern char *opt_logname, *opt_slow_logname, *opt_bin_logname, 
             *opt_relay_logname, *opt_audit_logname;

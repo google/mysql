@@ -98,6 +98,8 @@ int	vio_errno(Vio*vio);
 my_socket vio_fd(Vio*vio);
 /* Remote peer's address and name in text form */
 my_bool vio_peer_addr(Vio *vio, char *buf, uint16 *port, size_t buflen);
+/* Local address and name in text form */
+my_bool vio_local_addr(Vio* vio, char *buf, uint16 *port);
 /* Wait for an I/O event notification. */
 int vio_io_wait(Vio *vio, enum enum_vio_io_event event, int timeout);
 my_bool vio_is_connected(Vio *vio);
@@ -197,6 +199,7 @@ void vio_end(void);
 #define vio_close(vio)				((vio)->vioclose)(vio)
 #define vio_shutdown(vio,how)			((vio)->shutdown)(vio,how)
 #define vio_peer_addr(vio, buf, prt, buflen)	(vio)->peer_addr(vio, buf, prt, buflen)
+#define vio_local_addr(vio, buf, prt)           (vio)->local_addr(vio, buf, prt)
 #define vio_io_wait(vio, event, timeout)        (vio)->io_wait(vio, event, timeout)
 #define vio_is_connected(vio)                   (vio)->is_connected(vio)
 #define vio_peer_is_remote(vio)                 (vio)->peer_is_remote(vio)
@@ -261,6 +264,7 @@ struct st_vio
   int     (*viokeepalive)(Vio*, my_bool);
   int     (*fastsend)(Vio*);
   my_bool (*peer_addr)(Vio*, char *, uint16*, size_t);
+  my_bool (*local_addr)(Vio*, char *, uint16*);
   void    (*in_addr)(Vio*, struct sockaddr_storage*);
   my_bool (*should_retry)(Vio*);
   my_bool (*was_timeout)(Vio*);
