@@ -515,8 +515,8 @@ static sys_var_const_os         sys_plugin_dir(&vars, "plugin_dir",
                                                OPT_GLOBAL, SHOW_CHAR,
                                                (uchar*) opt_plugin_dir);
 static sys_var_const            sys_port(&vars, "port",
-                                         OPT_GLOBAL, SHOW_INT,
-                                         (uchar*) &mysqld_port);
+                                         OPT_GLOBAL, SHOW_CHAR_PTR,
+                                         (uchar*) &mysqld_ports_str);
 static sys_var_thd_ulong        sys_preload_buff_size(&vars, "preload_buffer_size",
                                               &SV::preload_buff_size);
 static sys_var_const            sys_protocol_version(&vars, "protocol_version",

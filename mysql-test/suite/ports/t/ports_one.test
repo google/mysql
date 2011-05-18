@@ -1,0 +1,11 @@
+# Testing with one port in list.
+# Port.
+connect (conn1,127.0.0.1,root,,test,$MASTER_MYPORT1);
+--replace_result $MASTER_MYPORT1 MASTER_MYPORT1
+SHOW VARIABLES LIKE "port";
+disconnect conn1;
+
+# Port not on list.
+--replace_result $MASTER_MYSOCK MASTER_MYSOCK $MASTER_MYPORT MASTER_MYPORT
+--Error 2003
+connect (conn1,127.0.0.1,root,,test,$MASTER_MYPORT2);
