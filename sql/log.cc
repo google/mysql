@@ -5336,14 +5336,19 @@ void MYSQL_BIN_LOG::close(uint exiting)
   if (log_state == LOG_OPENED)
   {
 #ifdef HAVE_REPLICATION
-    if (log_type == LOG_BIN && !no_auto_events &&
-	(exiting & LOG_CLOSE_STOP_EVENT))
-    {
-      Stop_log_event s;
-      s.write(&log_file);
-      bytes_written+= s.data_written;
-      signal_update();
-    }
+    /*
+      Used to issue a Stop_log_event here. That was removed for multiple
+      reasons.
+
+      1) The slave takes no action in response to the event
+         so it isn't needed to begin with.
+      2) If the master and slave are running with different binlog formats,
+         the slave writes the stop event in its format while the rest of the
+         events in the relay logs are of the master's format. This can cause
+         the SQL thread to explode when it tries to read the stop event.
+      3) If the master is generating an ID sequence we do not want the
+         stop event to consume an ID.
+    */
 #endif /* HAVE_REPLICATION */
 
     /* don't pwrite in a file opened with O_APPEND - it doesn't work */
