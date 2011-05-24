@@ -3208,15 +3208,25 @@ static int init_common_variables(const char *conf_file_name, int argc,
 
   orig_argc=argc;
   orig_argv=argv;
-  load_defaults(conf_file_name, groups, &argc, &argv);
+  int load_defaults_result=
+      load_defaults(conf_file_name, groups, &argc, &argv);
+
   defaults_argv=argv;
   defaults_argc=argc;
   if (get_options(&defaults_argc, defaults_argv))
     return 1;
+  // fail without defaults (after --version and --help are handled
+  //                        in get_options)
+  if (load_defaults_result != 0)
+  {
+    sql_print_error("Could not find configuration file (my.cnf). "
+                    "If this is intentional, try running with --no-defaults.");
+    return 1;
+  }
   set_server_version();
 
   DBUG_PRINT("info",("%s  Ver %s for %s on %s\n",my_progname,
-		     server_version, SYSTEM_TYPE,MACHINE_TYPE));
+                     server_version, SYSTEM_TYPE,MACHINE_TYPE));
 
 #ifdef HAVE_LARGE_PAGES
   /* Initialize large page size */
