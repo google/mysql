@@ -236,17 +236,21 @@ int my_search_option_files(const char *conf_file, int *argc, char ***argv,
   }
   else
   {
+    my_bool found_conf= FALSE;
     for (dirs= default_directories ; *dirs; dirs++)
     {
       if (**dirs)
       {
-	if (search_default_file(func, func_ctx, *dirs, conf_file) < 0)
-	  goto err;
+        int file_err= search_default_file(func, func_ctx, *dirs, conf_file);
+        if (file_err < 0)
+          goto err;
+        else if (file_err == 0)
+          found_conf= TRUE;
       }
       else if (my_defaults_extra_file)
       {
         if ((error= search_default_file_with_ext(func, func_ctx, "", "",
-                                                my_defaults_extra_file, 0)) < 0)
+                                                 my_defaults_extra_file, 0)) < 0)
 	  goto err;				/* Fatal error */
         if (error > 0)
         {
@@ -254,7 +258,12 @@ int my_search_option_files(const char *conf_file, int *argc, char ***argv,
                   my_defaults_extra_file);
           goto err;
         }
+        found_conf= TRUE;
       }
+    }
+    if (!found_conf)
+    {
+      goto err;
     }
   }
 
@@ -560,15 +569,22 @@ static int search_default_file(Process_option_func opt_handler,
   const char *empty_list[]= { "", 0 };
   my_bool have_ext= fn_ext(config_file)[0] != 0;
   const char **exts_to_use= have_ext ? empty_list : f_extensions;
+  my_bool found= FALSE;
 
   for (ext= (char**) exts_to_use; *ext; ext++)
   {
     int error;
     if ((error= search_default_file_with_ext(opt_handler, handler_ctx,
                                              dir, *ext,
-					     config_file, 0)) < 0)
+                                             config_file, 0)) < 0)
       return error;
+    if (error == 0) {
+      found= TRUE;
+    }
   }
+  if (!found)
+    return 1;
+
   return 0;
 }
 
