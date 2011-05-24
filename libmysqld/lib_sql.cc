@@ -545,8 +545,8 @@ int init_embedded_server(int argc, char **argv, char **groups)
 
   orig_argc= *argcp;
   orig_argv= *argvp;
-  if (load_defaults("my", (const char **)groups, argcp, argvp))
-    return 1;
+  (void) load_defaults("my", (const char **)groups, argcp, argvp);
+
   defaults_argc= *argcp;
   defaults_argv= *argvp;
   remaining_argc= *argcp;
@@ -560,7 +560,7 @@ int init_embedded_server(int argc, char **argv, char **groups)
   if (ho_error != 0)
     return 1;
 
-  if (init_common_variables())
+  if (init_common_variables_part1() || init_common_variables_part2())
   {
     mysql_server_end();
     return 1;

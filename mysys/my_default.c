@@ -315,12 +315,16 @@ int my_search_option_files(const char *conf_file, int *argc, char ***argv,
   }
   else
   {
+    my_bool found_conf= FALSE;
     for (dirs= default_directories ; *dirs; dirs++)
     {
       if (**dirs)
       {
-	if (search_default_file(func, func_ctx, *dirs, conf_file) < 0)
-	  goto err;
+        int file_err= search_default_file(func, func_ctx, *dirs, conf_file);
+        if (file_err < 0)
+          goto err;
+        else if (file_err == 0)
+          found_conf= TRUE;
       }
       else if (my_defaults_extra_file)
       {
@@ -333,14 +337,18 @@ int my_search_option_files(const char *conf_file, int *argc, char ***argv,
                   my_defaults_extra_file);
           goto err;
         }
+        found_conf= TRUE;
       }
+    }
+    if (!found_conf)
+    {
+      goto err;
     }
   }
 
   DBUG_RETURN(0);
 
 err:
-  fprintf(stderr,"Fatal error in defaults handling. Program aborted\n");
   DBUG_RETURN(1);
 }
 
@@ -574,13 +582,9 @@ int my_load_defaults(const char *conf_file, const char **groups,
   ctx.args= &args;
   ctx.group= &group;
 
-  if ((error= my_search_option_files(conf_file, argc, argv, &args_used,
-                                     handle_default_option, (void *) &ctx,
-                                     dirs)))
-  {
-    free_root(&alloc,MYF(0));
-    DBUG_RETURN(error);
-  }
+  error= my_search_option_files(conf_file, argc, argv, &args_used,
+                                handle_default_option, (void *) &ctx,
+                                dirs);
   /*
     Here error contains <> 0 only if we have a fully specified conf_file
     or a forced default file
@@ -635,10 +639,10 @@ int my_load_defaults(const char *conf_file, const char **groups,
     exit(0);
   }
 
-  if (default_directories)
+  if (error == 0 && default_directories)
     *default_directories= dirs;
 
-  DBUG_RETURN(0);
+  DBUG_RETURN(error);
 
  err:
   fprintf(stderr,"Fatal error in defaults handling. Program aborted\n");
@@ -664,6 +668,7 @@ static int search_default_file(Process_option_func opt_handler,
   const char *empty_list[]= { "", 0 };
   my_bool have_ext= fn_ext(config_file)[0] != 0;
   const char **exts_to_use= have_ext ? empty_list : f_extensions;
+  my_bool found= FALSE;
 
   for (ext= (char**) exts_to_use; *ext; ext++)
   {
@@ -672,7 +677,13 @@ static int search_default_file(Process_option_func opt_handler,
                                              dir, *ext,
 					     config_file, 0)) < 0)
       return error;
+    if (error == 0) {
+      found= TRUE;
+    }
   }
+  if (!found)
+    return 1;
+
   return 0;
 }
 

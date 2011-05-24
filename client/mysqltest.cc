@@ -7235,8 +7235,7 @@ get_one_option(int optid, const struct my_option *opt, char *argument)
 
 int parse_args(int argc, char **argv)
 {
-  if (load_defaults("my",load_default_groups,&argc,&argv))
-    exit(1);
+  load_defaults("my",load_default_groups,&argc,&argv);
 
   default_argv= argv;
 

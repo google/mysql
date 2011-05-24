@@ -3895,7 +3895,7 @@ static void my_malloc_size_cb_func(long long size, my_bool is_thread_specific)
 }
 
 
-static int init_common_variables()
+static int init_common_variables_part1()
 {
   umask(((~my_umask) & 0666));
   connection_errors_select= 0;
@@ -4079,6 +4079,11 @@ static int init_common_variables()
     unireg_abort(0);
 #endif /*!EMBEDDED_LIBRARY*/
 
+  return 0;
+}
+
+static int init_common_variables_part2()
+{
   DBUG_PRINT("info",("%s  Ver %s for %s on %s\n",my_progname,
 		     server_version, SYSTEM_TYPE,MACHINE_TYPE));
 
@@ -5220,8 +5225,8 @@ int mysqld_main(int argc, char **argv)
   orig_argc= argc;
   orig_argv= argv;
   my_getopt_use_args_separator= TRUE;
-  if (load_defaults(MYSQL_CONFIG_NAME, load_default_groups, &argc, &argv))
-    return 1;
+  int load_defaults_result=
+      load_defaults(MYSQL_CONFIG_NAME, load_default_groups, &argc, &argv);
   my_getopt_use_args_separator= FALSE;
   defaults_argc= argc;
   defaults_argv= argv;
@@ -5357,7 +5362,17 @@ int mysqld_main(int argc, char **argv)
   }
 #endif
 
-  if (init_common_variables())
+  if (init_common_variables_part1())
+    unireg_abort(1);				// Will do exit
+  // fail without defaults (after --version and --help are handled
+  //                        in get_options)
+  if (load_defaults_result)
+  {
+    sql_print_error("Could not find configuration file (my.cnf). "
+                    "If this is intentional, try running with --no-defaults.");
+    unireg_abort(1);				// Will do exit
+  }
+  if (init_common_variables_part2())
     unireg_abort(1);				// Will do exit
 
   init_signals();

@@ -1170,11 +1170,7 @@ int main(int argc,char *argv[])
       close(stdout_fileno_copy);             /* Clean up dup(). */
   }
 
-  if (load_defaults("my",load_default_groups,&argc,&argv))
-  {
-    my_end(0);
-    exit(1);
-  }
+  load_defaults("my",load_default_groups,&argc,&argv);
   defaults_argv=argv;
   if ((status.exit_status= get_options(argc, (char **) argv)))
     mysql_end(-1);

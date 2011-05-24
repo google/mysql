@@ -994,8 +994,7 @@ int main(int argc, char **argv)
   /*
   ** Check out the args
   */
-  if (load_defaults("my", load_default_groups, &argc, &argv))
-    goto end2;
+  load_defaults("my", load_default_groups, &argc, &argv);
 
   defaults_argv= argv;
   if (get_options(&argc, &argv))
@@ -1061,7 +1060,6 @@ int main(int argc, char **argv)
   my_free(shared_memory_base_name);
   mysql_library_end();
   free_defaults(defaults_argv);
- end2:
   my_end(my_end_arg);
   return ret;
 } /* main */
