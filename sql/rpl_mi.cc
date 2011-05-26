@@ -23,6 +23,7 @@
 
 #ifdef HAVE_REPLICATION
 
+#include "slave.h"
 
 // Defined in slave.cc
 int init_intvar_from_file(int* var, IO_CACHE* f, int default_val);
@@ -65,25 +66,27 @@ void init_master_info_with_options(Master_info* mi)
   mi->master_log_pos = BIN_LOG_HEADER_SIZE;             // skip magic number
 
   if (master_host)
-    strmake(mi->host, master_host, sizeof(mi->host) - 1);
+    strmake_with_trim(mi->host, master_host, sizeof(mi->host) - 1);
   if (master_user)
-    strmake(mi->user, master_user, sizeof(mi->user) - 1);
+    strmake_with_trim(mi->user, master_user, sizeof(mi->user) - 1);
   if (master_password)
-    strmake(mi->password, master_password, MAX_PASSWORD_LENGTH);
+    strmake_with_trim(mi->password, master_password, MAX_PASSWORD_LENGTH);
   mi->port = master_port;
   mi->connect_retry = master_connect_retry;
 
   mi->ssl= master_ssl;
   if (master_ssl_ca)
-    strmake(mi->ssl_ca, master_ssl_ca, sizeof(mi->ssl_ca)-1);
+    strmake_with_trim(mi->ssl_ca, master_ssl_ca, sizeof(mi->ssl_ca) - 1);
   if (master_ssl_capath)
-    strmake(mi->ssl_capath, master_ssl_capath, sizeof(mi->ssl_capath)-1);
+    strmake_with_trim(mi->ssl_capath, master_ssl_capath,
+                      sizeof(mi->ssl_capath) - 1);
   if (master_ssl_cert)
-    strmake(mi->ssl_cert, master_ssl_cert, sizeof(mi->ssl_cert)-1);
+    strmake_with_trim(mi->ssl_cert, master_ssl_cert, sizeof(mi->ssl_cert) - 1);
   if (master_ssl_cipher)
-    strmake(mi->ssl_cipher, master_ssl_cipher, sizeof(mi->ssl_cipher)-1);
+    strmake_with_trim(mi->ssl_cipher, master_ssl_cipher,
+                      sizeof(mi->ssl_cipher) - 1);
   if (master_ssl_key)
-    strmake(mi->ssl_key, master_ssl_key, sizeof(mi->ssl_key)-1);
+    strmake_with_trim(mi->ssl_key, master_ssl_key, sizeof(mi->ssl_key) - 1);
   /* Intentionally init ssl_verify_server_cert to 0, no option available  */
   mi->ssl_verify_server_cert= 0;
   DBUG_VOID_RETURN;

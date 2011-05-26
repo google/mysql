@@ -15,4 +15,14 @@ n
 1
 2
 drop table t1;
+include/stop_slave.inc
+change master to master_host='  masterhost  ', master_user='  user', master_log_file='master_bin.000001   ', master_log_pos=4, master_port=3306;
+Master_Host = 'masterhost'
+Master_User = 'user'
+Master_Log_File = 'master_bin.000001'
+Read_Master_Log_Pos = '4'
+Master_Port = '3306'
+reset master;
+reset slave;
+include/start_slave.inc
 include/rpl_end.inc

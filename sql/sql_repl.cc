@@ -1282,8 +1282,8 @@ bool change_master(THD* thd, Master_info* mi)
   }
 
   if (lex_mi->log_file_name)
-    strmake(mi->master_log_name, lex_mi->log_file_name,
-	    sizeof(mi->master_log_name)-1);
+    strmake_with_trim(mi->master_log_name, lex_mi->log_file_name,
+                      sizeof(mi->master_log_name) - 1);
   if (lex_mi->pos)
   {
     mi->master_log_pos= lex_mi->pos;
@@ -1291,11 +1291,11 @@ bool change_master(THD* thd, Master_info* mi)
   DBUG_PRINT("info", ("master_log_pos: %lu", (ulong) mi->master_log_pos));
 
   if (lex_mi->host)
-    strmake(mi->host, lex_mi->host, sizeof(mi->host)-1);
+    strmake_with_trim(mi->host, lex_mi->host, sizeof(mi->host) - 1);
   if (lex_mi->user)
-    strmake(mi->user, lex_mi->user, sizeof(mi->user)-1);
+    strmake_with_trim(mi->user, lex_mi->user, sizeof(mi->user) - 1);
   if (lex_mi->password)
-    strmake(mi->password, lex_mi->password, sizeof(mi->password)-1);
+    strmake_with_trim(mi->password, lex_mi->password, sizeof(mi->password) - 1);
   if (lex_mi->port)
     mi->port = lex_mi->port;
   if (lex_mi->connect_retry)
@@ -1309,15 +1309,17 @@ bool change_master(THD* thd, Master_info* mi)
       (lex_mi->ssl_verify_server_cert == LEX_MASTER_INFO::SSL_ENABLE);
 
   if (lex_mi->ssl_ca)
-    strmake(mi->ssl_ca, lex_mi->ssl_ca, sizeof(mi->ssl_ca)-1);
+    strmake_with_trim(mi->ssl_ca, lex_mi->ssl_ca, sizeof(mi->ssl_ca) - 1);
   if (lex_mi->ssl_capath)
-    strmake(mi->ssl_capath, lex_mi->ssl_capath, sizeof(mi->ssl_capath)-1);
+    strmake_with_trim(mi->ssl_capath, lex_mi->ssl_capath,
+                      sizeof(mi->ssl_capath) - 1);
   if (lex_mi->ssl_cert)
-    strmake(mi->ssl_cert, lex_mi->ssl_cert, sizeof(mi->ssl_cert)-1);
+    strmake_with_trim(mi->ssl_cert, lex_mi->ssl_cert, sizeof(mi->ssl_cert) - 1);
   if (lex_mi->ssl_cipher)
-    strmake(mi->ssl_cipher, lex_mi->ssl_cipher, sizeof(mi->ssl_cipher)-1);
+    strmake_with_trim(mi->ssl_cipher, lex_mi->ssl_cipher,
+                      sizeof(mi->ssl_cipher) - 1);
   if (lex_mi->ssl_key)
-    strmake(mi->ssl_key, lex_mi->ssl_key, sizeof(mi->ssl_key)-1);
+    strmake_with_trim(mi->ssl_key, lex_mi->ssl_key, sizeof(mi->ssl_key) - 1);
 #ifndef HAVE_OPENSSL
   if (lex_mi->ssl || lex_mi->ssl_ca || lex_mi->ssl_capath ||
       lex_mi->ssl_cert || lex_mi->ssl_cipher || lex_mi->ssl_key ||
@@ -1329,10 +1331,10 @@ bool change_master(THD* thd, Master_info* mi)
   if (lex_mi->relay_log_name)
   {
     need_relay_log_purge= 0;
-    strmake(mi->rli.group_relay_log_name,lex_mi->relay_log_name,
-	    sizeof(mi->rli.group_relay_log_name)-1);
-    strmake(mi->rli.event_relay_log_name,lex_mi->relay_log_name,
-	    sizeof(mi->rli.event_relay_log_name)-1);
+    strmake_with_trim(mi->rli.group_relay_log_name, lex_mi->relay_log_name,
+                      sizeof(mi->rli.group_relay_log_name) - 1);
+    strmake_with_trim(mi->rli.event_relay_log_name, lex_mi->relay_log_name,
+                      sizeof(mi->rli.event_relay_log_name) - 1);
   }
 
   if (lex_mi->relay_log_pos)

@@ -48,5 +48,17 @@ save_master_pos;
 connection slave;
 sync_with_master;
 
+# Check space trimming
+source include/stop_slave.inc;
+change master to master_host='  masterhost  ', master_user='  user', master_log_file='master_bin.000001   ', master_log_pos=4, master_port=3306;
+let $status_items=Master_Host, Master_User, Master_Log_File, Read_Master_Log_Pos, Master_Port;
+source include/show_slave_status.inc;
+
+connection master;
+reset master;
+connection slave;
+reset slave;
+source include/start_slave.inc;
+
 # End of 4.1 tests
 --source include/rpl_end.inc
