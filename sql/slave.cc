@@ -832,11 +832,24 @@ int init_strvar_from_file(char *var, int max_size, IO_CACHE *f,
   uint length;
   DBUG_ENTER("init_strvar_from_file");
 
+
+  /*
+     Consume spaces from the front of the line without consuming any
+     character which is not a space in order to leave the rest of the
+     logic as unchanged as possible.
+  */
+  while ((my_b_bytes_in_cache(f) || my_b_fill(f)) &&
+         (f->read_pos[0] == ' '))
+    f->read_pos++;
+
   if ((length=my_b_gets(f,var, max_size)))
   {
     char* last_p = var + length -1;
     if (*last_p == '\n')
-      *last_p = 0; // if we stopped on newline, kill it
+    {
+      // if we stopped on newline, kill it
+      *last_p--= 0;
+    }
     else
     {
       /*
@@ -846,6 +859,9 @@ int init_strvar_from_file(char *var, int max_size, IO_CACHE *f,
       int c;
       while (((c=my_b_get(f)) != '\n' && c != my_b_EOF)) ;
     }
+    /* Trim spaces from the end of the line. */
+    while (last_p >= var && *last_p == ' ')
+      *last_p--= '\0';
     DBUG_RETURN(0);
   }
   else if (default_val)
@@ -2453,6 +2469,22 @@ relay log, you will be able to know their names by issuing 'SHOW SLAVE STATUS' \
 on this slave.\
 ");
   DBUG_RETURN(1);
+}
+
+/*
+  A version of strmake which also trims spaces from the ends of the strings.
+  Only intended to be used for MASTER_INFO fields as it makes no attempt to
+  handle all charsets.
+*/
+char *strmake_with_trim(char *dst, const char *src, uint length)
+{
+  while (*src == ' ')
+    ++src;
+  char *end= strmake(dst, src, length);
+  /* Remove trailing spaces and leave end pointing at first NULL. */
+  while (end > dst && *(end - 1) == ' ')
+    *--end= '\0';
+  return end;
 }
 
 
