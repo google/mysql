@@ -3021,6 +3021,7 @@ void Security_context::init()
   host_or_ip= "connecting host";
   priv_host[0]= '\0';
   master_access= 0;
+  current_user= NULL;
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   db_access= NO_ACCESS;
 #endif

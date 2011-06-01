@@ -790,9 +790,11 @@ public:
     user - user of the client, set to NULL until the user has been read from
     the connection
     priv_user - The user privilege we are using. May be "" for anonymous user.
+    current_user - The user we are currently authorized as. Unlike user
+    and priv_user, this value won't change until authentication has succeeded.
     ip - client IP
   */
-  char   *host, *user, *priv_user, *ip;
+  char   *host, *user, *priv_user, *current_user, *ip;
   /* The host privilege we are using */
   char   priv_host[MAX_HOSTNAME];
   /* points to host if host is available, otherwise points to ip */

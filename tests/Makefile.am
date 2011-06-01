@@ -35,7 +35,7 @@ EXTRA_DIST =		auto_increment.res auto_increment.tst \
 			myisam-big-rows.tst \
 			CMakeLists.txt
 
-bin_PROGRAMS =		mysql_client_test
+bin_PROGRAMS =		mysql_client_test proxy_user_test
 noinst_PROGRAMS =	insert_test select_test thread_test bug25714
 
 INCLUDES =		-I$(top_builddir)/include -I$(top_srcdir)/include \
@@ -50,8 +50,10 @@ mysql_client_test_SOURCES= mysql_client_test.c\
 
 insert_test_SOURCES=       insert_test.c
 select_test_SOURCES=       select_test.c
+proxy_user_test_SOURCES=   proxy_user_test.c
 insert_test_DEPENDENCIES=	$(LIBRARIES) $(pkglib_LTLIBRARIES)
 select_test_DEPENDENCIES=	$(LIBRARIES) $(pkglib_LTLIBRARIES)
+proxy_user_test_DEPENDENCIES=	$(LIBRARIES) $(pkglib_LTLIBRARIES)
 
 bug25714_SOURCES=          bug25714.c
 bug25714_DEPENDENCIES=     $(LIBRARIES) $(pkglib_LTLIBRARIES)

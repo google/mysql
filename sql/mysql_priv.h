@@ -2036,6 +2036,7 @@ extern uint opt_crash_binlog_innodb;
 extern char *shared_memory_base_name, *mysqld_unix_port;
 extern my_bool opt_enable_shared_memory;
 extern char *default_tz_name;
+extern char *opt_mystubby_proxy_user;
 #endif /* MYSQL_SERVER */
 #if defined MYSQL_SERVER || defined INNODB_COMPATIBILITY_HOOKS
 extern my_bool opt_large_pages;

@@ -1,0 +1,4 @@
+###
+# This test will fail unless $MYSQL_ROOT/bin/proxy_user_test exists.
+
+--exec $MYSQL_PROXY_USER_TEST $MASTER_MYSOCK 2>&1

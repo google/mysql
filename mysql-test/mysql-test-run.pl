@@ -2147,6 +2147,16 @@ sub environment_setup {
   $ENV{'MYSQL_BUG25714'}=  native_path($exe_bug25714);
 
   # ----------------------------------------------------
+  # proxy_user_test executable is used to test --proxy_user which
+  # allows a COM_CHANGE_USER to succeed without a password.
+  # ----------------------------------------------------
+  my $exe_proxy_user_test=
+    mtr_exe_maybe_exists(vs_config_dirs('tests', 'proxy_user_test'),
+                         "$basedir/tests/proxy_user_test",
+                         "$basedir/bin/proxy_user_test");
+  $ENV{'MYSQL_PROXY_USER_TEST'}=  native_path($exe_proxy_user_test);
+
+  # ----------------------------------------------------
   # mysql_fix_privilege_tables.sql
   # ----------------------------------------------------
   my $file_mysql_fix_privilege_tables=

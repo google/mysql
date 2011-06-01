@@ -334,6 +334,7 @@ check_user(THD *thd, enum enum_server_command command,
       DBUG_RETURN(1);
   }
   my_ok(thd);
+  thd->security_ctx->current_user= thd->security_ctx->user;
   DBUG_RETURN(0);
 #else
 
@@ -538,6 +539,10 @@ check_user(THD *thd, enum enum_server_command command,
       */
       thd->net.skip_big_packet= TRUE;
 #endif
+      /*
+        We have successfully authenticated. Update our current_user to match.
+      */
+      thd->security_ctx->current_user= thd->security_ctx->user;
       /* Ready to handle queries */
       DBUG_RETURN(0);
     }

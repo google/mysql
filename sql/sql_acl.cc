@@ -910,8 +910,20 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
       {
         res= 3;
 
+        /*
+          We short-circuit the password if we are the proxy_user user.
+          This check will be hit on all authentication attempts, no
+          matter the origin. However, it will only succeed in authorizing
+          the proxy user if opt_mystubby_proxy_user has been set as a
+          command line flag, and we currently are that user, as represented
+          by current_user.
+        */
+        if (sctx->current_user && opt_mystubby_proxy_user &&
+            !strcmp(sctx->current_user, opt_mystubby_proxy_user))
+          res= 0;
+
         /* check password: it should be empty or valid */
-        if (passwd_len == acl_user_tmp->salt_len)
+        else if (passwd_len == acl_user_tmp->salt_len)
         {
           if (acl_user_tmp->salt_len == 0 ||
               (acl_user_tmp->salt_len == SCRAMBLE_LENGTH ?
@@ -1074,6 +1086,7 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     else
       *sctx->priv_host= 0;
   }
+
   VOID(pthread_mutex_unlock(&acl_cache->lock));
   DBUG_RETURN(res);
 }
