@@ -88,6 +88,8 @@ int	vio_errno(Vio*vio);
 my_socket vio_fd(Vio*vio);
 /* Remote peer's address and name in text form */
 my_bool	vio_peer_addr(Vio* vio, char *buf, uint16 *port);
+/* Local address and name in text form */
+my_bool vio_local_addr(Vio* vio, char *buf, uint16 *port);
 /* Remotes in_addr */
 void	vio_in_addr(Vio *vio, struct in_addr *in);
 my_bool	vio_poll_read(Vio *vio,uint timeout);

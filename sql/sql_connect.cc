@@ -259,6 +259,31 @@ end:
 #endif /* NO_EMBEDDED_ACCESS_CHECKS */
 
 
+/*
+  Check if the thd is using the repl_port.
+
+  SYNOPSIS
+    is_using_repl_port(thd)
+
+  RETURN VALUE
+    0 OK; not using the prioritized replication port
+    1 OK; using the replication port
+*/
+
+int is_using_repl_port(THD *thd)
+{
+  NET *net= &thd->net;
+  char ipaddr[30];
+  uint16 local_port;
+
+  if (0 == mysqld_repl_port)
+    return 0;
+
+  vio_local_addr(net->vio, ipaddr, &local_port);
+  return (local_port == mysqld_repl_port) ? 1 : 0;
+}
+
+
 /**
   Check if user exist and password supplied is correct.
 
@@ -403,6 +428,17 @@ check_user(THD *thd, enum enum_server_command command,
                      "failover in progress", MYF(0));
           // TODO(jtolmer): change back to -2 in user-stats branch
           DBUG_RETURN(1);
+        }
+
+        if (is_using_repl_port(thd))
+        {
+          // Returns 0 if global access is correct
+          if (check_global_access(thd, SUPER_ACL | REPL_SLAVE_ACL))
+          {
+            net_send_error(thd, ER_SPECIFIC_ACCESS_DENIED_ERROR,
+                           "not authorized for repl_port");
+            DBUG_RETURN(1);
+          }
         }
       }
 
