@@ -596,6 +596,9 @@ static sys_var_bool_ptr sys_update_connection_privs(&vars, "update_connection_pr
 
 static sys_var_thd_ulong	sys_range_alloc_block_size(&vars, "range_alloc_block_size",
 						   &SV::range_alloc_block_size);
+static sys_var_const            sys_repl_port(&vars, "repl_port",
+                                              OPT_GLOBAL, SHOW_INT,
+                                              (uchar*) &mysqld_repl_port);
 static sys_var_thd_ulong	sys_query_alloc_block_size(&vars, "query_alloc_block_size",
 						   &SV::query_alloc_block_size,
 						   0, fix_thd_mem_root);

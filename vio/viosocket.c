@@ -63,6 +63,30 @@ size_t vio_read(Vio * vio, uchar* buf, size_t size)
   DBUG_RETURN(r);
 }
 
+my_bool vio_local_addr(Vio *vio, char *buf, uint16 *port)
+{
+  DBUG_ENTER("vio_local_addr");
+  DBUG_PRINT("enter", ("sd: %d", vio->sd));
+  if (vio->localhost)
+  {
+    strmov(buf, "127.0.0.1");
+    *port= 0;
+  }
+  else
+  {
+    size_socket addrLen= sizeof(vio->local);
+    if (getsockname(vio->sd, (struct sockaddr *) (&vio->local),
+                    &addrLen) != 0)
+    {
+      DBUG_PRINT("exit", ("getsockname gave error: %d", socket_errno));
+      DBUG_RETURN(1);
+    }
+    my_inet_ntoa(vio->local.sin_addr, buf);
+    *port= ntohs(vio->local.sin_port);
+  }
+  DBUG_PRINT("exit", ("addr: %s", buf));
+  DBUG_RETURN(0);
+}
 
 /*
   Buffered read: if average read size is small it may

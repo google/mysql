@@ -1982,6 +1982,7 @@ extern uint test_flags,select_errors,ha_open_options;
 extern uint protocol_version;
 extern char *mysqld_ports_str;
 extern uint dropping_tables;
+extern uint mysqld_repl_port;
 extern uint delay_key_write_options;
 extern ulong max_long_data_size;
 #endif /* MYSQL_SERVER */

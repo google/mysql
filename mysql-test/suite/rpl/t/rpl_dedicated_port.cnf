@@ -1,0 +1,4 @@
+!include ../my.cnf
+
+[ENV]
+REPL_PORT= 13500
