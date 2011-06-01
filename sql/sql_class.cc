@@ -3023,6 +3023,7 @@ void Security_context::init()
   priv_host[0]= '\0';
   access_ver= 0;
   master_access= 0;
+  current_user= NULL;
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   db_access= NO_ACCESS;
 #endif

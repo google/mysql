@@ -1155,12 +1155,19 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
 
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
-  acl_user= find_sys_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
+  if (sctx->current_user && opt_proxy_user &&
+      !strcmp(sctx->current_user, opt_proxy_user)) {
+    acl_user= find_user_no_passwd(sctx->user, sctx->host, sctx->ip);
+    if(acl_user)
+      res= 0;
+  } else {
+    acl_user= find_sys_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
+                                   passwd, passwd_len, &res);
+    if (res == 1)
+    {
+      acl_user= find_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
                                  passwd, passwd_len, &res);
-  if (res == 1)
-  {
-    acl_user= find_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
-                               passwd, passwd_len, &res);
+    }
   }
 
   /*
@@ -1307,6 +1314,7 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     else
       *sctx->priv_host= 0;
   }
+
   VOID(pthread_mutex_unlock(&acl_cache->lock));
   DBUG_RETURN(res);
 }

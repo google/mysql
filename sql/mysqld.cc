@@ -403,6 +403,9 @@ bool opt_large_files= sizeof(my_off_t) > 4;
 */
 static my_bool opt_help= 0, opt_verbose= 0;
 
+// For use with --proxy_user
+char *opt_proxy_user= NULL;
+
 arg_cmp_func Arg_comparator::comparator_matrix[5][2] =
 {{&Arg_comparator::compare_string,     &Arg_comparator::compare_e_string},
  {&Arg_comparator::compare_real,       &Arg_comparator::compare_e_real},
@@ -6295,8 +6298,9 @@ enum options_mysqld
   OPT_HTTPD_BIND_ADDRESS,
   OPT_HTTPD_PORT,
   OPT_HTTPD,
-  OPT_HTTPD_TRUST_CLIENTS
+  OPT_HTTPD_TRUST_CLIENTS,
 #endif
+  OPT_MYSQL_PROXY_USER
 };
 
 
@@ -7621,6 +7625,14 @@ thread is in the relay logs.",
    &global_system_variables.preload_buff_size,
    &max_system_variables.preload_buff_size, 0, GET_ULONG,
    REQUIRED_ARG, 32*1024L, 1024, 1024*1024*1024L, 0, 1, 0},
+  {"proxy-user", OPT_MYSQL_PROXY_USER,
+   "Enables authentication via proxy for the given user. The specified user "
+   "has the ability to execute COM_CHANGE_USER and switch to any other user "
+   "without providing the password of the user to be switched to. "
+   "This option has the potential to make the server less secure, so use "
+   "with utmost care.",
+   &opt_proxy_user, &opt_proxy_user, 0, GET_STR, REQUIRED_ARG,
+   0, 0, 0, 0, 0, 0},
   {"query_alloc_block_size", OPT_QUERY_ALLOC_BLOCK_SIZE,
    "Allocation block size for query parsing and execution.",
    &global_system_variables.query_alloc_block_size,

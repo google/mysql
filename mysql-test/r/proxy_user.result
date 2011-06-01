@@ -1,0 +1,15 @@
+CREATE USER 'proxy_user'@'localhost' IDENTIFIED BY 'pass';
+CREATE USER 'test_user'@'localhost' IDENTIFIED BY 'pass2';
+CREATE USER 'testabc'@'localhost' IDENTIFIED BY 'foobar';
+GRANT ALL ON *.* to 'testabc'@'localhost';
+GRANT INSERT ON *.* to 'test_user'@'localhost';
+GRANT INSERT ON *.* TO 'test_user'@'localhost' IDENTIFIED BY PASSWORD '*1B884EF334D678B0743C8CE0425F980669D8FBB6'
+Couldn't change user to: user: 'testabc', password: 'bababa', db: '':  Error: Access denied for user 'testabc'@'localhost' (using password: YES)
+GRANT INSERT ON *.* TO 'test_user'@'localhost' IDENTIFIED BY PASSWORD '*1B884EF334D678B0743C8CE0425F980669D8FBB6'
+GRANT USAGE ON *.* TO 'proxy_user'@'localhost' IDENTIFIED BY PASSWORD '*196BDEDE2AE4F84CA44C47D54D78478C7E2BD7B7'
+Couldn't change user to: user: 'notauser', password: '', db: '':  Error: Access denied for user 'notauser'@'localhost' (using password: NO)
+GRANT USAGE ON *.* TO 'proxy_user'@'localhost' IDENTIFIED BY PASSWORD '*196BDEDE2AE4F84CA44C47D54D78478C7E2BD7B7'
+GRANT ALL PRIVILEGES ON *.* TO 'testabc'@'localhost' IDENTIFIED BY PASSWORD '*9B500343BC52E2911172EB52AE5CF4847604C6E5'
+DROP USER 'proxy_user'@'localhost';
+DROP USER 'test_user'@'localhost';
+DROP USER 'testabc'@'localhost';

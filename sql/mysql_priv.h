@@ -2047,6 +2047,7 @@ inline bool server_is_writable()
 { return !(opt_readonly || opt_disk_quota_exceeded); }
 void issue_server_not_writable_error(); // defined/documented in mysqld.cc
 
+extern char *opt_proxy_user;
 #endif /* MYSQL_SERVER */
 #if defined MYSQL_SERVER || defined INNODB_COMPATIBILITY_HOOKS
 extern my_bool opt_large_pages;
