@@ -35,6 +35,8 @@
 #include "rpl_injector.h"
 #include "repl_hier_cache.h"
 
+#include "httpd.h"
+
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
@@ -785,6 +787,7 @@ char **orig_argv;
 static my_socket unix_sock;
 static my_socket ip_socks[MAX_MYSQLD_PORTS];
 static my_socket repl_sock;
+extern my_socket http_sock;
 struct rand_struct sql_rand; ///< used by sql_class.cc:THD::THD()
 
 #ifndef EMBEDDED_LIBRARY
@@ -987,6 +990,8 @@ static void close_connections(void)
       shutdown_socket(ip_socks[i]);
     }
     shutdown_socket(repl_sock);
+    if (mysqld_http_enable)
+      shutdown_socket(http_sock);
   }
 #ifdef __NT__
   if (hPipe != INVALID_HANDLE_VALUE && opt_enable_named_pipe)
@@ -1148,6 +1153,8 @@ static void close_server_sock()
   }
   close_server_sock_helper(repl_sock, "TCP/IP replication");
   close_server_sock_helper(unix_sock, "unix/IP");
+  if (mysqld_http_enable && http_sock != INVALID_SOCKET)
+    close_server_sock_helper(http_sock, "TCP/IP HTTP");
 
   VOID(unlink(mysqld_unix_port));
   DBUG_VOID_RETURN;
@@ -4611,6 +4618,17 @@ we force server id to 2, but this MySQL server will not act as a slave.");
   my_str_malloc= &my_str_malloc_mysqld;
   my_str_free= &my_str_free_mysqld;
 
+  if (!opt_disable_networking && mysqld_http_enable)
+  {
+    socket_init(&http_sock, mysqld_http_port);
+    if ((int) mysqld_http_port != INVALID_SOCKET)
+    {
+      sql_print_information("Listen for HTTP status requests on port %u",
+                            mysqld_http_port);
+      create_httpd_thread();
+    }
+  }
+
   /*
     init signals & alarm
     After this we can't quit by a simple unireg_abort
@@ -5986,7 +6004,9 @@ enum options_mysqld
   OPT_RPL_SEMI_SYNC_TIMEOUT,
   OPT_RPL_SEMI_SYNC_TRACE,
   OPT_RPL_EVENT_BUFFER_SIZE,
-  OPT_MYSQL_REPL_PORT
+  OPT_MYSQL_REPL_PORT,
+  OPT_MYSQL_HTTP_PORT,
+  OPT_MYSQL_HTTP_ENABLE
 };
 
 
@@ -6197,6 +6217,12 @@ struct my_option my_long_options[] =
    "Disable with --skip-large-pages.", &opt_large_pages, &opt_large_pages,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
+  {"http-enable", OPT_MYSQL_HTTP_ENABLE, "Enable the HTTP service.",
+   &mysqld_http_enable, &mysqld_http_enable,
+   0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"http-port", OPT_MYSQL_HTTP_PORT, "Listen port for the HTTP server.",
+   &mysqld_http_port, &mysqld_http_port,
+   0, GET_INT, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"ignore-builtin-innodb", OPT_IGNORE_BUILTIN_INNODB ,
    "Disable initialization of builtin InnoDB plugin.",
    0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
@@ -8270,6 +8296,7 @@ static int mysql_init_variables(void)
     ip_socks[i]= INVALID_SOCKET;
   }
   repl_sock= INVALID_SOCKET;
+  http_sock= INVALID_SOCKET;
   mysql_home_ptr= mysql_home;
   pidfile_name_ptr= pidfile_name;
   log_error_file_ptr= log_error_file;

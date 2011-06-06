@@ -77,7 +77,7 @@ noinst_HEADERS =	item.h item_func.h item_sum.h item_cmpfunc.h \
 			event_data_objects.h event_scheduler.h \
 			sql_partition.h partition_info.h partition_element.h \
 			contributors.h sql_servers.h hash_64.h \
-			repl_hier_cache.h repl_semi_sync.h sql_stats.h
+			repl_hier_cache.h repl_semi_sync.h sql_stats.h httpd.h
 
 mysqld_SOURCES =	sql_lex.cc sql_handler.cc sql_partition.cc \
 			item.cc item_sum.cc item_buff.cc item_func.cc \
@@ -124,7 +124,8 @@ mysqld_SOURCES =	sql_lex.cc sql_handler.cc sql_partition.cc \
 			sql_plugin.cc sql_binlog.cc \
 			sql_builtin.cc sql_tablespace.cc partition_info.cc \
 			sql_servers.cc event_parse_data.cc hash_64.cc \
-			repl_hier_cache.cc repl_semi_sync.cc sql_stats.cc
+			repl_hier_cache.cc repl_semi_sync.cc sql_stats.cc \
+			httpd_request.cc httpd_server.cc
 
 nodist_mysqld_SOURCES =	mini_client_errors.c pack.c client.c my_time.c my_user.c 
 

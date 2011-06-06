@@ -33,9 +33,18 @@ if [[ -a ${INSTANCE_DIR}/mysql.port ]]
 then
   PORT=$(cat ${INSTANCE_DIR}/mysql.port)
 else
-  LAST_PORT=$(echo 51000 $(find instance/ -name mysql.port | xargs cat) | fmt -1 | sort -n | tail -n1)
+  LAST_PORT=$(echo 51000 $(find instance/ -name 'mysql.*port' | xargs cat) | fmt -1 | sort -n | tail -n1)
   PORT=$((${LAST_PORT} + 1))
   echo ${PORT} > ${INSTANCE_DIR}/mysql.port
+fi
+
+if [[ -a ${INSTANCE_DIR}/mysql.http_port ]]
+then
+  HTTP_PORT=$(cat ${INSTANCE_DIR}/mysql.http_port)
+else
+  LAST_PORT=$(echo 51000 $(find instance/ -name 'mysql.*port' | xargs cat) | fmt -1 | sort -n | tail -n1)
+  HTTP_PORT=$((${LAST_PORT} + 1))
+  echo ${HTTP} > ${INSTANCE_DIR}/mysql.http_port
 fi
 
 if [[ -a ${INSTANCE_DIR}/mysql.id ]]
@@ -59,6 +68,8 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --character-sets-dir=${BIN_DIR}/sql/share/charsets \
   --sock=${INSTANCE_DIR}/mysql.sock \
   --port=${PORT} \
+  --http-enable \
+  --http-port=${HTTP_PORT} \
   --server_id=${ID} \
   --pid-file=${INSTANCE_DIR}/mysql.pid \
   ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
