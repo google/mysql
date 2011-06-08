@@ -51,6 +51,9 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --tmpdir=${INSTANCE_DIR}/tmp/ \
   --language=${BIN_DIR}/sql/share/english \
   --character-sets-dir=${BIN_DIR}/sql/share/charsets \
+  --googlestats=ON \
+  --googlestats_servers_table=LocalStatsServers \
+  --googlestats_version_table=CommittedStatsVersions \
   --sock=${INSTANCE_DIR}/mysql.sock \
   --port=${PORT} \
   --httpd \
@@ -65,7 +68,8 @@ then
   echo ">>>>>> Bootstraping ${NAME}..."
   ( echo "use mysql;"; \
     cat ${SRC_DIR}/scripts/mysql_system_tables.sql \
-    ${SRC_DIR}/scripts/mysql_system_tables_data.sql ) | \
+      ${SRC_DIR}/scripts/mysql_system_tables_data.sql \
+      ${SRC_DIR}/scripts/mysql_googlestats_tables.sql ) | \
   ${cmd[*]} --bootstrap \
     &> ${INSTANCE_DIR}/mysql.err
 fi
@@ -95,4 +99,3 @@ else
     set +x
   fi
 fi
-

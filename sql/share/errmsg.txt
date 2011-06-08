@@ -6221,6 +6221,8 @@ ER_SLAVE_OUT_OF_ORDER_GROUP_ID
   eng "Slave SQL thread encountered ev->group_id==%s < last processed ID==%s. Stopping replication."
 ER_SQL_LOG_TXN
   eng "SQL transaction logging failed"
+ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+  eng "Cannot query a GoogleStats table during insert, update, delete, replace"
 ER_ENGINE_DEPRECATED
   eng "Create or alter table %s.%s requested with engine %s, which is deprecated by the system administrator. Please use a different storage engine."
 ER_OVER_LIMIT_TMP_DISK_SPACE

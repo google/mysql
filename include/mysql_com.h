@@ -129,6 +129,7 @@ enum enum_server_command
 					   and truncate the index */
 #define REFRESH_TABLE_STATS     512     /* Refresh table stats hash table */
 #define REFRESH_USER_STATS      1024    /* Refresh user stats hash table */
+#define REFRESH_GOOGLESTATS     256     /* Refresh GoogleStats cache. */
 
 /* The following can't be set with mysql_refresh() */
 #define REFRESH_READ_LOCK	16384	/* Lock tables for read */

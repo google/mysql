@@ -73,7 +73,8 @@ dist_pkgdata_DATA =	fill_help_tables.sql \
 			mysql_fix_privilege_tables.sql \
 			mysql_system_tables.sql \
 			mysql_system_tables_data.sql \
-			mysql_test_data_timezone.sql
+			mysql_test_data_timezone.sql \
+			mysql_googlestats_tables.sql
 
 CLEANFILES =		@server_scripts@ \
 			make_binary_distribution \

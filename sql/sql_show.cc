@@ -725,7 +725,8 @@ mysqld_show_create(THD *thd, TABLE_LIST *table_list)
   {
     Show_create_error_handler view_error_suppressor(thd, table_list);
     thd->push_internal_handler(&view_error_suppressor);
-    bool error= open_normal_and_derived_tables(thd, table_list, 0);
+    bool error= open_normal_and_derived_tables(thd, table_list,
+                                               MYSQL_OPEN_IGNORE_CSV);
     thd->pop_internal_handler();
     if (error && (thd->killed || thd->main_da.is_error()))
       DBUG_RETURN(TRUE);
@@ -3175,7 +3176,8 @@ fill_schema_table_by_open(THD *thd, bool is_show_fields_or_keys,
   lex->sql_command= SQLCOM_SHOW_FIELDS;
 
   result= open_normal_and_derived_tables(thd, table_list,
-                                         MYSQL_LOCK_IGNORE_FLUSH);
+                                         MYSQL_LOCK_IGNORE_FLUSH |
+                                         MYSQL_OPEN_IGNORE_CSV);
 
   /*
     Restore old value of sql_command back as it is being looked at in

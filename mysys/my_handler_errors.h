@@ -81,8 +81,9 @@ static const char *handler_error_messages[]=
   "Too many active concurrent transactions",
   /* TODO(seanrees): move this down beyond HA_ERR_TABLE_IN_FK_CHECK for compat. */
   "SQL transaction logging failed",
+  "Cannot query a GoogleStats table during insert, update, delete, replace",
   /* "", */
-  "",
+  /* "", */
   "",
   "Table is being used in foreign key check" /* HA_ERR_TABLE_IN_FK_CHECK */
 };

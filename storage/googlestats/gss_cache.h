@@ -115,9 +115,12 @@ public:
   // See ::_reinit for comments.
   static bool reinit(THD* thd)
   {
-    if (instance()) {
+    if (instance())
+    {
       return instance()->_reinit(thd);
-    } else {
+    }
+    else
+    {
       my_message(ER_UNKNOWN_ERROR, "GoogleStats not initialized.", MYF(0));
       return false;
     }
@@ -127,9 +130,14 @@ public:
   static int showStatus(THD* thd, bool verbose, const char* wild)
   {
     if (instance())
+    {
       return (instance()->_showStatus(thd, verbose, wild));
+    }
     else
+    {
+      my_message(ER_UNKNOWN_ERROR, "GoogleStats not initialized.", MYF(0));
       return -1;
+    }
   }
 
   // See ::_setStatus for comments.

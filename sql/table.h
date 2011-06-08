@@ -937,7 +937,6 @@ struct st_table {
   //   ... lock_tables() -> for all tables in the query
   // See open_tables() for the code.
   //
-  // TODO(seanrees): -- move this to memory associated with the table handler instance
   query_id_t    googlestats_version_query_id;
   int           googlestats_version_num;
   longlong      googlestats_version_hash;

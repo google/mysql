@@ -2184,6 +2184,8 @@ MYSQL_LOCK *mysql_lock_tables(THD *thd, TABLE **table, uint count,
 #define MYSQL_OPEN_TEMPORARY_ONLY               0x0008
 #define MYSQL_LOCK_IGNORE_GLOBAL_READ_ONLY      0x0010
 #define MYSQL_LOCK_PERF_SCHEMA                  0x0020
+/* Google Addition: Ignore CommittedStatsVersions. */
+#define MYSQL_OPEN_IGNORE_CSV                   0x0040
 
 void mysql_unlock_tables(THD *thd, MYSQL_LOCK *sql_lock);
 void mysql_unlock_read_tables(THD *thd, MYSQL_LOCK *sql_lock);
