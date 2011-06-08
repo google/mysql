@@ -1,0 +1,9 @@
+# Suppress this (expected) warning from GoogleStats, or mysql-test-run
+# will fail the test.
+call mtr.add_suppression("StatsServerCache: not initialized!");
+
+--error ER_UNKNOWN_ERROR
+show stats_server status;
+
+--error ER_UNKNOWN_ERROR
+flush stats_servers;

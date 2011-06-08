@@ -79,5 +79,6 @@ static const char *handler_error_messages[]=
   "File to short; Expected more data in file",
   "Read page with wrong checksum",
   "Too many active concurrent transactions",
-  "SQL transaction logging failed"
+  "SQL transaction logging failed",
+  "Cannot query a GoogleStats table during insert, update, delete, replace"
 };

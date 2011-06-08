@@ -14,8 +14,8 @@
 #include "gss_cache.h"
 #include "gss_aux.h"
 #include "gss_errors.h"
-#include "googlestats.h"
-#include "googlestats_priv.h"
+#include "ha_googlestats.h"
+#include "status_vars.h"
 #include "sql_show.h"
 
 #include <sys/types.h>
@@ -45,15 +45,6 @@ template class std::vector<std::pair<StatsServerCache::TblMapKey, StatsServerCac
 
 StatsServerCache* StatsServerCache::_instance = 0;
 
-bool googlestats_init(void) {
-  return StatsServerCache::createInstance();
-}
-
-bool googlestats_end(void) {
-  // false means success to MySQL, so invert reality here
-  return !StatsServerCache::destroyInstance();
-}
-
 bool googlestats_reinit(THD* thd) {
   // false means success to MySQL, so invert reality here
   return !StatsServerCache::reinit(thd);
@@ -66,7 +57,6 @@ int googlestats_show_status(THD* thd, bool verbose, const char* wild) {
 int googlestats_set_status() {
   return StatsServerCache::setStatus();
 }
-
 
 StatsServerCache::StatsServerCache() {
   pthread_mutex_init(&mutex, MY_MUTEX_INIT_FAST);
@@ -84,13 +74,11 @@ StatsServerCache::createInstance() {
   _instance = new StatsServerCache();
   if (_instance == 0) {
     StatsServerAux::printError("Failed to start GoogleStats");
-    // TODO(mcallaghan): make this fatal
     return false;
   } else {
     bool res = _instance->_reinit(0);
     if (!res) {
       StatsServerAux::printError("Failed to start GoogleStats");
-      // TODO(mcallaghan): make this fatal
       delete _instance;
       _instance = NULL;
       return false;
@@ -604,6 +592,11 @@ StatsServerCache::load(THD* thd,
   table_list.db = const_cast<char*>(dbName);
   table_list.lock_type = TL_READ;
   TABLE_LIST* table_list_ptr = &table_list;
+
+  // New in 5.1; partitioning requires lexing to be started. This should not
+  // affect us for reading from LocalStatsServers.
+  lex_start(thd);
+
   uint ctr = 0;
 
   if (open_tables(thd, &table_list_ptr, &ctr, 0)) {

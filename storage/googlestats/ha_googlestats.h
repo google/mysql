@@ -7,11 +7,25 @@
 
 #include <string>
 
-class ha_innobase;
 class StatsServerKeys;
 class StatsServerKeyVals;
 class StatsServerConnectState;
 class StatsServerPushedConds;
+
+// Used for FLUSH STATS_SERVERS. Returns false on success.
+extern bool googlestats_reinit(THD*);
+
+extern char *googlestats_servers_tbl;
+extern char *googlestats_version_tbl;
+extern int googlestats_timeout, googlestats_retry_interval;
+extern int googlestats_log_level;
+extern int googlestats_slow_threshold;
+extern my_bool buffer_table_sort;
+extern int googlestats_max_packet;
+
+extern int get_versions_for_googlestats_tables(THD* thd, TABLE_LIST* tables);
+
+enum GsLogLevel {GsLogLevelNone = 0, GsLogLevelLow, GsLogLevelMed, GsLogLevelHigh};
 
 // This class describes a "requested" field; i.e. one that has been requested
 // on the query.  We also cache commonly used field attributes in order to

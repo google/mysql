@@ -1305,6 +1305,10 @@ static void print_lock_error(int error, const char *table)
   case HA_ERR_WRONG_COMMAND:
     textno=ER_ILLEGAL_HA;
     break;
+  /* Google Addition. */
+  case HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE:
+    textno=ER_NO_QUERY_GOOGLESTATS_ON_UPDATE;
+    break;
   default:
     textno=ER_CANT_LOCK;
     break;

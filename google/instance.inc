@@ -18,7 +18,8 @@ then
   echo ">>>>>> Bootstraping ${NAME}..."
   ( echo "use mysql;"; \
     cat ${SRC_DIR}/scripts/mysql_system_tables.sql \
-    ${SRC_DIR}/scripts/mysql_system_tables_data.sql ) | \
+      ${SRC_DIR}/scripts/mysql_system_tables_data.sql \
+      ${SRC_DIR}/scripts/mysql_googlestats_tables.sql ) | \
   ${BIN_DIR}/sql/mysqld \
     --no-defaults \
     --bootstrap \
@@ -26,6 +27,7 @@ then
     --tmpdir=${INSTANCE_DIR}/tmp/ \
     --language=${BIN_DIR}/sql/share/english \
     --character-sets-dir=${BIN_DIR}/sql/share/charsets \
+    --googlestats=OFF \
     &> ${INSTANCE_DIR}/mysql.err
 fi
 
@@ -73,6 +75,9 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --httpd-socket=${INSTANCE_DIR}/http.sock \
   --server_id=${ID} \
   --pid-file=${INSTANCE_DIR}/mysql.pid \
+  --googlestats=ON \
+  --googlestats_servers_table=LocalStatsServers \
+  --googlestats_version_table=CommittedStatsVersions \
   ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
 
 if [[ -n "${GDB}" ]]
@@ -95,4 +100,3 @@ else
     set +x
   fi
 fi
-

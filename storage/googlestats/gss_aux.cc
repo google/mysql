@@ -9,8 +9,8 @@
 #include <m_ctype.h>
 #include "gss_aux.h"
 #include "gss_errors.h"
-#include "googlestats.h"
-#include "googlestats_priv.h"
+#include "ha_googlestats.h"
+#include "status_vars.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -32,42 +32,6 @@ int get_versions_for_googlestats_tables(THD* thd, TABLE_LIST* tables) {
   return StatsServerAux::getVersionNumber(thd, tables);
 }
 
-#if 0
-int
-StatsServerAux::readBytes(
-  int sock_fd,
-  void* buf,
-  size_t length,
-  int timeout)
-{
-  int total = 0;
-  while (total < length) {
-    // read rows
-    int len = read(sock_fd, buf, length - total);
-    if (len < 0) {
-      if (errno == EINTR) {
-        printError("readBytes: time-out on socket");
-      } else {
-        // some unspecified error
-        printError("readBytes: read error on socket (errno=%d, len=%d, "
-          "total=%d, requested=%d)", errno, len, total, length);
-      }
-      return(-1);
-    }
-    if (len == 0) {
-      printError("readBytes: socket unexpectedly closed");
-      return(-1);
-    }
-    total += len;
-    buf = static_cast<void*>(static_cast<char*>(buf) +len);
-    if (googlestats_log_level >= GsLogLevelHigh) {
-      printError("readBytes: read %d bytes", len);
-    }
-  }
-  return(0);
-}
-
-#else
 int
 StatsServerAux::readBytes(
   int sock_fd,
@@ -117,7 +81,6 @@ StatsServerAux::readBytes(
   }
   return(0);
 }
-#endif
 
 // return -1 if any error or timeout; return 0 otherwise
 int

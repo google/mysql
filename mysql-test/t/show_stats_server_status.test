@@ -1,0 +1,68 @@
+-- source include/have_innodb.inc
+
+show stats_server status;
+show changed stats_server status;
+show stats_server status like 'x';
+
+create database T;
+use T;
+create table TA (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+create table TB (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+
+CREATE TABLE `CommittedStatsVersions` (
+  `TableName` varchar(128) NOT NULL default '',
+  `LastVersion` int(11) NOT NULL default '0',
+  `CumulativeVersionHash` bigint(20) NOT NULL default '0',
+  PRIMARY KEY  (`TableName`)
+) ENGINE=InnoDB;
+
+CREATE TABLE `LocalStatsServers` (
+  `Host` varchar(128) NOT NULL default '',
+  `Port` int(11) NOT NULL default '0',
+  `TableName` varchar(128) NOT NULL default '',
+  `Tier` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`TableName`,`Host`,`Port`)
+) ENGINE=InnoDB;
+
+insert into LocalStatsServers values ('localhost', 1111, 'TA', 1);
+insert into LocalStatsServers values ('localhost', 1111, 'TB', 1);
+insert into LocalStatsServers values ('localhost', 1111, 'TC', 1);
+insert into LocalStatsServers values ('127.0.0.1', 2222, 'TB', 1);
+insert into LocalStatsServers values ('nonexistentstatsserver', 2222, 'TB', 1);
+
+insert into CommittedStatsVersions values ('TA', 1, 1111);
+insert into CommittedStatsVersions values ('TB', 2, 2222);
+
+-- error 1296
+select * from TA;
+
+flush stats_servers;
+
+show stats_server status;
+
+-- error 1296
+select * from TA;
+
+-- replace_column 6 TIMESTAMP
+show stats_server status;
+-- replace_column 6 TIMESTAMP
+show stats_server status like '127.0.0.1';
+-- replace_column 6 TIMESTAMP
+show stats_server status like 'localhost';
+-- replace_column 6 TIMESTAMP
+show stats_server status like 'T.TA';
+-- replace_column 6 TIMESTAMP
+show stats_server status like '%A';
+-- replace_column 6 TIMESTAMP
+show stats_server status like 'bogus';
+
+-- replace_column 6 TIMESTAMP
+show changed stats_server status;
+-- replace_column 6 TIMESTAMP
+show changed stats_server status like '%.T%';
+-- replace_column 6 TIMESTAMP
+show changed stats_server status like '127.0.0.1';
+-- replace_column 6 TIMESTAMP
+show changed stats_server status like 'localhost';
+
+drop database T;

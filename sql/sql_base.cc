@@ -26,6 +26,10 @@
 #include <my_dir.h>
 #include <hash.h>
 #include "rpl_filter.h"
+
+// For get_versions_for_googlestats_tables().
+#include "../storage/googlestats/googlestats_ext.h"
+
 #ifdef  __WIN__
 #include <io.h>
 #endif
@@ -4926,6 +4930,17 @@ process_view_routines:
 
   if (query_tables_last_own)
     thd->lex->mark_as_requiring_prelocking(query_tables_last_own);
+
+  // GoogleStats addition. Open and populate stats table versions.
+  if (!result && !(flags & MYSQL_OPEN_IGNORE_CSV)) {
+    const char* info= thd->proc_info;
+    thd_proc_info(thd, "Get GoogleStats version number");
+    result= get_versions_for_googlestats_tables(thd, *start);
+    thd_proc_info(thd, info);
+    if (result) {
+      my_message(ER_UNKNOWN_ERROR, "Can't read GoogleStats version.", MYF(0));
+    }
+  }
 
   if (result && tables)
   {

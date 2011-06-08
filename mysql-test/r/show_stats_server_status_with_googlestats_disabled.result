@@ -1,0 +1,5 @@
+call mtr.add_suppression("StatsServerCache: not initialized!");
+show stats_server status;
+ERROR HY000: GoogleStats not initialized.
+flush stats_servers;
+ERROR HY000: GoogleStats not initialized.

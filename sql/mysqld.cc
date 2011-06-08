@@ -32,9 +32,6 @@
 
 #include "../storage/myisam/ha_myisam.h"
 
-/* Google Addition */
-#include "googlestats.h"
-
 #include "rpl_injector.h"
 #include "repl_hier_cache.h"
 
@@ -710,7 +707,6 @@ SHOW_COMP_OPTION have_ssl, have_symlink, have_dlopen, have_query_cache;
 SHOW_COMP_OPTION have_geometry, have_rtree_keys;
 SHOW_COMP_OPTION have_crypt, have_compress;
 SHOW_COMP_OPTION have_community_features;
-SHOW_COMP_OPTION have_googlestats;
 
 my_bool opt_allow_delayed_write;
 my_bool opt_allow_stored_procedures;
@@ -3127,7 +3123,7 @@ const char *load_default_groups[]= {
 #ifdef WITH_NDBCLUSTER_STORAGE_ENGINE
 "mysql_cluster",
 #endif
-"mysqld","server", MYSQL_BASE_VERSION, "googlestats", 0, 0};
+"mysqld","server", MYSQL_BASE_VERSION, 0, 0};
 
 #if defined(__WIN__) && !defined(EMBEDDED_LIBRARY)
 static const int load_default_groups_sz=
@@ -3312,6 +3308,7 @@ SHOW_VAR com_status_vars[]= {
   {"show_slave_hosts",     (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_SLAVE_HOSTS]), SHOW_LONG_STATUS},
   {"show_slave_status",    (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_SLAVE_STAT]), SHOW_LONG_STATUS},
   {"show_status",          (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_STATUS]), SHOW_LONG_STATUS},
+  {"show_statsservers_status", (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_STATSSERVERS_STATUS]), SHOW_LONG_STATUS},
   {"show_storage_engines", (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_STORAGE_ENGINES]), SHOW_LONG_STATUS},
   {"show_table_status",    (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TABLE_STATUS]), SHOW_LONG_STATUS},
   {"show_tables",          (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TABLES]), SHOW_LONG_STATUS},
@@ -4211,13 +4208,6 @@ a file name for --log-bin-index option", opt_binlog_index_name);
   {
     sql_print_error("Can't init databases");
     unireg_abort(1);
-  }
-
-  /* Initialize GoogleStats cache */
-  // TODO(seanrees): make this more modularly loaded (LOAD PLUGIN).
-  if (googlestats_init())
-  {
-    sql_print_error("googlestats_init failed");
   }
 
 #ifdef WITH_CSV_STORAGE_ENGINE
@@ -8652,7 +8642,6 @@ static int mysql_init_variables(void)
 #if !defined(my_pthread_setprio) && !defined(HAVE_PTHREAD_SETSCHEDPARAM)
   opt_specialflag |= SPECIAL_NO_PRIOR;
 #endif
-  have_googlestats=SHOW_OPTION_YES;
 
 #if defined(__WIN__) || defined(__NETWARE__)
   /* Allow Win32 and NetWare users to move MySQL anywhere */

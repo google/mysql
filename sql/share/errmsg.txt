@@ -6221,3 +6221,5 @@ ER_SLAVE_OUT_OF_ORDER_GROUP_ID
   eng "Slave SQL thread encountered ev->group_id==%s < last processed ID==%s. Stopping replication."
 ER_SQL_LOG_TXN
   eng "SQL transaction logging failed"
+ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+  eng "Cannot query a GoogleStats table during insert, update, delete, replace"

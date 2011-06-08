@@ -1221,7 +1221,10 @@ int plugin_init(int *argc, char **argv, int flags)
       /* only initialize MyISAM and CSV at this stage */
       if (!(is_myisam=
             !my_strcasecmp(&my_charset_latin1, plugin->name, "MyISAM")) &&
-          my_strcasecmp(&my_charset_latin1, plugin->name, "CSV"))
+          my_strcasecmp(&my_charset_latin1, plugin->name, "CSV") &&
+          /* GoogleStats needs InnoDB loaded first, so it can read
+           * CommittedStatsVersions. */
+          my_strcasecmp(&my_charset_latin1, plugin->name, "InnoDB"))
         continue;
 
       if (plugin_ptr->state == PLUGIN_IS_UNINITIALIZED &&
@@ -3308,7 +3311,9 @@ static int test_plugin_options(MEM_ROOT *tmp_root, struct st_plugin_int *tmp,
     default.
   */
   if (!(my_strcasecmp(&my_charset_latin1, tmp->name.str, "federated") &&
-      my_strcasecmp(&my_charset_latin1, tmp->name.str, "ndbcluster")))
+      my_strcasecmp(&my_charset_latin1, tmp->name.str, "ndbcluster") &&
+      /* Google Addition */
+      my_strcasecmp(&my_charset_latin1, tmp->name.str, "googlestats")))
     plugin_load_policy= PLUGIN_OFF;
 
   for (opt= tmp->plugin->system_vars; opt && *opt; opt++)
@@ -3473,4 +3478,3 @@ void my_print_help_inc_plugins(my_option *main_options, uint size)
   delete_dynamic(&all_options);
   free_root(&mem_root, MYF(0));
 }
-

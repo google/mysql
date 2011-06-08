@@ -38,7 +38,7 @@ ${SRC_DIR}/configure \
   --includedir=/usr/include \
   --mandir=/usr/share/man \
   --enable-thread-safe-client \
-  --with-plugins=innodb_plugin \
+  --with-plugins=innodb_plugin,googlestats \
   --with-lzo2-dir=bundled \
   --with-ncurses-dir=bundled \
   --with-readline \

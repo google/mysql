@@ -1,6 +1,6 @@
 MYSQL_STORAGE_ENGINE(googlestats,,  [GoogleStats Storage Engine],
-        [GoogleStats], [max,max-no-ndb])
+        [Allows MySQL access to Google Stats Server data], [max,max-no-ndb])
+# This plugin is static-only, since there are build-time dependencies within
+# sql/sql_base.cc that need this.
 MYSQL_PLUGIN_STATIC(googlestats,   [libgooglestats.a])
-MYSQL_PLUGIN_DYNAMIC(googlestats,   [ha_googlestats.la])
 MYSQL_PLUGIN_DEPENDS_ON_MYSQL_INTERNALS(googlestats, [ha_googlestats.cc])
-MYSQL_PLUGIN_MANDATORY(googlestats) dnl Required by mysqld.cc

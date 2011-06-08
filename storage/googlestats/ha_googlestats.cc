@@ -13,12 +13,12 @@
 #include <assert.h>
 #include <m_ctype.h>
 
-#include "ha_googlestats.h"
-#include "googlestats.h"
 #include "gss_cache.h"
 #include "gss_aux.h"
 #include "gss_errors.h"
+#include "ha_googlestats.h"
 #include "lzo1x.h"
+#include "status_vars.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -477,8 +477,6 @@ static void header_init(uchar* header, int header_len) {
     memset(header, 0, header_len);
   }
 }
-
-handlerton *googlestats_hton;
 
 ha_googlestats::ha_googlestats(handlerton *hton, TABLE_SHARE *table_arg):
   handler(hton, table_arg), rowCount(0),
@@ -2279,22 +2277,16 @@ ha_googlestats::external_lock(
     cleanup();
   } else {
     // at statement start
-    if (THDVAR(current_thd, query_on_update) && might_write_binlog()) {
+    if (!THDVAR(current_thd, query_on_update) && might_write_binlog()) {
       switch (current_thd->lex->sql_command) {
         case SQLCOM_INSERT_SELECT:
         case SQLCOM_REPLACE_SELECT:
         case SQLCOM_UPDATE_MULTI:
         case SQLCOM_DELETE_MULTI:
-          // TODO(seanrees): do we really need our own error here? if so, can we
-          // add it to the module and not to include/my_base.h and to the
-          // various error message dictionaries?
-          //return (my_errno = HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE);
-          return (my_errno = HA_ERR_UNSUPPORTED);
+          return (my_errno = HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE);
         case SQLCOM_CREATE_TABLE:
           if (current_thd->lex->query_tables) // fail on CREATE TABLE ... SELECT
-            // TODO(seanrees): do we really need our own error here?
-            //return (my_errno = HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE);
-            return (my_errno = HA_ERR_UNSUPPORTED);
+            return (my_errno = HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE);
           break;
         default:
           break;
@@ -3486,49 +3478,37 @@ static handler *googlestats_create_handler(handlerton *hton,
 static int googlestats_init(void *p)
 {
   DBUG_ENTER("googlestats_init");
- 
-  googlestats_hton = (handlerton *)p;
+
+  handlerton *googlestats_hton = (handlerton *)p;
+
   googlestats_hton->state = SHOW_OPTION_YES;
   googlestats_hton->db_type = DB_TYPE_GOOGLESTATS;
-  googlestats_hton->slot = 0;
-  googlestats_hton->savepoint_offset = 0;
-  googlestats_hton->close_connection = NULL;
-  googlestats_hton->savepoint_set = NULL;
-  googlestats_hton->savepoint_rollback = NULL;
-  googlestats_hton->savepoint_release = NULL;
-  googlestats_hton->commit = NULL;
-  googlestats_hton->rollback = NULL;
-  googlestats_hton->prepare = NULL;
-  googlestats_hton->recover = NULL;
-  googlestats_hton->commit_by_xid = NULL;
-  googlestats_hton->rollback_by_xid = NULL;
-  googlestats_hton->create_cursor_read_view = NULL;
-  googlestats_hton->set_cursor_read_view = NULL;
-  googlestats_hton->close_cursor_read_view = NULL;
   googlestats_hton->create = googlestats_create_handler;
-  googlestats_hton->drop_database = NULL;
-  googlestats_hton->panic = NULL;
-  googlestats_hton->start_consistent_snapshot = NULL;
-  googlestats_hton->flush_logs = NULL;
-  googlestats_hton->show_status = NULL;
-  googlestats_hton->partition_flags = NULL;
-  googlestats_hton->alter_table_flags = NULL;
-  googlestats_hton->alter_tablespace = NULL;
-  googlestats_hton->fill_files_table = NULL;
-  googlestats_hton->flags = HTON_NO_FLAGS;
-  googlestats_hton->binlog_func = NULL;
-  googlestats_hton->binlog_log_query = NULL;
-  googlestats_hton->release_temporary_latches = NULL;
-  googlestats_hton->get_log_status = NULL;
-  googlestats_hton->create_iterator = NULL;
-  googlestats_hton->discover = NULL;
-  googlestats_hton->find_files = NULL;
-  googlestats_hton->table_exists_in_engine = NULL;
   googlestats_hton->license = PLUGIN_LICENSE_PROPRIETARY;
-  googlestats_hton->data = NULL;
 
-  DBUG_RETURN(0);
+  bool success = true;
+
+  // Initialize the stats server cache.
+  success = StatsServerCache::createInstance();
+
+  // init() returns 0 for success, non-zero for failure.
+  // This code is written this way in the interest of being explicit.
+  DBUG_RETURN(success ? 0 : 1);
 }
+
+static int googlestats_deinit(void *p)
+{
+  DBUG_ENTER("googlestats_end");
+
+  // destroyInstance() is safe to call even if it was never created in the
+  // first place.
+  bool success = StatsServerCache::destroyInstance();
+
+  // deinit() returns 0 for success, non-zero for failure.
+  // This code is written this way in the interest of being explicit.
+  DBUG_RETURN(success ? 0 : 1);
+}
+
 
 static struct st_mysql_storage_engine googlestats_storage_engine=
 { MYSQL_HANDLERTON_INTERFACE_VERSION };
@@ -3604,6 +3584,7 @@ static struct st_mysql_sys_var* googlestats_system_variables[]= {
   // Thead (session) variables.
   MYSQL_SYSVAR(initial_fetch_rows),
   MYSQL_SYSVAR(multifetch_max_keys),
+  MYSQL_SYSVAR(query_on_update),
   NULL
 };
 
@@ -3616,11 +3597,7 @@ mysql_declare_plugin(googlestats)
   "Supports Stats Server tables",
   PLUGIN_LICENSE_PROPRIETARY,
   googlestats_init,   /* Plugin Init */
-  // TODO(seanrees): add gogolestats_deinit (copy googlestats_end?)
-  NULL,
-  #if 0
-  googlestats_end,    /* Plugin Deinit */
-  #endif
+  googlestats_deinit, /* Plugin Deinit */
   0x0100              /* 1.0 */,
   NULL,               /* status variables */
   googlestats_system_variables,               /* system variables */

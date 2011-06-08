@@ -124,6 +124,9 @@ enum enum_sql_command {
   SQLCOM_SHOW_TABLE_STATS,
   SQLCOM_SHOW_USER_STATS,
 
+  /* GoogleStats */
+  SQLCOM_SHOW_STATSSERVERS_STATUS,
+
   /*
     When a command is added here, be sure it's also added in mysqld.cc
     in "struct show_var_st status_vars[]= {" ...

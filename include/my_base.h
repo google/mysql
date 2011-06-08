@@ -447,7 +447,9 @@ enum ha_base_keytype {
 #define HA_ERR_TOO_MANY_CONCURRENT_TRXS 177 /*Too many active concurrent transactions */
 /* Failed to log an SQL statement during TXN. */
 #define HA_ERR_SQL_LOG_TXN        178
-#define HA_ERR_LAST               178    /* Copy of last error nr */
+/* Cannot query GoogleStats on DML. */
+#define HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE 179
+#define HA_ERR_LAST               179    /* Copy of last error nr */
 
 /* Number of different errors */
 #define HA_ERR_ERRORS            (HA_ERR_LAST - HA_ERR_FIRST + 1)

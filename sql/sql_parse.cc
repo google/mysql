@@ -32,6 +32,9 @@
 #include "rpl_mi.h"
 #include "debug_sync.h"
 
+// For googlestats_reinit, googlestats_{set,show}_status
+#include "../storage/googlestats/googlestats_ext.h"
+
 /**
   @defgroup Runtime_Environment Runtime Environment
   @{
@@ -384,6 +387,8 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_SHOW_TABLE_STATUS]= (CF_STATUS_COMMAND |
                                                 CF_SHOW_TABLE_COMMAND |
                                                 CF_REEXECUTION_FRAGILE);
+  /* GoogleStats addition. */
+  sql_command_flags[SQLCOM_SHOW_STATSSERVERS_STATUS]= CF_STATUS_COMMAND;
 
   /*
     The following is used to preserver CF_ROW_COUNT during the
@@ -2473,6 +2478,14 @@ mysql_execute_command(THD *thd)
     pthread_mutex_unlock(&LOCK_status);
     break;
   }
+  case SQLCOM_SHOW_STATSSERVERS_STATUS:
+    {
+      if (check_global_access(thd, SUPER_ACL | PROCESS_ACL))
+        goto error;
+      res= googlestats_show_status(thd, lex->verbose,
+                                   (lex->wild ? lex->wild->ptr() : NullS));
+      break;
+    }
   case SQLCOM_SHOW_DATABASES:
   case SQLCOM_SHOW_TABLES:
   case SQLCOM_SHOW_TRIGGERS:
@@ -7446,6 +7459,9 @@ bool reload_acl_and_cache(THD *thd, ulong options, TABLE_LIST *tables,
    pthread_mutex_unlock(&LOCK_active_mi);
  }
 #endif
+ if (options & REFRESH_GOOGLESTATS)
+   if (googlestats_reinit(thd))
+     result= 1;
  if (options & REFRESH_USER_RESOURCES)
    reset_mqh((LEX_USER *) NULL, 0);             /* purecov: inspected */
  if (options & REFRESH_TABLE_STATS)
