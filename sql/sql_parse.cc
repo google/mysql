@@ -83,6 +83,7 @@ const LEX_STRING command_name[]={
   { C_STRING_WITH_LEN("Set option") },
   { C_STRING_WITH_LEN("Fetch") },
   { C_STRING_WITH_LEN("Daemon") },
+  { C_STRING_WITH_LEN("Binlog Dump") },
   { C_STRING_WITH_LEN("Error") }  // Last command number
 };
 
@@ -1545,6 +1546,109 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       break;
     }
 #endif
+  case COM_BINLOG_DUMP2:
+    {
+      ushort flags;
+      uint32 slave_server_id;
+      uint32 event_server_id;
+      ulonglong group_id;
+
+      statistic_increment(thd->status_var.com_other, &LOCK_status);
+      thd->enable_slow_log= opt_log_slow_admin_statements;
+      if (check_global_access(thd, REPL_SLAVE_ACL))
+        break;
+
+      flags= uint2korr(packet);
+
+      /*
+        Prevent trying to parse a buffer this version doesn't understand.
+        Also, currently should be here iff BINLOG_USE_GROUP_ID set.
+      */
+      if ((flags & ~BINLOG_MASK) || !(flags & BINLOG_USE_GROUP_ID))
+      {
+        const char *msg= "Slave trying to connect using unsupported flags %02x";
+        sql_print_error(msg, flags);
+
+        my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+        my_printf_error(my_errno, msg, MYF(0), flags);
+
+        error= TRUE;
+        unregister_slave(thd, 1, 1);
+        break;
+      }
+
+      thd->server_id= 0;                        /* avoid suicide */
+      if ((slave_server_id= uint4korr(packet + 2)))
+        kill_zombie_dump_threads(slave_server_id);
+      thd->server_id= slave_server_id;
+
+      group_id= uint8korr(packet + 6);
+      event_server_id= uint4korr(packet + 14);
+
+      char llbuf[22];
+      snprintf(llbuf, 22, "%llu", group_id);
+
+      sql_print_information("binlog_dump with group_id %s", llbuf);
+
+      if (!rpl_hierarchical)
+      {
+        const char *msg = "Slave trying to connect using group_id = %s when "
+          "rpl_hierarchical not set.";
+
+        sql_print_error(msg, llbuf);
+
+        my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+        my_printf_error(my_errno, msg, MYF(0), llbuf);
+
+        error= TRUE;
+        unregister_slave(thd, 1, 1);
+        break;
+      }
+
+      LOG_INFO linfo;
+      if (!mysql_bin_log.get_log_info_for_group_id(thd, group_id, &linfo))
+      {
+        if (event_server_id == linfo.server_id)
+        {
+          int dir_len= dirname_length(linfo.log_file_name);
+
+          general_log_print(thd, command,
+                            "Group_ID: %s  Log: '%s'  Pos: %ld",
+                            llbuf, linfo.log_file_name + dir_len,
+                            (long) linfo.pos);
+          mysql_binlog_send(thd, linfo.log_file_name + dir_len,
+                            linfo.pos, flags);
+        }
+        else
+        {
+          const char *msg = "Slave trying to connect using group_id = %s, "
+            "but server_id from the slave doesn't match that found in the "
+            "bin log. Slave appears to be from an alternate future. "
+            "Server_id from slave %u != Server_id from bin log %u";
+
+          sql_print_error(msg, llbuf, event_server_id, linfo.server_id);
+
+          my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+          my_printf_error(my_errno, msg, MYF(0), llbuf, event_server_id,
+                          linfo.server_id);
+        }
+      }
+      else
+      {
+        const char *msg= "Slave trying to connect using group_id = %s "
+          "which couldn't be found in the bin logs.";
+
+        sql_print_error(msg, llbuf);
+
+        my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+        my_printf_error(my_errno, msg, MYF(0), llbuf);
+      }
+
+      /*  fake COM_QUIT -- if we get here, the thread needs to terminate. */
+      unregister_slave(thd, 1, 1);
+      error= TRUE;
+      break;
+    }
   case COM_REFRESH:
   {
     int not_used;
@@ -2601,6 +2705,14 @@ mysql_execute_command(THD *thd)
     res = show_binlog_info(thd);
     break;
   }
+  case SQLCOM_SHOW_BINLOG_INFO_FOR:
+  {
+    /* Accept one of two privileges. */
+    if (check_global_access(thd, SUPER_ACL | REPL_CLIENT_ACL))
+      goto error;
+    res= show_binlog_info_for_group_id(thd, lex->group_id);
+    break;
+  }
 
   case SQLCOM_LOAD_MASTER_DATA: // sync with master
     if (check_global_access(thd, SUPER_ACL))
@@ -2664,6 +2776,17 @@ mysql_execute_command(THD *thd)
 	break;
       }
     }
+#ifdef HAVE_REPLICATION
+    else
+    {
+      if (rpl_hierarchical && might_write_binlog())
+      {
+        res= 1;
+        my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--rpl-hierarchical");
+        break;
+      }
+    }
+#endif /* HAVE_REPLICATION */
     DBUG_ASSERT(first_table == all_tables && first_table != 0);
     bool link_to_local;
     // Skip first table, which is the table we are creating

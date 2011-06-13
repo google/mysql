@@ -208,7 +208,12 @@ int mysql_load(THD *thd,sql_exchange *ex,TABLE_LIST *table_list,
   }
 
   table= table_list->table;
-  transactional_table= table->file->has_transactions();
+  /*
+    All events associated with a LOAD DATA should get a single group_id so
+    we lie and set transactional_table when rpl_hierarchical is set
+    regardless of whether the table is actually transactional.
+  */
+  transactional_table= table->file->has_transactions() || rpl_hierarchical;
 
   if (!fields_vars.elements)
   {

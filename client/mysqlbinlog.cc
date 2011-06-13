@@ -92,6 +92,8 @@ static ulonglong start_position, stop_position;
 #define start_position_mot ((my_off_t)start_position)
 #define stop_position_mot  ((my_off_t)stop_position)
 
+static ulonglong start_group_id, stop_group_id;
+
 static char *start_datetime_str, *stop_datetime_str;
 static my_time_t start_datetime= 0, stop_datetime= MY_TIME_T_MAX;
 static ulonglong rec_count= 0;
@@ -716,9 +718,28 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
       if (ev_type != ROTATE_EVENT &&
           server_id && (server_id != ev->server_id))
         goto end;
+      /* Skip events before the desired start group_id */
+      if (print_event_info->common_header_len >= LOG_EVENT_HEADER_WITH_ID_LEN
+          && ev->group_id < start_group_id)
+        /*
+          Since rotate events don't have a group_id there's a slight bug
+          here where any rotate events we encounter before finding the
+          desired group_id will be output.
+        */
+        goto end;
     }
     if (((my_time_t)(ev->when) >= stop_datetime)
         || (pos >= stop_position_mot))
+    {
+      /* end the program */
+      retval= OK_STOP;
+      goto end;
+    }
+    if (print_event_info->common_header_len >= LOG_EVENT_HEADER_WITH_ID_LEN &&
+        stop_group_id != 0 &&
+        ev_type != FORMAT_DESCRIPTION_EVENT &&
+        ev_type != ROTATE_EVENT &&
+        ev->group_id > stop_group_id)
     {
       /* end the program */
       retval= OK_STOP;
@@ -1156,6 +1177,12 @@ static struct my_option my_long_options[] =
    &stop_position, &stop_position, 0, GET_ULL,
    REQUIRED_ARG, (longlong)(~(my_off_t)0), BIN_LOG_HEADER_SIZE,
    (longlong)(~(my_off_t)0), 0, 0, 0},
+  {"start-group-id", OPT_START_GROUP_ID, "Start the output with group_id N.",
+   &start_group_id, &start_group_id, 0, GET_ULL,
+   REQUIRED_ARG, 0, 0, ULONG_MAX, 0, 0, 0},
+  {"stop-group-id", OPT_STOP_GROUP_ID, "Stop the output after group_id N.",
+   &stop_group_id, &stop_group_id, 0, GET_ULL,
+   REQUIRED_ARG, 0, 0, ULONG_MAX, 0, 0, 0},
   {"to-last-log", 't', "Requires -R. Will not stop at the end of the \
 requested binlog but rather continue printing until the end of the last \
 binlog of the MySQL server. If you send the output to the same MySQL server, \

@@ -66,6 +66,7 @@ typedef struct st_load_file_info
 
 int log_loaded_block(IO_CACHE* file);
 int init_replication_sys_vars();
+bool might_write_binlog();
 
 #endif /* HAVE_REPLICATION */
 

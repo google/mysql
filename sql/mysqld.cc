@@ -33,6 +33,7 @@
 #include "../storage/myisam/ha_myisam.h"
 
 #include "rpl_injector.h"
+#include "repl_hier_cache.h"
 
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
@@ -3119,6 +3120,7 @@ SHOW_VAR com_status_vars[]= {
   {"set_option",           (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SET_OPTION]), SHOW_LONG_STATUS},
   {"show_authors",         (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_AUTHORS]), SHOW_LONG_STATUS},
   {"show_binlog_events",   (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_BINLOG_EVENTS]), SHOW_LONG_STATUS},
+  {"show_binlog_info",     (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_BINLOG_INFO_FOR]), SHOW_LONG_STATUS},
   {"show_binlogs",         (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_BINLOGS]), SHOW_LONG_STATUS},
   {"show_charsets",        (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_CHARSETS]), SHOW_LONG_STATUS},
   {"show_collations",      (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_COLLATIONS]), SHOW_LONG_STATUS},
@@ -3897,6 +3899,28 @@ with --log-bin instead.");
     { 
       DBUG_ASSERT(global_system_variables.binlog_format != BINLOG_FORMAT_UNSPEC);
     }
+  if (rpl_hierarchical)
+  {
+    if (!opt_log_slave_updates)
+    {
+      sql_print_error("You need to use --log-slave-updates to make "
+                      "--rpl_hierarchical work.");
+      unireg_abort(1);
+    }
+    if (opt_binlog_format_id != BINLOG_FORMAT_STMT)
+    {
+      sql_print_error("You need to use --binlog-format=STATEMENT to make "
+                      "--rpl_hierarchical work.");
+      unireg_abort(1);
+    }
+    if (!binlog_filter->get_do_db()->is_empty() ||
+        !binlog_filter->get_ignore_db()->is_empty())
+    {
+      sql_print_error("Using --binlog-do-db or --binlog-ignore-db in "
+                      "conjunction with --rpl-hierarchical is disallowed.");
+      unireg_abort(1);
+    }
+  }
 
   /* Check that we have not let the format to unspecified at this point */
   DBUG_ASSERT((uint)global_system_variables.binlog_format <=
@@ -4119,10 +4143,43 @@ a file name for --log-bin-index option", opt_binlog_index_name);
     unireg_abort(1);
   }
 
+  /*
+    Persistence and crash recovery of group_id is tied to the binlog. So we
+    still need to call mysql_bin_log.open() in a special group_id-only mode
+    when tc_log == &tc_log_dummy.
+  */
+  if (rpl_hierarchical && tc_log == &tc_log_dummy)
+  {
+    mysql_bin_log.set_group_id_only_crash_recovery(true);
+    if (mysql_bin_log.open(opt_bin_logname))
+    {
+      sql_print_error("Can't load/recover group_id");
+      unireg_abort(1);
+    }
+  }
+
   if (ha_recover(0))
   {
     unireg_abort(1);
   }
+
+  /*
+    The hierarchical replication cache should be initialized after the bin log
+    recovery which happened above and before the bin log is opened below.
+  */
+  if (rpl_hierarchical && rpl_hierarchical_cache_frequency_not_thd_safe &&
+      mysql_bin_log.initialize_repl_hier_cache(true /* need_lock */))
+  {
+    sql_print_error("Failed to initialize hierarchical replication cache.");
+    unireg_abort(1);
+  }
+  /*
+    rpl_hier_cache_frequency_real is the variable protected by locks against
+    multi-threaded access which actually gets used. There is no multi-threaded
+    access here so we don't have to take any locks.
+  */
+  rpl_hier_cache_frequency_real=
+    rpl_hierarchical_cache_frequency_not_thd_safe;
 
   if (opt_bin_log && mysql_bin_log.open(opt_bin_logname, LOG_BIN, 0,
                                         WRITE_CACHE, 0, max_binlog_size, 0, TRUE))
@@ -5963,7 +6020,11 @@ enum options_mysqld
   OPT_SYSTEM_USER_TABLE,
   OPT_DEPRECATED_ENGINES,
   OPT_BLOCK_USER_ACCESS,
-  OPT_UNIX_SOCKET_HOSTNAME
+  OPT_UNIX_SOCKET_HOSTNAME,
+  OPT_RPL_HIERARCHICAL_ENABLED,
+  OPT_RPL_HIERARCHICAL_ACT_AS_ROOT,
+  OPT_RPL_HIERARCHICAL_CACHE_FREQUENCY,
+  OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY
 };
 
 
@@ -7526,6 +7587,27 @@ thread is in the relay logs.",
    "unix socket.",
    &opt_unix_socket_hostname, &opt_unix_socket_hostname,
    0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"rpl_hierarchical", OPT_RPL_HIERARCHICAL_ENABLED,
+   "Enable replication global group IDs and hierarchical replication "
+   "features.", &rpl_hierarchical,
+   0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
+  {"rpl_hierarchical_act_as_root", OPT_RPL_HIERARCHICAL_ACT_AS_ROOT,
+   "Used for testing rpl_hierarchical. Makes a slave pretend to be "
+   "the root master, issuing group_ids for events rather than preserving the "
+   "group_ids from the real master.", &rpl_hierarchical_act_as_root,
+   0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
+  {"rpl_hierarchical_cache_frequency", OPT_RPL_HIERARCHICAL_CACHE_FREQUENCY,
+   "Group IDs which are a multiple of this value are inserted into a "
+   "cache to make converting group ID to log name and pos faster. Disable "
+   "by setting to 0.",
+   &rpl_hierarchical_cache_frequency_not_thd_safe,
+   &rpl_hierarchical_cache_frequency_not_thd_safe,
+   0, GET_ULL, REQUIRED_ARG, 5000, 0, (longlong) ULONG_MAX, 0, 1, 0},
+  {"rpl_hierarchical_slave_recovery", OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY,
+   "Use hierarchical information to connect to the master if a recovery of"
+   "the bin log is done at server start.",
+   &rpl_hierarchical_slave_recovery,
+   0, 0, GET_BOOL, NO_ARG, 1, 0, 1, 0, 1, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 

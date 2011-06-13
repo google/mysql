@@ -194,6 +194,10 @@ struct sql_ex_info
   }
 };
 
+extern my_bool rpl_hierarchical;
+extern my_bool rpl_hierarchical_act_as_root;
+extern my_bool rpl_hierarchical_slave_recovery;
+
 /*****************************************************************************
 
   MySQL Binary Log
@@ -226,7 +230,12 @@ struct sql_ex_info
 #define LOG_EVENT_MINIMAL_HEADER_LEN 19u
 
 /* Header size written depends on some options. */
-#define LOG_EVENT_HEADER_LEN         (LOG_EVENT_MINIMAL_HEADER_LEN)
+#define LOG_EVENT_ID_LEN             8u
+#define LOG_EVENT_HEADER_WITH_ID_LEN (LOG_EVENT_MINIMAL_HEADER_LEN +\
+                                      LOG_EVENT_ID_LEN)
+#define LOG_EVENT_HEADER_LEN         (LOG_EVENT_MINIMAL_HEADER_LEN +\
+                                      (rpl_hierarchical ? LOG_EVENT_ID_LEN\
+                                       : 0u))
 
 /* event-specific post-header sizes */
 // where 3.23, 4.x and 5.0 agree
@@ -287,6 +296,7 @@ struct sql_ex_info
 #define EVENT_LEN_OFFSET     9
 #define LOG_POS_OFFSET       13
 #define FLAGS_OFFSET         17
+#define GROUP_ID_OFFSET      19
 
 /* start event post-header (for v3 and v4) */
 
@@ -912,6 +922,11 @@ public:
   */
   uint16 flags;
 
+  /*
+    ID of this event's group.
+  */
+  ulonglong group_id;
+
   bool cache_stmt;
 
   /**
@@ -1081,6 +1096,8 @@ public:
     Returns the human readable name of this event's type.
   */
   const char* get_type_str();
+
+  inline void set_server_id(uint32 id) { server_id= id; }
 
   /* Return start of query time or current time */
 
@@ -2341,9 +2358,12 @@ public:
   uchar type;
 
 #ifndef MYSQL_CLIENT
-  Intvar_log_event(THD* thd_arg,uchar type_arg, ulonglong val_arg)
+  Intvar_log_event(THD* thd_arg,uchar type_arg, ulonglong val_arg,
+                   ulonglong group_id)
     :Log_event(thd_arg,0,0),val(val_arg),type(type_arg)
-  {}
+  {
+    Log_event::group_id= group_id;
+  }
 #ifdef HAVE_REPLICATION
   void pack_info(Protocol* protocol);
 #endif /* HAVE_REPLICATION */
@@ -2417,9 +2437,12 @@ class Rand_log_event: public Log_event
   ulonglong seed2;
 
 #ifndef MYSQL_CLIENT
-  Rand_log_event(THD* thd_arg, ulonglong seed1_arg, ulonglong seed2_arg)
+  Rand_log_event(THD* thd_arg, ulonglong seed1_arg, ulonglong seed2_arg,
+                 ulonglong group_id)
     :Log_event(thd_arg,0,0),seed1(seed1_arg),seed2(seed2_arg)
-  {}
+  {
+    Log_event::group_id= group_id;
+  }
 #ifdef HAVE_REPLICATION
   void pack_info(Protocol* protocol);
 #endif /* HAVE_REPLICATION */
@@ -2510,10 +2533,13 @@ public:
 #ifndef MYSQL_CLIENT
   User_var_log_event(THD* thd_arg, char *name_arg, uint name_len_arg,
                      char *val_arg, ulong val_len_arg, Item_result type_arg,
-		     uint charset_number_arg)
+                     uint charset_number_arg, ulonglong group_id)
     :Log_event(), name(name_arg), name_len(name_len_arg), val(val_arg),
     val_len(val_len_arg), type(type_arg), charset_number(charset_number_arg)
-    { is_null= !val; }
+    {
+      is_null= !val;
+      Log_event::group_id= group_id;
+    }
   void pack_info(Protocol* protocol);
 #else
   void print(FILE* file, PRINT_EVENT_INFO* print_event_info);

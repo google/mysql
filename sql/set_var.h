@@ -1406,6 +1406,24 @@ public:
 };
 #endif
 
+/* For SET BINLOG_GROUP_ID */
+
+class set_var_group_id: public set_var_base
+{
+  ulonglong group_id;
+  uint32 server_id;
+  bool reset_master;
+public:
+  set_var_group_id(ulonglong group_id_arg, uint32 server_id_arg,
+                   bool reset_master_arg)
+    :group_id(group_id_arg), server_id(server_id_arg),
+    reset_master(reset_master_arg)
+  {}
+  int check(THD *thd);
+  int update(THD *thd);
+};
+
+
 extern "C"
 {
   typedef int (*process_key_cache_t) (const char *, KEY_CACHE *);

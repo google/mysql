@@ -701,6 +701,8 @@ THD::THD()
   proc_info="login";
   where= THD::DEFAULT_WHERE;
   server_id = ::server_id;
+  group_id= 0;
+  master_has_group_ids= false;
   slave_net = 0;
   command=COM_CONNECT;
   *scramble= '\0';

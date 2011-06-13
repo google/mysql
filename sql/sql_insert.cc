@@ -3395,9 +3395,13 @@ int select_create::write_to_binlog(bool is_trans, int errcode)
     String query;
     int result;
 
-    thd->binlog_start_trans_and_stmt();
-    /* Binlog the CREATE TABLE IF NOT EXISTS statement */
-    result= binlog_show_create_table(&table, 1, 0);
+    /*
+      Binlog the CREATE TABLE IF NOT EXISTS statement. The CREATE and
+      the INSERT are 2 separate groups in the binlog. Thus, pass false
+      for is_trans so that the CREATE does not go into the transaction
+      cache.
+    */
+    result= binlog_show_create_table(&table, 1, false, 0);
     if (result)
       return result;
 
@@ -3704,7 +3708,8 @@ select_create::prepare(List<Item> &values, SELECT_LEX_UNIT *u)
           !ptr->get_create_info()->table_existed)
       {
         int errcode= query_error_code(thd, thd->killed == THD::NOT_KILLED);
-        if (int error= ptr->binlog_show_create_table(tables, count, errcode))
+        if (int error= ptr->binlog_show_create_table(tables, count,
+                                                     true, errcode))
           return error;
       }
       return 0;
@@ -3747,7 +3752,7 @@ select_create::prepare(List<Item> &values, SELECT_LEX_UNIT *u)
       if (thd->current_stmt_binlog_row_based)
       {
         int errcode= query_error_code(thd, thd->killed == THD::NOT_KILLED);
-        binlog_show_create_table(&(create_table->table), 1, errcode);
+        binlog_show_create_table(&(create_table->table), 1, true, errcode);
       }
       table= create_table->table;
     }
@@ -3816,7 +3821,8 @@ select_create::prepare(List<Item> &values, SELECT_LEX_UNIT *u)
 }
 
 int
-select_create::binlog_show_create_table(TABLE **tables, uint count, int errcode)
+select_create::binlog_show_create_table(TABLE **tables, uint count,
+                                        bool is_trans, int errcode)
 {
   /*
     Note 1: We generate a CREATE TABLE statement for the
@@ -3853,10 +3859,8 @@ select_create::binlog_show_create_table(TABLE **tables, uint count, int errcode)
   if (mysql_bin_log.is_open())
   {
     result= thd->binlog_query(THD::STMT_QUERY_TYPE,
-                              query.ptr(), query.length(),
-                              /* is_trans */ TRUE,
-                              /* suppress_use */ FALSE,
-                              errcode);
+                              query.ptr(), query.length(), is_trans,
+                              /* suppress_use */ FALSE, errcode);
   }
   return result;
 }

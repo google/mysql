@@ -130,16 +130,30 @@ extern TC_LOG_DUMMY tc_log_dummy;
 
 class Relay_log_info;
 
+/*
+  Size of log_file_name is greater than FN_REFLEN because it needs to
+  be able to also temporarily hold the group_id, server_id and delimiters
+  when rpl_hierarchical is set. group_id is a ulonglong, but llstr
+  converts to a longlong so need 20 digits. server_id is uint32 so 10 digits.
+  Both are bracketed by delimiters as having one at the end
+  makes parsing easier and also provides some protection against
+  files which have been corrupted by truncation. That would be 33
+  additional characters. I added 1 more to hold the '\n'.
+*/
+#define LOG_NAME_LEN (FN_REFLEN + 34)
+
 typedef struct st_log_info
 {
-  char log_file_name[FN_REFLEN];
-  my_off_t index_file_offset, index_file_start_offset;
+  char log_file_name[LOG_NAME_LEN];
+  my_off_t index_file_start_offset;
   my_off_t pos;
   bool fatal; // if the purge happens to give us a negative offset
+  ulonglong group_id;
+  /* server_id which issued above group_id. */
+  uint32 server_id;
   pthread_mutex_t lock;
   st_log_info()
-    : index_file_offset(0), index_file_start_offset(0),
-      pos(0), fatal(0)
+      : index_file_start_offset(0), pos(0), fatal(0), group_id(0), server_id(0)
     {
       log_file_name[0] = '\0';
       pthread_mutex_init(&lock, MY_MUTEX_INIT_FAST);
@@ -161,8 +175,19 @@ typedef struct st_log_info
 class Log_event;
 class Rows_log_event;
 
-enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN, LOG_AUDIT };
+enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN, LOG_AUDIT, LOG_RELAY };
 enum enum_log_state { LOG_OPENED, LOG_CLOSED, LOG_TO_BE_OPENED };
+
+/*
+  scan modes for MSYQL_LOG::scan_bin_log_events. INFO_OF_ID mode tells
+  the function to return the information of the last event which matches
+  the specified group_id. FIRST_ID_INFO tells the function to return the
+  first group_id found in a file. There are currently no callers which
+  use FIRST_ID_INFO.
+*/
+enum enum_bin_log_scan_mode { INFO_OF_ID, FIRST_ID_INFO };
+
+int show_binlog_info_for_group_id(THD *thd, ulonglong group_id);
 
 /*
   TODO use mmap instead of IO_CACHE for binlog
@@ -282,7 +307,6 @@ class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG
   uint file_id;
   uint open_count;				// For replication
   int readers_count;
-  bool need_start_event;
   /*
     no_auto_events means we don't want any of these automatic events :
     Start/Rotate/Stop. That is, in 4.x when we rotate a relay log, we don't
@@ -292,6 +316,40 @@ class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG
   */
   bool no_auto_events;
 
+  /*
+    This variable holds the value of the last group_id to go into the
+    bin log. Access to it is protected by MYSQL_LOG::LOCK_log.
+  */
+  ulonglong group_id;
+
+  /*
+    This variable holds the server_id which issued the above group_id.
+    Used to provide protection from a slave connecting to a new master
+    which has an alternate future. Initialized to zero, signifying an
+    illegal server_id, and stays there until an event is actually written
+    to the bin log.
+  */
+  uint32 last_event_server_id;
+
+  /*
+    Whether server is currently a slave. Used when rpl_hierarchical in
+    should_skip_event to know if the event should be filtered from
+    going to the bin log.
+  */
+  bool have_master;
+
+  /*
+    Set to true if TC_LOG::recover was called during server intialization
+    and the conditions were correct for doing hierarchical based slave
+    recovery.
+  */
+  bool do_rpl_hierarchical_slave_recovery;
+
+  /*
+    Special mode to load/recover group_id when tc_log == &tc_log_dummy.
+  */
+  bool group_id_only_crash_recovery;
+
   int write_to_file(IO_CACHE *cache);
   /*
     This is used to start writing to a new log file. The difference from
@@ -300,6 +358,18 @@ class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG
   */
   int new_file_without_locking();
   int new_file_impl(bool need_lock);
+
+  int open_binlog_with_group_id(const char *log_file_name,
+                                pthread_mutex_t *log_lock,
+                                File *file, IO_CACHE *log);
+  int cached_get_log_info_for_group_id(THD *thd, ulonglong group_id_arg,
+                                       LOG_INFO *linfo, bool *used_cache);
+  int uncached_get_log_info_for_group_id(THD *thd, ulonglong group_id_arg,
+                                         LOG_INFO *linfo);
+  int scan_bin_log_events(IO_CACHE *cache, const char *log_file_name,
+                          enum_bin_log_scan_mode mode,
+                          pthread_mutex_t *log_lock, ulonglong *group_id_arg,
+                          my_off_t *pos, uint32 *server_id_arg);
 
 public:
   using MYSQL_LOG::generate_name;
@@ -355,7 +425,6 @@ public:
   void set_max_size(ulong max_size_arg);
   void signal_update();
   void wait_for_update(THD* thd, bool master_or_slave);
-  void set_need_start_event() { need_start_event = 1; }
   void init(bool no_auto_events_arg, ulong max_size);
   void init_pthread_objects();
   void cleanup();
@@ -366,8 +435,15 @@ public:
 	    bool no_auto_events_arg, ulong max_size,
             bool null_created,
             bool need_mutex);
-  bool open_index_file(const char *index_file_name_arg,
-                       const char *log_name, bool need_mutex);
+  int open_index_file(const char *index_file_name_arg,
+                      const char *log_name, bool need_mutex);
+  int read_index_entry(char *log_name, uint *length, ulonglong *group_id_arg,
+                       uint32 *server_id_arg);
+  int write_index_entry(char *log_name, ulonglong group_id_arg,
+                        uint32 server_id_arg, bool from_recover);
+  int write_group_id_to_index(char *log_name, bool need_lock,
+                              bool from_recover);
+
   /* Use this to start writing a new log file */
   int new_file();
 
@@ -375,10 +451,14 @@ public:
   bool write(Log_event* event_info); // binary log write
   bool write(THD *thd, IO_CACHE *cache, Log_event *commit_event, bool incident);
 
-  bool write_incident(THD *thd, bool lock);
-  int  write_cache(IO_CACHE *cache, bool lock_log, bool flush_and_sync);
+  bool write_incident(THD *thd, bool lock, ulonglong *group_id_to_use);
+  int  write_cache(IO_CACHE *cache, bool lock_log, bool flush_and_sync,
+                   ulonglong group_id_arg);
   void set_write_error(THD *thd);
   bool check_write_error(THD *thd);
+
+  bool should_skip_event(THD *thd);
+  ulonglong get_group_id_to_use(THD *thd);
 
   void start_union_events(THD *thd, query_id_t query_id_param);
   void stop_union_events(THD *thd);
@@ -411,7 +491,7 @@ public:
   int register_create_index_entry(const char* entry);
   int purge_index_entry(THD *thd, ulonglong *decrease_log_space,
                         bool need_mutex);
-  bool reset_logs(THD* thd);
+  bool reset_logs(bool need_lock);
   void close(uint exiting);
 
   // iterating through the log index file
@@ -429,13 +509,63 @@ public:
 
   inline void lock_index() { pthread_mutex_lock(&LOCK_index);}
   inline void unlock_index() { pthread_mutex_unlock(&LOCK_index);}
+  inline void lock_log() { pthread_mutex_lock(&LOCK_log);}
+  inline void unlock_log() { pthread_mutex_unlock(&LOCK_log);}
   inline IO_CACHE *get_index_file() { return &index_file;}
   inline uint32 get_open_count() { return open_count; }
+
+  inline void get_group_and_server_id(ulonglong *group_id_arg,
+                                      uint32 *server_id_arg)
+  {
+    lock_log();
+    *group_id_arg= group_id;
+    *server_id_arg= last_event_server_id;
+    unlock_log();
+  }
+  inline ulonglong get_group_id()
+  {
+    ulonglong group_id_arg;
+    uint32 server_id_arg;
+    get_group_and_server_id(&group_id_arg, &server_id_arg);
+    return group_id_arg;
+  }
+  int update_group_id(THD *thd, ulonglong group_id_arg,
+                      uint32 server_id_arg, bool reset_master);
+
+  int initialize_repl_hier_cache(bool need_lock);
+  int get_log_info_for_group_id(THD *thd, ulonglong group_id_arg,
+                                LOG_INFO *linfo);
 
   bool enter_dump_thread(THD *thd);
   bool exit_dump_thread(THD *thd);
   bool prepare_for_reset_logs(THD *thd);
   bool complete_reset_logs(THD *thd);
+
+  void set_have_master(bool have_master_arg)
+  {
+    lock_log();
+    have_master= have_master_arg;
+    unlock_log();
+  }
+
+  bool get_have_master()
+  {
+    bool have_master_ret;
+    lock_log();
+    have_master_ret= have_master;
+    unlock_log();
+    return have_master_ret;
+  }
+
+  bool should_do_rpl_hierarchical_slave_recovery()
+  {
+    return do_rpl_hierarchical_slave_recovery;
+  }
+
+  void set_group_id_only_crash_recovery(bool arg)
+  {
+    group_id_only_crash_recovery= arg;
+  }
 };
 
 class Log_event_handler
