@@ -991,7 +991,7 @@ bool load_master_data(THD* thd)
     }
   }
   thd_proc_info(thd, "purging old relay logs");
-  if (purge_relay_logs(&active_mi->rli,thd,
+  if (purge_relay_logs(&active_mi->rli,
 		       0 /* not only reset, but also reinit */,
 		       &errmsg))
   {

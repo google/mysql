@@ -1416,6 +1416,8 @@ public:
   */
   enum enum_server_command command;
   uint32     server_id;
+  ulonglong  group_id;                          // used when rpl_hierarchical
+  bool       master_has_group_ids;
   uint32     file_id;			// for LOAD DATA INFILE
   /* remote (peer) port */
   uint16 peer_port;
@@ -2670,7 +2672,8 @@ public:
     {}
   int prepare(List<Item> &list, SELECT_LEX_UNIT *u);
 
-  int binlog_show_create_table(TABLE **tables, uint count, int errcode);
+  int binlog_show_create_table(TABLE **tables, uint count,
+                               bool is_trans, int errcode);
   void store_values(List<Item> &values);
   void send_error(uint errcode,const char *err);
   bool send_eof();

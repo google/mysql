@@ -120,6 +120,7 @@ enum enum_sql_command {
   SQLCOM_SHOW_CREATE_TRIGGER,
   SQLCOM_ALTER_DB_UPGRADE,
   SQLCOM_SHOW_PROFILE, SQLCOM_SHOW_PROFILES,
+  SQLCOM_SHOW_BINLOG_INFO_FOR,
 
   /*
     When a command is added here, be sure it's also added in mysqld.cc
@@ -216,6 +217,9 @@ typedef struct st_lex_master_info
   char *ssl_key, *ssl_cert, *ssl_ca, *ssl_capath, *ssl_cipher;
   char *relay_log_name;
   ulong relay_log_pos;
+
+  /* Only used when rpl_hierarchical set */
+  bool connect_using_group_id;
 } LEX_MASTER_INFO;
 
 
@@ -1845,6 +1849,9 @@ typedef struct st_lex : public Query_tables_list
     into the select_lex.
   */
   table_map  used_tables;
+
+  /* Used for SHOW BINLOG INFO FOR. */
+  ulonglong group_id;
 
   st_lex();
 

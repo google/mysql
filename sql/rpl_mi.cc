@@ -33,8 +33,8 @@ int init_strvar_from_file(char *var, int max_size, IO_CACHE *f,
 Master_info::Master_info()
   :Slave_reporting_capability("I/O"),
    ssl(0), ssl_verify_server_cert(0), fd(-1), io_thd(0), inited(0),
-   abort_slave(0),slave_running(0),
-   slave_run_id(0)
+   abort_slave(0), slave_running(0),
+   slave_run_id(0), connect_using_group_id(false)
 {
   host[0] = 0; user[0] = 0; password[0] = 0;
   ssl_ca[0]= 0; ssl_capath[0]= 0; ssl_cert[0]= 0;
@@ -99,8 +99,10 @@ enum {
   /* 5.1.16 added value of master_ssl_verify_server_cert */
   LINE_FOR_MASTER_SSL_VERIFY_SERVER_CERT= 15,
 
+  LINE_IN_MASTER_INFO_WITH_GROUP_ID= 16,
+
   /* Number of lines currently used when saving master info file */
-  LINES_IN_MASTER_INFO= LINE_FOR_MASTER_SSL_VERIFY_SERVER_CERT
+  LINES_IN_MASTER_INFO= LINE_IN_MASTER_INFO_WITH_GROUP_ID
 };
 
 int init_master_info(Master_info* mi, const char* master_info_fname,
@@ -297,6 +299,25 @@ file '%s')", fname);
 #endif /* HAVE_OPENSSL */
 
     /*
+      Note that below check examines the value of connect_using_group_id
+      even when !rpl_hierarchical. That's okay because the MASTER_INFO
+      contructor initializes connect_using_group_id to FALSE.
+    */
+    if (lines >= LINE_IN_MASTER_INFO_WITH_GROUP_ID) {
+      if (init_intvar_from_file((int *) &mi->connect_using_group_id,
+                                &mi->file, 0))
+      {
+        sql_print_error("Error reading connect_using_group_id line");
+        goto errwithmsg;
+      }
+      if (!rpl_hierarchical && mi->connect_using_group_id != 0) {
+        sql_print_error("Master configuration specifies connect_using_group_id "
+                        "but rpl_hierarchical is not set.");
+        goto errwithmsg;
+      }
+    }
+
+    /*
       This has to be handled here as init_intvar_from_file can't handle
       my_off_t types
     */
@@ -403,13 +424,15 @@ int flush_master_info(Master_info* mi,
 
   my_b_seek(file, 0L);
   my_b_printf(file,
-              "%u\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n%d\n%s\n%s\n%s\n%s\n%s\n%d\n",
+              "%u\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n%d\n"
+              "%s\n%s\n%s\n%s\n%s\n%d\n%d\n",
               LINES_IN_MASTER_INFO,
               mi->master_log_name, llstr(mi->master_log_pos, lbuf),
               mi->host, mi->user,
               mi->password, mi->port, mi->connect_retry,
               (int)(mi->ssl), mi->ssl_ca, mi->ssl_capath, mi->ssl_cert,
-              mi->ssl_cipher, mi->ssl_key, mi->ssl_verify_server_cert);
+              mi->ssl_cipher, mi->ssl_key, mi->ssl_verify_server_cert,
+              rpl_hierarchical ? (int) mi->connect_using_group_id : 0);
   DBUG_RETURN(-flush_io_cache(file));
 }
 

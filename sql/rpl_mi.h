@@ -102,6 +102,14 @@ class Master_info : public Slave_reporting_capability
 
   */
   long clock_diff_with_master;
+
+  /*
+    When set, slave sends the group_id to the master as part of the
+    COM_BINLOG_DUMP request. Master then uses the group_id rather than
+    (log name,offset) to determine the first event to start sending back
+    to the slave.
+  */
+  bool connect_using_group_id;
 };
 
 void init_master_info_with_options(Master_info* mi);

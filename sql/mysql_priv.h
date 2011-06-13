@@ -612,7 +612,9 @@ protected:
 
 /* BINLOG_DUMP options */
 
-#define BINLOG_DUMP_NON_BLOCK   1
+#define BINLOG_DUMP_NON_BLOCK   0x0001
+#define BINLOG_USE_GROUP_ID     0x0004
+#define BINLOG_MASK             0x0005
 
 /* sql_show.cc:show_log_files() */
 #define SHOW_LOG_STATUS_FREE "FREE"

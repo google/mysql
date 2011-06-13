@@ -201,10 +201,13 @@ void adjust_linfo_offsets(my_off_t purge_offset)
 	we just started reading the index file. In that case
 	we have nothing to adjust
       */
-      if (linfo->index_file_offset < purge_offset)
-	linfo->fatal = (linfo->index_file_offset != 0);
+      if (linfo->index_file_start_offset < purge_offset)
+        linfo->fatal= (linfo->index_file_start_offset != 0);
       else
-	linfo->index_file_offset -= purge_offset;
+      {
+        DBUG_ASSERT(linfo->index_file_start_offset >= purge_offset);
+        linfo->index_file_start_offset-= purge_offset;
+      }
       pthread_mutex_unlock(&linfo->lock);
     }
   }
@@ -416,7 +419,7 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
   else
     name=0;					// Find first log
 
-  linfo.index_file_offset = 0;
+  linfo.index_file_start_offset= 0;
 
   if (mysql_bin_log.find_log_pos(&linfo, name, 1))
   {
@@ -840,7 +843,7 @@ err:
   /*
     Exclude  iteration through thread list
     this is needed for purge_logs() - it will iterate through
-    thread list and update thd->current_linfo->index_file_offset
+    thread list and update thd->current_linfo->index_file_start_offset
     this mutex will make sure that it never tried to update our linfo
     after we return from this stack frame
   */
@@ -1093,7 +1096,7 @@ int reset_slave(THD *thd, Master_info* mi)
   ha_reset_slave(thd);
 
   // delete relay logs, clear relay log coordinates
-  if ((error= purge_relay_logs(&mi->rli, thd,
+  if ((error= purge_relay_logs(&mi->rli,
 			       1 /* just reset */,
 			       &errmsg)))
   {
@@ -1169,8 +1172,8 @@ void kill_zombie_dump_threads(uint32 slave_server_id)
 
   while ((tmp=it++))
   {
-    if (tmp->command == COM_BINLOG_DUMP &&
-       tmp->server_id == slave_server_id)
+    if ((tmp->command == COM_BINLOG_DUMP || tmp->command == COM_BINLOG_DUMP2) &&
+        tmp->server_id == slave_server_id)
     {
       pthread_mutex_lock(&tmp->LOCK_thd_data);	// Lock from delete
       break;
@@ -1202,7 +1205,7 @@ void kill_all_dump_threads()
   I_List_iterator<THD> it(threads);
   while ((tmp= it++))
   {
-    if (tmp->command == COM_BINLOG_DUMP)
+    if (tmp->command == COM_BINLOG_DUMP || tmp->command == COM_BINLOG_DUMP2)
     {
       pthread_mutex_lock(&tmp->LOCK_thd_data);
       tmp->awake(THD::KILL_CONNECTION);
@@ -1252,6 +1255,24 @@ bool change_master(THD* thd, Master_info* mi)
 		       thread_mask))
   {
     my_message(ER_MASTER_INFO, ER(ER_MASTER_INFO), MYF(0));
+    unlock_slave_threads(mi);
+    DBUG_RETURN(TRUE);
+  }
+
+  /* Validate input. */
+  if (((lex_mi->log_file_name || lex_mi->pos) &&
+       (lex_mi->relay_log_name || lex_mi->relay_log_pos)) ||
+      (lex_mi->connect_using_group_id &&
+       (lex_mi->log_file_name || lex_mi->pos ||
+        lex_mi->relay_log_name || lex_mi->relay_log_pos)))
+  {
+    my_message(ER_SYNTAX_ERROR, ER(ER_SYNTAX_ERROR), MYF(0));
+    unlock_slave_threads(mi);
+    DBUG_RETURN(TRUE);
+  }
+  if (lex_mi->connect_using_group_id && !rpl_hierarchical)
+  {
+    my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--skip-rpl-hierarchical");
     unlock_slave_threads(mi);
     DBUG_RETURN(TRUE);
   }
@@ -1344,6 +1365,16 @@ bool change_master(THD* thd, Master_info* mi)
   }
 
   /*
+    If user specified to connect using the group_id, use it. Else, if the user
+    specified any log file or pos, ensure using group_id is off.
+  */
+  if (lex_mi->connect_using_group_id)
+    mi->connect_using_group_id= true;
+  else if (lex_mi->log_file_name || lex_mi->pos ||
+           lex_mi->relay_log_name || lex_mi->relay_log_pos)
+    mi->connect_using_group_id= false;
+
+  /*
     If user did specify neither host nor port nor any log name nor any log
     pos, i.e. he specified only user/password/master_connect_retry, he probably
     wants replication to resume from where it had left, i.e. from the
@@ -1359,6 +1390,7 @@ bool change_master(THD* thd, Master_info* mi)
   */
   if (!lex_mi->host && !lex_mi->port &&
       !lex_mi->log_file_name && !lex_mi->pos &&
+      !lex_mi->connect_using_group_id &&
       need_relay_log_purge)
    {
      /*
@@ -1387,7 +1419,7 @@ bool change_master(THD* thd, Master_info* mi)
   {
     relay_log_purge= 1;
     thd_proc_info(thd, "Purging old relay logs");
-    if (purge_relay_logs(&mi->rli, thd,
+    if (purge_relay_logs(&mi->rli,
 			 0 /* not only reset, but also reinit */,
 			 &errmsg))
     {
@@ -1455,6 +1487,9 @@ bool change_master(THD* thd, Master_info* mi)
   pthread_cond_broadcast(&mi->data_cond);
   pthread_mutex_unlock(&mi->rli.data_lock);
 
+  /* Let the bin log know if this server has a master. */
+  mysql_bin_log.set_have_master(mi->host[0] != '\0');
+
   unlock_slave_threads(mi);
   thd_proc_info(thd, 0);
   my_ok(thd);
@@ -1490,7 +1525,7 @@ int reset_master(THD* thd)
     return 1;
   }
 
-  int result= mysql_bin_log.reset_logs(thd);
+  int result= mysql_bin_log.reset_logs(true /* need_lock */);
   (void) mysql_bin_log.complete_reset_logs(thd);
   return result;
 }
@@ -1570,7 +1605,7 @@ bool mysql_show_binlog_events(THD* thd)
     else
       name=0;					// Find first log
 
-    linfo.index_file_offset = 0;
+    linfo.index_file_start_offset= 0;
 
     if (mysql_bin_log.find_log_pos(&linfo, name, 1))
     {
@@ -1693,6 +1728,12 @@ bool show_binlog_info(THD* thd)
 					   MYSQL_TYPE_LONGLONG));
   field_list.push_back(new Item_empty_string("Binlog_Do_DB",255));
   field_list.push_back(new Item_empty_string("Binlog_Ignore_DB",255));
+  /*
+    We always output the new column even when !rpl_hierarchical
+    because test framework needs columns to be static.
+  */
+  field_list.push_back(new Item_return_int("Group_ID", 10,
+                                           MYSQL_TYPE_LONGLONG));
 
   if (protocol->send_fields(&field_list,
                             Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
@@ -1708,6 +1749,10 @@ bool show_binlog_info(THD* thd)
     protocol->store((ulonglong) li.pos);
     protocol->store(binlog_filter->get_do_db());
     protocol->store(binlog_filter->get_ignore_db());
+    if (rpl_hierarchical)
+      protocol->store(li.group_id);
+    else
+      protocol->store_null();
     if (protocol->write())
       DBUG_RETURN(TRUE);
   }
@@ -1730,7 +1775,7 @@ bool show_binlogs(THD* thd)
   IO_CACHE *index_file;
   LOG_INFO cur;
   File file;
-  char fname[FN_REFLEN];
+  char fname[LOG_NAME_LEN];
   List<Item> field_list;
   uint length;
   int cur_dir_len;
@@ -1761,8 +1806,10 @@ bool show_binlogs(THD* thd)
 
   reinit_io_cache(index_file, READ_CACHE, (my_off_t) 0, 0, 0);
 
-  /* The file ends with EOF or empty line */
-  while ((length=my_b_gets(index_file, fname, sizeof(fname))) > 1)
+  ulonglong group_id_unused;
+  uint32 server_id_unused;
+  while (!mysql_bin_log.read_index_entry(fname, &length, &group_id_unused,
+                                         &server_id_unused))
   {
     int dir_len;
     ulonglong file_length= 0;                   // Length if open fails
@@ -2029,6 +2076,13 @@ static void start_failover(THD *thd)
     }
   }
   pthread_mutex_unlock(&LOCK_thread_count);
+}
+
+/* Returns true if processing of a statement may write a binlog event */
+bool might_write_binlog()
+{
+  return (mysql_bin_log.is_open() &&
+          (!rpl_hierarchical || !mysql_bin_log.get_have_master()));
 }
 
 #endif /* HAVE_REPLICATION */

@@ -44,6 +44,10 @@
 
 #define FLAGSTR(V,F) ((V)&(F)?#F" ":"")
 
+/* When set, enable Global Event IDs and hierarchical replication features. */
+my_bool rpl_hierarchical;
+my_bool rpl_hierarchical_act_as_root;
+my_bool rpl_hierarchical_slave_recovery;
 
 /*
   Size of buffer for printing a double in format %.<PREC>g
@@ -677,6 +681,7 @@ Log_event::Log_event(THD* thd_arg, uint16 flags_arg, bool using_trans)
   exec_time(0),
   data_written(0),
   flags(flags_arg),
+  group_id(0),
   thd(thd_arg)
 {
   server_id=	thd->server_id;
@@ -698,6 +703,7 @@ Log_event::Log_event()
   exec_time(0),
   data_written(0),
   flags(0),
+  group_id(0),
   cache_stmt(0),
   thd(0)
 {
@@ -780,9 +786,18 @@ Log_event::Log_event(const char* buf,
       twice when you have two masters which are slaves of a 3rd master).
       Then we are done.
     */
+
+    group_id= 0;                                /* Initialize to something */
     return;
   }
   /* otherwise, go on with reading the header from buf. */
+
+  DBUG_ASSERT(LOG_EVENT_HEADER_WITH_ID_LEN ==
+              LOG_EVENT_MINIMAL_HEADER_LEN + LOG_EVENT_ID_LEN);
+  if (description_event->common_header_len >= LOG_EVENT_HEADER_WITH_ID_LEN)
+    group_id= uint8korr(buf + GROUP_ID_OFFSET);
+  else
+    group_id= 0; // Initialize to something
 }
 
 #ifndef MYSQL_CLIENT
@@ -842,7 +857,18 @@ Log_event::do_shall_skip(Relay_log_info *rli)
                       (ulong) server_id, (ulong) ::server_id,
                       rli->replicate_same_server_id,
                       rli->slave_skip_counter));
-  if ((server_id == ::server_id && !rli->replicate_same_server_id) ||
+  /*
+    If rpl_hierarchical, we allow replicating from same server_id in order
+    to support failover + restore scenarios where a server_id which was
+    previously a master is restored, added back into the replication topology
+    as a slave and needs to play events which originated from itself from
+    before the restore when it was the master. rpl_hierarchical doesn't
+    support circular replication topologies so no fear of infinite loops.
+    Further, there is a group_id check elsewhere which will prevent the
+    playing of events "from the past".
+  */
+  if ((server_id == ::server_id && !rli->replicate_same_server_id
+       && !rpl_hierarchical) ||
       (rli->slave_skip_counter == 1 && rli->is_in_group()))
     return EVENT_SKIP_IGNORE;
   else if (rli->slave_skip_counter > 0)
@@ -978,6 +1004,9 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
   int4store(header+ EVENT_LEN_OFFSET, data_written);
   int4store(header+ LOG_POS_OFFSET, log_pos);
   int2store(header+ FLAGS_OFFSET, flags);
+
+  if (rpl_hierarchical && get_header_size() > LOG_EVENT_MINIMAL_HEADER_LEN)
+    int8store(header + GROUP_ID_OFFSET, group_id);
 
   DBUG_RETURN(my_b_safe_write(file, header, get_header_size()) != 0);
 }
@@ -1382,6 +1411,22 @@ void Log_event::print_header(IO_CACHE* file,
   if ((get_type_code() != FORMAT_DESCRIPTION_EVENT) &&
       (get_type_code() != ROTATE_EVENT))
   {
+    /* Handle possible existence of new header with an id. Some notes:
+       1. rpl_hierarchical will always be false in mysqlbinlog (which
+          calls this).
+       2. Given above, can't use LOG_EVENT_HEADER_LEN as it will always be 19.
+          Wouldn't want to use it anyway because it doesn't provide any info
+          about the format of events we're reading, only those we would be
+          writing, but mysqlbinlog doesn't write events.
+       3. All instances of the Log_event class have a group_id, but for
+          FORMAT_DESCRIPTION_EVENT & ROTATE_EVENT the value will always
+          be zero because those events don't write the group_id to the log
+          as their formats are frozen. Thus, we don't want to output it.
+    */
+    DBUG_ASSERT(8 == (LOG_EVENT_HEADER_WITH_ID_LEN -
+                      LOG_EVENT_MINIMAL_HEADER_LEN));
+    if (print_event_info->common_header_len >= LOG_EVENT_HEADER_WITH_ID_LEN)
+      my_b_printf(file, " group_id %s ", llstr(group_id, llbuff));
   }
 
   /* mysqlbinlog --hexdump */
@@ -1415,6 +1460,23 @@ void Log_event::print_header(IO_CACHE* file,
       if ((get_type_code() != FORMAT_DESCRIPTION_EVENT) &&
           (get_type_code() != ROTATE_EVENT))
       {
+        /* Pretty-print group_id if event has one. */
+        if (print_event_info->common_header_len >=
+            LOG_EVENT_HEADER_WITH_ID_LEN)
+        {
+          my_b_printf(file, "#                 Group ID\n");
+          bytes_written=
+            my_snprintf(emit_buf, sizeof(emit_buf),
+                        "# %8.8lx %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                        (unsigned long) hexdump_from,
+                        ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5],
+                        ptr[6], ptr[7]);
+          DBUG_ASSERT(static_cast<size_t>(bytes_written) < sizeof(emit_buf));
+          my_b_write(file, (uchar *) emit_buf, bytes_written);
+          ptr+= LOG_EVENT_ID_LEN;
+          hexdump_from+= LOG_EVENT_ID_LEN;
+          size-= LOG_EVENT_ID_LEN;
+        }
       }
     }
 
@@ -4098,7 +4160,7 @@ int Format_description_log_event::do_apply_event(Relay_log_info const *rli)
     perform, we don't call Start_log_event_v3::do_apply_event()
     (this was just to update the log's description event).
   */
-  if (server_id != (uint32) ::server_id)
+  if (!is_relay_log_event())
   {
     /*
       If the event was not requested by the slave i.e. the master sent
@@ -4124,7 +4186,7 @@ int Format_description_log_event::do_apply_event(Relay_log_info const *rli)
 
 int Format_description_log_event::do_update_pos(Relay_log_info *rli)
 {
-  if (server_id == (uint32) ::server_id)
+  if (is_relay_log_event())
   {
     /*
       We only increase the relay log position if we are skipping

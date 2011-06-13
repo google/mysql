@@ -64,6 +64,7 @@
 
 #include "events.h"
 #include "sql_repl.h"
+#include "repl_hier_cache.h"
 
 /* WITH_NDBCLUSTER_STORAGE_ENGINE */
 #ifdef WITH_NDBCLUSTER_STORAGE_ENGINE
@@ -131,6 +132,7 @@ static void fix_query_cache_size(THD *thd, enum_var_type type);
 static void fix_query_cache_min_res_unit(THD *thd, enum_var_type type);
 static void fix_myisam_max_sort_file_size(THD *thd, enum_var_type type);
 static void fix_max_binlog_size(THD *thd, enum_var_type type);
+static void fix_rpl_hierarchical_cache_frequency(THD *thd, enum_var_type type);
 static void fix_max_relay_log_size(THD *thd, enum_var_type type);
 static void fix_max_connections(THD *thd, enum_var_type type);
 static int check_max_delayed_threads(THD *thd, set_var *var);
@@ -522,6 +524,20 @@ static sys_var_thd_ulong	sys_read_rnd_buff_size(&vars, "read_rnd_buffer_size",
 					       &SV::read_rnd_buff_size);
 static sys_var_thd_ulong	sys_div_precincrement(&vars, "div_precision_increment",
                                               &SV::div_precincrement);
+static sys_var_const            sys_rpl_hierarchical(&vars, "rpl_hierarchical",
+                                                     OPT_GLOBAL, SHOW_BOOL,
+                                                     (uchar*)
+                                                     &rpl_hierarchical);
+static sys_var_const            sys_rpl_hierarchical_act_as_root(
+    &vars, "rpl_hierarchical_act_as_root", OPT_GLOBAL, SHOW_BOOL,
+    (uchar*) &rpl_hierarchical_act_as_root);
+static sys_var_ulonglong_ptr    sys_rpl_hierarchical_cache_frequency(
+    &vars, "rpl_hierarchical_cache_frequency",
+    &rpl_hierarchical_cache_frequency_not_thd_safe,
+    fix_rpl_hierarchical_cache_frequency);
+static sys_var_const            sys_rpl_hierarchical_slave_recovery(
+    &vars, "rpl_hierarchical_slave_recovery", OPT_GLOBAL, SHOW_BOOL,
+    (uchar*) &rpl_hierarchical_slave_recovery);
 static sys_var_long_ptr	sys_rpl_recovery_rank(&vars, "rpl_recovery_rank",
 					      &rpl_recovery_rank);
 static sys_var_long_ptr	sys_query_cache_size(&vars, "query_cache_size",
@@ -1331,6 +1347,14 @@ bool sys_var_thd_binlog_format::is_readonly() const
   */
   THD *thd= current_thd;
   /*
+    rpl_hierarchical is only compatible with SBR.
+  */
+  if (rpl_hierarchical)
+  {
+    my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--rpl-hierarchical");
+    return 1;
+  }
+  /*
     If RBR and open temporary tables, their CREATE TABLE may not be in the
     binlog, so we can't toggle to SBR in this connection.
     The test below will also prevent SET GLOBAL, well it was not easy to test
@@ -1377,6 +1401,54 @@ static void fix_max_binlog_size(THD *thd, enum_var_type type)
 #endif
   DBUG_VOID_RETURN;
 }
+
+
+static void fix_rpl_hierarchical_cache_frequency(THD *thd, enum_var_type type)
+{
+  bool need_init;
+
+  DBUG_ENTER("fix_rpl_hierarchical_cache_frequency");
+
+  DBUG_PRINT("info", ("fix_rpl_hierarchical_cache_frequency=%llu",
+                      rpl_hierarchical_cache_frequency_not_thd_safe));
+
+  mysql_bin_log.lock_log();
+
+  /*
+    Set rpl_hier_cache_frequency_real before calling
+    initialize_repl_hier_cache because in error conditions
+    initialize will disable the cache, setting the variable
+    to 0, and we don't want to overwrite that here.
+  */
+  need_init= !rpl_hier_cache_frequency_real;
+  rpl_hier_cache_frequency_real=
+    rpl_hierarchical_cache_frequency_not_thd_safe;
+
+  /* If new value is now 0, free up any existing cache. */
+  if (!rpl_hierarchical_cache_frequency_not_thd_safe)
+  {
+    repl_hier_cache_clear();
+  }
+  /* If previous value was 0, initialize the cache. */
+  else if (need_init)
+  {
+    /*
+      We don't check the return of initialize_repl_hier_cache
+      because if it encounters an error it will just disable
+      the cache.
+    */
+    mysql_bin_log.initialize_repl_hier_cache(false);
+  }
+
+  /*
+     Do not set rpl_hier_cache_frequency_real here!
+  */
+
+  mysql_bin_log.unlock_log();
+
+  DBUG_VOID_RETURN;
+}
+
 
 static void fix_max_relay_log_size(THD *thd, enum_var_type type)
 {
@@ -3799,6 +3871,22 @@ int set_var_failover::update(THD *thd)
   set_failover(thd, in_failover);
   return 0;
 }
+
+
+/*****************************************************************************
+  Functions to handle SET BINLOG_GROUP_ID
+*****************************************************************************/
+
+int set_var_group_id::check(THD *thd)
+{
+  return check_global_access(thd, SUPER_ACL);
+}
+
+int set_var_group_id::update(THD *thd)
+{
+  return mysql_bin_log.update_group_id(thd, group_id, server_id, reset_master);
+}
+
 
 /****************************************************************************
  Functions to handle table_type

@@ -37,6 +37,8 @@
 #include "message.h"
 #endif
 
+#include "repl_hier_cache.h"
+
 #include <mysql/plugin.h>
 
 /* max size of the log message */
@@ -83,6 +85,8 @@ static HASH audit_log_tables;
 */
 static bool audit_stmt_filter[SQLCOM_END + 1];
 
+const char rpl_hierarchical_index_delimiter= '|';
+
 static bool test_if_number(const char *str,
 			   long *res, bool allow_wildcards);
 static int binlog_init(void *p);
@@ -92,6 +96,19 @@ static int binlog_savepoint_rollback(handlerton *hton, THD *thd, void *sv);
 static int binlog_commit(handlerton *hton, THD *thd, bool all);
 static int binlog_rollback(handlerton *hton, THD *thd, bool all);
 static int binlog_prepare(handlerton *hton, THD *thd, bool all);
+
+/* Queries with the correct log position in the event */
+struct QueryLogEvent
+{
+  const char *query_;
+  const uint32 query_length_;
+};
+
+QueryLogEvent query_with_log[]=
+{
+  { "BEGIN", strlen("BEGIN") },
+  { "COMMIT", strlen("COMMIT") }
+};
 
 /**
   Silence all errors and warnings reported when performing a write
@@ -1679,7 +1696,7 @@ binlog_end_trans(THD *thd, binlog_trx_data *trx_data,
     if (all || !(thd->options & (OPTION_BEGIN | OPTION_NOT_AUTOCOMMIT)))
     {
       if (trx_data->has_incident())
-        error= mysql_bin_log.write_incident(thd, TRUE);
+        error= mysql_bin_log.write_incident(thd, TRUE, NULL);
       trx_data->reset();
     }
     else                                        // ...statement
@@ -2184,7 +2201,8 @@ bool MYSQL_LOG::open(const char *log_name, enum_log_type log_type_arg,
   if (io_cache_type == SEQ_READ_APPEND)
     open_flags |= O_RDWR | O_APPEND;
   else
-    open_flags |= O_WRONLY | (log_type == LOG_BIN ? 0 : O_APPEND);
+    open_flags |= O_WRONLY | ((log_type == LOG_BIN ||
+                               log_type == LOG_RELAY) ? 0 : O_APPEND);
 
   db[0]= 0;
 
@@ -2193,7 +2211,8 @@ bool MYSQL_LOG::open(const char *log_name, enum_log_type log_type_arg,
       init_io_cache(&log_file, file, IO_SIZE, io_cache_type,
                     my_tell(file, MYF(MY_WME)), 0,
                     MYF(MY_WME | MY_NABP |
-                        ((log_type == LOG_BIN) ? MY_WAIT_IF_FULL : 0))))
+                        ((log_type == LOG_BIN || log_type == LOG_RELAY) ?
+                         MY_WAIT_IF_FULL : 0))))
     goto err;
 
   if (log_type == LOG_NORMAL)
@@ -2314,7 +2333,7 @@ void MYSQL_LOG::cleanup()
 int MYSQL_LOG::generate_new_name(char *new_name, const char *log_name)
 {
   fn_format(new_name, log_name, mysql_data_home, "", 4);
-  if (log_type == LOG_BIN)
+  if (log_type == LOG_BIN || log_type == LOG_RELAY)
   {
     if (!fn_ext(log_name)[0])
     {
@@ -2663,7 +2682,11 @@ MYSQL_BIN_LOG::MYSQL_BIN_LOG()
   prepared_xids(0),
   file_id(1),
   open_count(1),
-  need_start_event(TRUE),
+  group_id(0),
+  last_event_server_id(0),
+  have_master(false),
+  do_rpl_hierarchical_slave_recovery(false),
+  group_id_only_crash_recovery(false),
   is_relay_log(0),
   description_event_for_exec(0),
   description_event_for_queue(0)
@@ -2725,8 +2748,8 @@ void MYSQL_BIN_LOG::init_pthread_objects()
 }
 
 
-bool MYSQL_BIN_LOG::open_index_file(const char *index_file_name_arg,
-                                    const char *log_name, bool need_mutex)
+int MYSQL_BIN_LOG::open_index_file(const char *index_file_name_arg,
+                                   const char *log_name, bool need_mutex)
 {
   File index_file_nr= -1;
   DBUG_ASSERT(!my_b_inited(&index_file));
@@ -2761,7 +2784,7 @@ bool MYSQL_BIN_LOG::open_index_file(const char *index_file_name_arg,
     */
     if (index_file_nr >= 0)
       my_close(index_file_nr,MYF(0));
-    return TRUE;
+    return 1;
   }
 
 #ifdef HAVE_REPLICATION
@@ -2781,11 +2804,291 @@ bool MYSQL_BIN_LOG::open_index_file(const char *index_file_name_arg,
   {
     sql_print_error("MYSQL_BIN_LOG::open_index_file failed to sync the index "
                     "file.");
-    return TRUE;
+    return 1;
   }
 #endif
 
-  return FALSE;
+  return 0;
+}
+
+
+/**
+  Read a line, which may or may not include a group_id, from the index file.
+
+  @param[in,out]  log_name       Buffer to receive the full-path name of the
+                                 log file, must be at least LOG_NAME_LEN in
+                                 size
+  @param[out]     length         Receives the actual length of string put into
+                                 log_name, may be 0 or 1 if EOF reached
+  @param[out]     group_id_arg   Recieves any group_id read from the file,
+                                 or 0 if line in the file didn't contain one
+  @param[out]     server_id_arg  Recieves any server_id read from the file,
+                                 or 0 if line in the file didn't contain one
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::read_index_entry(char *log_name, uint *length,
+                                    ulonglong *group_id_arg,
+                                    uint32 *server_id_arg)
+{
+  /*
+    Have to look for and parse group_ids out of the entry
+    regardless of rpl_hierarchical because the option may
+    have been set and then later turned off.
+  */
+
+  /* Initialize group_id_arg to default. */
+  *group_id_arg= 0;
+  *server_id_arg= 0;
+
+  /* If we get 0 or 1 characters, this is the end of the file. */
+  if (((*length= my_b_gets(&index_file, log_name, LOG_NAME_LEN)) <= 1) ||
+      (log_name[(*length) - 1] != '\n'))
+  {
+    return 1;
+  }
+
+  if (log_name[(*length) - 2] == rpl_hierarchical_index_delimiter)
+  {
+    /*
+      Only the bin log should have group_ids. At process initilization this
+      code is called as part of the opening the TC_LOG to check if the
+      previous shutdown was clean. In that case, log_type == LOG_UNKNOWN.
+    */
+    if (log_type != LOG_BIN && log_type != LOG_UNKNOWN)
+    {
+      sql_print_error("read_index_entry found group_id delimiter on"
+                      "unexpected log type(%d).", log_type);
+      index_file.error= LOG_INFO_INVALID;
+      return 1;
+    }
+
+    /*
+      Line ends in the delimiter, so appears to have a group_id & server_id.
+      Start searching back for the other delimiters. We can limit how far
+      back up the string we'll search for the other delimiters before giving
+      up based on max len of a ulonglong and uint32. The entry looks something
+      like this:
+
+      /export/hda3/mysql/slave-relay-bin.000002|328983|1755911|\n
+    */
+    int stop_pos= max(0, ((int) (*length)) - (LOG_NAME_LEN - FN_REFLEN));
+    int i= (*length) - 3;
+    int server_id_delim= -1;
+    for ( ; ; i--)
+    {
+      if (i < stop_pos)
+      {
+        /* Should have found the delimiter already. File is invalid. */
+        log_name[(*length) - 1]= '\0';
+        sql_print_error("read_index_entry failed to find group_id delimiter "
+                        "parsing line: %s", log_name);
+        index_file.error= LOG_INFO_INVALID;
+        return 1;
+      }
+
+      if (log_name[i] == rpl_hierarchical_index_delimiter)
+      {
+        if (server_id_delim < 0)
+          /* Found first delimiter. */
+          server_id_delim= i;
+        else
+          /* Found both delimiters. Exit loop. */
+          break;
+      }
+    }
+
+    DBUG_ASSERT(i > 0 && server_id_delim > 0);
+
+    char *end_char;
+    *group_id_arg= strtoull(log_name + i + 1, &end_char, 10);
+
+    /*
+      end_char should now be pointing to the delimiter between the group_id
+      and the server_id.
+    */
+    if (end_char != log_name + server_id_delim)
+    {
+      sql_print_error("read_index_entry consumed incorrect number of "
+                      "characters reading group_id.");
+      index_file.error= LOG_INFO_INVALID;
+      return 1;
+    }
+
+    *server_id_arg= strtoul(log_name + server_id_delim + 1, &end_char, 10);
+
+    /* end_char should now be pointing to the terminating delimiter. */
+    if (end_char != (log_name + *length - 2))
+    {
+      sql_print_error("read_index_entry consumed incorrect number of "
+                      "characters reading server_id.");
+      index_file.error= LOG_INFO_INVALID;
+      return 1;
+    }
+
+    /*
+      Doctor string back to format callers expected before the addition
+      of group_ids.
+    */
+    log_name[i]= '\n';
+    *length= i + 1;
+  }
+
+  return 0;
+}
+
+/**
+  Write a line to the index file which may or may not include a group_id.
+
+  @param  log_name       full-path name of log file to write to the file
+  @param  group_id_arg   the group_id to also write to the line if
+                         rpl_hierarchical and the log is a bin log,
+                         not a relay log
+  @param  server_id_arg  the server_id to also write to the line if
+                         rpl_hierarchical and the log is a bin log,
+                         not a relay log
+  @param  from_recover   if set, forces writing the group_id and server_id
+                         despite the log_type not being LOG_BIN
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::write_index_entry(char *log_name, ulonglong group_id_arg,
+                                     uint32 server_id_arg, bool from_recover)
+{
+  if (my_b_write(&index_file, (uchar *) log_name, strlen(log_name)))
+  {
+    sql_print_error("MYSQL_LOG::write_index_entry failed to write to index "
+                    "file. log_name = %s.", log_name);
+    return 1;
+  }
+
+  if (rpl_hierarchical && (log_type == LOG_BIN || from_recover))
+  {
+    char llbuf[22];
+
+    /*
+      The entry will look something like this:
+
+      /export/hda3/mysql/slave-relay-bin.000002|328983|1755911|\n
+    */
+    /*
+       Not using llstr as it takes a longlong, not a ulonglong, so results
+       in the index file aren't what one would expect if the group_id climbs
+       high enough that the high bit is set.
+    */
+    /* llstr((longlong) group_id_arg, llbuf); */
+    int len= snprintf(llbuf, 22, "%llu", group_id_arg);
+    if (len < 1 || len > 22)
+    {
+      sql_print_error("MYSQL_LOG::write_index_entry, snprintf failed "
+                      "returning %d", len);
+      return 1;
+    }
+    if (my_b_write(&index_file,
+                   (uchar *) &rpl_hierarchical_index_delimiter, 1) ||
+        my_b_write(&index_file, (uchar *) llbuf, strlen(llbuf)) ||
+        my_b_write(&index_file, (uchar *) &rpl_hierarchical_index_delimiter, 1))
+    {
+      sql_print_error("MYSQL_LOG::write_index_entry failed to write to index "
+                      "file. group_id = %s", llbuf);
+      return 1;
+    }
+
+    len= snprintf(llbuf, 11, "%u", server_id_arg);
+    if (len < 1 || len > 11)
+    {
+      sql_print_error("MYSQL_LOG::write_index_entry, snprintf failed "
+                      "returning %d", len);
+      return 1;
+    }
+    if (my_b_write(&index_file, (uchar *) llbuf, strlen(llbuf)) ||
+        my_b_write(&index_file, (uchar *) &rpl_hierarchical_index_delimiter, 1))
+    {
+      sql_print_error("MYSQL_LOG::write_index_entry failed to write to index "
+                      "file. server_id = %s", llbuf);
+      return 1;
+    }
+  }
+
+  if (my_b_write(&index_file, (uchar *) "\n", 1))
+  {
+    sql_print_error("MYSQL_LOG::write_index_entry failed to write \\n to "
+                    "index file.");
+    return 1;
+  }
+
+  return 0;
+}
+
+/**
+  Updates the last entry in the index file to have last consumed group_id.
+
+  @param  log_name      Log name which should have its group_id updated
+  @param  need_lock     Set if parent does not have a lock on LOCK_index
+  @param  from_recover  Set if called from recovery code where log_type is
+                        not yet set to LOG_BIN
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::write_group_id_to_index(char *log_name,
+                                           bool need_lock, bool from_recover)
+{
+  /* Check if we even need to do any work. */
+  if (!rpl_hierarchical)
+    return 0;
+
+  /*
+     Only want to write to the index for the bin log, but during recover
+     log_type == LOG_CLOSED so we pass in a flag and force the code to
+     run in that case.
+  */
+  if (!from_recover && log_type != LOG_BIN)
+    return 0;
+
+  LOG_INFO log_info;
+  int error;
+
+  if ((error= find_log_pos(&log_info, log_name, need_lock)))
+  {
+    sql_print_error("MYSQL_LOG::write_group_id_to_index call to "
+                    "find_log_pos() failed with error = %d)", error);
+    return 1;
+  }
+
+  DBUG_ASSERT(my_b_inited(&index_file) != 0);
+  if (reinit_io_cache(&index_file, WRITE_CACHE,
+                      log_info.index_file_start_offset, 0, 0) ||
+      write_index_entry(log_info.log_file_name, group_id, last_event_server_id,
+                        from_recover) ||
+      my_chsize(index_file.file, my_b_tell(&index_file), '\n',  MYF(MY_WME)) ||
+      flush_io_cache(&index_file) ||
+      my_sync(index_file.file, MYF(MY_WME)))
+  {
+    sql_print_error("MYSQL_LOG::write_group_id_to_index failed to update "
+                    "index file. log_info.index_file_start_offset = %lu ,"
+                    "log_info.log_file_name = %s",
+                    (unsigned long) log_info.index_file_start_offset,
+                    log_info.log_file_name);
+    return 1;
+  }
+
+  /*
+    NOTE: Some threads cache a LOG_INFO, but since we only wrote to the last
+    line of the index file we don't need to do any adjustments since LOG_INFO
+    now only stores index_file_start_offset, which is still valid with the
+    write just done above.
+  */
+
+  return 0;
 }
 
 
@@ -2869,7 +3172,7 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
 
   open_count++;
 
-  DBUG_ASSERT(log_type == LOG_BIN);
+  DBUG_ASSERT(log_type == LOG_BIN || log_type == LOG_RELAY);
 
   {
     bool write_file_name_to_index_file=0;
@@ -2889,12 +3192,8 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
       write_file_name_to_index_file= 1;
     }
 
-    if (need_start_event && !no_auto_events)
+    if (!no_auto_events)
     {
-      /*
-        In 4.x we set need_start_event=0 here, but in 5.0 we want a Start event
-        even if this is not the very first binlog.
-      */
       Format_description_log_event s(BINLOG_VERSION);
       /*
         don't set LOG_EVENT_BINLOG_IN_USE_F for SEQ_READ_APPEND io_cache
@@ -2905,6 +3204,8 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
       if (!s.is_valid())
         goto err;
       s.dont_set_created= null_created_arg;
+      if (log_type == LOG_RELAY)
+        s.set_relay_log_event();
       if (s.write(&log_file))
         goto err;
       bytes_written+= s.data_written;
@@ -2958,9 +3259,8 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
         file. As every time we write to the index file, we sync it.
       */
       if (DBUG_EVALUATE_IF("fault_injection_updating_index", 1, 0) ||
-          my_b_write(&index_file, (uchar*) log_file_name,
-                     strlen(log_file_name)) ||
-          my_b_write(&index_file, (uchar*) "\n", 1) ||
+          write_index_entry(log_file_name, group_id, last_event_server_id,
+                            false) ||
           flush_io_cache(&index_file) ||
           my_sync(index_file.file, MYF(MY_WME)))
         goto err;
@@ -2968,6 +3268,11 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
 #ifdef HAVE_REPLICATION
       DBUG_EXECUTE_IF("crash_create_after_update_index", DBUG_SUICIDE(););
 #endif
+
+      if (rpl_hierarchical && rpl_hier_cache_frequency_real &&
+          log_type == LOG_BIN)
+        repl_hier_cache_append_file(group_id, last_event_server_id,
+                                    log_file_name);
     }
   }
   log_state= LOG_OPENED;
@@ -3010,6 +3315,8 @@ int MYSQL_BIN_LOG::raw_get_current_log(LOG_INFO* linfo)
 {
   strmake(linfo->log_file_name, log_file_name, sizeof(linfo->log_file_name)-1);
   linfo->pos = my_b_tell(&log_file);
+  linfo->group_id= group_id;
+  linfo->server_id= last_event_server_id;
   return 0;
 }
 
@@ -3113,9 +3420,8 @@ int MYSQL_BIN_LOG::find_log_pos(LOG_INFO *linfo, const char *log_name,
   {
     uint length;
     my_off_t offset= my_b_tell(&index_file);
-    /* If we get 0 or 1 characters, this is the end of the file */
 
-    if ((length= my_b_gets(&index_file, fname, FN_REFLEN)) <= 1)
+    if (read_index_entry(fname, &length, &linfo->group_id, &linfo->server_id))
     {
       /* Did not find the given entry; Return not found or error */
       error= !index_file.error ? LOG_INFO_EOF : LOG_INFO_IO;
@@ -3130,7 +3436,6 @@ int MYSQL_BIN_LOG::find_log_pos(LOG_INFO *linfo, const char *log_name,
       DBUG_PRINT("info",("Found log file entry"));
       fname[length-1]=0;			// remove last \n
       linfo->index_file_start_offset= offset;
-      linfo->index_file_offset = my_b_tell(&index_file);
       break;
     }
   }
@@ -3176,17 +3481,39 @@ int MYSQL_BIN_LOG::find_next_log(LOG_INFO* linfo, bool need_lock)
   safe_mutex_assert_owner(&LOCK_index);
 
   /* As the file is flushed, we can't get an error here */
-  (void) reinit_io_cache(&index_file, READ_CACHE, linfo->index_file_offset, 0,
-			 0);
+  if (reinit_io_cache(&index_file, READ_CACHE,
+                      linfo->index_file_start_offset, 0, 0))
+  {
+    sql_print_error("MYSQL_LOG::find_next_log got failure from "
+                    "reinit_io_cache.");
+    error= LOG_INFO_IO;
+    goto err;
+  }
 
-  linfo->index_file_start_offset= linfo->index_file_offset;
-  if ((length=my_b_gets(&index_file, fname, FN_REFLEN)) <= 1)
+  /*
+    When the bin log is closed, the index may be updated with the group_id
+    of the last event in the log, altering the length of the "current" line.
+    Thus, we read the "current line" again before moving on to the next.
+  */
+  if ((length= my_b_gets(&index_file, fname, LOG_NAME_LEN)) <= 1)
+  {
+    sql_print_error("MYSQL_LOG::find_next_log got failure from "
+                    "my_b_gets.");
+    error= LOG_INFO_INVALID;
+    static const uint *null_ptr= NULL;
+    if (*(null_ptr)) null_ptr = NULL;
+    goto err;
+  }
+
+  DBUG_ASSERT(linfo->index_file_start_offset + length ==
+              my_b_tell(&index_file));
+  linfo->index_file_start_offset= my_b_tell(&index_file);
+  if (read_index_entry(fname, &length, &linfo->group_id, &linfo->server_id))
   {
     error = !index_file.error ? LOG_INFO_EOF : LOG_INFO_IO;
     goto err;
   }
   fname[length-1]=0;				// kill \n
-  linfo->index_file_offset = my_b_tell(&index_file);
 
 err:
   if (need_lock)
@@ -3201,7 +3528,8 @@ err:
 
   The new index file will only contain this file.
 
-  @param thd		Thread
+  @param  need_lock  Set this to 1 if the parent doesn't already have a
+                     lock on LOCK_index
 
   @note
     If not called from slave thread, write start event to new log
@@ -3212,14 +3540,29 @@ err:
     1   error
 */
 
-bool MYSQL_BIN_LOG::reset_logs(THD* thd)
+bool MYSQL_BIN_LOG::reset_logs(bool need_lock)
 {
+  /* current_thd will be NULL when called from init_slave. */
+  THD* thd= current_thd;
   LOG_INFO linfo;
   bool error=0;
   const char* save_name;
   DBUG_ENTER("reset_logs");
 
-  ha_reset_logs(thd);
+  // If called from init_slave() it is just to purge relay logs so no
+  // need to notify the storage engines.
+  if (thd) ha_reset_logs(thd);
+  if (need_lock)
+  {
+    /*
+      We need to get both locks to be sure that no one is trying to
+      write to the index log file.
+    */
+    pthread_mutex_lock(&LOCK_log);
+    pthread_mutex_lock(&LOCK_index);
+  }
+  safe_mutex_assert_owner(&LOCK_log);
+  safe_mutex_assert_owner(&LOCK_index);
 
   /*
     The following mutex is needed to ensure that no threads call
@@ -3228,13 +3571,6 @@ bool MYSQL_BIN_LOG::reset_logs(THD* thd)
     into binlog even on rollback.
   */
   pthread_mutex_lock(&LOCK_thread_count);
-
-  /*
-    We need to get both locks to be sure that no one is trying to
-    write to the index log file.
-  */
-  pthread_mutex_lock(&LOCK_log);
-  pthread_mutex_lock(&LOCK_index);
 
   /* Save variables so that we can reopen the log */
   save_name=name;
@@ -3262,9 +3598,10 @@ bool MYSQL_BIN_LOG::reset_logs(THD* thd)
     {
       if (my_errno == ENOENT) 
       {
-        push_warning_printf(current_thd, MYSQL_ERROR::WARN_LEVEL_WARN,
-                            ER_LOG_PURGE_NO_FILE, ER(ER_LOG_PURGE_NO_FILE),
-                            linfo.log_file_name);
+        if (thd)
+          push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
+                              ER_LOG_PURGE_NO_FILE, ER(ER_LOG_PURGE_NO_FILE),
+                              linfo.log_file_name);
         sql_print_information("Failed to delete file '%s'",
                               linfo.log_file_name);
         my_errno= 0;
@@ -3272,13 +3609,14 @@ bool MYSQL_BIN_LOG::reset_logs(THD* thd)
       }
       else
       {
-        push_warning_printf(current_thd, MYSQL_ERROR::WARN_LEVEL_WARN,
-                            ER_BINLOG_PURGE_FATAL_ERR,
-                            "a problem with deleting %s; "
-                            "consider examining correspondence "
-                            "of your binlog index file "
-                            "to the actual binlog files",
-                            linfo.log_file_name);
+        if (thd)
+          push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
+                              ER_BINLOG_PURGE_FATAL_ERR,
+                              "a problem with deleting %s; "
+                              "consider examining correspondence "
+                              "of your binlog index file "
+                              "to the actual binlog files",
+                              linfo.log_file_name);
         error= 1;
         goto err;
       }
@@ -3287,15 +3625,20 @@ bool MYSQL_BIN_LOG::reset_logs(THD* thd)
       break;
   }
 
+  if (rpl_hierarchical && rpl_hier_cache_frequency_real &&
+      log_type == LOG_BIN)
+    repl_hier_cache_clear();
+
   /* Start logging with a new file */
   close(LOG_CLOSE_INDEX | LOG_CLOSE_TO_BE_OPENED);
   if ((error= my_delete_allow_opened(index_file_name, MYF(0))))	// Reset (open will update)
   {
     if (my_errno == ENOENT) 
     {
-      push_warning_printf(current_thd, MYSQL_ERROR::WARN_LEVEL_WARN,
-                          ER_LOG_PURGE_NO_FILE, ER(ER_LOG_PURGE_NO_FILE),
-                          index_file_name);
+      if (thd)
+        push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
+                            ER_LOG_PURGE_NO_FILE, ER(ER_LOG_PURGE_NO_FILE),
+                            index_file_name);
       sql_print_information("Failed to delete file '%s'",
                             index_file_name);
       my_errno= 0;
@@ -3303,19 +3646,18 @@ bool MYSQL_BIN_LOG::reset_logs(THD* thd)
     }
     else
     {
-      push_warning_printf(current_thd, MYSQL_ERROR::WARN_LEVEL_WARN,
-                          ER_BINLOG_PURGE_FATAL_ERR,
-                          "a problem with deleting %s; "
-                          "consider examining correspondence "
-                          "of your binlog index file "
-                          "to the actual binlog files",
-                          index_file_name);
+      if (thd)
+        push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
+                            ER_BINLOG_PURGE_FATAL_ERR,
+                            "a problem with deleting %s; "
+                            "consider examining correspondence "
+                            "of your binlog index file "
+                            "to the actual binlog files",
+                            index_file_name);
       error= 1;
       goto err;
     }
   }
-  if (!thd->slave_thread)
-    need_start_event=1;
   if (!open_index_file(index_file_name, 0, FALSE))
     if ((error= open(save_name, log_type, 0, io_cache_type, no_auto_events, max_size, 0, FALSE)))
       goto err;
@@ -3323,8 +3665,10 @@ bool MYSQL_BIN_LOG::reset_logs(THD* thd)
 
 err:
   VOID(pthread_mutex_unlock(&LOCK_thread_count));
-  pthread_mutex_unlock(&LOCK_index);
-  pthread_mutex_unlock(&LOCK_log);
+  if (need_lock) {
+    pthread_mutex_unlock(&LOCK_index);
+    pthread_mutex_unlock(&LOCK_log);
+  }
   DBUG_RETURN(error);
 }
 
@@ -3391,7 +3735,7 @@ int MYSQL_BIN_LOG::purge_first_log(Relay_log_info* rli, bool included)
     char buff[22];
     sql_print_error("next log error: %d  offset: %s  log: %s included: %d",
                     error,
-                    llstr(rli->linfo.index_file_offset,buff),
+                    llstr(rli->linfo.index_file_start_offset,buff),
                     rli->event_relay_log_name,
                     included);
     goto err;
@@ -3445,7 +3789,7 @@ int MYSQL_BIN_LOG::purge_first_log(Relay_log_info* rli, bool included)
     char buff[22];
     sql_print_error("next log error: %d  offset: %s  log: %s included: %d",
                     error,
-                    llstr(rli->linfo.index_file_offset,buff),
+                    llstr(rli->linfo.index_file_start_offset, buff),
                     rli->group_relay_log_name,
                     included);
     goto err;
@@ -3543,6 +3887,10 @@ int MYSQL_BIN_LOG::purge_logs(const char *to_log,
                       log_info.log_file_name);
       goto err;
     }
+
+    if (rpl_hierarchical && rpl_hier_cache_frequency_real &&
+        log_type == LOG_BIN)
+      repl_hier_cache_purge_file(log_info.log_file_name);
 
     if (find_next_log(&log_info, 0) || exit_loop)
       break;
@@ -4064,7 +4412,7 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
     goto end;
   new_name_ptr=new_name;
 
-  if (log_type == LOG_BIN)
+  if (log_type == LOG_BIN || log_type == LOG_RELAY)
   {
     /*
       Previously close() would clear the in-use bit but it has been changed
@@ -4606,6 +4954,100 @@ MYSQL_BIN_LOG::flush_and_set_pending_rows_event(THD *thd,
 }
 
 /**
+  Determines if the current event should be skipped from going in the bin log.
+
+  If hierarchical replication is enabled and and this server doesn't have a
+  master, log the event because it means that this server is the root of the
+  replication topology. If this server does have a master, only log the
+  event if it is coming from the replication SQL thread. This is because we
+  want a hierarhical replication slave's bin log to only contain events which
+  originated from the topology's root master, not accumulating events from
+  intermediate levels in the topology from statements like 'CREATE TEMPORARY
+  TABLE' which may be allowed to run on such servers.
+
+  @param  thd  the current thd
+
+  @return true if the event should be skipped, false otherwise
+*/
+bool MYSQL_BIN_LOG::should_skip_event(THD *thd)
+{
+  safe_mutex_assert_owner(&LOCK_log);
+  return rpl_hierarchical && !thd->slave_thread && have_master;
+}
+
+/**
+  Determine group_id to use for writing event to bin log.
+
+  When about to write an event to the bin log, determine what group_id
+  should be used.
+
+  @param  thd  the current thd
+
+  @return the group_id to use
+*/
+ulonglong MYSQL_BIN_LOG::get_group_id_to_use(THD *thd)
+{
+  safe_mutex_assert_owner(&LOCK_log);
+
+  ulonglong group_id_to_use= 0;
+
+  if (rpl_hierarchical)
+  {
+    if (!thd->slave_thread || rpl_hierarchical_act_as_root)
+      /*
+        We're the root master. Use the group_id from our internal state.
+        Note that this ID may be a continuation from the last group
+        this server issued. Or, it may be that this server was previously
+        a slave and just now became the root master. In that case, the
+        server is continuing the ID sequence at the point the old server
+        left off.
+      */
+      group_id_to_use= group_id + 1;
+    else
+    {
+      if (thd->master_has_group_ids)
+        /*
+          We're a slave and on the replication SQL thread. Preserve the
+          ID from the originating server, which was passed in the THD.
+        */
+        group_id_to_use= thd->group_id;
+      else
+        /*
+          The master wasn't running with rpl_hierarchical when the event
+          being executed was generated. In that case, we always write 0
+          as that value should never actually show up in a bin log.
+        */
+        group_id_to_use= 0;
+    }
+
+    /*
+      If thd->group_id < this->group_id, then the event should have been
+      blocked in exec_relay_log_event and replication stopped.
+
+      Would be nice to assert that the values differ by at most 1, but
+      the existence of the 'set binlog_group_id=' statement means that
+      it can't be asserted.
+    */
+    DBUG_ASSERT(group_id <= group_id_to_use ||
+                (thd->slave_thread && !thd->master_has_group_ids));
+    if (group_id_to_use < group_id &&
+        (!thd->slave_thread || thd->master_has_group_ids))
+    {
+      char llbuf1[22], llbuf2[22];
+      snprintf(llbuf1, 22, "%llu",
+               (unsigned long long) group_id_to_use);
+      snprintf(llbuf2, 22, "%llu",
+               (unsigned long long) group_id);
+      sql_print_error("About to write bad group_id = %s to the bin log. "
+                      "Server's current group_id = %s", llbuf1, llbuf2);
+    }
+  }
+
+  return group_id_to_use;
+}
+
+
+/**
   Write an event to the binary log.
 */
 
@@ -4643,6 +5085,13 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
 
   pthread_mutex_lock(&LOCK_log);
 
+  /* Check to see if we should skip logging this event. */
+  if (should_skip_event(thd))
+  {
+    pthread_mutex_unlock(&LOCK_log);
+    DBUG_RETURN(0);
+  }
+
   /*
      In most cases this is only called if 'is_open()' is true; in fact this is
      mostly called if is_open() *was* true a few instructions before, but it
@@ -4667,6 +5116,9 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
       DBUG_RETURN(0);
     }
 #endif /* HAVE_REPLICATION */
+
+    /* Figure out which group_id to use for this event. */
+    ulonglong group_id_to_use= get_group_id_to_use(thd);
 
 #if defined(USING_TRANSACTIONS) 
     /*
@@ -4704,6 +5156,12 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                             (ulong) trans_log_pos));
         thd->binlog_start_trans_and_stmt();
         file= trans_log;
+        /*
+          For events going to the transaction cache log, always use
+          0. We'll fixup the events with a real group_id later in
+          MYSQL_LOG::write_cache.
+        */
+        group_id_to_use= 0;
       }
       /*
         TODO as Mats suggested, for all the cases above where we write to
@@ -4736,7 +5194,8 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
         if (thd->stmt_depends_on_first_successful_insert_id_in_prev_stmt)
         {
           Intvar_log_event e(thd,(uchar) LAST_INSERT_ID_EVENT,
-                             thd->first_successful_insert_id_in_prev_stmt_for_binlog);
+                             thd->first_successful_insert_id_in_prev_stmt_for_binlog,
+                             group_id_to_use);
           if (e.write(file))
             goto err;
         }
@@ -4747,13 +5206,14 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                              nb_elements()));
           Intvar_log_event e(thd, (uchar) INSERT_ID_EVENT,
                              thd->auto_inc_intervals_in_cur_stmt_for_binlog.
-                             minimum());
+                             minimum(), group_id_to_use);
           if (e.write(file))
             goto err;
         }
         if (thd->rand_used)
         {
-          Rand_log_event e(thd,thd->rand_saved_seed1,thd->rand_saved_seed2);
+          Rand_log_event e(thd,thd->rand_saved_seed1, thd->rand_saved_seed2,
+                           group_id_to_use);
           if (e.write(file))
             goto err;
         }
@@ -4768,13 +5228,21 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                                  user_var_event->value,
                                  user_var_event->length,
                                  user_var_event->type,
-                                 user_var_event->charset_number);
+                                 user_var_event->charset_number,
+                                 group_id_to_use);
             if (e.write(file))
               goto err;
           }
         }
       }
     }
+
+    /*
+      Set the group_id. Needs to be done while holding LOCK_log,
+      which is why it's here and not done when event_info is
+      constructed.
+    */
+    event_info->group_id= group_id_to_use;
 
     /*
        Write the SQL command
@@ -4788,6 +5256,29 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
     {
       if (flush_and_sync())
 	goto err;
+
+      /*
+        We're writing to the real log, so update group_id to match
+        what we just wrote.
+      */
+      if (group_id_to_use)
+      {
+        group_id= group_id_to_use;
+        last_event_server_id= event_info->server_id;
+
+        /*
+          If the cache is on and the group_id is a multiple of the cache
+          frequency, append to the cache. We do not append to the cache
+          if the group_id == 0 because that means this server is a slave
+          replicating from a master which isn't generating IDs and the
+          cache logic breaks down under those conditions.
+        */
+        if (rpl_hierarchical && rpl_hier_cache_frequency_real &&
+            !(group_id % rpl_hier_cache_frequency_real))
+          repl_hier_cache_push_back(group_id, last_event_server_id,
+                                    log_file_name, my_b_safe_tell(&log_file));
+      }
+
       signal_update();
       if ((error= rotate_and_purge(RP_LOCK_LOG_IS_ALREADY_LOCKED)))
         goto err;
@@ -4924,7 +5415,7 @@ int MYSQL_BIN_LOG::rotate_and_purge(uint flags)
          We give it a shot and try to write an incident event anyway
          to the current log. 
       */
-      if (!write_incident(current_thd, FALSE))
+      if (!write_incident(current_thd, FALSE, NULL))
         flush_and_sync();
 
 #ifdef HAVE_REPLICATION
@@ -4972,7 +5463,8 @@ uint MYSQL_BIN_LOG::next_file_id()
     be reset as a READ_CACHE to be able to read the contents from it.
  */
 
-int MYSQL_BIN_LOG::write_cache(IO_CACHE *cache, bool lock_log, bool sync_log)
+int MYSQL_BIN_LOG::write_cache(IO_CACHE *cache, bool lock_log, bool sync_log,
+                               ulonglong group_id_arg)
 {
   Mutex_sentry sentry(lock_log ? &LOCK_log : NULL);
 
@@ -5018,6 +5510,10 @@ int MYSQL_BIN_LOG::write_cache(IO_CACHE *cache, bool lock_log, bool sync_log)
       /* fix end_log_pos */
       val= uint4korr(&header[LOG_POS_OFFSET]) + group;
       int4store(&header[LOG_POS_OFFSET], val);
+
+      /* fix group_id */
+      if (rpl_hierarchical)
+        int8store(&header[GROUP_ID_OFFSET], group_id_arg);
 
       /* write the first half of the split header */
       if (my_b_write(&log_file, header, carry))
@@ -5068,6 +5564,11 @@ int MYSQL_BIN_LOG::write_cache(IO_CACHE *cache, bool lock_log, bool sync_log)
           /* fix end_log_pos */
           val= uint4korr(log_pos) + group;
           int4store(log_pos, val);
+
+          /* fix group_id */
+          if (rpl_hierarchical)
+            int8store(cache->read_pos + hdr_offs + GROUP_ID_OFFSET,
+                      group_id_arg);
 
           /* next event header at ... */
           log_pos= (uchar *)cache->read_pos + hdr_offs + EVENT_LEN_OFFSET;
@@ -5130,7 +5631,8 @@ int query_error_code(THD *thd, bool not_killed)
   return error;
 }
 
-bool MYSQL_BIN_LOG::write_incident(THD *thd, bool lock)
+bool MYSQL_BIN_LOG::write_incident(THD *thd, bool lock,
+                                   ulonglong *group_id_to_use)
 {
   uint error= 0;
   DBUG_ENTER("MYSQL_BIN_LOG::write_incident");
@@ -5144,7 +5646,18 @@ bool MYSQL_BIN_LOG::write_incident(THD *thd, bool lock)
   Incident_log_event ev(thd, incident, write_error_msg);
   if (lock)
     pthread_mutex_lock(&LOCK_log);
+
+  if (group_id_to_use == NULL)
+    ev.group_id= get_group_id_to_use(thd);
+  else
+    ev.group_id= *group_id_to_use;
+
   error= ev.write(&log_file);
+
+  // Consume the group_id.
+  if (group_id_to_use == NULL && !error)
+    group_id= ev.group_id;
+
   if (lock)
   {
     if (!error && !(error= flush_and_sync()))
@@ -5187,6 +5700,13 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
   DBUG_ENTER("MYSQL_BIN_LOG::write(THD *, IO_CACHE *, Log_event *)");
   VOID(pthread_mutex_lock(&LOCK_log));
 
+  /* Check to see if we should skip logging this event. */
+  if (should_skip_event(thd))
+  {
+    pthread_mutex_unlock(&LOCK_log);
+    DBUG_RETURN(0);
+  }
+
   /* NULL would represent nothing to replicate after ROLLBACK */
   DBUG_ASSERT(commit_event != NULL);
 
@@ -5199,12 +5719,21 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
      */
     if (my_b_tell(cache) > 0)
     {
+      /* Figure out which group_id to use for this event. */
+      ulonglong group_id_to_use= get_group_id_to_use(thd);
+
       /*
         Log "BEGIN" at the beginning of every transaction.  Here, a
         transaction is either a BEGIN..COMMIT block or a single
         statement in autocommit mode.
       */
       Query_log_event qinfo(thd, STRING_WITH_LEN("BEGIN"), TRUE, TRUE, 0);
+
+      /*
+        Set the event's group_id. Above constructor used more than just here
+        so chose to not change it and instead set the group_id here.
+      */
+      qinfo.group_id= group_id_to_use;
 
       /*
         Now this Query_log_event has artificial log_pos 0. It must be
@@ -5219,21 +5748,32 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
 
       DBUG_EXECUTE_IF("crash_before_writing_xid",
                       {
-                        if ((write_error= write_cache(cache, false, true)))
+                        if ((write_error= write_cache(cache, false, true,
+                                                      group_id_to_use)))
                           DBUG_PRINT("info", ("error writing binlog cache: %d",
                                                write_error));
                         DBUG_PRINT("info", ("crashing before writing xid"));
                         DBUG_SUICIDE();
                       });
 
-      if ((write_error= write_cache(cache, false, false)))
+      if ((write_error= write_cache(cache, false, false, group_id_to_use)))
         goto err;
       DBUG_EXECUTE_IF("half_binlogged_transaction", goto DBUG_skip_commit;);
 
-      if (commit_event && commit_event->write(&log_file))
-        goto err;
+      if (commit_event)
+      {
+        /*
+          Set the group_id. Needs to be done while holding LOCK_log,
+          which is why it's here and not done when event_info is
+          constructed.
+        */
+        commit_event->group_id= group_id_to_use;
 
-      if (incident && write_incident(thd, FALSE))
+        if (commit_event->write(&log_file))
+          goto err;
+      }
+
+      if (incident && write_incident(thd, FALSE, &group_id_to_use))
         goto err;
 
 #ifndef DBUG_OFF
@@ -5248,6 +5788,29 @@ DBUG_skip_commit:
         write_error=1;				// Don't give more errors
         goto err;
       }
+
+      /*
+        We're writing to the real log, so update group_id to match
+        what we just wrote.
+      */
+      if (group_id_to_use)
+      {
+        group_id= group_id_to_use;
+        last_event_server_id= commit_event->server_id;
+
+        /*
+          If the cache is on and the group_id is a multiple of the cache
+          frequency, append to the cache. We do not append to the cache
+          if the group_id == 0 because that means this server is a slave
+          replicating from a master which isn't generating IDs and the
+          cache logic breaks down under those conditions.
+      */
+        if (rpl_hierarchical && rpl_hier_cache_frequency_real &&
+            !(group_id % rpl_hier_cache_frequency_real))
+          repl_hier_cache_push_back(group_id, last_event_server_id,
+                                    log_file_name, my_b_safe_tell(&log_file));
+      }
+
       signal_update();
     }
 
@@ -5351,9 +5914,38 @@ void MYSQL_BIN_LOG::close(uint exiting)
     */
 #endif /* HAVE_REPLICATION */
 
+    /*
+      Update the rpl_hier cache so that it knows the last group_id written
+      to this log.
+    */
+    if (rpl_hierarchical && rpl_hier_cache_frequency_real &&
+        log_type == LOG_BIN)
+      repl_hier_cache_update_last_entry(group_id, last_event_server_id,
+                                        log_file_name);
+
     /* don't pwrite in a file opened with O_APPEND - it doesn't work */
-    if (log_file.type == WRITE_CACHE && log_type == LOG_BIN)
+    if (log_file.type == WRITE_CACHE &&
+        (log_type == LOG_BIN || log_type == LOG_RELAY))
     {
+      /*
+        Flush the last used group_id to the index file before clearing
+        the IN_USE bit. Will do no work if !rpl_hierarchical. If
+        LOG_CLOSE_STOP_EVENT is set, it means we're in the shut down
+        case and write_group_id_to_index needs to take the lock. In
+        the rotate to new bin log case the lock is already owned (which
+        will be asserted down inside of find_log_pos).
+      */
+      if (write_group_id_to_index(log_file_name,
+                                  exiting & LOG_CLOSE_STOP_EVENT, false))
+      {
+        /*
+           Failed to update the index file with the group_id so leave bin
+           log marked as in use. That way, if the bin log ends up being
+           most recent on next server start, we'll recover the group_id
+           from it.
+        */
+        sql_print_error("failed to update index with correct group_id");
+      }
       /*
         If doing a rotate, do not clear the in-use bit now. new_file() will
         clear it after the new file is opened. Thus, if a crash occurs
@@ -5364,7 +5956,7 @@ void MYSQL_BIN_LOG::close(uint exiting)
         doesn't matter in that case if the bit is cleared because the file
         is going to get deleted right after anyway.
       */
-      if (!(exiting & LOG_CLOSE_TO_BE_OPENED))
+      else if (!(exiting & LOG_CLOSE_TO_BE_OPENED))
       {
         /* clearing LOG_EVENT_BINLOG_IN_USE_F. */
         my_off_t offset= BIN_LOG_HEADER_SIZE + FLAGS_OFFSET;
@@ -6812,8 +7404,9 @@ int TC_LOG_BINLOG::open(const char *opt_name)
   LOG_INFO log_info;
   int      error= 1;
 
-  DBUG_ASSERT(total_ha_2pc > 1);
+  DBUG_ASSERT(group_id_only_crash_recovery || total_ha_2pc > 1);
   DBUG_ASSERT(opt_name && opt_name[0]);
+  DBUG_ASSERT(rpl_hierarchical || !group_id_only_crash_recovery);
 
   pthread_mutex_init(&LOCK_prep_xids, MY_MUTEX_INIT_FAST);
   pthread_cond_init (&COND_prep_xids, 0);
@@ -6825,7 +7418,7 @@ int TC_LOG_BINLOG::open(const char *opt_name)
     return 1;
   }
 
-  if (using_heuristic_recover())
+  if (!group_id_only_crash_recovery && using_heuristic_recover())
   {
     /* generate a new binlog to mask a corrupted one */
     open(opt_name, LOG_BIN, 0, WRITE_CACHE, 0, max_binlog_size, 0, TRUE);
@@ -6856,6 +7449,18 @@ int TC_LOG_BINLOG::open(const char *opt_name)
     do
     {
       strmake(log_name, log_info.log_file_name, sizeof(log_name)-1);
+      /*
+        Update group_id to match the value we read out of the index
+        file. When loop exits, it will be the value of the last line
+        in the index. It may be overwritten later in recover, if the
+        recovered bin log contains events with IDs larger than what
+        was in the index.
+      */
+      if (rpl_hierarchical)
+      {
+        group_id= log_info.group_id;
+        last_event_server_id= log_info.server_id;
+      }
     } while (!(error= find_next_log(&log_info, 1)));
 
     if (error !=  LOG_INFO_EOF)
@@ -6876,6 +7481,46 @@ int TC_LOG_BINLOG::open(const char *opt_name)
     {
       sql_print_information("Recovering after a crash using %s", opt_name);
       error= recover(&log, (Format_description_log_event *)ev);
+
+      /*
+        Fix index to have the correct group_id.
+      */
+      if (rpl_hierarchical)
+      {
+        error|= write_group_id_to_index(log_name, true, true);
+
+        /*
+          If this server is a slave, and if a transaction was in the process
+          of being committed when the server crashed, and the server was
+          running with bin log enabled (which is why this function is
+          running), it's possible that the state of the database is now
+          inconsistent with relay-log.info and, if it was also running with
+          rpl_transaction_enabled, could even be inconsistent with InnoDB's
+          replication state. Specifically, if the server crashed after a
+          transaction was written to the bin log, but before it was committed
+          to InnoDB, that transaction was just committed as part of the
+          recover call above, but neither relay-log.info nor InnoDB's
+          replication status were updated. The above scenario, if nothing
+          is done about it, would result in an attempt to replay a
+          transaction when the replication SQL thread starts up, possibly
+          resulting in data discrepencies between the slave and the master
+          or replication stopping with an error (e.g. attempting to insert
+          a duplicate entry for a key).
+
+          Thus, if we're running with rpl_hierarchical, ignore relay-log.info
+          after a crash recovery. Instead, reset the slave and turn on
+          connect_using_group_id.
+
+          NOTE: It's possible that this slave is running with
+          rpl_hierarchical while the master is not. In that case turning on
+          connect_using_group_id would cause the replication IO thread
+          to get back an error from the master. A heuristing for telling
+          if the master is not running with rpl_hierarchial is 'group_id == 0'
+          (see get_group_id_to_use()).
+        */
+        if (rpl_hierarchical_slave_recovery && group_id)
+          do_rpl_hierarchical_slave_recovery= true;
+      }
     }
     else
       error=0;
@@ -6940,8 +7585,11 @@ int TC_LOG_BINLOG::recover(IO_CACHE *log, Format_description_log_event *fdle)
   Log_event  *ev;
   HASH xids;
   MEM_ROOT mem_root;
+  bool in_trans= false;
 
-  if (! fdle->is_valid() ||
+  if (!fdle->is_valid())
+    goto err1;
+  if (!group_id_only_crash_recovery &&
       hash_init(&xids, &my_charset_bin, TC_LOG_PAGE_SIZE/3, 0,
                 sizeof(my_xid), 0, 0, MYF(0)))
     goto err1;
@@ -6952,7 +7600,7 @@ int TC_LOG_BINLOG::recover(IO_CACHE *log, Format_description_log_event *fdle)
 
   while ((ev= Log_event::read_log_event(log,0,fdle)) && ev->is_valid())
   {
-    if (ev->get_type_code() == XID_EVENT)
+    if (!group_id_only_crash_recovery && ev->get_type_code() == XID_EVENT)
     {
       Xid_log_event *xev=(Xid_log_event *)ev;
       uchar *x= (uchar *) memdup_root(&mem_root, (uchar*) &xev->xid,
@@ -6960,25 +7608,1088 @@ int TC_LOG_BINLOG::recover(IO_CACHE *log, Format_description_log_event *fdle)
       if (!x || my_hash_insert(&xids, x))
         goto err2;
     }
+
+    /*
+      Index file is only updated with correct group_id on a clean shutdown.
+      If we didn't shutdown cleanly, need to recover the group_id for the
+      last group this server committed.
+    */
+    if (rpl_hierarchical &&
+        ev->get_type_code() != ROTATE_EVENT &&
+        ev->get_type_code() != FORMAT_DESCRIPTION_EVENT)
+    {
+      /*
+        Look for BEGIN and COMMIT events so that we can keep track
+        of when events are part of a transaction. Ignore all events
+        which are part of a transaction except for COMMIT.
+      */
+      if (ev->get_type_code() == QUERY_EVENT)
+      {
+        Query_log_event *qev= (Query_log_event *) ev;
+
+        DBUG_ASSERT(!strncmp(query_with_log[0].query_, "BEGIN", 6));
+        DBUG_ASSERT(!strncmp(query_with_log[1].query_, "COMMIT", 7));
+        for (int idx= 0; idx < 2; ++idx)
+        {
+          if (qev->q_len == query_with_log[idx].query_length_ &&
+              !strncmp(qev->query, query_with_log[idx].query_, qev->q_len))
+          {
+            in_trans= !idx;
+            break;
+          }
+        }
+      }
+      else if (ev->get_type_code() == XID_EVENT)
+        in_trans= false;
+
+      /*
+        group_id may have been flushed to the index file as part of a
+        SET BINLOG_GROUP_ID=<value>; statement prior to an unclean shutdown.
+        Thus, we may loop over events with a group_id less than the value we
+        previously read out of the index and so take the max of the values.
+      */
+      if (!in_trans && group_id < ev->group_id)
+      {
+        group_id= ev->group_id;
+        last_event_server_id= ev->server_id;
+      }
+    }
+
     delete ev;
   }
 
-  if (ha_recover(&xids))
+  if (!group_id_only_crash_recovery && ha_recover(&xids))
     goto err2;
 
   free_root(&mem_root, MYF(0));
-  hash_free(&xids);
+  if (!group_id_only_crash_recovery)
+    hash_free(&xids);
   return 0;
 
 err2:
   free_root(&mem_root, MYF(0));
-  hash_free(&xids);
+  if (!group_id_only_crash_recovery)
+    hash_free(&xids);
 err1:
   sql_print_error("Crash recovery failed. Either correct the problem "
                   "(if it's, for example, out of memory error) and restart, "
                   "or delete (or rename) binary log and start mysqld with "
                   "--tc-heuristic-recover={commit|rollback}");
   return 1;
+}
+
+/**
+  Updates server's notion of the current group_id.
+
+  This function is called in response to a SET BINLOG_GROUP_ID command. It
+  protects the group_id variable with LOCK_log and always rotates to a new
+  log so that the index file gets updated with an entry which contains
+  group_id_arg.
+
+  @param  thd              the curren thd
+  @param  group_id_arg     the new group_id
+  @param  server_id_arg    the new server_id
+  @param  do_reset_master  whether to reset the master as part of the command
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::update_group_id(THD *thd, ulonglong group_id_arg,
+                                   uint32 server_id_arg, bool do_reset_master)
+{
+  ulonglong rpl_hier_cache_freq_save;
+
+  if (!rpl_hierarchical)
+  {
+    my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--skip-rpl-hierarchical");
+    return 1;
+  }
+
+  if (do_reset_master && prepare_for_reset_logs(thd))
+  {
+    if (thd->killed)
+      thd->send_kill_message();
+    else
+      my_message(ER_LOG_PURGE_UNKNOWN_ERR,
+                 ER(ER_LOG_PURGE_UNKNOWN_ERR), MYF(0));
+    return 1;
+  }
+
+  pthread_mutex_lock(&LOCK_log);
+
+  /*
+    Disallow setting the group_id to be smaller than what the server
+    has already seen. Doing so causes the repl_hier_cache to explode and
+    the non-cached version of get_log_info_for_group_id to error out.
+  */
+  if (group_id_arg < group_id && !do_reset_master)
+  {
+    my_error(ER_STATEMENT_REQUIRES_OPTION, MYF(0), "WITH RESET");
+    pthread_mutex_unlock(&LOCK_log);
+    return 1;
+  }
+
+  /*
+    Update group_id before any reset so that the group_id value written
+    to the index file is the new one.
+  */
+  group_id= group_id_arg;
+  last_event_server_id= server_id_arg;
+
+  if (do_reset_master)
+  {
+    /*
+      Because we may have just changed group_id to be a lower value
+      than what has been written to the logs/index/cache we have to
+      jump through some hoops in order to ensure that the cache
+      ends up in a valid state.
+    */
+    rpl_hier_cache_freq_save= rpl_hier_cache_frequency_real;
+    rpl_hier_cache_frequency_real= 0;
+
+    repl_hier_cache_clear();
+
+    pthread_mutex_lock(&LOCK_index);
+    (void) reset_logs(false /* need_lock */);
+    pthread_mutex_unlock(&LOCK_index);
+
+    rpl_hier_cache_frequency_real= rpl_hier_cache_freq_save;
+
+    /*
+      Now that logs and index have the new group_id,
+      initialize cache if it is enabled.
+    */
+    if (rpl_hier_cache_frequency_real)
+      /* An error in initialize will just disable the cache. */
+      initialize_repl_hier_cache(false);
+  }
+
+  /*
+    The DB admin used 'SET BINLOG_GROUP_ID' to update group_id. However,
+    because MYSQL_LOG::group_id holds the last consumed ID, the next events
+    written to the bin log will have (group_id_arg + 1) and so no events
+    which actually match group_id_arg will show up in the bin log. This
+    causes problems if the server is receiving events and later the DB
+    admin does a 'SHOW BINLOG INFO FOR' or the slave tries to connect
+    using a group_id which matches the group_id_arg used here. The solution,
+    rotate_and_purge here to start a new bin log, which has the side-effect
+    of writing group_id_arg to the index file. Then, in
+    get_log_info_for_group_id, special case looking for a group_id which
+    exactly matches a value in the index file.
+  */
+  rotate_and_purge(RP_LOCK_LOG_IS_ALREADY_LOCKED | RP_FORCE_ROTATE);
+
+  pthread_mutex_unlock(&LOCK_log);
+
+  if (do_reset_master)
+    (void) mysql_bin_log.complete_reset_logs(thd);
+
+  return 0;
+}
+
+/**
+  Helper function which opens a bin log file and verifies that the events
+  in it contain group_ids.
+
+  @param  log_file_name  name of the file to open
+  @param  log_lock       if non-NULL, the lock to take when reading from
+                         the file
+  @param[out]  file      receives the File so that caller can close it
+  @param[out]  log       receives the IO_CACHE caller can use to read the file
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::open_binlog_with_group_id(const char *log_file_name,
+                                             pthread_mutex_t *log_lock,
+                                             File *file, IO_CACHE *log)
+{
+  const char *errmsg;
+  Log_event *ev= 0;
+  Format_description_log_event fdle(BINLOG_VERSION);
+  uint8 common_header_len;
+
+  if (!fdle.is_valid())
+  {
+    sql_print_error("MYSQL_LOG::open_binlog_with_group_id failed at "
+                    "!fdle.is_valid()");
+    goto err1;
+  }
+
+  if ((*file= open_binlog(log, log_file_name, &errmsg)) < 0)
+  {
+    sql_print_error("MYSQL_LOG::open_binlog_with_group_id failed at "
+                    "open_binlog with message: %s", errmsg);
+    goto err1;
+  }
+
+  if (!(ev= Log_event::read_log_event(log, log_lock, &fdle)))
+  {
+    sql_print_error("MYSQL_LOG::open_binlog_with_group_id failed at "
+                    "read_log_event");
+    goto err2;
+  }
+
+  if (ev->get_type_code() != FORMAT_DESCRIPTION_EVENT)
+  {
+    sql_print_error("MYSQL_LOG::open_binlog_with_group_id failed at "
+                    "first event is not FORMAT_DESCRIPTION_EVENT");
+    goto err3;
+  }
+
+  common_header_len= ((Format_description_log_event *) ev)->common_header_len;
+  if (common_header_len < LOG_EVENT_HEADER_WITH_ID_LEN)
+  {
+    sql_print_error("MYSQL_LOG::open_binlog_with_group_id failed at "
+                    "common header not long enough to contain group_id");
+    goto err3;
+  }
+
+  delete ev;
+  return 0;
+
+ err3:
+  delete ev;
+ err2:
+  end_io_cache(log);
+  my_close(*file, MYF(MY_WME));
+ err1:
+  return 1;
+}
+
+/**
+  Initializes the hierarchical replication cache.
+
+  This function is called at server initialization if cache is enabled and
+  at runtime when the cache switches from disabled to enabled. It reads
+  the index file and adds entries to the cache for each index entry.
+
+  @param  need_lock  Set to 1 if caller has not locked LOCK_log
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::initialize_repl_hier_cache(bool need_lock)
+{
+  LOG_INFO linfo;
+  int error;
+  int ret_val= 0;
+
+  DBUG_ASSERT(rpl_hierarchical);
+
+  /* Cache is protected by bin log's LOCK_log. */
+  if (need_lock)
+    pthread_mutex_lock(&LOCK_log);
+  safe_mutex_assert_owner(&LOCK_log);
+  /* And we're reading the index so protect it. */
+  pthread_mutex_lock(&LOCK_index);
+
+  /*
+    Get first bin log, if there is one. The case where there isn't is
+    during init_server_components on a brand new system.
+  */
+  if (!(error= find_log_pos(&linfo, NullS, false)))
+  {
+    do
+    {
+      repl_hier_cache_append_file(linfo.group_id, linfo.server_id,
+                                  linfo.log_file_name);
+    } while (!(error= find_next_log(&linfo, false)));
+  }
+
+  if (error !=  LOG_INFO_EOF)
+  {
+    sql_print_error("MYSQL_LOG::initialize_repl_hier_cache failed parsing "
+                    "index with error = %d. Diabling the cache.", error);
+    repl_hier_cache_disable();
+    ret_val= 1;
+  }
+
+  if (need_lock)
+    pthread_mutex_unlock(&LOCK_log);
+  pthread_mutex_unlock(&LOCK_index);
+
+  return ret_val;
+}
+
+/**
+  Retrieve a LOG_INFO for the specified group_id from the cache.
+
+  Attempts to retrieve a LOG_INFO from the hierarchical replication cache.
+  First queries the cache for a starting log and position. Then does a
+  sequential scan of the file for the matching group_id. Acquires LOCK_log
+  to protect rpl_hier_cache_frequency_real. Because the lock needs to be
+  taken to determine whether cache is enabled, the check is done here and
+  results returned to caller via used_cache.
+
+  @param       thd           the current thd
+  @param       group_id_arg  the group_id to lookup
+  @param[out]  linfo         receives the results of the lookup
+  @param[out]  used_cache    receives whether the cache was used. If not,
+                             caller should do an uncached lookup.
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::cached_get_log_info_for_group_id(THD *thd,
+                                                    ulonglong group_id_arg,
+                                                    LOG_INFO *linfo,
+                                                    bool *used_cache)
+{
+  int ret_val= 1;
+  bool need_unlock= true;
+  pthread_mutex_t *log_lock= NULL;
+  const char *log_file;
+  bool returned_log_file_boundary= false;
+
+  pthread_mutex_lock(&LOCK_log);
+  if (rpl_hier_cache_frequency_real)
+  {
+    /* Cache is on so we used it regardless of success return. */
+    *used_cache= true;
+
+    /*
+      Query the cache to see if we get a hit. Note that a hit does not
+      mean a matching group_id. Rather, a hit means that we get a starting
+      log_file_name and pos. The pos is important because it means we only
+      have to sequentially scan a portion of the file rather than the whole
+      thing.
+    */
+    if (!repl_hier_cache_lookup(group_id /* server's current ID */,
+                                last_event_server_id, /* and current srv ID */
+                                group_id_arg /* target ID */,
+                                &linfo->group_id /* cache entry found ID */,
+                                &linfo->server_id,
+                                &linfo->pos, &log_file,
+                                &returned_log_file_boundary))
+    {
+      /*
+        If we're not in the special case of getting back a file boundary,
+        the returned cache entry's ID must be less than or equal to the
+        target ID.
+      */
+      DBUG_ASSERT(returned_log_file_boundary ||
+                  linfo->group_id <= group_id_arg);
+
+      strncpy(linfo->log_file_name, log_file, LOG_NAME_LEN);
+
+      /*
+        If the cache used a boundary, then it gave imcomplete information.
+        Specificially, it didn't give a pos.
+      */
+      if (returned_log_file_boundary)
+      {
+        /*
+          We do different things in this situation. If the target ID matches
+          the log file boundary ID, we want to use the end of the log as the
+          pos. Otherwise, we scan from the beginning of the log.
+        */
+        if (group_id_arg == linfo->group_id)
+        {
+          /*
+            Special case to handle group_ids set via 'SET BINLOG_GROUP_ID'.
+            So that we can find those group_ids even after new events have
+            come through the system. This works because the implementation of
+            update_group_id rotates to a new log when the group_id is set.
+          */
+          MY_STAT stat;
+          if (!my_stat(linfo->log_file_name, &stat, MYF(0)))
+          {
+            sql_print_information("Failed to execute my_stat on file '%s'",
+                                  linfo->log_file_name);
+            goto err1;
+          }
+
+          linfo->pos= stat.st_size;
+        }
+        else
+        {
+          /*
+            If it wasn't a match, means that we need to start the scan at the
+            beginning of the log.
+          */
+          linfo->pos= BIN_LOG_HEADER_SIZE;
+        }
+      }
+
+      /*
+        Scan through the log if cache hit is before the target ID. Otherwise,
+        we can just return what we got back from the cache.
+      */
+      if (linfo->group_id != group_id_arg)
+      {
+        File file;
+        IO_CACHE log;
+
+        /*
+          We don't want to hold LOCK_log for a long time while we scan through
+          the file. Check to see if the hit is for the active log. If so,
+          only take the lock during reads. If not, no need to lock at all.
+        */
+        if (!strcmp(linfo->log_file_name, log_file_name))
+          log_lock= &LOCK_log;
+
+        need_unlock= false;
+        pthread_mutex_unlock(&LOCK_log);
+
+        if (!open_binlog_with_group_id(linfo->log_file_name, log_lock, &file,
+                                       &log))
+        {
+          DBUG_ASSERT(linfo->pos <= my_b_filelength(&log));
+          my_b_seek(&log, linfo->pos);
+
+          ret_val= scan_bin_log_events(&log, linfo->log_file_name,
+                                       INFO_OF_ID, log_lock,
+                                       &group_id_arg, &linfo->pos,
+                                       &linfo->server_id);
+          end_io_cache(&log);
+          my_close(file, MYF(MY_WME));
+        }
+      }
+      else
+        ret_val= 0;
+    }
+    /*
+      No else clause here because no error message is printed out for failure
+      to lookup in the cache because user may have simply asked for an ID the
+      server doesn't have.
+    */
+  }
+
+ err1:
+  if (need_unlock)
+    pthread_mutex_unlock(&LOCK_log);
+
+  return ret_val;
+}
+
+/**
+  Retrieve a LOG_INFO for the specified group_id without using the cache.
+
+  First scans the index file looking for a log which should contain
+  the requested group_id. If found, then scans the log for the matching
+  group_id. If the current log has to be scanned, will acquire LOCK_log
+  to read it safely.
+
+  @param       thd           the current thd
+  @param       group_id_arg  the group_id to lookup
+  @param[out]  linfo         receives the results of the lookup
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::uncached_get_log_info_for_group_id(THD *thd,
+                                                      ulonglong group_id_arg,
+                                                      LOG_INFO *linfo)
+{
+  int ret_val= 1;
+  pthread_mutex_t *log_lock= NULL;
+  bool active_log= false;
+  int error;
+
+  DBUG_ASSERT(!thd->current_linfo);
+  thd->current_linfo= linfo;
+
+  /*
+    Read through the index file looking for an entry with a group_id
+    which is greater than then one for which we're looking.
+  */
+  if ((error= find_log_pos(linfo, NullS, true)))
+  {
+    /*
+      EOF here is an unexpected error. We're running with --rpl_hierarchical
+      which means that we're also running with --log-bin, which means that
+      we should have a bin log and index file to process.
+    */
+    sql_print_error("MYSQL_LOG::get_log_info_for_group_id call to "
+                    "find_log_pos() failed with error = %d)", error);
+    goto err1;
+  }
+
+  while (linfo->group_id < group_id_arg)
+  {
+    if ((error= find_next_log(linfo, true)))
+    {
+      if (error !=  LOG_INFO_EOF)
+      {
+        sql_print_error("MYSQL_LOG::get_log_info_for_group_id call to "
+                        "find_next_pos() failed with error = %d)", error);
+
+        goto err1;
+      }
+
+      /*
+        On LOG_INFO_EOF break out of the loop and search the current log for
+        a matching ID. We need to do this because the index file isn't updated
+        with the ID until the corresponding bin log is closed and so
+        linfo->group_id isn't accurate for the currently open log.
+      */
+      if (get_current_log(linfo))
+      {
+        sql_print_error("MYSQL_LOG::get_log_info_for_group_id unexpected "
+                        "error from get_current_log.");
+        goto err1;
+      }
+
+      /*
+        If the log we need to scan is the active one, protect reads with
+        LOCK_log since it may also receive writes while we're scanning
+        it and we don't want to get any partial events. If not active, we
+        can safely read from it without any locks.
+      */
+      active_log= true;
+      log_lock= &LOCK_log;
+
+      break;
+    }
+  }
+
+  /*
+    Special case to handle group_ids set via 'SET BINLOG_GROUP_ID'. There
+    is a case above which handles the scenario where no new events have
+    come through the system since, but this case handles the case where
+    there have been events and works because the implementation of
+    update_group_id rotates to a new log when the group_id is set.
+
+    Thus, if the matching log isn't the active log and the IDs exactly
+    match. Return the end of that log.
+  */
+  if (!active_log && linfo->group_id == group_id_arg)
+  {
+    MY_STAT stat;
+    if (!my_stat(linfo->log_file_name, &stat, MYF(0)))
+    {
+      sql_print_information("Failed to execute my_stat on file '%s'",
+                            linfo->log_file_name);
+      goto err1;
+    }
+
+    linfo->pos= stat.st_size;
+    ret_val= 0;
+    goto err1;
+  }
+
+  /*
+    Found an entry which seems to match the group_id for which we're looking.
+    Scan through the log searching for the matching group.
+  */
+  {
+    File file;
+    IO_CACHE log;
+
+    if (open_binlog_with_group_id(linfo->log_file_name, log_lock, &file, &log))
+      /* open_binlog_with_group_id outputs error message */
+      goto err1;
+
+    ret_val= scan_bin_log_events(&log, linfo->log_file_name,
+                                 INFO_OF_ID, log_lock, &group_id_arg,
+                                 &linfo->pos, &linfo->server_id);
+    end_io_cache(&log);
+    my_close(file, MYF(MY_WME));
+  }
+
+ err1:
+  thd->current_linfo= 0;
+
+  return ret_val;
+}
+
+/**
+  Helper function to scan through a log looking at events.
+
+  Much of this logic is duplicated from MYSQL_LOG::write_cache, but there
+  are enough differences that I didn't think it was worth trying to share
+  the code as it would have involved function pointers and many params.
+  Currently only supports 2 modes, INFO_OF_ID and FIRST_ID_INFO. INFO_OF_ID
+  mode returns the end_log_pos and server_id of the last event
+  which matches group_id_arg. FIRST_ID_INFO mode doesn't currently have any
+  callers but it returns the first group_id found in the log. Reads a block
+  of data from cache and then parses the individual events out of the block.
+  Must handle case that an event header spans 2 blocks of data. When in
+  INFO_OF_ID mode, inserts appropriate events into the hierarchical
+  replication cache in order to populate it.
+
+  @param          cache          IO_CACHE from which to read
+  @param          log_file_name  name of file being scanned
+  @param          mode           mode of the scan, i.e. what action to take
+  @param          log_lock       If non-NULL, the lock to take when reading
+                                 from cache
+  @param[in,out]  group_id_arg   in or out depending on mode, may receive
+                                 the first group_id in the log or is the
+                                 group_id for which the caller is searching
+  @param[out]     pos            receives the end_log_pos of the event matching
+                                 group_id_arg
+  @param[out]     server_id_arg  receives the server_id of the event matching
+                                 group_id_arg
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::scan_bin_log_events(IO_CACHE *cache,
+                                       const char *log_file_name,
+                                       enum_bin_log_scan_mode mode,
+                                       pthread_mutex_t *log_lock,
+                                       ulonglong *group_id_arg,
+                                       my_off_t *pos, uint32 *server_id_arg)
+{
+  my_off_t length= my_b_bytes_in_cache(cache), carry, hdr_offs;
+  Log_event_type event_type;
+  my_off_t out_pos= 0;
+  uint32 out_server_id= 0;
+  ulonglong event_group_id_prev= 0;
+  ulonglong event_group_id= 0;
+
+  ulonglong known_cache_freq= 0;
+  my_off_t cache_match_end_pos= 0;
+  ulonglong cache_match_group_id= 0;
+  uint32 cache_match_server_id= 0;
+
+  /*
+    Note that FORMAT_DESCRIPTION_EVENT and ROTATE_EVENT events will
+    have a header size that is less than LOG_EVENT_HEADER_WITH_ID_LEN,
+    but we don't have to worry about reading beyond the end of any
+    buffers because the size of both FORMAT_DESCRIPTION_EVENT and
+    ROTATE_EVENT are >= LOG_EVENT_HEADER_WITH_ID_LEN. ROTATE_HEADER_LEN
+    is 8 and then has additional data following. The FDE is larger than
+    Rotate so we're okay.
+  */
+  uchar header[LOG_EVENT_HEADER_WITH_ID_LEN];
+
+  /*
+    Our caller already init'ed the cache, read the FDE out of it, and
+    advanced the read_pos to the start of the next event so we can just
+    start reading at cache->read_pos.
+  */
+  hdr_offs= carry= 0;
+
+  /* Only 2 modes currently supported */
+  if (mode != INFO_OF_ID && mode != FIRST_ID_INFO)
+    return 1;
+
+  do
+  {
+
+    /*
+      if we only got a partial header in the last iteration,
+      get the other half now and process a full header.
+    */
+    if (unlikely(carry > 0))
+    {
+      DBUG_ASSERT(carry < LOG_EVENT_HEADER_WITH_ID_LEN);
+
+      /* assemble both halves */
+      memcpy(&header[carry], (char *) cache->read_pos,
+             LOG_EVENT_HEADER_WITH_ID_LEN - carry);
+
+      /* Get type of event */
+      event_type= (Log_event_type) header[EVENT_TYPE_OFFSET];
+
+      if (event_type != FORMAT_DESCRIPTION_EVENT &&
+          event_type != ROTATE_EVENT)
+      {
+        if (mode == FIRST_ID_INFO)
+        {
+          *group_id_arg= uint8korr(&header[GROUP_ID_OFFSET]);
+          *pos= uint4korr(&header[LOG_POS_OFFSET]);
+          *server_id_arg= uint4korr(&header[SERVER_ID_OFFSET]);
+          return 0;
+        }
+
+        DBUG_ASSERT(mode == INFO_OF_ID);
+
+        /* Get group_id */
+        event_group_id= uint8korr(&header[GROUP_ID_OFFSET]);
+
+        if (event_group_id < event_group_id_prev)
+        {
+          char llbuf1[22];
+          char llbuf2[22];
+          snprintf(llbuf1, 22, "%llu", event_group_id_prev);
+          snprintf(llbuf2, 22, "%llu", event_group_id);
+          sql_print_error("MYSQL_LOG::scan_bin_log_events "
+                          "encountered out of order group_ids. "
+                          "prev_group_id = %s. curr_group_id = %s.",
+                          llbuf1, llbuf2);
+          return 1;
+        }
+
+        event_group_id_prev= event_group_id;
+
+        /* Check if we just moved off the last event which matched. */
+        if (out_pos != 0 && event_group_id > *group_id_arg)
+        {
+          *pos= out_pos;
+          *server_id_arg= out_server_id;
+          return 0;
+        }
+
+        /* Did we enter or continue within matching group? */
+        else if (event_group_id == *group_id_arg)
+        {
+          out_pos= uint4korr(&header[LOG_POS_OFFSET]);
+          out_server_id= uint4korr(&header[SERVER_ID_OFFSET]);
+        }
+
+        /* Did we fail to find a match? */
+        else if (event_group_id > *group_id_arg)
+        {
+          return 1;
+        }
+
+        /*
+          While we're scanning the log, build up the cache. Under normal
+          conditions, this will not attempt to insert duplicates.
+          Additionally, it will normally only 'insert' at the end of the
+          vectors, not in the middle.
+        */
+        pthread_mutex_lock(&LOCK_log);
+        /*
+          We're not holding the lock for the whole operation so make
+          sure things haven't changed out from under us so that we don't
+          put bad data in the cache.
+        */
+        if (known_cache_freq == rpl_hier_cache_frequency_real)
+        {
+          /* Is cache even on? */
+          if (rpl_hier_cache_frequency_real)
+          {
+            if (event_group_id &&
+                !(event_group_id % rpl_hier_cache_frequency_real))
+            {
+              /*
+                This group_id is one which should go in the cache. Save off
+                it's end_log_pos.
+              */
+              cache_match_end_pos= uint4korr(&header[LOG_POS_OFFSET]);
+              cache_match_group_id= event_group_id;
+              cache_match_server_id= uint4korr(&header[SERVER_ID_OFFSET]);
+            }
+            else if (cache_match_end_pos != 0)
+            {
+              /*
+                Just scanned passed the last event with an ID which should
+                be in the cache. Add it.
+              */
+              repl_hier_cache_insert(cache_match_group_id,
+                                     cache_match_server_id,
+                                     log_file_name, cache_match_end_pos);
+              cache_match_end_pos= 0;
+            }
+          }
+        }
+        else
+        {
+          /* Cache frequency changed out from under us, clear state. */
+          cache_match_end_pos= 0;
+        }
+        known_cache_freq= rpl_hier_cache_frequency_real;
+        pthread_mutex_unlock(&LOCK_log);
+      }
+
+      /* next event header at ... */
+      hdr_offs= uint4korr(&header[EVENT_LEN_OFFSET]) - carry;
+
+      carry= 0;
+    }
+
+    if (likely(length > 0))
+    {
+      /*
+        process all event-headers in this (partial) cache.
+        if next header is beyond current read-buffer,
+        we'll get it later (though not necessarily in the
+        very next iteration, just "eventually").
+      */
+
+      while (hdr_offs < length)
+      {
+        /*
+          partial header only? save what we can get, process once
+          we get the rest.
+        */
+
+        if (hdr_offs + LOG_EVENT_HEADER_WITH_ID_LEN > length)
+        {
+          carry= length - hdr_offs;
+          memcpy(header, (char *) cache->read_pos + hdr_offs, carry);
+          length= hdr_offs;
+        }
+        else
+        {
+          /* we've got a full event-header, and it came in one piece */
+
+          uchar *log_pos= cache->read_pos + hdr_offs;
+
+          /* Get type of event */
+          event_type= (Log_event_type) log_pos[EVENT_TYPE_OFFSET];
+
+          if (event_type != FORMAT_DESCRIPTION_EVENT &&
+              event_type != ROTATE_EVENT)
+          {
+            if (mode == FIRST_ID_INFO)
+            {
+              *group_id_arg= uint8korr(log_pos + GROUP_ID_OFFSET);
+              *pos= uint4korr(log_pos + LOG_POS_OFFSET);
+              *server_id_arg= uint4korr(log_pos + SERVER_ID_OFFSET);
+              return 0;
+            }
+
+            DBUG_ASSERT(mode == INFO_OF_ID);
+
+            /* Get group_id */
+            event_group_id= uint8korr(log_pos + GROUP_ID_OFFSET);
+
+            if (event_group_id < event_group_id_prev)
+            {
+              char llbuf1[22];
+              char llbuf2[22];
+              snprintf(llbuf1, 22, "%llu", event_group_id_prev);
+              snprintf(llbuf2, 22, "%llu", event_group_id);
+              sql_print_error("MYSQL_LOG::scan_bin_log_events "
+                              "encountered out of order group_ids. "
+                              "prev_group_id = %s. curr_group_id = %s.",
+                              llbuf1, llbuf2);
+              return 1;
+            }
+
+            event_group_id_prev= event_group_id;
+
+            /* Check if we just moved off the last event which matched. */
+            if (out_pos != 0 && event_group_id > *group_id_arg)
+            {
+              *pos= out_pos;
+              *server_id_arg= out_server_id;
+              return 0;
+            }
+            /* Did we enter or continue within matching group? */
+            else if (event_group_id == *group_id_arg)
+            {
+              out_pos= uint4korr(log_pos + LOG_POS_OFFSET);
+              out_server_id= uint4korr(log_pos + SERVER_ID_OFFSET);
+            }
+            /* Did we fail to find a match? */
+            else if (event_group_id > *group_id_arg)
+            {
+              return 1;
+            }
+
+            /*
+              While we're scanning the log, build up the cache. Under normal
+              conditions, this will not attempt to insert duplicates.
+              Additionally, it will normally only 'insert' at the end of the
+              vectors, not in the middle.
+            */
+            pthread_mutex_lock(&LOCK_log);
+            /*
+              We're not holding the lock for the whole operation so make
+              sure things haven't changed out from under us so that we don't
+              put bad data in the cache.
+            */
+            if (known_cache_freq == rpl_hier_cache_frequency_real)
+            {
+              /* Is cache even on? */
+              if (rpl_hier_cache_frequency_real)
+              {
+                if (event_group_id &&
+                    !(event_group_id % rpl_hier_cache_frequency_real))
+                {
+                  /*
+                    This group_id is one which should go in the cache. Save off
+                    it's end_log_pos.
+                  */
+                  cache_match_end_pos= uint4korr(log_pos + LOG_POS_OFFSET);
+                  cache_match_group_id= event_group_id;
+                  cache_match_server_id= uint4korr(log_pos +
+                                                   SERVER_ID_OFFSET);
+                }
+                else if (cache_match_end_pos != 0)
+                {
+                  /*
+                    Just scanned passed the last event with an ID which should
+                    be in the cache. Add it.
+                  */
+                  repl_hier_cache_insert(cache_match_group_id,
+                                         cache_match_server_id,
+                                         log_file_name, cache_match_end_pos);
+                  cache_match_end_pos= 0;
+                }
+              }
+            }
+            else
+            {
+              /* Cache frequency changed out from under us, clear state. */
+              cache_match_end_pos= 0;
+            }
+            known_cache_freq= rpl_hier_cache_frequency_real;
+            pthread_mutex_unlock(&LOCK_log);
+          }
+
+          /* next event header at ... */
+          hdr_offs+= uint4korr(log_pos + EVENT_LEN_OFFSET);
+        }
+      }
+
+      /*
+        Adjust hdr_offs. Note that it may still point beyond the segment
+        read in the next iteration; if the current event is very long,
+        it may take a couple of read-iterations (and subsequent adjustments
+        of hdr_offs) for it to point into the then-current segment.
+        If we have a split header (!carry), hdr_offs will be set at the
+        beginning of the next iteration, overwriting the value we set here:
+      */
+      hdr_offs-= length;
+    }
+
+    cache->read_pos= cache->read_end;           /* Mark buffer used up. */
+
+    if (log_lock)
+      pthread_mutex_lock(log_lock);
+    length= my_b_fill(cache);
+    if (log_lock)
+      pthread_mutex_unlock(log_lock);
+  } while (length);
+
+  DBUG_ASSERT(carry == 0);
+
+  /*
+    The matching group_id might have been the last group in the log.
+  */
+  if (mode == INFO_OF_ID && out_pos != 0)
+  {
+    DBUG_ASSERT(event_group_id == *group_id_arg);
+    *pos= out_pos;
+    *server_id_arg= out_server_id;
+    return 0;
+  }
+
+  /*
+    Shouldn't really be here. To get here requires:
+      1. Index file lists group_id >= group_id_arg for this log.
+      2. No group_id >= group_id_arg found in log.
+    The only way I can think of for that to happen is if group_id was
+    some value a, SET BINLOG_GROUP_ID is used to override group_id to some
+    new value b and then SHOW BINLOG INFO FOR is called with a value c such
+    that a < c < b.
+  */
+  return 1;
+}
+
+/**
+  Get a LOG_INFO for group_id_arg.
+
+  @param       thd           current thd
+  @param       group_id_arg  group_id to lookup
+  @param[out]  linfo         receives the LOG_INFO for event which matches
+                             group_id_arg
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int MYSQL_BIN_LOG::get_log_info_for_group_id(THD *thd, ulonglong group_id_arg,
+                                             LOG_INFO *linfo)
+{
+  int ret_val= 1;
+  bool used_cache= false;
+
+  /*
+    Special case for the when the request is for the current group_id.
+    This is needed to cover 2 cases.
+      1. A pristine system has been setup where the only events in
+         any bin log are FORMAT_DESCRIPTION_EVENT and/or ROTATE_EVENTS.
+      2. SET BINLOG_GROUP_ID was used and no events have come through
+         the system since.
+  */
+  pthread_mutex_lock(&LOCK_log);
+  if (group_id == group_id_arg)
+  {
+    ret_val= raw_get_current_log(linfo);
+    pthread_mutex_unlock(&LOCK_log);
+    return ret_val;
+  }
+  /*
+    Don't bother looking through the logs if we're being asked for an ID
+    from the future.
+  */
+  else if (group_id < group_id_arg)
+  {
+    pthread_mutex_unlock(&LOCK_log);
+    return 1;
+  }
+  pthread_mutex_unlock(&LOCK_log);
+
+   /* Use cache if enabled. */
+  ret_val= cached_get_log_info_for_group_id(thd, group_id_arg,
+                                            linfo, &used_cache);
+  if (!used_cache)
+    ret_val= uncached_get_log_info_for_group_id(thd, group_id_arg, linfo);
+
+  return ret_val;
+}
+
+/**
+  Implementation behind 'SHOW BINLOG INFO FOR' statement.
+
+  @param  thd       current thd
+  @param  group_id  group_id to lookup
+
+  @return    Operation status
+    @retval  0  success
+    @retval  1  error
+*/
+
+int show_binlog_info_for_group_id(THD *thd, ulonglong group_id)
+{
+  if (!rpl_hierarchical)
+  {
+    my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--skip-rpl-hierarchical");
+    return 1;
+  }
+
+  LOG_INFO linfo;
+  if (mysql_bin_log.get_log_info_for_group_id(thd, group_id, &linfo))
+  {
+    my_error(ER_ERROR_WHEN_EXECUTING_COMMAND, MYF(0),
+             "SHOW BINLOG INFO FOR", "Failed to find matching binlog group.");
+    return 1;
+  }
+
+  List<Item> field_list;
+  Protocol *protocol= thd->protocol;
+  field_list.push_back(new Item_empty_string("Log_name", 255));
+  field_list.push_back(new Item_return_int("Pos", 20,
+                                           MYSQL_TYPE_LONGLONG));
+  field_list.push_back(new Item_return_int("Server_ID", 10,
+                                           MYSQL_TYPE_LONG));
+  if (protocol->send_fields(&field_list,
+                            Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
+    return 1;
+
+  protocol->prepare_for_resend();
+  int dir_len= dirname_length(linfo.log_file_name);
+  protocol->store(linfo.log_file_name + dir_len,
+                  strlen(linfo.log_file_name + dir_len), &my_charset_bin);
+
+  protocol->store(linfo.pos);
+  protocol->store(linfo.server_id);
+  if (protocol->write())
+    return 1;
+
+  my_eof(thd);
+  return 0;
 }
 
 

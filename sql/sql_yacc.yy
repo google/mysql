@@ -689,10 +689,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 
 %pure_parser                                    /* We have threads */
 /*
-  Currently there are 171 shift/reduce conflicts.
+  Currently there are 172 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 171
+%expect 172
 
 /*
    Comments for TOKENS.
@@ -743,6 +743,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  BIGINT                        /* SQL-2003-R */
 %token  BINARY                        /* SQL-2003-R */
 %token  BINLOG_SYM
+%token  BINLOG_GROUP_ID_SYM
 %token  BIN_NUM
 %token  BIT_AND                       /* MYSQL-FUNC */
 %token  BIT_OR                        /* MYSQL-FUNC */
@@ -787,6 +788,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  CONCURRENT
 %token  CONDITION_SYM                 /* SQL-2003-N */
 %token  CONNECTION_SYM
+%token  CONNECT_USING_GROUP_ID_SYM
 %token  CONSISTENT_SYM
 %token  CONSTRAINT                    /* SQL-2003-R */
 %token  CONTAINS_SYM                  /* SQL-2003-N */
@@ -920,6 +922,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  INDEXES
 %token  INDEX_SYM
 %token  INFILE
+%token  INFO_SYM
 %token  INITIAL_SIZE_SYM
 %token  INNER_SYM                     /* SQL-2003-R */
 %token  INNOBASE_SYM
@@ -1335,6 +1338,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         opt_natural_language_mode opt_query_expansion
         opt_ev_status opt_ev_on_completion ev_on_completion opt_ev_comment
         ev_alter_on_schedule_completion opt_ev_rename_to opt_ev_sql_stmt
+        reset_master
 
 %type <ulong_num>
         ulong_num real_ulong_num merge_insert_types
@@ -1800,6 +1804,10 @@ master_def:
           {
             Lex->mi.ssl_verify_server_cert= $3 ?
               LEX_MASTER_INFO::SSL_ENABLE : LEX_MASTER_INFO::SSL_DISABLE;
+          }
+        | CONNECT_USING_GROUP_ID_SYM
+          {
+            Lex->mi.connect_using_group_id= true;
           }
         | master_file_def
         ;
@@ -10244,6 +10252,12 @@ show_param:
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_BINLOG_EVENTS;
           } opt_limit_clause_init
+        | BINLOG_SYM INFO_SYM FOR_SYM ulonglong_num
+          {
+            LEX *lex= Lex;
+            lex->sql_command= SQLCOM_SHOW_BINLOG_INFO_FOR;
+            lex->group_id= $4;
+          }
         | keys_or_index from_or_in table_ident opt_db where_clause
           {
             LEX *lex= Lex;
@@ -11734,6 +11748,7 @@ keyword_sp:
         | AVG_ROW_LENGTH           {}
         | AVG_SYM                  {}
         | BINLOG_SYM               {}
+        | BINLOG_GROUP_ID_SYM      {}
         | BIT_SYM                  {}
         | BLOCK_SYM                {}
         | BOOL_SYM                 {}
@@ -11809,6 +11824,7 @@ keyword_sp:
         | INVOKER_SYM              {}
         | IMPORT                   {}
         | INDEXES                  {}
+        | INFO_SYM                 {}
         | INITIAL_SIZE_SYM         {}
         | IO_SYM                   {}
         | IPC_SYM                  {}
@@ -12299,7 +12315,16 @@ option_value:
           {
             Lex->var_list.push_back(new set_var_failover($3));
           }
+        | BINLOG_GROUP_ID_SYM EQ ulonglong_num ','
+          MASTER_SERVER_ID_SYM EQ ulong_num reset_master
+          {
+            Lex->var_list.push_back(new set_var_group_id($3, $7, $8));
+          }
         ;
+
+reset_master:
+        /* empty */ { $$= 0; }
+        | WITH RESET_SYM { $$= 1; };
 
 internal_variable_name:
           ident

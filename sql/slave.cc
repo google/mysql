@@ -266,6 +266,50 @@ int init_slave()
   if (server_id && !master_host && active_mi->host[0])
     master_host= active_mi->host;
 
+  /* Let the bin log know if this server has a master. */
+  mysql_bin_log.set_have_master(active_mi->host[0] != '\0');
+
+  if (mysql_bin_log.should_do_rpl_hierarchical_slave_recovery() &&
+      active_mi->host[0] != '\0')
+  {
+    DBUG_ASSERT(rpl_hierarchical_slave_recovery);
+
+    sql_print_information("Hierarchical replication crash recovery running. "
+                          "Purging existing relay logs and turnning on "
+                          "connect_using_group_id.");
+
+    /* Connect to the master using the group_id recovered from the bin log */
+    active_mi->master_log_name[0]= 0;
+    active_mi->master_log_pos= BIN_LOG_HEADER_SIZE;
+    active_mi->connect_using_group_id= true;
+
+    /*
+      If replication SQL thread was behind the IO thread then
+      connect_using_group_id will pull down some events which were
+      already fetched and put in the relay log(s) before the server
+      crash. To avoid confusion which could be caused by having the
+      same event show up multiple times in the relay logs, clean out
+      relay logs from before the crash.
+    */
+    const char *errmsg= NULL;
+    if (purge_relay_logs(&active_mi->rli,
+                         0                      /* also reinit */,
+                         &errmsg))
+    {
+      sql_print_error("Call to purge_relay_logs() in init_slave() failed with "
+                      "message '%s'.", errmsg);
+      goto err;
+    }
+
+    /*
+      Not reset inside purge_relay_logs so go ahead and reset them here.
+      Technically resetting these isn't required, but it makes some logging
+      which happens make more sense.
+    */
+    active_mi->rli.future_event_relay_log_pos= 0;
+    active_mi->rli.future_group_master_log_pos= 0;
+  }
+
   /* If server id is not set, start_slave_thread() will say it */
 
   if (master_host && !opt_skip_slave_start)
@@ -1655,6 +1699,14 @@ bool show_master_info(THD* thd, Master_info* mi)
   field_list.push_back(new Item_return_int("Last_SQL_Errno", 4, MYSQL_TYPE_LONG));
   field_list.push_back(new Item_empty_string("Last_SQL_Error", 20));
 
+  /*
+    We always output the new column even when !rpl_hierarchical
+    because the test framework needs columns to be static.
+  */
+  field_list.push_back(new Item_return_int("Exec_Master_Group_ID", 10,
+                                           MYSQL_TYPE_LONGLONG));
+  field_list.push_back(new Item_empty_string("Connect_Using_Group_ID", 3));
+
   if (protocol->send_fields(&field_list,
                             Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
     DBUG_RETURN(TRUE);
@@ -1775,6 +1827,16 @@ bool show_master_info(THD* thd, Master_info* mi)
     protocol->store(mi->rli.last_error().number);
     // Last_SQL_Error
     protocol->store(mi->rli.last_error().message, &my_charset_bin);
+
+    // Exec_Master_Group_ID
+    if (rpl_hierarchical)
+      // Note that get_group_id locks mysql_bin_log.LOCK_log.
+      protocol->store((ulonglong) mysql_bin_log.get_group_id());
+    else
+      protocol->store_null();
+    // Connect_Using_Group_ID
+    protocol->store(mi->connect_using_group_id ? "Yes" : "No",
+                    &my_charset_bin);
 
     pthread_mutex_unlock(&mi->rli.err_lock);
     pthread_mutex_unlock(&mi->err_lock);
@@ -1921,21 +1983,52 @@ static int safe_sleep(THD* thd, int sec, CHECK_KILLED_FUNC thread_killed,
 static int request_dump(MYSQL* mysql, Master_info* mi,
                         bool *suppress_warnings)
 {
-  uchar buf[FN_REFLEN + 10];
-  int len;
-  int binlog_flags = 0; // for now
+  uchar buf[FN_REFLEN + 18];
+  int len, name_len;
+  int binlog_flags= 0;
   char* logname = mi->master_log_name;
+  enum_server_command cmd= COM_BINLOG_DUMP;
   DBUG_ENTER("request_dump");
   
   *suppress_warnings= FALSE;
 
-  // TODO if big log files: Change next to int8store()
-  int4store(buf, (ulong) mi->master_log_pos);
-  int2store(buf + 4, binlog_flags);
-  int4store(buf + 6, server_id);
-  len = (uint) strlen(logname);
-  memcpy(buf + 10, logname,len);
-  if (simple_command(mysql, COM_BINLOG_DUMP, buf, len + 10, 1))
+  DBUG_ASSERT(rpl_hierarchical || !mi->connect_using_group_id);
+
+  /*
+    If !connect_using_group_id, use the old COM_BINLOG_DUMP along
+    with the old buffer format.
+  */
+  if (!mi->connect_using_group_id)
+  {
+    // TODO if big log files: Change next to int8store()
+    int4store(buf, (ulong) mi->master_log_pos);
+    int2store(buf + 4, binlog_flags);
+    int4store(buf + 6, server_id);
+    name_len= (uint) strlen(logname);
+    memcpy(buf + 10, logname, name_len);
+    len= name_len + 10;
+  }
+  else
+  {
+    ulonglong group_id;
+    uint32 event_server_id;
+
+    binlog_flags|= BINLOG_USE_GROUP_ID;
+
+    int2store(buf, binlog_flags);
+    int4store(buf + 2, server_id);
+
+    /* Note that get_group_id() acquires MYSQL_LOG::LOCK_log. */
+    mysql_bin_log.get_group_and_server_id(&group_id, &event_server_id);
+
+    int8store(buf + 6, group_id);
+    int4store(buf + 14, event_server_id);
+
+    cmd= COM_BINLOG_DUMP2;
+    len= 18;
+  }
+
+  if (simple_command(mysql, cmd, buf, len, 1))
   {
     /*
       Something went wrong, so we will just reconnect and retry later
@@ -2171,6 +2264,7 @@ int apply_event_and_update_pos(Log_event* ev, THD* thd, Relay_log_info* rli)
   */
 
   thd->server_id = ev->server_id; // use the original server id for logging
+  thd->group_id= ev->group_id;                // ad the same group_id
   thd->set_time();                            // time the query
   thd->lex->current_select= 0;
   if (!ev->when)
@@ -2321,6 +2415,49 @@ static int exec_relay_log_event(THD* thd, Relay_log_info* rli)
       delete ev;
       DBUG_RETURN(1);
     }
+
+    /*
+      If we're trying to execute a group_id < what we've already
+      encountered then it means we're trying to execute an event multiple
+      times.
+
+      Note: The group_id check should really be (ev->group_id <= grp_id).
+      Unfortunately doing so causes replication failures when
+      a table is InnoDB on the master and MyISAM on the slave (which is done
+      in many of the rpl_* tests). Thus, the check is left as only <.
+    */
+    if (rpl_hierarchical)
+    {
+      /*
+        Have to check that the events we're executing are from a server
+        which is generating group_ids.
+      */
+      if (rli->relay_log.description_event_for_exec->common_header_len <
+          LOG_EVENT_HEADER_WITH_ID_LEN)
+      {
+        thd->master_has_group_ids= false;
+      }
+      else
+      {
+        thd->master_has_group_ids= true;
+
+        ulonglong grp_id= mysql_bin_log.get_group_id();
+        if (ev->get_type_code() != FORMAT_DESCRIPTION_EVENT &&
+            ev->get_type_code() != ROTATE_EVENT &&
+            ev->group_id < grp_id)
+        {
+          char llbuf1[22], llbuf2[22];
+          snprintf(llbuf1, 22, "%llu", ev->group_id);
+          snprintf(llbuf2, 22, "%llu", grp_id);
+          rli->report(ERROR_LEVEL, ER_SLAVE_OUT_OF_ORDER_GROUP_ID,
+                      ER(ER_SLAVE_OUT_OF_ORDER_GROUP_ID), llbuf1, llbuf2);
+          pthread_mutex_unlock(&rli->data_lock);
+          delete ev;
+          DBUG_RETURN(1);
+        }
+      }
+    }
+
     exec_res= apply_event_and_update_pos(ev, thd, rli);
 
     /*
@@ -2768,6 +2905,13 @@ Stopping slave I/O thread due to out-of-memory error from master");
           goto err;
         goto connected;
       } // if (event_len == packet_error)
+
+      /*
+        Now that we successfully got an event, turn off connect_using_group_id
+        because it can be much more expensive for the master than connecting
+        by log name and pos.
+      */
+      mi->connect_using_group_id= false;
 
       retry_count=0;                    // ok event, reset retry counter
       thd_proc_info(thd, "Queueing master event to the relay log");
@@ -3753,12 +3897,15 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
      for STOP_EVENT/ROTATE_EVENT/START_EVENT: these cannot come from ourselves
      (--log-slave-updates would not log that) unless this slave is also its
      direct master (an unsupported, useless setup!).
+
+     rpl_hierarchical allows replicating same server_id to support some
+     failover + restore scenarios.
   */
 
   pthread_mutex_lock(log_lock);
 
   if ((uint4korr(buf + SERVER_ID_OFFSET) == ::server_id) &&
-      !mi->rli.replicate_same_server_id)
+      !mi->rli.replicate_same_server_id && !rpl_hierarchical)
   {
     /*
       Do not write it to the relay log.

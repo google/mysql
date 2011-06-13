@@ -185,7 +185,7 @@ a file name for --relay-log-index option", opt_relaylog_index_name);
       but a destructor will take care of that
     */
     if (rli->relay_log.open_index_file(opt_relaylog_index_name, ln, TRUE) ||
-        rli->relay_log.open(ln, LOG_BIN, 0, SEQ_READ_APPEND, 0,
+        rli->relay_log.open(ln, LOG_RELAY, 0, SEQ_READ_APPEND, 0,
                             (max_relay_log_size ? max_relay_log_size :
                             max_binlog_size), 1, TRUE))
     {
@@ -906,8 +906,7 @@ void Relay_log_info::close_temporary_tables()
     Assumes to have a run lock on rli and that no slave thread are running.
 */
 
-int purge_relay_logs(Relay_log_info* rli, THD *thd, bool just_reset,
-                     const char** errmsg)
+int purge_relay_logs(Relay_log_info *rli, bool just_reset, const char **errmsg)
 {
   int error=0;
   DBUG_ENTER("purge_relay_logs");
@@ -958,7 +957,7 @@ int purge_relay_logs(Relay_log_info* rli, THD *thd, bool just_reset,
     rli->cur_log_fd= -1;
   }
 
-  if (rli->relay_log.reset_logs(thd))
+  if (rli->relay_log.reset_logs(true /* need_lock */))
   {
     *errmsg = "Failed during log reset";
     error=1;
@@ -1034,7 +1033,7 @@ bool Relay_log_info::is_until_satisfied(THD *thd, Log_event *ev)
 
   if (until_condition == UNTIL_MASTER_POS)
   {
-    if (ev && ev->server_id == (uint32) ::server_id && !replicate_same_server_id)
+    if (ev && ev->is_relay_log_event())
       DBUG_RETURN(FALSE);
     log_name= group_master_log_name;
     log_pos= (!ev)? group_master_log_pos :
