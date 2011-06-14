@@ -1366,6 +1366,11 @@ bool mysqld_show_open_tables(THD *thd,const char *wild);
 bool mysqld_show_logs(THD *thd);
 void append_identifier(THD *thd, String *packet, const char *name,
 		       uint length);
+void get_variable_value(THD *thd, SHOW_VAR *variables,
+                        enum enum_var_type value_type,
+                        struct system_status_var *status_var,
+                        char *buff,
+                        char **resultptr, char **resultend);
 #endif /* MYSQL_SERVER */
 #if defined MYSQL_SERVER || defined INNODB_COMPATIBILITY_HOOKS
 int get_quote_char_for_identifier(THD *thd, const char *name, uint length);
