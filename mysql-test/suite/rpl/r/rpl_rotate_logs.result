@@ -78,8 +78,8 @@ master-bin.000003	#
 master-bin.000004	#
 master-bin.000005	#
 show master status;
-File	Position	Binlog_Do_DB	Binlog_Ignore_DB
-master-bin.000005	#	<Binlog_Do_DB>	<Binlog_Ignore_DB>
+File	Position	Binlog_Do_DB	Binlog_Ignore_DB	Group_ID
+master-bin.000005	#	<Binlog_Do_DB>	<Binlog_Ignore_DB>	#
 select * from t4;
 a
 testing temporary tables part 2
