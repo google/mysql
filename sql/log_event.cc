@@ -49,6 +49,7 @@ my_bool rpl_hierarchical;
 my_bool rpl_hierarchical_act_as_root;
 my_bool rpl_hierarchical_slave_recovery;
 my_bool rpl_hierarchical_50_compat;
+my_bool rpl_event_checksums;
 
 /*
   Size of buffer for printing a double in format %.<PREC>g
@@ -700,6 +701,7 @@ Log_event::Log_event(THD* thd_arg, uint16 flags_arg, bool using_trans)
   data_written(0),
   flags(flags_arg),
   group_id(0),
+  crc(0),
   thd(thd_arg)
 {
   server_id=	thd->server_id;
@@ -722,6 +724,7 @@ Log_event::Log_event()
   data_written(0),
   flags(0),
   group_id(0),
+  crc(0),
   cache_stmt(0),
   thd(0)
 {
@@ -816,6 +819,22 @@ Log_event::Log_event(const char* buf,
     group_id= uint8korr(buf + GROUP_ID_OFFSET);
   else
     group_id= 0; // Initialize to something
+
+  /*
+    Checksum is special and always comes at the end of the header
+    even if new fields get added to the header. Thus, existence
+    of checksums is based on a bit in the flags of the FDE and
+    doesn't have a fixed POS in the header.
+  */
+  if (description_event->flags & LOG_EVENT_EVENTS_HAVE_CRC_F)
+  {
+    DBUG_ASSERT(description_event->common_header_len >=
+                LOG_EVENT_MINIMAL_HEADER_LEN + LOG_EVENT_CRC_LEN);
+    crc= uint4korr(buf + description_event->common_header_len -
+                   LOG_EVENT_CRC_LEN);
+  }
+  else
+    crc= 0;                                     /* Initialize to something */
 }
 
 #ifndef MYSQL_CLIENT
@@ -954,7 +973,9 @@ void Log_event::init_show_field_list(List<Item>* field_list)
   Log_event::write()
 */
 
-bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
+bool Log_event::write_header(IO_CACHE *file, ulong event_data_length,
+                             bool only_checksum_body, uint count_buffers,
+                             const uchar **buffers, const uint *buffer_sizes)
 {
   uchar header[LOG_EVENT_HEADER_LEN];
   ulong now;
@@ -1026,7 +1047,67 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
   if (rpl_hierarchical && get_header_size() > LOG_EVENT_MINIMAL_HEADER_LEN)
     int8store(header + GROUP_ID_OFFSET, group_id);
 
+  if (rpl_event_checksums && get_header_size() > LOG_EVENT_MINIMAL_HEADER_LEN)
+  {
+    crc= my_checksum(0L, NULL, 0);
+
+    /*
+      When writing to the transaction cache, we only compute the checksum
+      of the event body here. Later, the header gets updated when it
+      gets copied from the transaction cache to the bin log. Thus,
+      there is no value of computing it now. Instead, we'll compute
+      the checksum of the body and store that since the body bytes are more
+      readily available here than they are in the code to copy the event from
+      the transaction cache to the bin log. Later, when copying to the
+      bin log, we'll compute the checksum of the final header bytes and then
+      combine the 2 values using my_checksum_combine.
+    */
+    if (!only_checksum_body)
+      /*
+        When computing the checksum for the event, we skip the
+        checksum field itself.
+
+        Checksum in the header always comes last. Thus, it doesn't have
+        a fixed offset in the header as the offset depends on whether
+        IDs are also being added.
+      */
+      crc= my_checksum(crc, header, get_header_size() - LOG_EVENT_CRC_LEN);
+
+    for (uint i= 0; i < count_buffers; i++)
+    {
+      /* Do not call my_checksum if the buffer size is 0. It trashes the crc. */
+      if (buffer_sizes[i] > 0)
+        crc= my_checksum(crc, buffers[i], buffer_sizes[i]);
+    }
+
+    DBUG_EXECUTE_IF("write_bad_event_checksums",
+                    static int cEvents = 0;
+                    /* Wait a while before writing bad checksums */
+                    if (++cEvents > 67) {
+                      crc= 0xbaadf00d;
+                    });
+
+    int4store(header + get_header_size() - LOG_EVENT_CRC_LEN, crc);
+  }
+
   DBUG_RETURN(my_b_safe_write(file, header, get_header_size()) != 0);
+}
+
+bool Log_event::write_base(IO_CACHE *file, bool only_checksum_body,
+                           uint count_buffers, const uchar **buffers,
+                           const uint *buffer_sizes)
+{
+  uint data_length= 0;
+  for (uint i= 0; i < count_buffers; ++i)
+    data_length+= buffer_sizes[i];
+
+  int err;
+  err= write_header(file, data_length, only_checksum_body, count_buffers,
+                    buffers, buffer_sizes);
+  for (uint i= 0; !err && i < count_buffers; ++i)
+    err= my_b_safe_write(file, buffers[i], buffer_sizes[i]);
+
+  return err;
 }
 
 
@@ -1409,6 +1490,50 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
     DBUG_RETURN(0);
 #endif
   }
+
+  /*
+    If the events were generated with checksums, recompute the checksum
+    and verify that it matches what was read out of the buffer. Note that
+    the bytes containing the checksum are not themselves included in the
+    generation of the checksum.
+  */
+  if (description_event->flags & LOG_EVENT_EVENTS_HAVE_CRC_F &&
+      buf[EVENT_TYPE_OFFSET] != FORMAT_DESCRIPTION_EVENT &&
+      buf[EVENT_TYPE_OFFSET] != ROTATE_EVENT)
+  {
+    DBUG_ASSERT(event_len > description_event->common_header_len);
+
+    uint32 buf_crc;
+    buf_crc= my_checksum(0L, NULL, 0);
+    buf_crc= my_checksum(buf_crc, reinterpret_cast<const uchar *>(buf),
+                         description_event->common_header_len -
+                         LOG_EVENT_CRC_LEN);
+    buf_crc= my_checksum(buf_crc,
+                         reinterpret_cast<const uchar *>(
+                             buf + description_event->common_header_len),
+                         event_len - description_event->common_header_len);
+
+    if (ev->crc != buf_crc)
+    {
+#ifdef MYSQL_CLIENT
+      delete ev;
+      if (!force_opt) /* then mysqlbinlog dies */
+      {
+        *error= "Computed checksum for event differs from stored value.";
+        DBUG_RETURN(0);
+      }
+      ev= new Unknown_log_event(buf, description_event);
+#else
+      sql_print_error("Log_event::read_log_event encountered event where "
+                      "computed checksum of %08x differs from stored value "
+                      "of %08x", buf_crc, ev->crc);
+      *error= "Computed checksum for event differs from stored value.";
+      delete ev;
+      DBUG_RETURN(0);
+#endif
+    }
+  }
+
   DBUG_RETURN(ev);  
 }
 
@@ -1451,6 +1576,21 @@ void Log_event::print_header(IO_CACHE* file,
                       LOG_EVENT_MINIMAL_HEADER_LEN));
     if (print_event_info->common_header_len >= LOG_EVENT_HEADER_WITH_ID_LEN)
       my_b_printf(file, " group_id %s ", llstr(group_id, llbuff));
+
+    if (print_event_info->header_has_crc)
+    {
+      /*
+        my_b_printf() does not support full printf() formats, so we
+        have to do it this way.
+
+        TODO: Rewrite my_b_printf() to support full printf() syntax.
+      */
+      size_t const bytes_written=
+        my_snprintf(emit_buf, sizeof(emit_buf),
+                    " crc %08x ", crc);
+      DBUG_ASSERT(static_cast<size_t>(bytes_written) < sizeof(emit_buf));
+      my_b_write(file, (uchar *) emit_buf, bytes_written);
+    }
   }
 
   /* mysqlbinlog --hexdump */
@@ -1500,6 +1640,31 @@ void Log_event::print_header(IO_CACHE* file,
           ptr+= LOG_EVENT_ID_LEN;
           hexdump_from+= LOG_EVENT_ID_LEN;
           size-= LOG_EVENT_ID_LEN;
+        }
+
+        /* Handle header having a checksum. */
+        if (print_event_info->header_has_crc)
+        {
+          /* Output any unknown header bytes which are before the checksum. */
+          my_off_t unknown_header_size= print_event_info->common_header_len -
+              (ptr - (uchar *)temp_buf) - LOG_EVENT_CRC_LEN;
+          print_hexdump(file, hexdump_from, ptr, unknown_header_size);
+          ptr+= unknown_header_size;
+          hexdump_from+= unknown_header_size;
+          size-= unknown_header_size;
+
+          /* Pretty-print checksum */
+          my_b_printf(file, "#              CRC\n");
+          size_t bytes_written=
+              my_snprintf(emit_buf, sizeof(emit_buf),
+                          "# %8.8lx %02x %02x %02x %02x\n",
+                          (unsigned long) hexdump_from,
+                          ptr[0], ptr[1], ptr[2], ptr[3]);
+          DBUG_ASSERT(static_cast<size_t>(bytes_written) < sizeof(emit_buf));
+          my_b_write(file, (uchar *) emit_buf, bytes_written);
+          ptr+= LOG_EVENT_CRC_LEN;
+          hexdump_from+= LOG_EVENT_CRC_LEN;
+          size-= LOG_EVENT_CRC_LEN;
         }
       }
     }
@@ -2295,11 +2460,11 @@ static void write_str_with_code_and_len(uchar **dst, const char *src,
     will print!
 */
 
-bool Query_log_event::write(IO_CACHE* file)
+bool Query_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
-  uchar buf[QUERY_HEADER_LEN + MAX_SIZE_LOG_EVENT_STATUS];
+  uchar buf[QUERY_HEADER_LEN + get_post_header_size_for_derived() +
+            MAX_SIZE_LOG_EVENT_STATUS];
   uchar *start, *start_of_status;
-  ulong event_length;
 
   if (!query)
     return 1;                                   // Something wrong with event
@@ -2346,12 +2511,15 @@ bool Query_log_event::write(IO_CACHE* file)
   buf[Q_DB_LEN_OFFSET] = (char) db_len;
   int2store(buf + Q_ERR_CODE_OFFSET, error_code);
 
+  fill_post_header_for_derived(buf + QUERY_HEADER_LEN);
+
   /*
     You MUST always write status vars in increasing order of code. This
     guarantees that a slightly older slave will be able to parse those he
     knows.
   */
-  start_of_status= start= buf+QUERY_HEADER_LEN;
+  start_of_status= start= buf + QUERY_HEADER_LEN +
+    get_post_header_size_for_derived();
   if (flags2_inited)
   {
     *start++= Q_FLAGS2_CODE;
@@ -2505,19 +2673,22 @@ bool Query_log_event::write(IO_CACHE* file)
   DBUG_ASSERT(status_vars_len <= MAX_SIZE_LOG_EVENT_STATUS);
   int2store(buf + Q_STATUS_VARS_LEN_OFFSET, status_vars_len);
 
-  /*
-    Calculate length of whole event
-    The "1" below is the \0 in the db's length
-  */
-  event_length= (uint) (start-buf) + get_post_header_size_for_derived() + db_len + 1 + q_len;
+  const uint count_buffers= 4;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf,
+    start_of_status,
+    (db) ? (uchar *) db : (uchar *) "",
+    (uchar *) query
+  };
+  const uint buffer_sizes[count_buffers]= {
+    QUERY_HEADER_LEN + get_post_header_size_for_derived(),
+    start - start_of_status,
+    db_len + 1,
+    q_len
+  };
 
-  return (write_header(file, event_length) ||
-          my_b_safe_write(file, (uchar*) buf, QUERY_HEADER_LEN) ||
-          write_post_header_for_derived(file) ||
-          my_b_safe_write(file, (uchar*) start_of_status,
-                          (uint) (start-start_of_status)) ||
-          my_b_safe_write(file, (db) ? (uchar*) db : (uchar*)"", db_len + 1) ||
-          my_b_safe_write(file, (uchar*) query, q_len)) ? 1 : 0;
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 
 /**
@@ -3729,16 +3900,25 @@ Start_log_event_v3::Start_log_event_v3(const char* buf,
 */
 
 #ifndef MYSQL_CLIENT
-bool Start_log_event_v3::write(IO_CACHE* file)
+bool Start_log_event_v3::write(IO_CACHE *file, bool only_checksum_body)
 {
-  char buff[START_V3_HEADER_LEN];
+  uchar buff[START_V3_HEADER_LEN];
   int2store(buff + ST_BINLOG_VER_OFFSET,binlog_version);
   memcpy(buff + ST_SERVER_VER_OFFSET,server_version,ST_SERVER_VER_LEN);
   if (!dont_set_created)
     created= when= get_time();
   int4store(buff + ST_CREATED_OFFSET,created);
-  return (write_header(file, sizeof(buff)) ||
-          my_b_safe_write(file, (uchar*) buff, sizeof(buff)));
+
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    buff
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buff)
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -4130,7 +4310,8 @@ Format_description_log_event(const char* buf,
 }
 
 #ifndef MYSQL_CLIENT
-bool Format_description_log_event::write(IO_CACHE* file)
+bool Format_description_log_event::write(IO_CACHE *file,
+                                         bool only_checksum_body)
 {
   /*
     We don't call Start_log_event_v3::write() because this would make 2
@@ -4145,8 +4326,17 @@ bool Format_description_log_event::write(IO_CACHE* file)
   buff[ST_COMMON_HEADER_LEN_OFFSET]= common_header_len;
   memcpy((char*) buff+ST_COMMON_HEADER_LEN_OFFSET+1, (uchar*) post_header_len,
          LOG_EVENT_TYPES);
-  return (write_header(file, sizeof(buff)) ||
-          my_b_safe_write(file, buff, sizeof(buff)));
+
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    buff
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buff)
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -5158,13 +5348,23 @@ Rotate_log_event::Rotate_log_event(const char* buf, uint event_len,
 */
 
 #ifndef MYSQL_CLIENT
-bool Rotate_log_event::write(IO_CACHE* file)
+bool Rotate_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
-  char buf[ROTATE_HEADER_LEN];
+  uchar buf[ROTATE_HEADER_LEN];
   int8store(buf + R_POS_OFFSET, pos);
-  return (write_header(file, ROTATE_HEADER_LEN + ident_len) ||
-          my_b_safe_write(file, (uchar*)buf, ROTATE_HEADER_LEN) ||
-          my_b_safe_write(file, (uchar*)new_log_ident, (uint) ident_len));
+
+  const uint count_buffers= 2;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf,
+    (uchar *) new_log_ident
+  };
+  const uint buffer_sizes[count_buffers]= {
+    ROTATE_HEADER_LEN,
+    ident_len
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -5327,13 +5527,22 @@ const char* Intvar_log_event::get_var_type_name()
 */
 
 #ifndef MYSQL_CLIENT
-bool Intvar_log_event::write(IO_CACHE* file)
+bool Intvar_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
   uchar buf[9];
   buf[I_TYPE_OFFSET]= (uchar) type;
   int8store(buf + I_VAL_OFFSET, val);
-  return (write_header(file, sizeof(buf)) ||
-          my_b_safe_write(file, buf, sizeof(buf)));
+
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buf)
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -5455,13 +5664,22 @@ Rand_log_event::Rand_log_event(const char* buf,
 
 
 #ifndef MYSQL_CLIENT
-bool Rand_log_event::write(IO_CACHE* file)
+bool Rand_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
   uchar buf[16];
   int8store(buf + RAND_SEED1_OFFSET, seed1);
   int8store(buf + RAND_SEED2_OFFSET, seed2);
-  return (write_header(file, sizeof(buf)) ||
-          my_b_safe_write(file, buf, sizeof(buf)));
+
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buf)
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -5560,11 +5778,20 @@ Xid_log_event(const char* buf,
 
 
 #ifndef MYSQL_CLIENT
-bool Xid_log_event::write(IO_CACHE* file)
+bool Xid_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
   DBUG_EXECUTE_IF("do_not_write_xid", return 0;);
-  return write_header(file, sizeof(xid)) ||
-         my_b_safe_write(file, (uchar*) &xid, sizeof(xid));
+
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    (uchar *) &xid
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(xid)
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -5726,14 +5953,13 @@ User_var_log_event(const char* buf,
 
 
 #ifndef MYSQL_CLIENT
-bool User_var_log_event::write(IO_CACHE* file)
+bool User_var_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
-  char buf[UV_NAME_LEN_SIZE];
-  char buf1[UV_VAL_IS_NULL + UV_VAL_TYPE_SIZE + 
-	    UV_CHARSET_NUMBER_SIZE + UV_VAL_LEN_SIZE];
+  uchar buf[UV_NAME_LEN_SIZE];
+  uchar buf1[UV_VAL_IS_NULL + UV_VAL_TYPE_SIZE +
+             UV_CHARSET_NUMBER_SIZE + UV_VAL_LEN_SIZE];
   uchar buf2[max(8, DECIMAL_MAX_FIELD_SIZE + 2)], *pos= buf2;
   uint buf1_length;
-  ulong event_length;
 
   int4store(buf, name_len);
   
@@ -5776,14 +6002,22 @@ bool User_var_log_event::write(IO_CACHE* file)
     buf1_length= 10;
   }
 
-  /* Length of the whole event */
-  event_length= sizeof(buf)+ name_len + buf1_length + val_len;
+  const uint count_buffers= 4;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf,
+    (uchar *) name,
+    buf1,
+    pos
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buf),
+    name_len,
+    buf1_length,
+    val_len
+  };
 
-  return (write_header(file, event_length) ||
-          my_b_safe_write(file, (uchar*) buf, sizeof(buf))   ||
-	  my_b_safe_write(file, (uchar*) name, name_len)     ||
-	  my_b_safe_write(file, (uchar*) buf1, buf1_length) ||
-	  my_b_safe_write(file, pos, val_len));
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -6103,15 +6337,22 @@ int Slave_log_event::get_data_size()
 
 
 #ifndef MYSQL_CLIENT
-bool Slave_log_event::write(IO_CACHE* file)
+bool Slave_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
-  ulong event_length= get_data_size();
   int8store(mem_pool + SL_MASTER_POS_OFFSET, master_pos);
   int2store(mem_pool + SL_MASTER_PORT_OFFSET, master_port);
   // log and host are already there
 
-  return (write_header(file, event_length) ||
-          my_b_safe_write(file, (uchar*) mem_pool, event_length));
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    (uchar *) mem_pool
+  };
+  const uint buffer_sizes[count_buffers]= {
+    get_data_size()
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -6283,7 +6524,7 @@ bool Create_file_log_event::write_base(IO_CACHE* file)
 {
   bool res;
   fake_base= 1;                                 // pretend we are Load event
-  res= write(file);
+  res= write(file, false /* only_checksum_body */);
   fake_base= 0;
   return res;
 }
@@ -6535,13 +6776,23 @@ Append_block_log_event::Append_block_log_event(const char* buf, uint len,
 */
 
 #ifndef MYSQL_CLIENT
-bool Append_block_log_event::write(IO_CACHE* file)
+bool Append_block_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
   uchar buf[APPEND_BLOCK_HEADER_LEN];
   int4store(buf + AB_FILE_ID_OFFSET, file_id);
-  return (write_header(file, APPEND_BLOCK_HEADER_LEN + block_len) ||
-          my_b_safe_write(file, buf, APPEND_BLOCK_HEADER_LEN) ||
-	  my_b_safe_write(file, (uchar*) block, block_len));
+
+  const uint count_buffers= 2;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf,
+    block
+  };
+  const uint buffer_sizes[count_buffers]= {
+    APPEND_BLOCK_HEADER_LEN,
+    block_len
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -6689,12 +6940,21 @@ Delete_file_log_event::Delete_file_log_event(const char* buf, uint len,
 */
 
 #ifndef MYSQL_CLIENT
-bool Delete_file_log_event::write(IO_CACHE* file)
+bool Delete_file_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
  uchar buf[DELETE_FILE_HEADER_LEN];
  int4store(buf + DF_FILE_ID_OFFSET, file_id);
- return (write_header(file, sizeof(buf)) ||
-         my_b_safe_write(file, buf, sizeof(buf)));
+
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buf)
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -6786,12 +7046,21 @@ Execute_load_log_event::Execute_load_log_event(const char* buf, uint len,
 */
 
 #ifndef MYSQL_CLIENT
-bool Execute_load_log_event::write(IO_CACHE* file)
+bool Execute_load_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
   uchar buf[EXEC_LOAD_HEADER_LEN];
   int4store(buf + EL_FILE_ID_OFFSET, file_id);
-  return (write_header(file, sizeof(buf)) || 
-          my_b_safe_write(file, buf, sizeof(buf)));
+
+  const uint count_buffers= 1;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buf)
+  };
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -7016,15 +7285,13 @@ ulong Execute_load_query_log_event::get_post_header_size_for_derived()
 
 
 #ifndef MYSQL_CLIENT
-bool
-Execute_load_query_log_event::write_post_header_for_derived(IO_CACHE* file)
+void
+Execute_load_query_log_event::fill_post_header_for_derived(uchar *buf)
 {
-  uchar buf[EXECUTE_LOAD_QUERY_EXTRA_HEADER_LEN];
   int4store(buf, file_id);
   int4store(buf + 4, fn_pos_start);
   int4store(buf + 4 + 4, fn_pos_end);
   *(buf + 4 + 4 + 4)= (uchar) dup_handling;
-  return my_b_safe_write(file, buf, EXECUTE_LOAD_QUERY_EXTRA_HEADER_LEN);
 }
 #endif
 
@@ -7982,39 +8249,55 @@ Rows_log_event::do_update_pos(Relay_log_info *rli)
 #endif /* !defined(MYSQL_CLIENT) && defined(HAVE_REPLICATION) */
 
 #ifndef MYSQL_CLIENT
-bool Rows_log_event::write_data_header(IO_CACHE *file)
+bool Rows_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
+  const uint max_buffers= 5;
+  uint count_buffers= 0;
+  uchar *buffers_to_write[max_buffers];
+  uint buffer_sizes[max_buffers];
+
+  /*
+    The data header.
+  */
   uchar buf[ROWS_HEADER_LEN];	// No need to init the buffer
   DBUG_ASSERT(m_table_id != ~0UL);
+
+  int6store(buf + RW_MAPID_OFFSET, (ulonglong) m_table_id);
+  int2store(buf + RW_FLAGS_OFFSET, m_flags);
+
+  buffers_to_write[count_buffers]= buf;
+  buffer_sizes[count_buffers]= ROWS_HEADER_LEN;
   DBUG_EXECUTE_IF("old_row_based_repl_4_byte_map_id_master",
                   {
                     int4store(buf + 0, m_table_id);
                     int2store(buf + 4, m_flags);
-                    return (my_b_safe_write(file, buf, 6));
+                    buffer_sizes[count_buffers]= 6;
                   });
-  int6store(buf + RW_MAPID_OFFSET, (ulonglong)m_table_id);
-  int2store(buf + RW_FLAGS_OFFSET, m_flags);
-  return (my_b_safe_write(file, buf, ROWS_HEADER_LEN));
-}
+  ++count_buffers;
 
-bool Rows_log_event::write_data_body(IO_CACHE*file)
-{
+  /*
+    The data body.
+  */
+
   /*
      Note that this should be the number of *bits*, not the number of
      bytes.
   */
   uchar sbuf[sizeof(m_width) + 1];
   my_ptrdiff_t const data_size= m_rows_cur - m_rows_buf;
-  bool res= false;
   uchar *const sbuf_end= net_store_length(sbuf, (size_t) m_width);
   DBUG_ASSERT(static_cast<size_t>(sbuf_end - sbuf) <= sizeof(sbuf));
 
   DBUG_DUMP("m_width", sbuf, (size_t) (sbuf_end - sbuf));
-  res= res || my_b_safe_write(file, sbuf, (size_t) (sbuf_end - sbuf));
+  buffers_to_write[count_buffers]= sbuf;
+  buffer_sizes[count_buffers]= sbuf_end - sbuf;
+  ++count_buffers;
 
   DBUG_DUMP("m_cols", (uchar*) m_cols.bitmap, no_bytes_in_map(&m_cols));
-  res= res || my_b_safe_write(file, (uchar*) m_cols.bitmap,
-                              no_bytes_in_map(&m_cols));
+  buffers_to_write[count_buffers]= (uchar *) m_cols.bitmap;
+  buffer_sizes[count_buffers]= no_bytes_in_map(&m_cols);
+  ++count_buffers;
+
   /*
     TODO[refactor write]: Remove the "down cast" here (and elsewhere).
    */
@@ -8022,14 +8305,17 @@ bool Rows_log_event::write_data_body(IO_CACHE*file)
   {
     DBUG_DUMP("m_cols_ai", (uchar*) m_cols_ai.bitmap,
               no_bytes_in_map(&m_cols_ai));
-    res= res || my_b_safe_write(file, (uchar*) m_cols_ai.bitmap,
-                                no_bytes_in_map(&m_cols_ai));
+    buffers_to_write[count_buffers]= (uchar *) m_cols_ai.bitmap;
+    buffer_sizes[count_buffers]= no_bytes_in_map(&m_cols_ai);
+    ++count_buffers;
   }
   DBUG_DUMP("rows", m_rows_buf, data_size);
-  res= res || my_b_safe_write(file, m_rows_buf, (size_t) data_size);
+  buffers_to_write[count_buffers]= m_rows_buf;
+  buffer_sizes[count_buffers]= data_size;
+  ++count_buffers;
 
-  return res;
-
+  return write_base(file, only_checksum_body, count_buffers,
+                    (const uchar **) buffers_to_write, buffer_sizes);
 }
 #endif
 
@@ -8579,23 +8865,19 @@ int Table_map_log_event::do_update_pos(Relay_log_info *rli)
 #endif /* !defined(MYSQL_CLIENT) && defined(HAVE_REPLICATION) */
 
 #ifndef MYSQL_CLIENT
-bool Table_map_log_event::write_data_header(IO_CACHE *file)
+bool Table_map_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
+  /*
+    The data header.
+  */
   DBUG_ASSERT(m_table_id != ~0UL);
   uchar buf[TABLE_MAP_HEADER_LEN];
-  DBUG_EXECUTE_IF("old_row_based_repl_4_byte_map_id_master",
-                  {
-                    int4store(buf + 0, m_table_id);
-                    int2store(buf + 4, m_flags);
-                    return (my_b_safe_write(file, buf, 6));
-                  });
   int6store(buf + TM_MAPID_OFFSET, (ulonglong)m_table_id);
   int2store(buf + TM_FLAGS_OFFSET, m_flags);
-  return (my_b_safe_write(file, buf, TABLE_MAP_HEADER_LEN));
-}
 
-bool Table_map_log_event::write_data_body(IO_CACHE *file)
-{
+  /*
+    The data body.
+  */
   DBUG_ASSERT(m_dbnam != NULL);
   DBUG_ASSERT(m_tblnam != NULL);
   /* We use only one byte per length for storage in event: */
@@ -8615,16 +8897,42 @@ bool Table_map_log_event::write_data_body(IO_CACHE *file)
   uchar mbuf[sizeof(m_field_metadata_size)];
   uchar *const mbuf_end= net_store_length(mbuf, m_field_metadata_size);
 
-  return (my_b_safe_write(file, dbuf,      sizeof(dbuf)) ||
-          my_b_safe_write(file, (const uchar*)m_dbnam,   m_dblen+1) ||
-          my_b_safe_write(file, tbuf,      sizeof(tbuf)) ||
-          my_b_safe_write(file, (const uchar*)m_tblnam,  m_tbllen+1) ||
-          my_b_safe_write(file, cbuf, (size_t) (cbuf_end - cbuf)) ||
-          my_b_safe_write(file, m_coltype, m_colcnt) ||
-          my_b_safe_write(file, mbuf, (size_t) (mbuf_end - mbuf)) ||
-          my_b_safe_write(file, m_field_metadata, m_field_metadata_size),
-          my_b_safe_write(file, m_null_bits, (m_colcnt + 7) / 8));
- }
+  const uint count_buffers= 10;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf,
+    dbuf,
+    (uchar *) m_dbnam,
+    tbuf,
+    (uchar *) m_tblnam,
+    cbuf,
+    m_coltype,
+    mbuf,
+    m_field_metadata,
+    m_null_bits
+  };
+  uint buffer_sizes[count_buffers]= {
+    TABLE_MAP_HEADER_LEN,
+    sizeof(dbuf),
+    m_dblen + 1,
+    sizeof(tbuf),
+    m_tbllen + 1,
+    cbuf_end - cbuf,
+    m_colcnt,
+    mbuf_end - mbuf,
+    m_field_metadata_size,
+    (m_colcnt + 7) / 8
+  };
+
+  DBUG_EXECUTE_IF("old_row_based_repl_4_byte_map_id_master",
+                  {
+                    int4store(buf + 0, m_table_id);
+                    int2store(buf + 4, m_flags);
+                    buffer_sizes[0]= 6;
+                  });
+
+  return write_base(file, only_checksum_body, count_buffers,
+                    buffers_to_write, buffer_sizes);
+}
 #endif
 
 #if defined(HAVE_REPLICATION) && !defined(MYSQL_CLIENT)
@@ -9892,23 +10200,41 @@ Incident_log_event::do_apply_event(Relay_log_info const *rli)
 }
 #endif
 
+#if !defined(MYSQL_CLIENT)
 bool
-Incident_log_event::write_data_header(IO_CACHE *file)
+Incident_log_event::write(IO_CACHE *file, bool only_checksum_body)
 {
-  DBUG_ENTER("Incident_log_event::write_data_header");
+  DBUG_ENTER("Incident_log_event::write");
+
+  /*
+    The data header.
+  */
   DBUG_PRINT("enter", ("m_incident: %d", m_incident));
   uchar buf[sizeof(int16)];
   int2store(buf, (int16) m_incident);
-  DBUG_RETURN(my_b_safe_write(file, buf, sizeof(buf)));
-}
 
-bool
-Incident_log_event::write_data_body(IO_CACHE *file)
-{
-  DBUG_ENTER("Incident_log_event::write_data_body");
-  DBUG_RETURN(write_str(file, m_message.str, (uint) m_message.length));
-}
+  /*
+    The data body.
+  */
+  uchar tmp[1];
+  tmp[0]= (uchar) m_message.length;
 
+  const uint count_buffers= 3;
+  const uchar *buffers_to_write[count_buffers]= {
+    buf,
+    tmp,
+    (uchar *) m_message.str
+  };
+  const uint buffer_sizes[count_buffers]= {
+    sizeof(buf),
+    1,
+    m_message.length
+  };
+
+  DBUG_RETURN(write_base(file, only_checksum_body, count_buffers,
+                         buffers_to_write, buffer_sizes));
+}
+#endif
 
 #ifdef MYSQL_CLIENT
 /**

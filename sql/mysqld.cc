@@ -6025,7 +6025,8 @@ enum options_mysqld
   OPT_RPL_HIERARCHICAL_ACT_AS_ROOT,
   OPT_RPL_HIERARCHICAL_CACHE_FREQUENCY,
   OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY,
-  OPT_RPL_HIERARCHICAL_50_COMPAT
+  OPT_RPL_HIERARCHICAL_50_COMPAT,
+  OPT_RPL_EVENT_CHECKSUMS
 };
 
 
@@ -7613,6 +7614,10 @@ thread is in the relay logs.",
    "Enable the code which maps commands so that 5.1 can server as both a "
    "master and a slave to a 5.0 server and use CONNECT_USING_GROUP_ID.",
    &rpl_hierarchical_50_compat, 0, 0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"rpl_event_checksums", OPT_RPL_EVENT_CHECKSUMS,
+   "Enable checksums on events written to the bin log.",
+   &rpl_event_checksums,
+   0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 

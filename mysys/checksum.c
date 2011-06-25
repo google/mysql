@@ -40,3 +40,20 @@ ha_checksum my_checksum(ha_checksum crc, const uchar *pos, size_t length)
 #endif
 }
 
+/*
+  Combine two checksum values into one.  For two sequences of bytes, seq1
+  and seq2 with lengths len1 and len2, checksum values were calculated
+  for each, crc1 and crc2. my_checksum_combine returns the checksum value
+  of seq1 and seq2 concatenated, requiring only crc1, crc2, and len2.
+
+  SYNOPSIS
+    my_checksum_combine()
+      crc1      checksum of first block
+      crc2      checksum of second block
+      len2      length of the second block
+*/
+ha_checksum my_checksum_combine(ha_checksum crc1, ha_checksum crc2,
+                                my_off_t len2)
+{
+  return crc32_combine(crc1, crc2, len2);
+}

@@ -21,7 +21,8 @@ else
 LIBMYSQLCLIENT_LA =		$(top_builddir)/libmysql/libmysqlclient.la
 endif
 
-INCLUDES =			-I$(top_builddir)/include \
+INCLUDES =			@ZLIB_INCLUDES@ \
+				-I$(top_builddir)/include \
 				-I$(top_srcdir)/include \
 				-I$(top_srcdir)/regex \
                                 $(openssl_includes)
@@ -58,6 +59,7 @@ mysql_LDADD =			@readline_link@ @TERMCAP_LIB@ @NCURSES_LIBS@ \
 mysqladmin_SOURCES =		mysqladmin.cc
 
 mysqlbinlog_SOURCES =		mysqlbinlog.cc \
+				$(top_srcdir)/mysys/checksum.c \
 				$(top_srcdir)/mysys/mf_tempdir.c \
 				$(top_srcdir)/mysys/my_new.cc \
 				$(top_srcdir)/mysys/my_bit.c \
