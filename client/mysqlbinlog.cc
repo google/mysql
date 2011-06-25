@@ -858,6 +858,8 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
       glob_description_event= (Format_description_log_event*) ev;
       print_event_info->common_header_len=
         glob_description_event->common_header_len;
+      print_event_info->header_has_crc= test(glob_description_event->flags &
+                                             LOG_EVENT_EVENTS_HAVE_CRC_F);
       ev->print(result_file, print_event_info);
       if (!remote_opt)
         ev->free_temp_buf(); // free memory allocated in dump_local_log_entries
@@ -1993,6 +1995,11 @@ static Exit_status dump_local_log_entries(PRINT_EVENT_INFO *print_event_info,
     error("Invalid Format_description log event; could be out of memory.");
     goto err;
   }
+
+  print_event_info->common_header_len=
+    glob_description_event->common_header_len;
+  print_event_info->header_has_crc= test(glob_description_event->flags &
+                                         LOG_EVENT_EVENTS_HAVE_CRC_F);
 
   if (!start_position && my_b_read(file, tmp_buff, BIN_LOG_HEADER_SIZE))
   {

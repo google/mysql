@@ -3202,12 +3202,14 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
       */
       if (io_cache_type == WRITE_CACHE)
         s.flags|= LOG_EVENT_BINLOG_IN_USE_F;
+      if (rpl_event_checksums)
+        s.flags|= LOG_EVENT_EVENTS_HAVE_CRC_F;
       if (!s.is_valid())
         goto err;
       s.dont_set_created= null_created_arg;
       if (log_type == LOG_RELAY)
         s.set_relay_log_event();
-      if (s.write(&log_file))
+      if (s.write(&log_file, false /* only_checksum_body */))
         goto err;
       bytes_written+= s.data_written;
     }
@@ -3238,7 +3240,8 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
       /* Don't set log_pos in event header */
       description_event_for_queue->set_artificial_event();
 
-      if (description_event_for_queue->write(&log_file))
+      if (description_event_for_queue->write(&log_file,
+                                             false /* only_checksum_body */))
         goto err;
       bytes_written+= description_event_for_queue->data_written;
     }
@@ -4439,7 +4442,7 @@ int MYSQL_BIN_LOG::new_file_impl(bool need_lock)
       Rotate_log_event r(new_name+dirname_length(new_name),
                          0, LOG_EVENT_OFFSET, is_relay_log ? Rotate_log_event::RELAY_LOG : 0);
       if(DBUG_EVALUATE_IF("fault_injection_new_file_rotate_event", (error=close_on_error=TRUE), FALSE) ||
-         (error= r.write(&log_file)))
+         (error= r.write(&log_file, false /* only_checksum_body */)))
       {
         DBUG_EXECUTE_IF("fault_injection_new_file_rotate_event", errno=2;);
         close_on_error= TRUE;
@@ -4556,7 +4559,7 @@ bool MYSQL_BIN_LOG::append(Log_event* ev)
     Log_event::write() is smart enough to use my_b_write() or
     my_b_append() depending on the kind of cache we have.
   */
-  if (ev->write(&log_file))
+  if (ev->write(&log_file, false /* only_checksum_body */))
   {
     error=1;
     goto err;
@@ -4927,7 +4930,7 @@ MYSQL_BIN_LOG::flush_and_set_pending_rows_event(THD *thd,
     /*
       Write pending event to log file or transaction cache
     */
-    if (pending->write(file))
+    if (pending->write(file, file != &log_file))
     {
       pthread_mutex_unlock(&LOCK_log);
       set_write_error(thd);
@@ -5197,7 +5200,7 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
           Intvar_log_event e(thd,(uchar) LAST_INSERT_ID_EVENT,
                              thd->first_successful_insert_id_in_prev_stmt_for_binlog,
                              group_id_to_use);
-          if (e.write(file))
+          if (e.write(file, file != &log_file))
             goto err;
         }
         if (thd->auto_inc_intervals_in_cur_stmt_for_binlog.nb_elements() > 0)
@@ -5208,14 +5211,14 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
           Intvar_log_event e(thd, (uchar) INSERT_ID_EVENT,
                              thd->auto_inc_intervals_in_cur_stmt_for_binlog.
                              minimum(), group_id_to_use);
-          if (e.write(file))
+          if (e.write(file, file != &log_file))
             goto err;
         }
         if (thd->rand_used)
         {
           Rand_log_event e(thd,thd->rand_saved_seed1, thd->rand_saved_seed2,
                            group_id_to_use);
-          if (e.write(file))
+          if (e.write(file, file != &log_file))
             goto err;
         }
         if (thd->user_var_events.elements)
@@ -5231,7 +5234,7 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                                  user_var_event->type,
                                  user_var_event->charset_number,
                                  group_id_to_use);
-            if (e.write(file))
+            if (e.write(file, file != &log_file))
               goto err;
           }
         }
@@ -5249,7 +5252,7 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
        Write the SQL command
      */
 
-    if (event_info->write(file) || 
+    if (event_info->write(file, file != &log_file) ||
         DBUG_EVALUATE_IF("injecting_fault_writing", 1, 0))
       goto err;
 
@@ -5451,6 +5454,43 @@ uint MYSQL_BIN_LOG::next_file_id()
 
 
 /*
+  Helper function for write_cache. header must be at least
+  LOG_EVENT_HEADER_LEN.
+*/
+void MYSQL_BIN_LOG::fix_header_checksum(uchar *header)
+{
+  ulong body_len= uint4korr(&header[EVENT_LEN_OFFSET]) -
+      LOG_EVENT_HEADER_LEN;
+  uint32 body_crc= uint4korr(&header[LOG_EVENT_HEADER_LEN -
+                                     LOG_EVENT_CRC_LEN]);
+
+  uint32 crc= my_checksum(0L, NULL, 0);
+
+  /*
+    In this case, the body checksum was computed when the event
+    was writen to the transaction cache. However, the header
+    checksum was not computed then because it would have become
+    incorrect when the header data was updated in function write_cache
+    where it did 'fix end_log_pos' and 'fix group_id', a few lines before
+    the call to this function. Now that the header is in the final form
+    which will show up in the bin log, compute its checksum and combine
+    with the body checksum which was already computed.
+
+    When computing the checksum for the event, we skip the checksum field
+    itself.
+
+    Checksum in the header always comes last. Thus, it doesn't have
+    a fixed offset in the header as the offset depends on whether
+    IDs are also being added.
+  */
+  crc= my_checksum(crc, header, LOG_EVENT_HEADER_LEN -
+                   LOG_EVENT_CRC_LEN);
+  crc= my_checksum_combine(crc, body_crc, body_len);
+  int4store(&header[LOG_EVENT_HEADER_LEN - LOG_EVENT_CRC_LEN], crc);
+}
+
+
+/*
   Write the contents of a cache to the binary log.
 
   SYNOPSIS
@@ -5516,6 +5556,9 @@ int MYSQL_BIN_LOG::write_cache(IO_CACHE *cache, bool lock_log, bool sync_log,
       if (rpl_hierarchical)
         int8store(&header[GROUP_ID_OFFSET], group_id_arg);
 
+      if (rpl_event_checksums)
+        fix_header_checksum(header);
+
       /* write the first half of the split header */
       if (my_b_write(&log_file, header, carry))
         return ER_ERROR_ON_WRITE;
@@ -5570,6 +5613,9 @@ int MYSQL_BIN_LOG::write_cache(IO_CACHE *cache, bool lock_log, bool sync_log,
           if (rpl_hierarchical)
             int8store(cache->read_pos + hdr_offs + GROUP_ID_OFFSET,
                       group_id_arg);
+
+          if (rpl_event_checksums)
+            fix_header_checksum(cache->read_pos + hdr_offs);
 
           /* next event header at ... */
           log_pos= (uchar *)cache->read_pos + hdr_offs + EVENT_LEN_OFFSET;
@@ -5653,7 +5699,7 @@ bool MYSQL_BIN_LOG::write_incident(THD *thd, bool lock,
   else
     ev.group_id= *group_id_to_use;
 
-  error= ev.write(&log_file);
+  error= ev.write(&log_file, false /* only_checksum_body */);
 
   // Consume the group_id.
   if (group_id_to_use == NULL && !error)
@@ -5744,7 +5790,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
         in wrong positions being shown to the user, MASTER_POS_WAIT
         undue waiting etc.
       */
-      if (qinfo.write(&log_file))
+      if (qinfo.write(&log_file, false /* only_checksum_body */))
         goto err;
 
       DBUG_EXECUTE_IF("crash_before_writing_xid",
@@ -5770,7 +5816,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
         */
         commit_event->group_id= group_id_to_use;
 
-        if (commit_event->write(&log_file))
+        if (commit_event->write(&log_file, false /* only_checksum_body */))
           goto err;
       }
 

@@ -369,6 +369,12 @@ class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG
                           pthread_mutex_t *log_lock, ulonglong *group_id_arg,
                           my_off_t *pos, uint32 *server_id_arg);
 
+  /*
+    Helper function for write_cache. header must be at least
+    LOG_EVENT_HEADER_LEN.
+  */
+  static void fix_header_checksum(uchar *header);
+
 public:
   MYSQL_LOG::generate_name;
   MYSQL_LOG::is_open;

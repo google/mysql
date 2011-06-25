@@ -198,6 +198,7 @@ extern my_bool rpl_hierarchical;
 extern my_bool rpl_hierarchical_act_as_root;
 extern my_bool rpl_hierarchical_slave_recovery;
 extern my_bool rpl_hierarchical_50_compat;
+extern my_bool rpl_event_checksums;
 
 /*****************************************************************************
 
@@ -232,10 +233,13 @@ extern my_bool rpl_hierarchical_50_compat;
 
 /* Header size written depends on some options. */
 #define LOG_EVENT_ID_LEN             8u
+#define LOG_EVENT_CRC_LEN            4u
 #define LOG_EVENT_HEADER_WITH_ID_LEN (LOG_EVENT_MINIMAL_HEADER_LEN +\
                                       LOG_EVENT_ID_LEN)
 #define LOG_EVENT_HEADER_LEN         (LOG_EVENT_MINIMAL_HEADER_LEN +\
                                       (rpl_hierarchical ? LOG_EVENT_ID_LEN\
+                                       : 0u) +\
+                                      (rpl_event_checksums ? LOG_EVENT_CRC_LEN\
                                        : 0u))
 
 /* event-specific post-header sizes */
@@ -283,7 +287,7 @@ extern my_bool rpl_hierarchical_50_compat;
 #define MAX_LOG_EVENT_HEADER   ( /* in order of Query_log_event::write */ \
   LOG_EVENT_HEADER_LEN + /* write_header */ \
   QUERY_HEADER_LEN     + /* write_data */   \
-  EXECUTE_LOAD_QUERY_EXTRA_HEADER_LEN + /*write_post_header_for_derived */ \
+  EXECUTE_LOAD_QUERY_EXTRA_HEADER_LEN + /* fill_post_header_for_derived */ \
   MAX_SIZE_LOG_EVENT_STATUS + /* status */ \
   NAME_LEN + 1)
 
@@ -505,6 +509,18 @@ extern my_bool rpl_hierarchical_50_compat;
 */
 #define LOG_EVENT_RELAY_LOG_F 0x40
 
+/*
+  Set in the FDE when rpl_event_checksums is set. Uses a bit in the flags
+  because the checksum is a special field in the header in that it will
+  always be the last 4 bytes even as new fields are added.
+
+  Don't use the same byte as LOG_EVENT_BINLOG_IN_USE_F because we don't want
+  it to get cleared by MYSQL_LOG::close which writes a byte to clear the in
+  use bit.
+*/
+
+#define LOG_EVENT_EVENTS_HAVE_CRC_F 0x100
+
 /**
   @def OPTIONS_WRITTEN_TO_BIN_LOG
 
@@ -694,6 +710,7 @@ typedef struct st_print_event_info
   bool printed_fd_event;
   my_off_t hexdump_from;
   uint8 common_header_len;
+  bool header_has_crc;
   char delimiter[16];
 
 #ifdef MYSQL_CLIENT
@@ -928,6 +945,11 @@ public:
   */
   ulonglong group_id;
 
+  /*
+    The checksum of this event as written to the bin log.
+  */
+  uint32 crc;
+
   bool cache_stmt;
 
   /**
@@ -1011,17 +1033,29 @@ public:
   static void operator delete(void*, void*) { }
 
 #ifndef MYSQL_CLIENT
-  bool write_header(IO_CACHE* file, ulong data_length);
-  virtual bool write(IO_CACHE* file)
+  /*
+    only_checksum_body means we're writing to the transaction cache so
+    no use computing the checksum of the header since it is not yet in
+    its final form. See implementation of Log_event::write_header.
+  */
+  bool write_header(IO_CACHE *file, ulong data_length,
+                    bool only_checksum_body, uint count_buffers,
+                    const uchar **buffers, const uint *buffer_sizes);
+  bool write_base(IO_CACHE *file, bool only_checksum_body,
+                  uint count_buffers, const uchar **buffers,
+                  const uint *buffer_sizes);
+  virtual bool write(IO_CACHE *file, bool only_checksum_body)
   {
-    return (write_header(file, get_data_size()) ||
-            write_data_header(file) ||
-            write_data_body(file));
+    /*
+      Any class which writes more than the header overrides this default
+      implementation of write.
+    */
+    DBUG_ASSERT(!get_data_size());
+    if (get_data_size())
+      return 1;
+
+    return write_header(file, 0, only_checksum_body, 0, NULL, NULL);
   }
-  virtual bool write_data_header(IO_CACHE* file)
-  { return 0; }
-  virtual bool write_data_body(IO_CACHE* file __attribute__((unused)))
-  { return 0; }
   inline time_t get_time()
   {
     THD *tmp_thd;
@@ -1690,8 +1724,8 @@ public:
   }
   Log_event_type get_type_code() { return QUERY_EVENT; }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
-  virtual bool write_post_header_for_derived(IO_CACHE* file) { return FALSE; }
+  bool write(IO_CACHE *file, bool only_checksum_body);
+  virtual void fill_post_header_for_derived(uchar *buf) {}
 #endif
   bool is_valid() const { return query != 0; }
 
@@ -1815,7 +1849,7 @@ public:
   bool is_valid() const { return master_host != 0; }
   Log_event_type get_type_code() { return SLAVE_EVENT; }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
 
 private:
@@ -2107,8 +2141,26 @@ public:
     return sql_ex.new_format() ? NEW_LOAD_EVENT: LOAD_EVENT;
   }
 #ifndef MYSQL_CLIENT
-  bool write_data_header(IO_CACHE* file);
-  bool write_data_body(IO_CACHE* file);
+  virtual bool write(IO_CACHE *file, bool only_checksum_body)
+  {
+    /*
+      This code is only reachable if the master is running version
+      3.23 (see process_io_create_file which is only called from
+      queue_binlog_ver_1_event). The cost of fixing this code to
+      work with checksums is therefore higher than any benefit which
+      would be achieved.
+    */
+    DBUG_ASSERT(!rpl_event_checksums);
+    if (rpl_event_checksums)
+      return 1;
+
+    return (write_header(file, get_data_size(), only_checksum_body,
+                         0, NULL, NULL) ||
+            write_data_header(file) ||
+            write_data_body(file));
+  }
+  virtual bool write_data_header(IO_CACHE *file);
+  virtual bool write_data_body(IO_CACHE *file);
 #endif
   bool is_valid() const { return table_name != 0; }
   int get_data_size()
@@ -2197,7 +2249,7 @@ public:
   ~Start_log_event_v3() {}
   Log_event_type get_type_code() { return START_EVENT_V3;}
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
   bool is_valid() const { return 1; }
   int get_data_size()
@@ -2259,7 +2311,7 @@ public:
   }
   Log_event_type get_type_code() { return FORMAT_DESCRIPTION_EVENT;}
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
   bool is_valid() const
   {
@@ -2353,7 +2405,7 @@ public:
   const char* get_var_type_name();
   int get_data_size() { return  9; /* sizeof(type) + sizeof(val) */;}
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
   bool is_valid() const { return 1; }
 
@@ -2431,7 +2483,7 @@ class Rand_log_event: public Log_event
   Log_event_type get_type_code() { return RAND_EVENT;}
   int get_data_size() { return 16; /* sizeof(ulonglong) * 2*/ }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
   bool is_valid() const { return 1; }
 
@@ -2475,7 +2527,7 @@ class Xid_log_event: public Log_event
   Log_event_type get_type_code() { return XID_EVENT;}
   int get_data_size() { return sizeof(xid); }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
   bool is_valid() const { return 1; }
 
@@ -2525,7 +2577,7 @@ public:
   ~User_var_log_event() {}
   Log_event_type get_type_code() { return USER_VAR_EVENT;}
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
   bool is_valid() const { return 1; }
 
@@ -2664,7 +2716,7 @@ public:
   int get_data_size() { return  ident_len + ROTATE_HEADER_LEN;}
   bool is_valid() const { return new_log_ident != 0; }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
 #endif
 
 private:
@@ -2794,7 +2846,7 @@ public:
   int get_data_size() { return  block_len + APPEND_BLOCK_HEADER_LEN ;}
   bool is_valid() const { return block != 0; }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
   const char* get_db() { return db; }
 #endif
 
@@ -2835,7 +2887,7 @@ public:
   int get_data_size() { return DELETE_FILE_HEADER_LEN ;}
   bool is_valid() const { return file_id != 0; }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
   const char* get_db() { return db; }
 #endif
 
@@ -2875,7 +2927,7 @@ public:
   int get_data_size() { return  EXEC_LOAD_HEADER_LEN ;}
   bool is_valid() const { return file_id != 0; }
 #ifndef MYSQL_CLIENT
-  bool write(IO_CACHE* file);
+  bool write(IO_CACHE *file, bool only_checksum_body);
   const char* get_db() { return db; }
 #endif
 
@@ -2975,7 +3027,7 @@ public:
 
   ulong get_post_header_size_for_derived();
 #ifndef MYSQL_CLIENT
-  bool write_post_header_for_derived(IO_CACHE* file);
+  void fill_post_header_for_derived(uchar *buf);
 #endif
 
 private:
@@ -3396,8 +3448,7 @@ public:
   virtual int get_data_size() { return (uint) m_data_size; } 
 #ifndef MYSQL_CLIENT
   virtual int save_field_metadata();
-  virtual bool write_data_header(IO_CACHE *file);
-  virtual bool write_data_body(IO_CACHE *file);
+  virtual bool write(IO_CACHE *file, bool only_checksum_body);
   virtual const char *get_db() { return m_dbnam; }
 #endif
 
@@ -3543,8 +3594,7 @@ public:
   ulong get_table_id() const        { return m_table_id; }
 
 #ifndef MYSQL_CLIENT
-  virtual bool write_data_header(IO_CACHE *file);
-  virtual bool write_data_body(IO_CACHE *file);
+  virtual bool write(IO_CACHE *file, bool only_checksum_body);
   virtual const char *get_db() { return m_table->s->db.str; }
 #endif
   /*
@@ -3967,8 +4017,9 @@ public:
   virtual int do_apply_event(Relay_log_info const *rli);
 #endif
 
-  virtual bool write_data_header(IO_CACHE *file);
-  virtual bool write_data_body(IO_CACHE *file);
+#if !defined(MYSQL_CLIENT)
+  virtual bool write(IO_CACHE *file, bool only_checksum_body);
+#endif
 
   virtual Log_event_type get_type_code() { return INCIDENT_EVENT; }
 
