@@ -13,3 +13,23 @@ log-slave-updates
 rpl-hierarchical
 # Value of 1 to catch bugs in the cache.
 rpl-hierarchical-cache-frequency=1
+
+[row-crc]
+binlog-format=row
+rpl-event-checksums
+
+[stmt-crc]
+binlog-format=statement
+rpl-event-checksums
+
+[mix-crc]
+binlog-format=mixed
+rpl-event-checksums
+
+[hierarchical-crc]
+binlog-format=statement
+log-slave-updates
+rpl-hierarchical
+# Value of 1 to catch bugs in the cache.
+rpl-hierarchical-cache-frequency=1
+rpl-event-checksums
