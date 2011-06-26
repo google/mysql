@@ -1,4 +1,5 @@
 # repl_port
+
 connect (conn1,127.0.0.1,root,,test,$REPL_PORT);
 --replace_result $REPL_PORT REPL_PORT
 SHOW VARIABLES LIKE "repl_port";
