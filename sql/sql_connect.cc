@@ -437,7 +437,7 @@ check_user(THD *thd, enum enum_server_command command,
           {
             net_send_error(thd, ER_SPECIFIC_ACCESS_DENIED_ERROR,
                            "not authorized for repl_port");
-            DBUG_RETURN(1);
+            DBUG_RETURN(-1);
           }
         }
       }

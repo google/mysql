@@ -1,4 +1,0 @@
-!include ../my.cnf
-
-[ENV]
-REPL_PORT= @mysqld.1.repl_port
