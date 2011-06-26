@@ -17,12 +17,12 @@ SHOW VARIABLES LIKE "repl_port";
 disconnect conn1;
 
 # we don't have repl permissions, so we should fail.
---replace_result $MASTER_MYSOCK MASTER_MYSOCK
+--replace_result $MASTER_MYSOCK MASTER_MYSOCK $REPL_PORT REPL_PORT
 --error 1227
 connect (conn1,127.0.0.1,baduser,,test,$repl_port);
 
 # user does not exist, we should fail.
---replace_result $MASTER_MYSOCK MASTER_MYSOCK
+--replace_result $MASTER_MYSOCK MASTER_MYSOCK $REPL_PORT REPL_PORT
 --error 1045
 connect (conn1,127.0.0.1,notauser,,test,$repl_port);
 

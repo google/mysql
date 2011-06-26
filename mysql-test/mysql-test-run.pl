@@ -1552,16 +1552,16 @@ sub set_build_thread_ports($) {
   $ENV{MTR_BUILD_THREAD}= $build_thread;
 
   # Calculate baseport
-  $baseport= $build_thread * 10 + 10000;
-  if ( $baseport < 5001 or $baseport + 9 >= 32767 )
+  $baseport= $build_thread * 20 + 10000;
+  if ( $baseport < 5001 or $baseport + 19 >= 32767 )
   {
     mtr_error("MTR_BUILD_THREAD number results in a port",
               "outside 5001 - 32767",
-              "($baseport - $baseport + 9)");
+              "($baseport - $baseport + 19)");
   }
 
   mtr_report("Using MTR_BUILD_THREAD $build_thread,",
-	     "with reserved ports $baseport..".($baseport+9));
+	     "with reserved ports $baseport..".($baseport+19));
 
 }
 
@@ -2796,8 +2796,8 @@ sub kill_leftovers ($) {
 sub check_ports_free ($)
 {
   my $bthread= shift;
-  my $portbase = $bthread * 10 + 10000;
-  for ($portbase..$portbase+9){
+  my $portbase = $bthread * 20 + 10000;
+  for ($portbase..$portbase+19){
     if (mtr_ping_port($_)){
       mtr_report(" - 'localhost:$_' was not free");
       return 0; # One port was not free
@@ -5598,7 +5598,7 @@ Options to control what test suites or cases to run
 Options that specify ports
 
   mtr-port-base=#       Base for port numbers, ports from this number to
-  port-base=#           number+9 are reserved. Should be divisible by 10;
+  port-base=#           number+19 are reserved. Should be divisible by 20;
                         if not it will be rounded down. May be set with
                         environment variable MTR_PORT_BASE. If this value is
                         set and is not "auto", it overrides build-thread.
