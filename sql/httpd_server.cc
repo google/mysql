@@ -265,6 +265,24 @@ static int httpd_process_request(THD *thd, HTTPRequest *req)
   {
     err= req->abortabortabort();
   }
+  else if (MatchURL(net, "GET /var"))
+  {
+    err= req->var();
+    if (!err)
+      req->GenerateHeader(200, false);
+  }
+  else if (MatchURL(net, "GET /health"))
+  {
+    err= req->health();
+    if (!err)
+      req->GenerateHeader(200, true);
+  }
+  else if (MatchURL(net, "GET /status") || MatchURL(net, "GET /"))
+  {
+    err= req->status();
+    if (!err)
+      req->GenerateHeader(200, true);
+  }
   else
   {
     req->GenerateHeader(404, false);
