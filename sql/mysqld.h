@@ -249,6 +249,10 @@ extern bool hide_sensitive_information;
 
 extern const char * const hidden_information;
 
+#ifdef HAVE_REPLICATION
+extern my_bool rpl_crash_on_binlog_io_error;
+#endif
+
 /*
   THR_MALLOC is a key which will be used to set/get MEM_ROOT** for a thread,
   using my_pthread_setspecific_ptr()/my_thread_getspecific_ptr().

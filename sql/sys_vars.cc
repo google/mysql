@@ -2756,6 +2756,15 @@ static Sys_var_enum Sys_query_cache_type(
        ON_CHECK(check_query_cache_type),
        ON_UPDATE(fix_query_cache_type));
 
+#ifdef HAVE_REPLICATION
+static Sys_var_mybool Sys_rpl_crash_on_binlog_io_error(
+       "rpl_crash_on_binlog_io_error",
+       "When ON, if the binlog dump thread encounters an I/O error, truncation, "
+       "or bogus event while reading the active binlog the processes will crash.",
+       READ_ONLY GLOBAL_VAR(rpl_crash_on_binlog_io_error), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+#endif
+
 static Sys_var_mybool Sys_query_cache_wlock_invalidate(
        "query_cache_wlock_invalidate",
        "Invalidate queries in query cache on LOCK for write",

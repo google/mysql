@@ -1,0 +1,69 @@
+# Because this test intentionally crashes the server valgrind
+# reports lots of leaked memory. Thus, exclude it from running
+# under valgrind.
+--source include/not_valgrind.inc
+
+source include/master-slave.inc;
+
+call mtr.add_suppression("Failed in mysql_binlog_send.*binlog truncated in the middle of event");
+call mtr.add_suppression("Error in Log_event::read_log_event..: 'read error', data_len: [0-9]+, event_type: [0-9]+");
+call mtr.add_suppression("mysql\.gtid_slave_pos|\./mysql/gtid_slave_pos");
+
+sync_slave_with_master;
+--source include/stop_slave.inc
+
+connection master;
+let $slave_file= query_get_value(show master status, File, 1);
+let $slave_pos= query_get_value(show master status, Position, 1);
+
+create table t1 (a int primary key);
+create table t2 (b int primary key);
+
+let $start_log_pos= query_get_value(show binlog events in '$slave_file' from $slave_pos, Pos, 2);
+let $end_log_pos= query_get_value(show binlog events in '$slave_file' from $slave_pos, End_log_pos, 2);
+let $new_pos= query_get_value(select round($start_log_pos + ($end_log_pos - $start_log_pos)/2) as Pos, Pos, 1);
+
+let $file= $MYSQLTEST_VARDIR/mysqld.1/data/$slave_file;
+let $size= $new_pos;
+--source include/truncate_file.inc
+
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+
+connection slave;
+# We could not use include/start_slave.inc because it also does
+# show master status that fails because master is expected to crash
+# as we truncate the binlog.
+start slave;
+
+--source include/wait_for_slave_io_to_stop.inc
+--source include/stop_slave.inc
+reset slave;
+
+connection master;
+--enable_reconnect
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--source include/wait_until_connected_again.inc
+
+reset master;
+drop table t1;
+drop table t2;
+let $master_log_pos= query_get_value(show master status, Position, 1);
+
+connection slave;
+--disable_query_log
+eval change master to master_log_file='master-bin.000001', master_log_pos=$master_log_pos;
+--enable_query_log
+--source include/start_slave.inc
+
+# Cleanup
+
+connection server_1;
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+--connection default
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+connection master;
+--source include/rpl_end.inc

@@ -40,6 +40,7 @@ enum enum_gtid_until_state {
 
 int max_binlog_dump_events = 0; // unlimited
 my_bool opt_sporadic_binlog_dump_fail = 0;
+my_bool rpl_crash_on_binlog_io_error;
 #ifndef DBUG_OFF
 static int binlog_dump_count = 0;
 #endif
@@ -2434,6 +2435,14 @@ impossible position";
     }
     if (killed)
       goto end;
+    if (rpl_crash_on_binlog_io_error &&
+        (error == LOG_READ_BOGUS || error == LOG_READ_IO ||
+         error == LOG_READ_TRUNC))
+    {
+      test_for_non_eof_log_read_errors(error, &errmsg);
+      sql_print_error("Failed in mysql_binlog_send(): %s", errmsg);
+      kill(getpid(), SIGKILL);
+    }
 
     DBUG_EXECUTE_IF("wait_after_binlog_EOF",
                     {
