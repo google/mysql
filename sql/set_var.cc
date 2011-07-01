@@ -510,6 +510,9 @@ static sys_var_long_ptr	sys_rpl_recovery_rank(&vars, "rpl_recovery_rank",
 static sys_var_long_ptr	sys_query_cache_size(&vars, "query_cache_size",
 					     &query_cache_size,
 					     fix_query_cache_size);
+static sys_var_bool_ptr sys_rpl_crash_on_binlog_io_error(
+  &vars, "rpl_crash_on_binlog_io_error",
+  &rpl_crash_on_binlog_io_error);
 
 static sys_var_bool_ptr sys_update_connection_privs(&vars, "update_connection_privs",
                                                     &opt_update_connection_privs);

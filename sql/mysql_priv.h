@@ -2095,6 +2095,7 @@ extern SHOW_COMP_OPTION have_compress;
 extern int orig_argc;
 extern char **orig_argv;
 extern const char *load_default_groups[];
+extern my_bool rpl_crash_on_binlog_io_error;
 
 #ifndef __WIN__
 extern pthread_t signal_thread;
