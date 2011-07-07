@@ -1,0 +1,26 @@
+[mysqld.1]
+http-enable
+log-bin=                    master-bin
+
+[mysqld.2]
+http-enable
+master-host=                127.0.0.1
+master-port=                @mysqld.1.port
+master-password=            @mysqld.1.#password
+master-user=                @mysqld.1.#user
+log-bin=                    slave-bin
+relay-log=                  slave-relay-bin
+
+init-rpl-role=              slave
+log-slave-updates
+
+skip-slave-start
+
+[ENV]
+MASTER_MYPORT=              @mysqld.1.port
+MASTER_MYSOCK=              @mysqld.1.socket
+MASTER_HTTP_PORT=           @mysqld.1.http_port
+
+SLAVE_MYPORT=               @mysqld.2.port
+SLAVE_MYSOCK=               @mysqld.2.socket
+SLAVE_HTTP_PORT=            @mysqld.2.http_port
