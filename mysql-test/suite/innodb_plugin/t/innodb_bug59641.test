@@ -3,6 +3,8 @@
 -- source include/not_embedded.inc
 -- source include/have_innodb_plugin.inc
 
+let $innodb_file_format_max_orig=`select @@innodb_file_format_max`;
+
 CREATE TABLE t(a INT PRIMARY KEY, b INT)ENGINE=InnoDB;
 INSERT INTO t VALUES(2,2),(4,4),(8,8),(16,16),(32,32);
 COMMIT;
@@ -64,3 +66,5 @@ XA COMMIT '789';
 SELECT * FROM t;
 
 DROP TABLE t;
+
+eval set global innodb_file_format_max=$innodb_file_format_max_orig;
