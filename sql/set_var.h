@@ -1478,6 +1478,7 @@ uchar* find_named(I_List<NAMED_LIST> *list, const char *name, uint length,
 		NAMED_LIST **found);
 
 extern sys_var_str sys_var_general_log_path, sys_var_slow_log_path;
+extern sys_var_str sys_var_audit_log_path;
 
 /* key_cache functions */
 KEY_CACHE *get_key_cache(LEX_STRING *cache_name);

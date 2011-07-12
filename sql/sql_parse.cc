@@ -1611,6 +1611,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       break;
     }
     DBUG_PRINT("quit",("Got shutdown command for level %u", level));
+    audit_log_print(thd, command, NullS);
     general_log_print(thd, command, NullS);
     my_eof(thd);
     close_thread_tables(thd);			// Free before kill
@@ -6194,7 +6195,6 @@ void mysql_init_multi_delete(LEX *lex)
   lex->query_tables_last= &lex->query_tables;
 }
 
-
 /*
   When you modify mysql_parse(), you may need to mofify
   mysql_test_parse_for_slave() in this same file.
@@ -6305,6 +6305,7 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
       thd->lex->sphead= 0;
     }
     lex->unit.cleanup();
+    write_audit_record(lex, thd);
     thd_proc_info(thd, "freeing items");
     thd->end_statement();
     thd->cleanup_after_query();

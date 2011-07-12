@@ -853,12 +853,22 @@ bool general_log_print(THD *thd, enum enum_server_command command,
 bool general_log_write(THD *thd, enum enum_server_command command,
                        const char *query, uint query_length);
 
+bool audit_log_print(THD *thd, enum enum_server_command command,
+                     const char *format, ...);
+
+bool audit_log_write(THD *thd, enum enum_server_command command,
+                     const char *query, uint query_length);
+
+void init_audit_log_filter(const char *comma_list);
+
 #include "sql_class.h"
 #include "sql_acl.h"
 #include "tztime.h"
 #ifdef MYSQL_SERVER
 #include "sql_servers.h"
 #include "opt_range.h"
+
+void write_audit_record(LEX *lex, THD *thd);
 
 #ifdef HAVE_QUERY_CACHE
 struct Query_cache_query_flags
@@ -1024,6 +1034,7 @@ int check_user(THD *thd, enum enum_server_command command,
 	       bool check_count);
 pthread_handler_t handle_one_connection(void *arg);
 bool init_new_connection_handler_thread();
+void init_audit_log_tables(const char* comma_list);
 void reset_mqh(LEX_USER *lu, bool get_them);
 bool check_mqh(THD *thd, uint check_command);
 void time_out_user_resource_limits(THD *thd, USER_CONN *uc);
@@ -1984,7 +1995,7 @@ extern MYSQL_PLUGIN_IMPORT bool mysqld_embedded;
 extern bool opt_large_files, server_id_supplied;
 extern bool opt_update_log, opt_bin_log, opt_error_log;
 extern bool opt_disable_binlog_unsafe_warning;
-extern my_bool opt_log, opt_slow_log;
+extern my_bool opt_log, opt_slow_log, opt_audit_log;
 extern ulong log_output_options;
 extern my_bool opt_log_queries_not_using_indexes;
 extern bool opt_disable_networking, opt_skip_show_db;
@@ -2022,7 +2033,7 @@ extern my_bool opt_large_pages;
 extern uint opt_large_page_size;
 #endif /* MYSQL_SERVER || INNODB_COMPATIBILITY_HOOKS */
 #ifdef MYSQL_SERVER
-extern char *opt_logname, *opt_slow_logname;
+extern char *opt_logname, *opt_slow_logname, *opt_audit_logname;
 extern const char *log_output_str;
 extern char *opt_deprecated_engines;
 
