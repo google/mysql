@@ -450,7 +450,7 @@ static pthread_cond_t COND_thread_cache, COND_flush_thread_cache;
 /* Global variables */
 
 bool opt_update_log, opt_bin_log, opt_ignore_builtin_innodb= 0;
-my_bool opt_log, opt_slow_log;
+my_bool opt_log, opt_slow_log, opt_audit_log;
 ulong log_output_options;
 my_bool opt_log_queries_not_using_indexes= 0;
 bool opt_error_log= IF_WIN(1,0);
@@ -735,7 +735,7 @@ char *opt_relay_logname = 0, *opt_relaylog_index_name=0;
 my_bool master_ssl;
 char *master_ssl_key, *master_ssl_cert;
 char *master_ssl_ca, *master_ssl_capath, *master_ssl_cipher;
-char *opt_logname, *opt_slow_logname;
+char *opt_logname, *opt_slow_logname, *opt_audit_logname;
 
 /* Static variables */
 
@@ -752,6 +752,21 @@ static char *mysql_home_ptr, *pidfile_name_ptr;
 static int defaults_argc;
 static char **defaults_argv;
 static char *opt_bin_logname;
+
+/*
+  If --audit_log_tables=xxx,yyy we log the query to the log if table
+  xxx or yyy is one of the tables opened.
+ */
+static char *opt_audit_log_tables;
+
+/*
+  A list of statement types that are not logged
+  e.g. this line will prevent the logging of all insert and select
+  statements: --opt_audit_log_filter=insert,select
+ */
+static char *opt_audit_log_filter;
+
+
 
 int orig_argc;
 char **orig_argv;
@@ -2704,7 +2719,8 @@ pthread_handler_t signal_hand(void *arg __attribute__((unused)))
 #endif
       /* switch to the old log message processing */
       logger.set_handlers(LOG_FILE, opt_slow_log ? LOG_FILE:LOG_NONE,
-                          opt_log ? LOG_FILE:LOG_NONE);
+                          opt_log ? LOG_FILE:LOG_NONE,
+                          LOG_FILE);
       DBUG_PRINT("info",("Got signal: %d  abort_loop: %d",sig,abort_loop));
       if (!abort_loop)
       {
@@ -2737,13 +2753,15 @@ pthread_handler_t signal_hand(void *arg __attribute__((unused)))
       {
         logger.set_handlers(LOG_FILE,
                             opt_slow_log ? LOG_TABLE : LOG_NONE,
-                            opt_log ? LOG_TABLE : LOG_NONE);
+                            opt_log ? LOG_TABLE : LOG_NONE,
+                            LOG_FILE);
       }
       else
       {
         logger.set_handlers(LOG_FILE,
                             opt_slow_log ? log_output_options : LOG_NONE,
-                            opt_log ? log_output_options : LOG_NONE);
+                            opt_log ? log_output_options : LOG_NONE,
+                            LOG_FILE);
       }
       break;
 #ifdef USE_ONE_SIGNAL_HAND
@@ -3430,6 +3448,10 @@ static int init_common_variables(const char *conf_file_name, int argc,
   sys_var_slow_log_path.value= my_strdup(s, MYF(0));
   sys_var_slow_log_path.value_length= strlen(s);
 
+  s= opt_audit_logname ? opt_audit_logname : make_default_log_name(buff, "-audit.log");
+  sys_var_audit_log_path.value= my_strdup(s, MYF(0));
+  sys_var_audit_log_path.value_length= strlen(s);
+
 #if defined(ENABLED_DEBUG_SYNC)
   /* Initialize the debug sync facility. See debug_sync.cc. */
   if (debug_sync_init())
@@ -3974,7 +3996,7 @@ a file name for --log-bin-index option", opt_binlog_index_name);
       sql_print_warning("There were other values specified to "
                         "log-output besides NONE. Disabling slow "
                         "and general logs anyway.");
-    logger.set_handlers(LOG_FILE, LOG_NONE, LOG_NONE);
+    logger.set_handlers(LOG_FILE, LOG_NONE, LOG_NONE, LOG_FILE);
   }
   else
   {
@@ -3990,11 +4012,13 @@ a file name for --log-bin-index option", opt_binlog_index_name);
     }
 
     logger.set_handlers(LOG_FILE, opt_slow_log ? log_output_options:LOG_NONE,
-                        opt_log ? log_output_options:LOG_NONE);
+                        opt_log ? log_output_options:LOG_NONE,
+                        LOG_FILE);
   }
 #else
   logger.set_handlers(LOG_FILE, opt_slow_log ? LOG_FILE:LOG_NONE,
-                      opt_log ? LOG_FILE:LOG_NONE);
+                      opt_log ? LOG_FILE:LOG_NONE,
+                      LOG_FILE);
 #endif
 
   /*
@@ -5683,6 +5707,9 @@ enum options_mysqld
   OPT_KEEP_FILES_ON_CREATE,
   OPT_GENERAL_LOG,
   OPT_SLOW_LOG,
+  OPT_AUDIT_LOG_TABLES,
+  OPT_AUDIT_LOG,
+  OPT_AUDIT_LOG_FILTER,
   OPT_THREAD_HANDLING,
   OPT_INNODB_ROLLBACK_ON_TIMEOUT,
   OPT_SECURE_FILE_PRIV,
@@ -5695,6 +5722,7 @@ enum options_mysqld
   OPT_SLAVE_EXEC_MODE,
   OPT_GENERAL_LOG_FILE,
   OPT_SLOW_QUERY_LOG_FILE,
+  OPT_AUDIT_LOG_FILE,
   OPT_IGNORE_BUILTIN_INNODB,
   OPT_BINLOG_DIRECT_NON_TRANS_UPDATE,
   OPT_DEFAULT_CHARACTER_SET_OLD,
@@ -5952,6 +5980,22 @@ each time the SQL thread starts.",
   {"log", 'l', "Log connections and queries to file (deprecated option, use "
    "--general_log/--general_log_file instead).", &opt_logname,
    &opt_logname, 0, GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"audit-log", OPT_AUDIT_LOG,
+   "Log logins, queries against specified tables, and startup",
+   &opt_audit_logname, &opt_audit_logname, 0, GET_STR, OPT_ARG,
+   0, 0, 0, 0, 0, 0},
+  {"audit-log-tables", OPT_AUDIT_LOG_TABLES,
+   "Log queries that use these tables to the audit log (comma separated). "
+   "Alternatively use 'alltables' if logging all tables is desired.",
+   &opt_audit_log_tables, &opt_audit_log_tables, 0, GET_STR, REQUIRED_ARG,
+   0, 0, 0, 0, 0, 0},
+  {"audit-log-filter", OPT_AUDIT_LOG_FILTER,
+   "Filter certain statements from appearing in the audit log. "
+   "by default everything will be logged.  Statements can be filtered "
+   "by specifying a comma separated list here "
+   "e.g. select,insert,delete,update",
+   &opt_audit_log_filter, &opt_audit_log_filter, 0, GET_STR, REQUIRED_ARG,
+   0, 0, 0, 0, 0, 0},
   {"general_log_file", OPT_GENERAL_LOG_FILE,
    "Log connections and queries to given file.", &opt_logname,
    &opt_logname, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
@@ -7795,14 +7839,15 @@ static int mysql_init_variables(void)
   opt_skip_slave_start= opt_reckless_slave = 0;
   mysql_home[0]= pidfile_name[0]= log_error_file[0]= 0;
   myisam_test_invalid_symlink= test_if_data_home_dir;
-  opt_log= opt_slow_log= 0;
+  opt_log= opt_slow_log= opt_audit_log= 0;
   opt_update_log= 0;
   log_output_options= find_bit_type(log_output_str, &log_output_typelib);
   opt_bin_log= 0;
   opt_disable_networking= opt_skip_show_db=0;
   opt_skip_name_resolve= 0;
   opt_ignore_builtin_innodb= 0;
-  opt_logname= opt_update_logname= opt_binlog_index_name= opt_slow_logname= 0;
+  opt_logname= opt_update_logname= opt_binlog_index_name= opt_slow_logname=
+    opt_audit_logname= 0;
   opt_tc_log_file= (char *)"tc.log";      // no hostname in tc_log file name !
   opt_secure_auth= 0;
   opt_secure_file_priv= 0;
@@ -8162,6 +8207,15 @@ mysqld_get_one_option(int optid,
     break;
   case (int) OPT_ERROR_LOG_FILE:
     opt_error_log= 1;
+    break;
+  case OPT_AUDIT_LOG_TABLES:
+    init_audit_log_tables(argument);
+    break;
+  case (int) OPT_AUDIT_LOG:
+    opt_audit_log= 1;
+    break;
+  case OPT_AUDIT_LOG_FILTER:
+    init_audit_log_filter(argument);
     break;
 #ifdef HAVE_REPLICATION
   case (int) OPT_INIT_RPL_ROLE:
@@ -8855,7 +8909,7 @@ static void set_server_version(void)
   if (!strstr(MYSQL_SERVER_SUFFIX_STR, "-debug"))
     end= strmov(end, "-debug");
 #endif
-  if (opt_log || opt_update_log || opt_slow_log || opt_bin_log)
+  if (opt_log || opt_update_log || opt_slow_log || opt_bin_log || opt_audit_log)
     strmov(end, "-log");                        // This may slow down system
 }
 

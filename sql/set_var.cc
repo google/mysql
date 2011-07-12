@@ -147,6 +147,8 @@ static uchar *get_tmpdir(THD *thd);
 static int  sys_check_log_path(THD *thd,  set_var *var);
 static bool sys_update_general_log_path(THD *thd, set_var * var);
 static void sys_default_general_log_path(THD *thd, enum_var_type type);
+static bool sys_update_audit_log_path(THD *thd, set_var * var);
+static void sys_default_audit_log_path(THD *thd, enum_var_type type);
 static bool sys_update_slow_log_path(THD *thd, set_var * var);
 static void sys_default_slow_log_path(THD *thd, enum_var_type type);
 static uchar *get_myisam_mmap_size(THD *thd);
@@ -934,6 +936,8 @@ static sys_var_log_state sys_var_slow_query_log(&vars, "slow_query_log", &opt_sl
 /* Synonym of "slow_query_log" for consistency with SHOW VARIABLES output */
 static sys_var_log_state sys_var_log_slow(&vars, "log_slow_queries",
                                           &opt_slow_log, QUERY_LOG_SLOW);
+static sys_var_log_state sys_var_audit_log(&vars, "audit_log", &opt_audit_log,
+                                           QUERY_LOG_AUDIT);
 sys_var_str sys_var_general_log_path(&vars, "general_log_file", sys_check_log_path,
 				     sys_update_general_log_path,
 				     sys_default_general_log_path,
@@ -942,6 +946,10 @@ sys_var_str sys_var_slow_log_path(&vars, "slow_query_log_file", sys_check_log_pa
 				  sys_update_slow_log_path, 
 				  sys_default_slow_log_path,
 				  opt_slow_logname);
+sys_var_str sys_var_audit_log_path(&vars, "audit_log_file", sys_check_log_path,
+                                   sys_update_audit_log_path,
+                                   sys_default_audit_log_path,
+                                   opt_audit_logname);
 static sys_var_log_output sys_var_log_output_state(&vars, "log_output", &log_output_options,
 					    &log_output_typelib, 0);
 static sys_var_readonly         sys_myisam_mmap_size(&vars, "myisam_mmap_size",
@@ -2582,6 +2590,9 @@ bool update_sys_var_str_path(THD *thd, sys_var_str *var_str,
   case QUERY_LOG_GENERAL:
     file_log= logger.get_log_file_handler();
     break;
+  case QUERY_LOG_AUDIT:
+    file_log= logger.get_audit_log_file_handler();
+    break;
   default:
     MY_ASSERT_UNREACHABLE();
   }
@@ -2614,6 +2625,8 @@ bool update_sys_var_str_path(THD *thd, sys_var_str *var_str,
       break;
     case QUERY_LOG_GENERAL:
       file_log->open_query_log(sys_var_general_log_path.value);
+    case QUERY_LOG_AUDIT:
+      file_log->open_audit_log(sys_var_audit_log_path.value);
       break;
     default:
       DBUG_ASSERT(0);
@@ -2657,6 +2670,20 @@ static void sys_default_slow_log_path(THD *thd, enum_var_type type)
                                  QUERY_LOG_SLOW);
 }
 
+static void sys_default_audit_log_path(THD *thd, enum_var_type type)
+{
+  (void) update_sys_var_str_path(thd, &sys_var_audit_log_path,
+                                 0, "-audit.log", opt_audit_log,
+                                 QUERY_LOG_AUDIT);
+}
+
+static bool sys_update_audit_log_path(THD *thd, set_var * var)
+{
+  return update_sys_var_str_path(thd, &sys_var_audit_log_path,
+                                 var, "-audit.log", opt_audit_log,
+                                 QUERY_LOG_AUDIT);
+}
+
 
 bool sys_var_log_output::update(THD *thd, set_var *var)
 {
@@ -2664,6 +2691,7 @@ bool sys_var_log_output::update(THD *thd, set_var *var)
   logger.lock_exclusive();
   logger.init_slow_log(var->save_result.ulong_value);
   logger.init_general_log(var->save_result.ulong_value);
+  logger.init_audit_log(var->save_result.ulong_value);
   *value= var->save_result.ulong_value;
   logger.unlock();
   pthread_mutex_unlock(&LOCK_global_system_variables);
@@ -2677,6 +2705,7 @@ void sys_var_log_output::set_default(THD *thd, enum_var_type type)
   logger.lock_exclusive();
   logger.init_slow_log(LOG_FILE);
   logger.init_general_log(LOG_FILE);
+  logger.init_audit_log(LOG_FILE);
   *value= LOG_FILE;
   logger.unlock();
   pthread_mutex_unlock(&LOCK_global_system_variables);

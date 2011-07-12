@@ -190,7 +190,7 @@ public:
   const char *generate_name(const char *log_name, const char *suffix,
                             bool strip_ext, char *buff);
   int generate_new_name(char *new_name, const char *log_name);
- protected:
+protected:
   /* LOCK_log is inited by init_pthread_objects() */
   pthread_mutex_t LOCK_log;
   char *name;
@@ -228,6 +228,12 @@ public:
     char buf[FN_REFLEN];
     return open(generate_name(log_name, ".log", 0, buf), LOG_NORMAL, 0,
                 WRITE_CACHE);
+  }
+  bool open_audit_log(const char *log_name)
+  {
+    char buf[FN_REFLEN];
+    return open(generate_name(log_name, "-audit.log", 0, buf),
+                LOG_NORMAL, 0, WRITE_CACHE);
   }
 
 private:
@@ -439,6 +445,11 @@ public:
                            const char *command_type, uint command_type_len,
                            const char *sql_text, uint sql_text_len,
                            CHARSET_INFO *client_cs)= 0;
+  virtual bool log_audit(THD *thd, time_t event_time, const char *user_host,
+                         uint user_host_len, int thread_id,
+                         const char *command_type, uint command_type_len,
+                         const char *sql_text, uint sql_text_len,
+                         CHARSET_INFO *client_cs)=0;
   virtual ~Log_event_handler() {}
 };
 
@@ -468,6 +479,11 @@ public:
                            const char *command_type, uint command_type_len,
                            const char *sql_text, uint sql_text_len,
                            CHARSET_INFO *client_cs);
+  virtual bool log_audit(THD *thd, time_t event_time, const char *user_host,
+                         uint user_host_len, int thread_id,
+                         const char *command_type, uint command_type_len,
+                         const char *sql_text, uint sql_text_len,
+                         CHARSET_INFO *client_cs);
 
   int activate_log(THD *thd, uint log_type);
 };
@@ -476,11 +492,13 @@ public:
 /* type of the log table */
 #define QUERY_LOG_SLOW 1
 #define QUERY_LOG_GENERAL 2
+#define QUERY_LOG_AUDIT 3
 
 class Log_to_file_event_handler: public Log_event_handler
 {
   MYSQL_QUERY_LOG mysql_log;
   MYSQL_QUERY_LOG mysql_slow_log;
+  MYSQL_QUERY_LOG mysql_audit_log;
   bool is_initialized;
 public:
   Log_to_file_event_handler(): is_initialized(FALSE)
@@ -500,10 +518,16 @@ public:
                            const char *command_type, uint command_type_len,
                            const char *sql_text, uint sql_text_len,
                            CHARSET_INFO *client_cs);
+  virtual bool log_audit(THD *thd, time_t event_time, const char *user_host,
+                         uint user_host_len, int thread_id,
+                         const char *command_type, uint command_type_len,
+                         const char *sql_text, uint sql_text_len,
+                         CHARSET_INFO *client_cs);
   void flush();
   void init_pthread_objects();
   MYSQL_QUERY_LOG *get_mysql_slow_log() { return &mysql_slow_log; }
   MYSQL_QUERY_LOG *get_mysql_log() { return &mysql_log; }
+  MYSQL_QUERY_LOG *get_mysql_audit_log() {return &mysql_audit_log; }
 };
 
 
@@ -522,6 +546,7 @@ class LOGGER
   Log_event_handler *error_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
   Log_event_handler *slow_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
   Log_event_handler *general_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
+  Log_event_handler *audit_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
 
 public:
 
@@ -557,14 +582,20 @@ public:
                          const char *format, va_list args);
   bool general_log_write(THD *thd, enum enum_server_command command,
                          const char *query, uint query_length);
+  bool audit_log_print(THD *thd, enum enum_server_command command,
+                       const char *format, va_list args);
+  bool audit_log_write(THD *thd, enum enum_server_command command,
+                       const char *query, uint query_length);
 
   /* we use this function to setup all enabled log event handlers */
   int set_handlers(uint error_log_printer,
                    uint slow_log_printer,
-                   uint general_log_printer);
+                   uint general_log_printer,
+                   uint audit_log_printer);
   void init_error_log(uint error_log_printer);
   void init_slow_log(uint slow_log_printer);
   void init_general_log(uint general_log_printer);
+  void init_audit_log(uint audit_log_printer);
   void deactivate_log_handler(THD* thd, uint log_type);
   bool activate_log_handler(THD* thd, uint log_type);
   MYSQL_QUERY_LOG *get_slow_log_file_handler()
@@ -577,6 +608,12 @@ public:
   { 
     if (file_log_handler)
       return file_log_handler->get_mysql_log();
+    return NULL;
+  }
+  MYSQL_QUERY_LOG *get_audit_log_file_handler()
+  {
+    if (file_log_handler)
+      return file_log_handler->get_mysql_audit_log();
     return NULL;
   }
 };
