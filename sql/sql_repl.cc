@@ -1237,6 +1237,7 @@ bool change_master(THD* thd, Master_info* mi)
   uint saved_port;
   char saved_log_name[FN_REFLEN];
   my_off_t saved_log_pos;
+  bool saved_connect_using_group_id;
   DBUG_ENTER("change_master");
 
   lock_slave_threads(mi);
@@ -1288,8 +1289,17 @@ bool change_master(THD* thd, Master_info* mi)
   */
   strmake(saved_host, mi->host, HOSTNAME_LENGTH);
   saved_port= mi->port;
-  strmake(saved_log_name, mi->master_log_name, FN_REFLEN - 1);
-  saved_log_pos= mi->master_log_pos;
+  if (!mi->connect_using_group_id)
+  {
+    strmake(saved_log_name, mi->master_log_name, FN_REFLEN - 1);
+    saved_log_pos= mi->master_log_pos;
+  }
+  else
+  {
+    saved_log_name[0]= '\0';
+    saved_log_pos= BIN_LOG_HEADER_SIZE;
+  }
+  saved_connect_using_group_id= mi->connect_using_group_id;
 
   /*
     If the user specified host or port without binlog or position,
@@ -1470,11 +1480,12 @@ bool change_master(THD* thd, Master_info* mi)
 
   sql_print_information("'CHANGE MASTER TO executed'. "
     "Previous state master_host='%s', master_port='%u', master_log_file='%s', "
-    "master_log_pos='%ld'. "
+    "master_log_pos='%ld', connect_using_group_id=%d. "
     "New state master_host='%s', master_port='%u', master_log_file='%s', "
-    "master_log_pos='%ld'.", saved_host, saved_port, saved_log_name,
-    (ulong) saved_log_pos, mi->host, mi->port, mi->master_log_name,
-    (ulong) mi->master_log_pos);
+    "master_log_pos='%ld', connect_using_group_id=%d.",
+    saved_host, saved_port, saved_log_name, (ulong) saved_log_pos,
+    saved_connect_using_group_id, mi->host, mi->port, mi->master_log_name,
+    (ulong) mi->master_log_pos, mi->connect_using_group_id);
 
   /*
     If we don't write new coordinates to disk now, then old will remain in
