@@ -83,6 +83,15 @@ const LEX_STRING command_name[]={
   { C_STRING_WITH_LEN("Set option") },
   { C_STRING_WITH_LEN("Fetch") },
   { C_STRING_WITH_LEN("Daemon") },
+  { C_STRING_WITH_LEN("Reserved1") },
+  { C_STRING_WITH_LEN("Reserved2") },
+  { C_STRING_WITH_LEN("Reserved3") },
+  { C_STRING_WITH_LEN("Reserved4") },
+  { C_STRING_WITH_LEN("Reserved5") },
+  { C_STRING_WITH_LEN("Reserved6") },
+  { C_STRING_WITH_LEN("Reserved7") },
+  { C_STRING_WITH_LEN("Reserved8") },
+  { C_STRING_WITH_LEN("Reserved9") },
   { C_STRING_WITH_LEN("Binlog Dump") },
   { C_STRING_WITH_LEN("Error") }  // Last command number
 };
@@ -914,7 +923,8 @@ bool do_command(THD *thd)
 
   command= (enum enum_server_command) (uchar) packet[0];
 
-  if (command >= COM_END)
+  if (command >= COM_END ||
+      (COM_RESERVED1 <= command && command <= COM_RESERVED9))
     command= COM_END;				// Wrong command
 
   DBUG_PRINT("info",("Command on %s = %d (%s)",
