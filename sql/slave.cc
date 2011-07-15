@@ -2788,11 +2788,16 @@ pthread_handler_t handle_slave_io(void *arg)
   // we can get killed during safe_connect
   if (!safe_connect(thd, mysql, mi))
   {
-    sql_print_information("Slave I/O thread: connected to master '%s@%s:%d',"
-                          "replication started in log '%s' at position %s",
-                          mi->user, mi->host, mi->port,
-			  IO_RPL_LOG_NAME,
-			  llstr(mi->master_log_pos,llbuff));
+    if (!mi->connect_using_group_id)
+      sql_print_information("Slave I/O thread: connected to master '%s@%s:%d', "
+                            "replication started in log '%s' at position %s",
+                            mi->user, mi->host, mi->port,
+                            IO_RPL_LOG_NAME,
+                            llstr(mi->master_log_pos, llbuff));
+    else
+      sql_print_information("Slave I/O thread: connected to master '%s@%s:%d', "
+                            "using current group_id.",
+                            mi->user, mi->host, mi->port);
   /*
     Adding MAX_LOG_EVENT_HEADER_LEN to the max_packet_size on the I/O
     thread, since a replication event can become this much larger than

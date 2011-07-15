@@ -1598,8 +1598,6 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       char llbuf[22];
       snprintf(llbuf, 22, "%llu", group_id);
 
-      sql_print_information("binlog_dump with group_id %s", llbuf);
-
       if (!rpl_hierarchical)
       {
         const char *msg = "Slave trying to connect using group_id = %s when "
@@ -1622,10 +1620,10 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
         {
           int dir_len= dirname_length(linfo.log_file_name);
 
-          general_log_print(thd, command,
-                            "Group_ID: %s  Log: '%s'  Pos: %ld",
-                            llbuf, linfo.log_file_name + dir_len,
-                            (long) linfo.pos);
+          sql_print_information("binlog_dump with group_id %s, which maps to "
+                                "Log: '%s'  Pos: %ld", llbuf,
+                                linfo.log_file_name + dir_len,
+                                (long) linfo.pos);
           mysql_binlog_send(thd, linfo.log_file_name + dir_len,
                             linfo.pos, flags);
         }
