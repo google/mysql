@@ -2024,7 +2024,13 @@ static int request_dump(MYSQL* mysql, Master_info* mi,
     int8store(buf + 6, group_id);
     int4store(buf + 14, event_server_id);
 
-    cmd= COM_BINLOG_DUMP2;
+    // The id used for COM_BINLOG_DUMP2 in the Google build of 5.0 conflicts
+    // with an id which was added in the official release of 5.1. Thus, check
+    // the server_version of the master and see which id to send.
+    if (strcmp(mysql->server_version, "5.0.37-standard-log"))
+      cmd= COM_BINLOG_DUMP2;
+    else
+      cmd= COM_BINLOG_DUMP2_50;
     len= 18;
   }
 
