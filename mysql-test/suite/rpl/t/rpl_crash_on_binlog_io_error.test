@@ -1,6 +1,7 @@
 source include/master-slave.inc;
 
 call mtr.add_suppression("Failed in mysql_binlog_send.*binlog truncated in the middle of event");
+call mtr.add_suppression("Error in Log_event::read_log_event(): 'read error', data_len: [0-9]+, event_type: [0-9]+");
 
 connection slave;
 --source include/stop_slave.inc
