@@ -992,7 +992,7 @@ ha_googlestats::server_scan_init()
 }
 
 int
-ha_googlestats::index_init(uint idx)
+ha_googlestats::index_init(uint idx, bool sorted)
 {
   const char* kWho = "ha_googlestats::index_init";
   UpdateProcInfo updater(kWho);
@@ -2069,7 +2069,7 @@ ha_googlestats::index_read_idx(
   UpdateProcInfo updater(kWho);
   int res = 0;
 
-  if ((res = index_init(index))) {
+  if ((res = index_init(index, false))) {
     printError("%s: index_init failed", kWho);
     return res;
   } else {

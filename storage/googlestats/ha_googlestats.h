@@ -390,7 +390,7 @@ public:
   virtual int close(void);
 
   // Methods for keyed access (by index).
-  virtual int index_init(uint idx);
+  virtual int index_init(uint idx, bool sorted);
   virtual int index_end();
   virtual int index_read(uchar * buf, const uchar * key,
 			 uint key_len, enum ha_rkey_function find_flag);
