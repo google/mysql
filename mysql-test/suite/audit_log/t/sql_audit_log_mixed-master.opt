@@ -1,0 +1,1 @@
+--audit-log=auditlog --audit-log-tables=alltables --audit-log-filter=select,delete
