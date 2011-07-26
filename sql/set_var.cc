@@ -61,6 +61,7 @@
 #include <thr_alarm.h>
 #include <myisam.h>
 #include <my_dir.h>
+#include "repl_semi_sync.h"
 
 #include "events.h"
 #include "sql_repl.h"
@@ -133,6 +134,11 @@ static void fix_query_cache_min_res_unit(THD *thd, enum_var_type type);
 static void fix_myisam_max_sort_file_size(THD *thd, enum_var_type type);
 static void fix_max_binlog_size(THD *thd, enum_var_type type);
 static void fix_rpl_hierarchical_cache_frequency(THD *thd, enum_var_type type);
+static void fix_rpl_semi_sync_always_on(THD *thd, enum_var_type type);
+static void fix_rpl_semi_sync_timeout(THD *thd, enum_var_type type);
+static void fix_rpl_semi_sync_trace_level(THD *thd, enum_var_type type);
+static void fix_rpl_semi_sync_enabled(THD *thd, enum_var_type type);
+static void fix_rpl_semi_sync_slave_enabled(THD *thd, enum_var_type type);
 static void fix_max_relay_log_size(THD *thd, enum_var_type type);
 static void fix_max_connections(THD *thd, enum_var_type type);
 static int check_max_delayed_threads(THD *thd, set_var *var);
@@ -549,6 +555,26 @@ static sys_var_const            sys_rpl_event_checksums(&vars,
                                                         &rpl_event_checksums);
 static sys_var_long_ptr	sys_rpl_recovery_rank(&vars, "rpl_recovery_rank",
 					      &rpl_recovery_rank);
+static sys_var_bool_ptr
+sys_rpl_semi_sync_always_on(&vars, "rpl_semi_sync_always_on",
+                            &rpl_semi_sync_always_on,
+                            fix_rpl_semi_sync_always_on);
+static sys_var_long_ptr
+sys_rpl_semi_sync_enabled(&vars, "rpl_semi_sync_enabled",
+                          &rpl_semi_sync_enabled,
+                          fix_rpl_semi_sync_enabled);
+static sys_var_long_ptr
+sys_rpl_semi_sync_slave_enabled(&vars, "rpl_semi_sync_slave_enabled",
+                                &rpl_semi_sync_slave_enabled,
+                                fix_rpl_semi_sync_slave_enabled);
+static sys_var_long_ptr
+sys_rpl_semi_sync_timeout(&vars, "rpl_semi_sync_timeout",
+                          &rpl_semi_sync_timeout,
+                          fix_rpl_semi_sync_timeout);
+static sys_var_long_ptr
+sys_rpl_semi_sync_trace_level(&vars, "rpl_semi_sync_trace_level",
+                              &rpl_semi_sync_trace_level,
+                              fix_rpl_semi_sync_trace_level);
 static sys_var_long_ptr	sys_query_cache_size(&vars, "query_cache_size",
 					     &query_cache_size,
 					     fix_query_cache_size);
@@ -1470,6 +1496,72 @@ static void fix_rpl_hierarchical_cache_frequency(THD *thd, enum_var_type type)
   */
 
   mysql_bin_log.unlock_log();
+
+  DBUG_VOID_RETURN;
+}
+
+static void fix_rpl_semi_sync_always_on(THD *thd, enum_var_type type)
+{
+  DBUG_ENTER("fix_rpl_semi_sync_always_on");
+
+  DBUG_PRINT("info", ("rpl_semi_sync_always_on=%d",
+                      rpl_semi_sync_always_on));
+
+  if (rpl_semi_sync_always_on)
+    semi_sync_replicator.force_on();
+
+  DBUG_VOID_RETURN;
+}
+
+static void fix_rpl_semi_sync_timeout(THD *thd, enum_var_type type)
+{
+  DBUG_ENTER("fix_rpl_semi_sync_timeout");
+
+  DBUG_PRINT("info", ("rpl_semi_sync_timeout=%lu",
+                      rpl_semi_sync_timeout));
+  semi_sync_replicator.set_wait_timeout(rpl_semi_sync_timeout);
+
+  DBUG_VOID_RETURN;
+}
+
+static void fix_rpl_semi_sync_trace_level(THD *thd, enum_var_type type)
+{
+  DBUG_ENTER("fix_rpl_semi_sync_trace_level");
+
+  DBUG_PRINT("info", ("rpl_semi_sync_trace_level=%lu",
+                      rpl_semi_sync_trace_level));
+  semi_sync_replicator.set_trace_level(rpl_semi_sync_trace_level);
+
+  DBUG_VOID_RETURN;
+}
+
+static void fix_rpl_semi_sync_enabled(THD *thd, enum_var_type type)
+{
+  DBUG_ENTER("fix_rpl_semi_sync_enabled");
+  DBUG_PRINT("info", ("rpl_semi_sync_enabled=%lu",
+                      rpl_semi_sync_enabled));
+
+  if (rpl_semi_sync_enabled)
+  {
+    if (semi_sync_replicator.enable_master() != 0)
+      rpl_semi_sync_enabled= false;
+  }
+  else
+  {
+    if (semi_sync_replicator.disable_master() != 0)
+      rpl_semi_sync_enabled= true;
+  }
+
+  DBUG_VOID_RETURN;
+}
+
+static void fix_rpl_semi_sync_slave_enabled(THD *thd, enum_var_type type)
+{
+  DBUG_ENTER("fix_rpl_semi_sync_slave_enabled");
+
+  DBUG_PRINT("info", ("rpl_semi_sync_slave_enabled=%lu",
+                      rpl_semi_sync_slave_enabled));
+  semi_sync_replicator.set_slave_enabled(rpl_semi_sync_slave_enabled != 0);
 
   DBUG_VOID_RETURN;
 }

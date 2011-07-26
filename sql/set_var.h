@@ -210,8 +210,9 @@ class sys_var_bool_ptr :public sys_var
 {
 public:
   my_bool *value;
-  sys_var_bool_ptr(sys_var_chain *chain, const char *name_arg, my_bool *value_arg)
-    :sys_var(name_arg),value(value_arg)
+  sys_var_bool_ptr(sys_var_chain *chain, const char *name_arg,
+                   my_bool *value_arg, sys_after_update_func func= NULL)
+    :sys_var(name_arg, func), value(value_arg)
   { chain_sys_var(chain); }
   bool check(THD *thd, set_var *var)
   {

@@ -1545,6 +1545,13 @@ public:
 #endif
     }
   } transaction;
+
+  /*
+    Tracks the farthest binlog offset achieved by transactions in this thread.
+  */
+  char *repl_wait_binlog_name;
+  my_off_t repl_wait_binlog_pos;
+
   Field      *dup_field;
 #ifndef __WIN__
   sigset_t signals;
@@ -1801,6 +1808,8 @@ public:
     KILLED_NO_VALUE      /* means neither of the states */
   };
   killed_state volatile killed;
+  /* Whether the slave is doing semi-synchronous replication. */
+  bool       semi_sync_slave;
 
   /* scramble - random string sent to client on handshake */
   char	     scramble[SCRAMBLE_LENGTH+1];

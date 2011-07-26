@@ -614,6 +614,7 @@ protected:
 /* BINLOG_DUMP options */
 
 #define BINLOG_DUMP_NON_BLOCK   0x0001
+#define BINLOG_SEMI_SYNC        0x0002
 #define BINLOG_USE_GROUP_ID     0x0004
 #define BINLOG_MASK             0x0005
 
@@ -2101,6 +2102,7 @@ extern MYSQL_PLUGIN_IMPORT struct system_variables global_system_variables;
 extern struct system_variables max_system_variables;
 extern struct system_status_var global_status_var;
 extern struct rand_struct sql_rand;
+extern pthread_mutex_t LOCK_stats;
 
 extern const char *opt_date_time_formats[];
 extern KNOWN_DATE_TIME_FORMAT known_date_time_formats[];

@@ -24,6 +24,7 @@
 #include "rpl_filter.h"
 #include <my_dir.h>
 #include "debug_sync.h"
+#include "repl_semi_sync.h"
 
 bool failover= 0;
 
@@ -346,6 +347,23 @@ Increase max_allowed_packet on master";
   return error;
 }
 
+static void repl_cleanup(ushort flags, String *packet,
+                         char *packet_fixed_buffer)
+{
+  if (flags & BINLOG_SEMI_SYNC)
+  {
+    /* One less semi-sync client. */
+    thread_safe_sub(rpl_semi_sync_clients, 1, &LOCK_stats);
+  }
+  if (packet_fixed_buffer != NULL)
+  {
+    /* Release or free memory allocated for the packet */
+    packet->set((char*)0, 0, &my_charset_bin);
+
+    /* Free the fixed packet buffer. */
+    my_free(packet_fixed_buffer, MYF(0));
+  }
+}
 
 /*
   TODO: Clean up loop to only have one call to send_file()
@@ -357,6 +375,25 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
   LOG_INFO linfo;
   char *log_file_name = linfo.log_file_name;
   char search_file_name[FN_REFLEN], *name;
+  bool need_sync= false;
+
+  thd->semi_sync_slave= (flags & BINLOG_SEMI_SYNC);
+
+  int ev_offset;
+  if (!thd->semi_sync_slave)
+    ev_offset= 1;
+  else
+    ev_offset= 3;
+
+  /*
+    We pre-allocate fixed buffer for event packets.  If an event is more
+    than the size, String class will re-allocate memory and we will
+    reset the packet memory for the next packet creation command.
+    In this way, we do not need to allocate memory from small events.
+  */
+  const ulong packet_fixed_buffer_size= rpl_event_buffer_size;
+  char *packet_fixed_buffer= NULL;
+
   IO_CACHE log;
   File file = -1;
   String* packet = &thd->packet;
@@ -375,6 +412,16 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
   DBUG_PRINT("enter",("log_ident: '%s'  pos: %ld", log_ident, (long) pos));
 
   bzero((char*) &log,sizeof(log));
+  sql_print_information("Start %s binlog_dump to slave_server(%d), "
+                        "pos(%s, %lu)",
+                        thd->semi_sync_slave ? "semi-sync" : "asynchronous",
+                        thd->server_id, log_ident, (ulong)pos);
+
+  if (flags & BINLOG_SEMI_SYNC)
+  {
+    /* One more semi-sync clients. */
+    thread_safe_increment(rpl_semi_sync_clients, &LOCK_stats);
+  }
 
 #ifndef DBUG_OFF
   if (opt_sporadic_binlog_dump_fail && (binlog_dump_count++ % 2))
@@ -413,6 +460,16 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
   }
   call_exit_dump_thread= true;
 
+  /* Pre-allocate memory for event packets. */
+  packet_fixed_buffer= (char *)my_malloc(packet_fixed_buffer_size,
+                                         MYF(MY_WME));
+  if (packet_fixed_buffer == NULL)
+  {
+    errmsg=   "Master failed pre-allocate event fixed buffer";
+    my_errno= ER_OUTOFMEMORY;
+    goto err;
+  }
+
   name=search_file_name;
   if (log_ident[0])
     mysql_bin_log.make_log_name(search_file_name, log_ident);
@@ -449,7 +506,8 @@ impossible position";
     We need to start a packet with something other than 255
     to distinguish it from error
   */
-  packet->set("\0", 1, &my_charset_bin); /* This is the start of a new packet */
+  semi_sync_replicator.reserve_sync_header(
+    packet, thd, packet_fixed_buffer, packet_fixed_buffer_size);
 
   /*
     Tell the client about the log name with a fake Rotate event;
@@ -489,7 +547,8 @@ impossible position";
     my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
     goto err;
   }
-  packet->set("\0", 1, &my_charset_bin);
+  semi_sync_replicator.reserve_sync_header(
+    packet, thd, packet_fixed_buffer, packet_fixed_buffer_size);
   /*
     Adding MAX_LOG_EVENT_HEADER_LEN, since a binlog event can become
     this larger than the corresponding packet (query) sent 
@@ -513,28 +572,28 @@ impossible position";
      {
        /*
          The packet has offsets equal to the normal offsets in a binlog
-         event +1 (the first character is \0).
+         event + ev_offset (the first character is \0).
        */
        DBUG_PRINT("info",
                   ("Looked for a Format_description_log_event, found event type %d",
-                   (*packet)[EVENT_TYPE_OFFSET+1]));
-       if ((*packet)[EVENT_TYPE_OFFSET+1] == FORMAT_DESCRIPTION_EVENT)
+                   (*packet)[EVENT_TYPE_OFFSET+ev_offset]));
+       if ((*packet)[EVENT_TYPE_OFFSET+ev_offset] == FORMAT_DESCRIPTION_EVENT)
        {
-         binlog_can_be_corrupted= test((*packet)[FLAGS_OFFSET+1] &
+         binlog_can_be_corrupted= test((*packet)[FLAGS_OFFSET+ev_offset] &
                                        LOG_EVENT_BINLOG_IN_USE_F);
-         (*packet)[FLAGS_OFFSET+1] &= ~LOG_EVENT_BINLOG_IN_USE_F;
+         (*packet)[FLAGS_OFFSET+ev_offset] &= ~LOG_EVENT_BINLOG_IN_USE_F;
          /*
            mark that this event with "log_pos=0", so the slave
            should not increment master's binlog position
            (rli->group_master_log_pos)
          */
-         int4store((char*) packet->ptr()+LOG_POS_OFFSET+1, 0);
+         int4store((char*) packet->ptr()+LOG_POS_OFFSET+ev_offset, 0);
          /*
            if reconnect master sends FD event with `created' as 0
            to avoid destroying temp tables.
           */
          int4store((char*) packet->ptr()+LOG_EVENT_MINIMAL_HEADER_LEN+
-                   ST_CREATED_OFFSET+1, (ulong) 0);
+                   ST_CREATED_OFFSET+ev_offset, (ulong) 0);
          /* send it */
          if (my_net_write(net, (uchar*) packet->ptr(), packet->length()))
          {
@@ -561,7 +620,8 @@ impossible position";
        */
      }
      /* reset the packet as we wrote to it in any case */
-     packet->set("\0", 1, &my_charset_bin);
+     semi_sync_replicator.reserve_sync_header(
+       packet, thd, packet_fixed_buffer, packet_fixed_buffer_size);
   } /* end of if (pos > BIN_LOG_HEADER_SIZE); */
   else
   {
@@ -573,6 +633,7 @@ impossible position";
 
   while (!net->error && net->vio != 0 && !thd->killed)
   {
+    Log_event_type event_type;
     my_off_t prev_pos= pos;
     bool is_active_binlog= false;
     while (!(error= Log_event::read_log_event(&log, packet, log_lock,
@@ -590,9 +651,21 @@ impossible position";
       }
 #endif
 
+      DBUG_PRINT("info", ("Send packet: %s: current log position %lu",
+                          log_file_name, (ulong)my_b_tell(&log)));
+      pos= my_b_tell(&log);
+      if (semi_sync_replicator.update_sync_header(
+        packet, log_file_name+dirname_length(log_file_name),
+        pos, thd, &need_sync, &event_type) != 0)
+      {
+        errmsg= "Failed on update-1 semi-sync header";
+        my_errno= LOG_READ_MEM;
+        goto err;
+      }
+
       DBUG_EXECUTE_IF("dump_thread_wait_before_send_xid",
                       {
-                        if ((*packet)[EVENT_TYPE_OFFSET+1] == XID_EVENT)
+                        if (event_type == XID_EVENT)
                         {
                           net_flush(net);
                           const char act[]=
@@ -604,13 +677,13 @@ impossible position";
                         }
                       });
 
-      if ((*packet)[EVENT_TYPE_OFFSET+1] == FORMAT_DESCRIPTION_EVENT)
+      if (event_type == FORMAT_DESCRIPTION_EVENT)
       {
-        binlog_can_be_corrupted= test((*packet)[FLAGS_OFFSET+1] &
+        binlog_can_be_corrupted= test((*packet)[FLAGS_OFFSET+ev_offset] &
                                       LOG_EVENT_BINLOG_IN_USE_F);
-        (*packet)[FLAGS_OFFSET+1] &= ~LOG_EVENT_BINLOG_IN_USE_F;
+        (*packet)[FLAGS_OFFSET+ev_offset] &= ~LOG_EVENT_BINLOG_IN_USE_F;
       }
-      else if ((*packet)[EVENT_TYPE_OFFSET+1] == STOP_EVENT)
+      else if (event_type == STOP_EVENT)
         binlog_can_be_corrupted= FALSE;
 
       if (my_net_write(net, (uchar*) packet->ptr(), packet->length()))
@@ -622,15 +695,14 @@ impossible position";
 
       DBUG_EXECUTE_IF("dump_thread_wait_before_send_xid",
                       {
-                        if ((*packet)[EVENT_TYPE_OFFSET+1] == XID_EVENT)
+                        if (event_type == XID_EVENT)
                         {
                           net_flush(net);
                         }
                       });
 
-      DBUG_PRINT("info", ("log event code %d",
-			  (*packet)[LOG_EVENT_OFFSET+1] ));
-      if ((*packet)[LOG_EVENT_OFFSET+1] == LOAD_EVENT)
+      DBUG_PRINT("info", ("log event code %d", event_type));
+      if (event_type == LOAD_EVENT)
       {
 	if (send_file(thd))
 	{
@@ -639,7 +711,14 @@ impossible position";
 	  goto err;
 	}
       }
-      packet->set("\0", 1, &my_charset_bin);
+
+      if (need_sync &&
+          semi_sync_replicator.read_slave_reply(thd, net, &errmsg,
+                                                &my_errno) != 0)
+        goto err;
+
+      semi_sync_replicator.reserve_sync_header(
+        packet, thd, packet_fixed_buffer, packet_fixed_buffer_size);
     }
     if (rpl_crash_on_binlog_io_error &&
         (error == LOG_READ_BOGUS || error == LOG_READ_IO ||
@@ -760,6 +839,16 @@ impossible position";
 	if (read_packet)
 	{
 	  thd_proc_info(thd, "Sending binlog event to slave");
+          pos= my_b_tell(&log);
+          if (semi_sync_replicator.update_sync_header(
+            packet, log_file_name + dirname_length(log_file_name),
+            pos, thd, &need_sync, &event_type) != 0)
+          {
+            errmsg= "Failed on update-2 semi-sync header";
+            my_errno= LOG_READ_MEM;
+            goto err;
+          }
+
 	  if (my_net_write(net, (uchar*) packet->ptr(), packet->length()) )
 	  {
 	    errmsg = "Failed on my_net_write()";
@@ -767,7 +856,7 @@ impossible position";
 	    goto err;
 	  }
 
-	  if ((*packet)[LOG_EVENT_OFFSET+1] == LOAD_EVENT)
+	  if (event_type == LOAD_EVENT)
 	  {
 	    if (send_file(thd))
 	    {
@@ -776,11 +865,14 @@ impossible position";
 	      goto err;
 	    }
 	  }
-	  packet->set("\0", 1, &my_charset_bin);
-	  /*
-	    No need to net_flush because we will get to flush later when
-	    we hit EOF pretty quick
-	  */
+
+          if (need_sync &&
+              semi_sync_replicator.read_slave_reply(thd, net, &errmsg,
+                                                    &my_errno) != 0)
+            goto err;
+
+          semi_sync_replicator.reserve_sync_header(
+            packet, thd, packet_fixed_buffer, packet_fixed_buffer_size);
 	}
 
 	log.error=0;
@@ -830,14 +922,20 @@ impossible position";
 	goto err;
       }
 
-      packet->length(0);
-      packet->append('\0');
+      DBUG_PRINT("info",
+                 ("binlog_dump new binlog filename: %s", log_file_name));
+      semi_sync_replicator.reserve_sync_header(
+        packet, thd, packet_fixed_buffer, packet_fixed_buffer_size);
+      pos= BIN_LOG_HEADER_SIZE;
     }
   }
 
 end:
+  sql_print_information("End binlog_dump successfully: %d", thd->server_id);
+
   end_io_cache(&log);
   (void)my_close(file, MYF(MY_WME));
+  repl_cleanup(flags, packet, packet_fixed_buffer);
 
   my_eof(thd);
   thd_proc_info(thd, "Waiting to finalize termination");
@@ -849,8 +947,11 @@ end:
   DBUG_VOID_RETURN;
 
 err:
+  sql_print_information("End binlog_dump unsuccessful: %d - %s",
+                        thd->server_id, errmsg);
   thd_proc_info(thd, "Waiting to finalize termination");
   end_io_cache(&log);
+  repl_cleanup(flags, packet, packet_fixed_buffer);
   /*
     Exclude  iteration through thread list
     this is needed for purge_logs() - it will iterate through

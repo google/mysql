@@ -31,6 +31,7 @@
 #endif
 #include <my_dir.h>
 #include "debug_sync.h"
+#include "repl_semi_sync.h"
 
 #define STR_OR_NIL(S) ((S) ? (S) : "<nil>")
 
@@ -5561,6 +5562,10 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
   pthread_mutex_lock(&LOCK_status);
   if (option_type == OPT_GLOBAL)
     calc_sum_of_all_status(&tmp);
+
+  // This is always done to show immediately whether semi-sync is up or down.
+  semi_sync_replicator.set_export_stats();
+
   res= show_status_array(thd, wild,
                          (SHOW_VAR *)all_status_vars.buffer,
                          option_type, tmp1, "", tables->table,

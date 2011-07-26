@@ -28,6 +28,7 @@
 #include "sql_repl.h"
 #include "rpl_filter.h"
 #include "rpl_rli.h"
+#include "repl_semi_sync.h"
 
 #include <my_dir.h>
 #include <stdarg.h>
@@ -3554,6 +3555,7 @@ bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
   LOG_INFO linfo;
   bool error=0;
   const char* save_name;
+  bool do_semi_sync_reset_master= false;
   DBUG_ENTER("reset_logs");
 
   // If called from init_slave() it is just to purge relay logs so no
@@ -3579,6 +3581,17 @@ bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
   }
   safe_mutex_assert_owner(&LOCK_log);
   safe_mutex_assert_owner(&LOCK_index);
+
+  if (log_type == LOG_BIN)
+  {
+    do_semi_sync_reset_master= true;
+    int result= semi_sync_replicator.reset_master(thd);
+    if (result)
+    {
+      error= 1;
+      goto err;
+    }
+  }
 
   /* Save variables so that we can reopen the log */
   save_name=name;
@@ -3672,11 +3685,16 @@ bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
   my_free((uchar*) save_name, MYF(0));
 
 err:
-  VOID(pthread_mutex_unlock(&LOCK_thread_count));
+  if (do_semi_sync_reset_master)
+  {
+    semi_sync_replicator.reset_master_complete();
+  }
+
   if (need_lock) {
     pthread_mutex_unlock(&LOCK_index);
     pthread_mutex_unlock(&LOCK_log);
   }
+  VOID(pthread_mutex_unlock(&LOCK_thread_count));
   DBUG_RETURN(error);
 }
 
@@ -5060,6 +5078,7 @@ ulonglong MYSQL_BIN_LOG::get_group_id_to_use(THD *thd)
 bool MYSQL_BIN_LOG::write(Log_event *event_info)
 {
   THD *thd= event_info->thd;
+  bool reported_binlog_offset= false;
   bool error= 1;
   DBUG_ENTER("MYSQL_BIN_LOG::write(Log_event *)");
 
@@ -5285,6 +5304,34 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                                     log_file_name, my_b_safe_tell(&log_file));
       }
 
+      if (opt_using_transactions &&
+          !(thd->options & (OPTION_NOT_AUTOCOMMIT | OPTION_BEGIN)))
+      {
+        /*
+          LOAD DATA INFILE in AUTOCOMMIT=1 mode writes to the binlog
+          chunks also before it is successfully completed. We only report
+          the binlog write and do the commit inside the transactional table
+          handler if the log event type is appropriate.
+
+          TODO(ehudm): jtolmer: This comment and supporting logic are copied
+          from the 4.0 sources. Is it still applicable? I would think that we'd
+          always report the binlog offset here. We always consume a group_id at
+          this point in the code.
+          TODO(ehudm): Add another test that tests the conditions above to see
+          if we can get rid of the "if" below.
+        */
+
+        if (event_info->get_type_code() == QUERY_EVENT ||
+            event_info->get_type_code() == EXEC_LOAD_EVENT)
+        {
+          if (semi_sync_replicator.report_binlog_offset(thd,
+                                                        log_file_name,
+                                                        file->pos_in_file))
+            goto err;
+          reported_binlog_offset= true;
+        }
+      }
+
       signal_update();
       if ((error= rotate_and_purge(RP_LOCK_LOG_IS_ALREADY_LOCKED)))
         goto err;
@@ -5298,6 +5345,11 @@ err:
   }
 
   pthread_mutex_unlock(&LOCK_log);
+
+  /* Trigger semi-sync wait if it is enabled and needed. */
+  if (reported_binlog_offset)
+    semi_sync_replicator.commit_trx(thd);
+
   DBUG_RETURN(error);
 }
 
@@ -5878,6 +5930,11 @@ DBUG_skip_commit:
           repl_hier_cache_push_back(group_id, last_event_server_id,
                                     log_file_name, my_b_safe_tell(&log_file));
       }
+
+      if (semi_sync_replicator.report_binlog_offset(thd,
+                                                    log_file_name,
+                                                    log_file.pos_in_file))
+        goto err;
 
       signal_update();
     }
