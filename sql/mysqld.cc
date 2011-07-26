@@ -28,6 +28,7 @@
 #include "mysys_err.h"
 #include "events.h"
 #include "debug_sync.h"
+#include "repl_semi_sync.h"
 
 #include "../storage/myisam/ha_myisam.h"
 
@@ -704,6 +705,7 @@ pthread_mutex_t LOCK_mysql_create_db, LOCK_Acl, LOCK_open, LOCK_thread_count,
 	        LOCK_global_system_variables,
 		LOCK_user_conn, LOCK_slave_list, LOCK_active_mi,
                 LOCK_connection_count;
+pthread_mutex_t LOCK_stats;
 /**
   The below lock protects access to two global server variables:
   max_prepared_stmt_count and prepared_stmt_count. These variables
@@ -1529,6 +1531,7 @@ static void clean_up_mutexes()
   (void) pthread_cond_destroy(&COND_thread_cache);
   (void) pthread_cond_destroy(&COND_flush_thread_cache);
   (void) pthread_cond_destroy(&COND_manager);
+  (void) pthread_mutex_destroy(&LOCK_stats);
 }
 
 #endif /*EMBEDDED_LIBRARY*/
@@ -3277,6 +3280,10 @@ static int init_common_variables(const char *conf_file_name, int argc,
   DBUG_PRINT("info",("%s  Ver %s for %s on %s\n",my_progname,
                      server_version, SYSTEM_TYPE,MACHINE_TYPE));
 
+  /* Must be called after set_options() and MY_INIT(). */
+  if (semi_sync_replicator.init_object() != 0)
+    return 1;
+
 #ifdef HAVE_LARGE_PAGES
   /* Initialize large page size */
   if (opt_large_pages && (opt_large_page_size= my_get_large_page_size()))
@@ -3584,6 +3591,7 @@ static int init_thread_environment()
 #endif
   (void) pthread_mutex_init(&LOCK_server_started, MY_MUTEX_INIT_FAST);
   (void) pthread_cond_init(&COND_server_started,NULL);
+  (void) pthread_mutex_init(&LOCK_stats, MY_MUTEX_INIT_FAST);
   sp_cache_init();
 #ifdef HAVE_EVENT_SCHEDULER
   Events::init_mutexes();
@@ -5810,7 +5818,13 @@ enum options_mysqld
   OPT_RPL_HIERARCHICAL_CACHE_FREQUENCY,
   OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY,
   OPT_RPL_HIERARCHICAL_50_COMPAT,
-  OPT_RPL_EVENT_CHECKSUMS
+  OPT_RPL_EVENT_CHECKSUMS,
+  OPT_RPL_SEMI_SYNC,
+  OPT_RPL_SEMI_SYNC_ALWAYS_ON,
+  OPT_RPL_SEMI_SYNC_SLAVE,
+  OPT_RPL_SEMI_SYNC_TIMEOUT,
+  OPT_RPL_SEMI_SYNC_TRACE,
+  OPT_RPL_EVENT_BUFFER_SIZE
 };
 
 
@@ -7369,6 +7383,44 @@ thread is in the relay logs.",
    "Enable checksums on events written to the bin log.",
    &rpl_event_checksums,
    0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
+  {"rpl_event_buffer_size", OPT_RPL_EVENT_BUFFER_SIZE,
+   "The fixed event buffer during replication: actual event can exceed it; "
+   "avoids need to malloc/free memory for events smaller than this",
+   &rpl_event_buffer_size,
+   &rpl_event_buffer_size,
+   0, GET_ULONG, REQUIRED_ARG,
+   1024 * 1024,                               /* the default size */
+   16 * 1024,                                 /* the minimum size */
+   8 * 1024 * 1024,                           /* the maximum size */
+   0, 1, 0},
+  {"rpl_semi_sync_enabled", OPT_RPL_SEMI_SYNC,
+   "1 = Enable semi-synchronous replication. 0 = Disable it",
+   &rpl_semi_sync_enabled,
+   &rpl_semi_sync_enabled, 0, GET_ULONG, REQUIRED_ARG,
+   0, 0, 1, 0, 1, 0},
+  {"rpl_semi_sync_always_on", OPT_RPL_SEMI_SYNC_ALWAYS_ON,
+   "Force semi-sync to always be on. If no or slow slaves, will block "
+   "transactions.",
+   &rpl_semi_sync_always_on,
+   &rpl_semi_sync_always_on, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
+  {"rpl_semi_sync_slave_enabled", OPT_RPL_SEMI_SYNC_SLAVE,
+   "1 = Enable semi-synchronous in the slave database.  The slave will be "
+   "the semi-sync replication target",
+   &rpl_semi_sync_slave_enabled,
+   &rpl_semi_sync_slave_enabled, 0, GET_ULONG, REQUIRED_ARG,
+   0, 0, 1, 0, 1, 0},
+  {"rpl_semi_sync_timeout", OPT_RPL_SEMI_SYNC_TIMEOUT,
+   "The timeout value (in ms) for semi-synchronous replication in the master",
+   &rpl_semi_sync_timeout,
+   &rpl_semi_sync_timeout,
+   0, GET_ULONG, REQUIRED_ARG, 50, 0, ~0L, 0, 1, 0},
+  {"rpl_semi_sync_trace_level", OPT_RPL_SEMI_SYNC_TRACE,
+   "The tracing level for semi-sync replication.",
+   &rpl_semi_sync_trace_level,
+   &rpl_semi_sync_trace_level,
+   0, GET_ULONG, REQUIRED_ARG,
+   32,  /* By default, we trace the network waiting time. */
+   0, ~0L, 0, 1, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -7801,6 +7853,31 @@ SHOW_VAR status_vars[]= {
   {"Queries",                  (char*) &show_queries,            SHOW_FUNC},
   {"Questions",                (char*) offsetof(STATUS_VAR, questions), SHOW_LONG_STATUS},
 #ifdef HAVE_REPLICATION
+  {"Rpl_semi_sync_clients", (char*) &rpl_semi_sync_clients, SHOW_LONG},
+  {"Rpl_semi_sync_net_avg_wait_time(us)", (char*) &rpl_semi_sync_net_wait_time,
+   SHOW_LONG},
+  {"Rpl_semi_sync_net_wait_time", (char*) &rpl_semi_sync_net_wait_total_time,
+   SHOW_LONGLONG},
+  {"Rpl_semi_sync_net_waits", (char*) &rpl_semi_sync_net_wait_num,
+   SHOW_LONGLONG},
+  {"Rpl_semi_sync_no_times", (char*) &rpl_semi_sync_off_times, SHOW_LONG},
+  {"Rpl_semi_sync_no_tx", (char*) &rpl_semi_sync_no_transactions, SHOW_LONG},
+  {"Rpl_semi_sync_status", (char*) &rpl_semi_sync_status, SHOW_LONG},
+  {"Rpl_semi_sync_slave_status",(char*) &rpl_semi_sync_slave_status, SHOW_LONG},
+  {"Rpl_semi_sync_timefunc_failures", (char*) &rpl_semi_sync_timefunc_fails,
+   SHOW_LONG},
+  {"Rpl_semi_sync_timeouts", (char*) &rpl_semi_sync_num_timeouts, SHOW_LONG},
+  {"Rpl_semi_sync_tx_avg_wait_time(us)", (char*) &rpl_semi_sync_trx_wait_time,
+   SHOW_LONG},
+  {"Rpl_semi_sync_tx_wait_time", (char*) &rpl_semi_sync_trx_wait_total_time,
+   SHOW_LONGLONG},
+  {"Rpl_semi_sync_tx_waits", (char*) &rpl_semi_sync_trx_wait_num,
+   SHOW_LONGLONG},
+  {"Rpl_semi_sync_wait_pos_backtraverse", (char*) &rpl_semi_sync_back_wait_pos,
+   SHOW_LONG},
+  {"Rpl_semi_sync_wait_sessions", (char*) &rpl_semi_sync_wait_sessions,
+   SHOW_LONG},
+  {"Rpl_semi_sync_yes_tx",  (char*) &rpl_semi_sync_yes_transactions, SHOW_LONG},
   {"Rpl_status",               (char*) &show_rpl_status,          SHOW_FUNC},
 #endif
   {"Select_full_join",         (char*) offsetof(STATUS_VAR, select_full_join_count), SHOW_LONG_STATUS},

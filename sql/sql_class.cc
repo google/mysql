@@ -606,6 +606,8 @@ THD::THD()
    user_time(0), in_sub_stmt(0),
    sql_log_bin_toplevel(false),
    binlog_table_maps(0), binlog_flags(0UL),
+   repl_wait_binlog_name(NULL),
+   repl_wait_binlog_pos(0),
    table_map_for_update(0),
    arg_of_last_insert_id_function(FALSE),
    first_successful_insert_id_in_prev_stmt(0),
@@ -614,6 +616,7 @@ THD::THD()
    stmt_depends_on_first_successful_insert_id_in_prev_stmt(FALSE),
    examined_row_count(0),
    global_read_lock(0),
+   semi_sync_slave(false),
    is_fatal_error(0),
    transaction_rollback_request(0),
    is_fatal_sub_stmt_error(0),
@@ -988,6 +991,9 @@ void THD::cleanup(void)
     pthread_mutex_unlock(&LOCK_user_locks);
     ull= NULL;
   }
+  my_free(repl_wait_binlog_name, MYF(MY_ALLOW_ZERO_PTR));
+  repl_wait_binlog_name= NULL;
+  repl_wait_binlog_pos= 0;
 
   cleanup_done=1;
   DBUG_VOID_RETURN;

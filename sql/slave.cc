@@ -47,6 +47,7 @@
 
 #include "rpl_tblmap.h"
 #include "debug_sync.h"
+#include "repl_semi_sync.h"
 
 #define FLAGSTR(V,F) ((V)&(F)?#F" ":"")
 
@@ -1982,7 +1983,7 @@ static int safe_sleep(THD* thd, int sec, CHECK_KILLED_FUNC thread_killed,
 
 
 static int request_dump(MYSQL* mysql, Master_info* mi,
-                        bool *suppress_warnings)
+                        bool *suppress_warnings, bool semi_sync_slave)
 {
   uchar buf[FN_REFLEN + 18];
   int len, name_len;
@@ -1990,6 +1991,10 @@ static int request_dump(MYSQL* mysql, Master_info* mi,
   char* logname = mi->master_log_name;
   enum_server_command cmd= COM_BINLOG_DUMP;
   DBUG_ENTER("request_dump");
+
+  /* If semi-synchronous replication is enabled, set the flag. */
+  if (semi_sync_slave)
+    binlog_flags|= BINLOG_SEMI_SYNC;
   
   *suppress_warnings= FALSE;
 
@@ -2701,6 +2706,9 @@ pthread_handler_t handle_slave_io(void *arg)
 #ifndef DBUG_OFF
   uint retry_count_reg= 0, retry_count_dump= 0, retry_count_event= 0;
 #endif
+  bool semi_sync_slave= semi_sync_replicator.get_slave_enabled();
+  bool semi_sync_status= false;
+
   // needs to call my_thread_init(), otherwise we get a coredump in DBUG_ stuff
   my_thread_init();
   DBUG_ENTER("handle_slave_io");
@@ -2757,8 +2765,9 @@ pthread_handler_t handle_slave_io(void *arg)
   {
     if (!mi->connect_using_group_id)
       sql_print_information("Slave I/O thread: connected to master '%s@%s:%d', "
-                            "replication started in log '%s' at position %s",
+                            "%s replication started in log '%s' at position %s",
                             mi->user, mi->host, mi->port,
+                            semi_sync_slave ? "semi-sync" : "asynchronous",
                             IO_RPL_LOG_NAME,
                             llstr(mi->master_log_pos, llbuff));
     else
@@ -2812,6 +2821,14 @@ connected:
     goto connected;
   } 
 
+  /* Export the semi-sync status. */
+  if (semi_sync_slave && !semi_sync_status)
+  {
+    /* Semi-sync status is ON now. */
+    thread_safe_add(rpl_semi_sync_slave_status, 1, &LOCK_stats);
+    semi_sync_status= true;
+  }
+
   if (mi->rli.relay_log.description_event_for_queue->binlog_version > 1)
   {
     /*
@@ -2848,7 +2865,7 @@ connected:
   while (!io_slave_killed(thd,mi))
   {
     thd_proc_info(thd, "Requesting binlog dump");
-    if (request_dump(mysql, mi, &suppress_warnings))
+    if (request_dump(mysql, mi, &suppress_warnings, semi_sync_slave))
     {
       sql_print_error("Failed on request_dump()");
       if (check_io_slave_killed(thd, mi, "Slave I/O thread killed while \
@@ -2872,6 +2889,8 @@ requesting master dump") ||
     DBUG_ASSERT(mi->last_error().number == 0);
     while (!io_slave_killed(thd,mi))
     {
+      const char* event_buf;
+      bool need_reply;
       ulong event_len;
       /*
          We say "waiting" because read_event() will wait if there's nothing to
@@ -2933,10 +2952,23 @@ Stopping slave I/O thread due to out-of-memory error from master");
       */
       mi->connect_using_group_id= false;
 
+      need_reply= false;
+      if (semi_sync_slave)
+      {
+        if (semi_sync_replicator.slave_read_sync_header(
+              (const char*)mysql->net.read_pos + 1, event_len,
+              &need_reply, &event_buf, &event_len) != 0)
+        {
+          sql_print_error("Missing magic number in packet header.");
+          goto err;
+        }
+      }
+      else
+        event_buf= (const char*)mysql->net.read_pos + 1;
+
       retry_count=0;                    // ok event, reset retry counter
       thd_proc_info(thd, "Queueing master event to the relay log");
-      if (queue_event(mi,(const char*)mysql->net.read_pos + 1,
-                      event_len))
+      if (queue_event(mi, event_buf, event_len))
       {
         mi->report(ERROR_LEVEL, ER_SLAVE_RELAY_LOG_WRITE_FAILURE,
                    ER(ER_SLAVE_RELAY_LOG_WRITE_FAILURE),
@@ -2948,6 +2980,16 @@ Stopping slave I/O thread due to out-of-memory error from master");
         sql_print_error("Failed to flush master info file");
         goto err;
       }
+
+      /* We can reply the status now. */
+      if (need_reply &&
+          semi_sync_replicator.slave_reply(&mysql->net, mi->master_log_name,
+                                           mi->master_log_pos))
+      {
+        sql_print_error("Reply semi-sync packet failed.");
+        goto err;
+      }
+
       /*
         See if the relay logs take too much space.
         We don't lock mi->rli.log_space_lock here; this dirty read saves time
@@ -3017,6 +3059,13 @@ err:
   change_rpl_status(RPL_ACTIVE_SLAVE,RPL_IDLE_SLAVE);
   DBUG_ASSERT(thd->net.buff != 0);
   net_end(&thd->net); // destructor will not free it, because net.vio is 0
+
+  if (semi_sync_status)
+  {
+    /* Semi-sync status is OFF now. */
+    thread_safe_sub(rpl_semi_sync_slave_status, 1, &LOCK_stats);
+  }
+
   close_thread_tables(thd);
   pthread_mutex_lock(&LOCK_thread_count);
   THD_CHECK_SENTRY(thd);

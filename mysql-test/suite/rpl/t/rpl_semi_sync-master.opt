@@ -1,0 +1,1 @@
+--rpl_semi_sync_enabled=1 --rpl_semi_sync_timeout=1000

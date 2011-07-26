@@ -5798,6 +5798,7 @@ int Xid_log_event::do_apply_event(Relay_log_info const *rli)
   /* For a slave Xid_log_event is COMMIT */
   general_log_print(thd, COM_QUERY,
                     "COMMIT /* implicit, from Xid_log_event */");
+  const_cast<Relay_log_info*>(rli)->future_group_master_log_pos= log_pos;
   return end_trans(thd, COMMIT);
 }
 

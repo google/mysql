@@ -1,0 +1,269 @@
+#TODO(ehudm): jtolmer: Might be good to refactor the test so that engine is a
+# param and it can be called for both InnoDB and MyISAM.
+--source include/have_innodb.inc
+source include/master-slave.inc;
+
+connection master;
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show variables like 'rpl_semi_sync_enabled';
+
+connection slave;
+# Restart I/O thread to make sure that semi-sync is caught up.
+--source include/stop_slave.inc
+show variables like 'rpl_semi_sync_slave_enabled';
+set global rpl_semi_sync_slave_enabled= 1;
+--source include/start_slave.inc
+
+connection master;
+show status like 'Rpl_semi_sync_clients';
+# This DDL statement should be semi-synced.
+--disable_warnings
+drop table if exists t1;
+--enable_warnings
+
+create table t1(n int) engine= InnoDB;
+let $i= 300;
+while ($i)
+{
+  eval insert into t1 values ($i);
+  dec $i;
+}
+
+--source include/show_master_status.inc
+save_master_pos;
+
+connection slave;
+sync_with_master;
+
+show status like 'Rpl_semi_sync_slave_status';
+
+select count(distinct n) from t1;
+select min(n) from t1;
+select max(n) from t1;
+# stop slave to let semi-sync replication fail.
+--source include/stop_slave.inc
+
+connection master;
+
+# The first semi-sync check should be on because after slave stop,
+# there are no transactions on the master.
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_clients';
+
+begin;
+insert into t1 values (500);
+delete from t1 where n < 500;
+commit;
+insert into t1 values (100);
+--sleep 2
+
+# The second semi-sync check should be off because one transaction
+# times out during waiting.
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+save_master_pos;
+
+connection slave;
+show status like 'Rpl_semi_sync_slave_status';
+--source include/start_slave.inc
+sync_with_master;
+show status like 'Rpl_semi_sync_slave_status';
+
+select count(distinct n) from t1;
+select min(n) from t1;
+select max(n) from t1;
+
+connection master;
+drop table t1;
+save_master_pos;
+
+# The third semi-sync check should be on again.
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+
+connection slave;
+sync_with_master;
+--source include/stop_slave.inc
+
+# Binlog dump thread dies asynchronously which causes the test to fail
+# intermittently. Make it deterministic by killing it. A --sleep is not
+# sufficient because the thread may be blocked in wait_for_update.
+connection master;
+let $dump_id= query_get_value(show processlist, Id, 6);
+--error 0,1094
+--replace_result $dump_id Id
+eval kill $dump_id;
+--sleep 1
+
+show variables like 'rpl_semi_sync_enabled';
+
+# disable semi-sync on the fly
+set global rpl_semi_sync_enabled= 0;
+show variables like 'rpl_semi_sync_enabled';
+show status like 'Rpl_semi_sync_status';
+
+# enable semi-sync on the fly
+set global rpl_semi_sync_enabled= 1;
+
+# Prepare for next set of tests while slave still stopped to ensure
+# that this statement will aways be a no_tx. If slave is started before
+# the statement, there is a race between the binlog dump thread and
+# the thread running the create and so the counts could get thrown off.
+create table t1 (a int primary key auto_increment) engine= InnoDB;
+save_master_pos;
+
+connection slave;
+--source include/start_slave.inc
+sync_with_master;
+
+# Test rpl_semi_sync_always_on
+connection master;
+set global rpl_semi_sync_always_on= 1;
+set global rpl_semi_sync_timeout= 10;
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_timeouts';
+
+insert into t1 values (NULL);
+insert into t1 values (NULL);
+
+# semi-sync still on, yes result has gone up, timeouts stayed same
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_timeouts';
+
+connection slave;
+--source include/stop_slave.inc
+
+connection master;
+insert into t1 values (NULL);
+insert into t1 values (NULL);
+
+# semi-sync still on, yes result has gone up, timeouts gone up
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_timeouts';
+
+# check that a waiting transaction can be killed
+connection master;
+# Very large timeouts used to cause overflow and so the wait would return
+# immedidately. Use very large value here to test that issue is fixed.
+# 365 * 24 * 60 * 60 * 1000
+set global rpl_semi_sync_timeout= 31536000000;
+
+connect (con1, localhost, root,,);
+connection con1;
+let $id= query_get_value(select connection_id() as Id, Id, 1);
+send insert into t1 values (NULL);
+
+connection master;
+--sleep 1
+--replace_column 1 # 3 # 6 #
+show processlist;
+
+--replace_result $id id
+eval kill $id;
+--sleep 1
+--replace_column 1 # 3 # 6 #
+show processlist;
+
+# semi-sync still on, yes result has gone up, timeouts gone up
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_timeouts';
+
+connection slave;
+--source include/start_slave.inc
+
+connection master;
+insert into t1 values (NULL);
+
+# semi-sync still on, yes result has gone up
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_timeouts';
+
+# large timeouts used to cause a hang if a bin log rotation happened
+# while a transaction was waiting for ACK from slave
+connection slave;
+--source include/stop_slave.inc
+
+connection master;
+send insert into t1 values (NULL);
+--sleep 1
+
+connect (master2, localhost, root,,);
+send flush logs;
+
+connection slave;
+--source include/start_slave.inc
+
+connection master;
+reap;
+
+connection master2;
+reap;
+
+disconnect master2;
+
+connection master;
+
+# semi-sync still on, yes result has gone up
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_timeouts';
+
+# large timeouts used to cause a hang on LOCK_open if no slave was connected
+# when some DDL statements ran (ALTER TABLE, DROP, ...).
+connection slave;
+--source include/stop_slave.inc
+
+connection master;
+send drop table t1;
+
+connection slave;
+--source include/start_slave.inc
+
+connection master;
+# without the fix, this reap wouldn't return until semi-sync timeout expired.
+reap;
+
+# semi-sync still on, yes result has gone up
+show status like 'Rpl_semi_sync_status';
+show status like 'Rpl_semi_sync_no_tx';
+show status like 'Rpl_semi_sync_yes_tx';
+show status like 'Rpl_semi_sync_timeouts';
+
+# Note: Disable the reset {master,slave} tests below if you need the
+# binlogs for debugging.
+
+# Test 'reset master'.
+connection master;
+reset master;
+# Slave should disconnect due to bad binlog pos.
+--sleep 1
+show status like 'Rpl_semi_sync_clients';
+
+# Test 'reset slave'.
+connection slave;
+--source include/stop_slave.inc
+reset slave;
+--source include/start_slave.inc
+
+connection master;
+show status like 'Rpl_semi_sync_clients';
+
+set global rpl_semi_sync_timeout= 1000;
+set global rpl_semi_sync_always_on= 0;
+--source include/rpl_end.inc

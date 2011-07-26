@@ -27,6 +27,7 @@
 #include "rpl_filter.h"
 #include <myisampack.h>
 #include <errno.h>
+#include "repl_semi_sync.h"
 
 #ifdef WITH_PARTITION_STORAGE_ENGINE
 #include "ha_partition.h"
@@ -1198,6 +1199,11 @@ int ha_commit_trans(THD *thd, bool all)
         goto end;
       }
     DBUG_EXECUTE_IF("crash_commit_after", DBUG_SUICIDE(););
+
+    /* Trigger semi-sync wait if it is enabled and needed. */
+    if (all ||
+        (!(thd->options & (OPTION_NOT_AUTOCOMMIT | OPTION_BEGIN))))
+      error= semi_sync_replicator.commit_trx(thd);
 end:
     if (rw_trans)
       start_waiting_global_read_lock(thd);
