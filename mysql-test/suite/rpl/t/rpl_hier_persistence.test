@@ -4,6 +4,10 @@
 --source include/have_rpl_hierarchical.inc
 --source include/master-slave.inc
 
+connection slave;
+--source include/stop_slave.inc
+connection master;
+
 # Start with some non-default group_id value.
 
 #
@@ -65,5 +69,9 @@ let $current_id= query_get_value(show master status, Group_ID, 1);
 --disable_query_log
 eval select $expected_id - $current_id as zero;
 --enable_query_log
+
+connection slave;
+--source include/start_slave.inc
+connection master;
 
 --source include/rpl_end.inc
