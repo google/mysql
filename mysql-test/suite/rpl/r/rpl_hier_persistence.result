@@ -1,5 +1,6 @@
 include/master-slave.inc
 [connection master]
+include/stop_slave.inc
 set binlog_group_id=1209, master_server_id=1;
 include/rpl_restart_server.inc [server_number=1]
 zero
@@ -24,4 +25,5 @@ set binlog_group_id=18446744073709551615, master_server_id=1;
 include/rpl_restart_server.inc [server_number=1]
 zero
 0
+include/start_slave.inc
 include/rpl_end.inc
