@@ -267,6 +267,7 @@ static int httpd_process_request(THD *thd, HTTPRequest *req)
   }
   else if (MatchURL(net, "GET /var"))
   {
+    req->parseURLParams();
     err= req->var();
     if (!err)
       req->GenerateHeader(200, false);

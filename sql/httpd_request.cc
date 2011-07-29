@@ -29,7 +29,98 @@
 #include "rpl_mi.h"
 
 #define MAX_PREFIX_LENGTH 80                 // somewhat arbitrary
+#define MAX_VAR_NAME_LENGTH 160
 
+/**
+   Insert the string spanned from *base to *end into 'var_head'.
+
+   This is a helper function for parseURLParams. The string to insert
+   begins at *base and extends to *end. A new list node is allocated to
+   contain the new string. This node then becomes the new head of our
+   linked list.
+*/
+
+void HTTPRequest::insertVar(uchar *base, uchar *end)
+{
+  uchar *token;
+  LIST *node;
+
+  node= (LIST *) my_malloc(sizeof(LIST), MYF(0));
+  token= (uchar *) my_malloc(sizeof(uchar) * ((end - base) + 1), MYF(0));
+  strncpy((char *) token, (char *) base, end - base);
+  token[end - base]= '\0';
+  node->data= token;
+  var_head= list_add(var_head, node);
+}
+
+/**
+   Parse the /var parameter string and return the results.
+
+   Currently the only supported format is:
+
+     var=variable1:variable2:...
+
+   Example URLs:
+
+     http://localhost:8080/var?var=num_procs
+     http://localhost:8080/var?var=num_procs:status_aborted_clients
+
+   @param[in]      net  network object for this connection
+   @param[in,out]  req  the HTTPRequest object associated with this connection
+
+   @return Operation Status
+     @retval  true    ERROR
+     @retval  false   OK
+*/
+
+bool HTTPRequest::parseURLParams()
+{
+  int max_chars= 600;                         // longest param list we accept
+  uchar *url= net->buff;
+  uchar *c;                                   // curent char we are inspecting
+  uchar *base;                                // start of the current token
+  const char *prefix= "/var?var=";
+
+  // Skip the "GET ".
+  url+= 4;
+
+  // Check to see whether or not we should expect at least one parameter.
+  if (strncmp((const char *) url, prefix, sizeof(prefix)))
+  {
+    return false;
+  }
+
+  while (*url != '=')
+  {
+    url++;
+  }
+
+  url++;
+  base= url;
+
+  for (int i= 0; i < max_chars; i++)
+  {
+    c= url + i;
+
+    // Perhaps this should be expanded at some point for more chars.
+    if (*c == ' ' || *c == '\n' || *c == '\r' || *c == '&')
+    {
+      insertVar(base, c);
+      return false;
+    }
+
+    // We may need a better rule at some point.
+    if (*c == ':')
+    {
+      insertVar(base, c);
+      // Skip the symbol we broke on.
+      c++;
+      base= c;
+    }
+  }
+
+  return false;
+}
 
 bool HTTPRequest::WriteTableHeader(const char *title,
                                    const char *const *headings)
@@ -100,20 +191,27 @@ bool HTTPRequest::WriteTableColumn(const char *host, int port)
   return WriteBodyFmt("  <td>%s:%d</td>\r\n", host, port);
 }
 
+bool HTTPRequest::WriteBodyFmtVaList(const char *fmt, va_list ap)
+{
+  char buff[1024];
+  int ret= vsnprintf(buff, sizeof(buff) - 1, fmt, ap);
+  if (ret < 0)
+    return true;
+  return WriteBody(buff, ret);
+}
+
 /**
   Write a formatted string for the HTTP response body text.
   Return true if an error occurred, false otherwise.
 */
 bool HTTPRequest::WriteBodyFmt(const char *fmt, ...)
 {
-  char buff[1024];
   va_list ap;
+  bool res= false;
   va_start(ap, fmt);
-  int ret= vsnprintf(buff, sizeof(buff) - 1, fmt, ap);
-  if (ret < 0)
-    return true;
+  res= WriteBodyFmtVaList(fmt, ap);
   va_end(ap);
-  return WriteBody(buff, ret);
+  return res;
 }
 
 /**
@@ -179,6 +277,49 @@ bool HTTPRequest::GenerateError(const char *msg)
 }
 
 /**
+   Prints out the given variable, filtering it if the url query asks
+   for specific variables and the current one is not one of them.
+
+   @return Operation status
+     @retval  0       OK
+     @retval  errno   ERROR
+*/
+
+int HTTPRequest::var_PrintVar(const char *fmt, ...)
+{
+  va_list ap;
+  bool error;
+  bool write= var_head ? false : true;
+  LIST *node;
+
+  if (var_head)
+  {
+    // First argument is the key (a string).
+    va_start(ap, fmt);
+    char* key= va_arg(ap, char*);
+    va_end(ap);
+
+    for(node= var_head; node != NULL; node= node->next)
+    {
+      if (!strcmp((char *) node->data, key))
+      {
+        write= true;
+        break;
+      }
+    }
+  }
+
+  if (write)
+  {
+    va_start(ap, fmt);
+    error= WriteBodyFmtVaList(fmt, ap);
+    va_end(ap);
+  }
+
+  return error;
+}
+
+/**
    Output a list of status variables that would otherwise be achieved
    by commands like 'SHOW VARIABLES' and 'SHOW STATUS'.
 
@@ -238,14 +379,21 @@ int HTTPRequest::var_GenVars(const char *prefix, SHOW_VAR *vars)
       get_variable_value(thd_, &tmp, OPT_GLOBAL, &tmp_stat,
                          varbuf, &result, &resultend);
 
+    int key_length= strlen(prefix) + strlen(variables->name) + 1;
+    char key[MAX_VAR_NAME_LENGTH];
+    key_length= (key_length > MAX_VAR_NAME_LENGTH) ?
+                MAX_VAR_NAME_LENGTH : key_length;
+
     /*
       MySQL status variables are always capitalised on the first
       character, so we choose to lowercase it here to fit in with
       the existing format provided by the mysql_var_reporter.
     */
-    error |= WriteBodyFmt("%s%c%s %s\r\n",
-                          prefix, tolower(variables->name[0]),
-                          variables->name + 1, result);
+
+    my_snprintf(key, key_length, "%s%c%s", prefix,
+                tolower(variables->name[0]), variables->name + 1);
+
+    var_PrintVar("%s %s\r\n", key, result);
   }
   return (error) ? ER_OUT_OF_RESOURCES : 0;
 }
@@ -291,55 +439,51 @@ int HTTPRequest::var_MasterStatus()
 
   if (mi == NULL || mi->host[0] == '\0')
   {
-    err|= WriteBodyFmt("master_configured 1\r\n");
-    err|= WriteBodyFmt("slave_configured 0\r\n");
+    var_PrintVar("%s %s\r\n", "master_configured", "1");
+    var_PrintVar("%s %s\r\n", "slave_configured", "0");
     return (err) ? ER_OUT_OF_RESOURCES : 0;
   }
 
   mysql_bin_log.get_group_and_server_id(&group_id, &group_server_id);
 
-  err|= WriteBodyFmt("master_configured 0\r\n");
-  err|= WriteBodyFmt("slave_configured 1\r\n");
+  var_PrintVar("%s %s\r\n", "master_configured", "1");
+  var_PrintVar("%s %s\r\n", "slave_configured", "0");
 
   pthread_mutex_lock(&mi->data_lock);
   pthread_mutex_lock(&mi->rli.data_lock);
   in_addr ip;
   inet_pton(AF_INET, mi->host, &ip);
-  err|= WriteBodyFmt("master_host %d\r\n", (uint32) ip.s_addr);
-  err|= WriteBodyFmt("master_port %d\r\n", (uint32) mi->port);
-  err|= WriteBodyFmt("connect_retry %d\r\n", (uint32) mi->connect_retry);
-  err|= WriteBodyFmt("read_master_log_pos %lld\r\n", mi->master_log_pos);
-  err|= WriteBodyFmt("read_master_log_name %s\r\n", mi->master_log_name);
-  err|= WriteBodyFmt("relay_log_pos %lld\r\n", mi->rli.group_relay_log_pos);
-  err|= WriteBodyFmt("relay_log_name %s\r\n", mi->rli.group_relay_log_name);
-  err|= WriteBodyFmt("slave_io_running %d\r\n",
-                     (mi->slave_running == MYSQL_SLAVE_RUN_CONNECT) ? 1 : 0);
-  err|= WriteBodyFmt("slave_sql_running %d\r\n",
-                     mi->rli.slave_running ? 1 : 0);
+  var_PrintVar("%s %d\r\n", "master_host", (uint32) ip.s_addr);
+  var_PrintVar("%s %d\r\n", "master_port ", (uint32) mi->port);
+  var_PrintVar("%s %d\r\n", "connect_retry", (uint32) mi->connect_retry);
+  var_PrintVar("%s %d\r\n", "read_master_log_pos", mi->master_log_pos);
+  var_PrintVar("%s %s\r\n", "read_master_log_name", mi->master_log_name);
+  var_PrintVar("%s %d\r\n", "relay_log_pos", mi->rli.group_relay_log_pos);
+  var_PrintVar("%s %s\r\n", "relay_log_name", mi->rli.group_relay_log_name);
+  var_PrintVar("%s %d\r\n", "slave_io_running",
+                (mi->slave_running == MYSQL_SLAVE_RUN_CONNECT) ? 1 : 0);
+  var_PrintVar("%s %d\r\n", "slave_sql_running",
+                mi->rli.slave_running ? 1 : 0);
   pthread_mutex_lock(&mi->err_lock);
   pthread_mutex_lock(&mi->rli.err_lock);
-  err |= WriteBodyFmt("last_sql_errno %d\r\n", (uint32) mi->rli.last_error().number);
-  err |= WriteBodyFmt("last_io_errno %d\r\n", (uint32) mi->last_error().number);
+  var_PrintVar("%s %d\r\n", "last_sql_errno",
+                (uint32) mi->rli.last_error().number);
+  var_PrintVar("%s %d\r\n", "last_io_errno", (uint32) mi->last_error().number);
   pthread_mutex_unlock(&mi->rli.err_lock);
   pthread_mutex_unlock(&mi->err_lock);
-  err|= WriteBodyFmt("skip_counter %d\r\n",
-                     (uint32) mi->rli.slave_skip_counter);
-  err|= WriteBodyFmt("exec_master_log_pos %d\r\n",
-                     (uint32) mi->rli.group_master_log_pos);
-  err|= WriteBodyFmt("exec_master_log_name %s\r\n",
-                     mi->rli.group_master_log_name);
-  err|= WriteBodyFmt("relay_log_space %d\r\n",
-                     (uint32) mi->rli.log_space_total);
-  err|= WriteBodyFmt("until_log_pos %d\r\n",
-                     (uint32) mi->rli.until_log_pos);
-  err|= WriteBodyFmt("until_log_name %s\r\n",
-                     mi->rli.until_log_name);
-  err|= WriteBodyFmt("master_ssl_allowed %d\r\n",
-                     (uint32) mi->ssl ? 1 : 0);
-  err|= WriteBodyFmt("group_id %d\r\n",
-                     (uint32) group_id);
-  err|= WriteBodyFmt("group_server_id %d\r\n",
-                     (uint32) group_server_id);
+  var_PrintVar("%s %d\r\n", "skip_counter",
+                (uint32) mi->rli.slave_skip_counter);
+  var_PrintVar("%s %d\r\n", "exec_master_log_pos",
+                (uint32) mi->rli.group_master_log_pos);
+  var_PrintVar("%s %s\r\n", "exec_master_log_name",
+                mi->rli.group_master_log_name);
+  var_PrintVar("%s %d\r\n", "relay_log_space",
+                (uint32) mi->rli.log_space_total);
+  var_PrintVar("%s %d\r\n", "until_log_pos", (uint32) mi->rli.until_log_pos);
+  var_PrintVar("%s %s\r\n", "until_log_name",  mi->rli.until_log_name);
+  var_PrintVar("%s %d\r\n", "master_ssl_allowed", (uint32) mi->ssl ? 1 : 0);
+  var_PrintVar("%s %d\r\n", "group_id", (uint32) group_id);
+  var_PrintVar("%s %d\r\n", "group_server_id", (uint32) group_server_id);
 
   long secs= 0;
 
@@ -352,7 +496,7 @@ int HTTPRequest::var_MasterStatus()
       secs= 0;
   }
 
-  err|= WriteBodyFmt("seconds_behind_master %lld\r\n", secs);
+  var_PrintVar("%s %d\r\n", "seconds_behind_master", secs);
   pthread_mutex_unlock(&mi->rli.data_lock);
   pthread_mutex_unlock(&mi->data_lock);
   return (err) ? ER_OUT_OF_RESOURCES : 0;
@@ -400,12 +544,12 @@ int HTTPRequest::var_ProcessList()
   if (num_procs > 0)
     mean_proc_time= total_proc_time / num_procs;
   bool err= false;
-  err|= WriteBodyFmt("num_procs %d\r\n", num_procs);
-  err|= WriteBodyFmt("idle_procs %d\r\n", idle_procs);
-  err|= WriteBodyFmt("active_procs %d\r\n", active_procs);
-  err|= WriteBodyFmt("mean_proc_time %lld\r\n", mean_proc_time);
-  err|= WriteBodyFmt("total_proc_time %lld\r\n", total_proc_time);
-  err|= WriteBodyFmt("oldest_active_proc_time %d\r\n", oldest_start_time);
+  var_PrintVar("%s %d\r\n", "num_procs", num_procs);
+  var_PrintVar("%s %d\r\n", "idle_procs", idle_procs);
+  var_PrintVar("%s %d\r\n", "active_procs", active_procs);
+  var_PrintVar("%s %lld\r\n", "mean_proc_time", mean_proc_time);
+  var_PrintVar("%s %lld\r\n", "total_proc_time", total_proc_time);
+  var_PrintVar("%s %d\r\n", "oldest_active_proc_time", oldest_start_time);
   return (err) ? ER_OUT_OF_RESOURCES : 0;
 }
 

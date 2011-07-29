@@ -30,6 +30,7 @@ private:
     These functions return true on error and false on success.
   */
   bool WriteBodyFmt(const char *fmt, ...);
+  bool WriteBodyFmtVaList(const char *fmt, va_list ap);
 
   bool WriteBody(const char *buff)
   {
@@ -76,6 +77,7 @@ private:
   int var_TableStats();
   int var_IndexStats();
   int var_MasterStatus();
+  int var_PrintVar(const char *fmt, ...);
 
   /**
     These are the /status helper functions for generating HTML tables
@@ -87,13 +89,22 @@ private:
   int status_TableStats();
   int status_IndexStats();
 
+  void insertVar(uchar *base, uchar *end);
+
   THD *thd_;
   NET *net;
   String resp_body_, resp_header_;
   MEM_ROOT req_mem_root;
+
+  /*
+    List of variables requested via the /var?var=var1:var2:... url.
+  */
+  LIST *var_head;
+
 public:
-HTTPRequest(THD *thd)
-  : thd_(thd), resp_body_(NULL), resp_header_(NULL)
+
+  HTTPRequest(THD *thd)
+    : thd_(thd), resp_body_(NULL), resp_header_(NULL)
   {
     net= &thd_->net;
 
@@ -104,10 +115,15 @@ HTTPRequest(THD *thd)
       allocated in 32K chunks.
     */
     init_alloc_root(&req_mem_root, 32768, 32768);
+
+    var_head= NULL;
   }
 
   ~HTTPRequest()
   {
+    if (var_head)
+      list_free(var_head, 1);
+
     free_root(&req_mem_root, 0);
   }
 
@@ -125,6 +141,8 @@ HTTPRequest(THD *thd)
     Generate a HTTP error message.
   */
   bool GenerateError(const char *msg);
+
+  bool parseURLParams();
 
   /**
     Functions that implement the GET requests.
