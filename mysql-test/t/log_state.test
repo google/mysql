@@ -301,7 +301,8 @@ SET GLOBAL general_log_file = 'bug32748.query.log';
 SET GLOBAL slow_query_log_file = 'bug32748.slow.log';
 
 --echo
-SHOW VARIABLES LIKE '%log_file';
+SHOW VARIABLES LIKE 'general_log_file';
+SHOW VARIABLES LIKE 'slow_query_log_file';
 
 # Reset to initial values
 --echo
