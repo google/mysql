@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# This script connects to a running mysql instance and fetches the
+# /var in a tight loop, trying to obtain an increase in VmSize/VmRSS.
+
+NAME="instance/$1"
+
+if [[ ! -a ${NAME}/mysql.pid ]]
+then
+  echo ${NAME} is not started
+  exit
+fi
+
+PID=$(cat ${NAME}/mysql.pid)
+HTTP_PORT=$(cat ${NAME}/mysql.http_port)
+
+i=0
+max=100000
+every=1000
+while [[ ${i} -ne ${max} ]]
+do
+  wget 0.0.0.0:${HTTP_PORT}/var -O /dev/null -o /dev/null
+
+  if [[ $(( ${i} % ${every})) -eq 0 ]]
+  then
+    printf "%6d/%6d queries " $i ${max}
+    egrep 'VmSize|VmRSS' "/proc/${PID}/status" | xargs
+  fi
+  i=$(( ${i} + 1))
+done
