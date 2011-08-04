@@ -275,7 +275,7 @@ int init_slave()
     DBUG_ASSERT(rpl_hierarchical_slave_recovery);
 
     sql_print_information("Hierarchical replication crash recovery running. "
-                          "Purging existing relay logs and turnning on "
+                          "Purging existing relay logs and turning on "
                           "connect_using_group_id.");
 
     /* Connect to the master using the group_id recovered from the bin log */
