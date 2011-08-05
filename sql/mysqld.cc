@@ -7340,8 +7340,8 @@ thread is in the relay logs.",
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"rpl_hierarchical", OPT_RPL_HIERARCHICAL_ENABLED,
    "Enable replication global group IDs and hierarchical replication "
-   "features.", &rpl_hierarchical,
-   0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
+   "features. Must set --log-bin and --log-slave-updates to use this.",
+   &rpl_hierarchical, 0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
   {"rpl_hierarchical_act_as_root", OPT_RPL_HIERARCHICAL_ACT_AS_ROOT,
    "Used for testing rpl_hierarchical. Makes a slave pretend to be "
    "the root master, issuing group_ids for events rather than preserving the "
