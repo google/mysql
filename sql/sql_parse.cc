@@ -378,6 +378,7 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_SHOW_CREATE_EVENT]=  CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_PROFILES]= CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_PROFILE]= CF_STATUS_COMMAND;
+  sql_command_flags[SQLCOM_SHOW_BINLOG_INFO_FOR]= CF_STATUS_COMMAND;
 
    sql_command_flags[SQLCOM_SHOW_TABLES]=       (CF_STATUS_COMMAND |
                                                  CF_SHOW_TABLE_COMMAND |
