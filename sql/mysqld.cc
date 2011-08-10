@@ -1111,6 +1111,7 @@ static void close_connections(void)
   DBUG_VOID_RETURN;
 }
 
+#ifdef HAVE_CLOSE_SERVER_SOCK
 /* Helper function for close_server_sock() only.  */
 static void close_server_sock_helper(my_socket &sock, const char *sock_name)
 {
@@ -1132,6 +1133,7 @@ static void close_server_sock_helper(my_socket &sock, const char *sock_name)
 #endif
   }
 }
+#endif
 
 static void close_server_sock()
 {
