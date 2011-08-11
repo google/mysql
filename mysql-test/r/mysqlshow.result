@@ -104,6 +104,7 @@ Database: information_schema
 | TABLES                                |
 | TABLE_CONSTRAINTS                     |
 | TABLE_PRIVILEGES                      |
+| TABLE_STATISTICS                      |
 | TRIGGERS                              |
 | USER_PRIVILEGES                       |
 | VIEWS                                 |
@@ -144,6 +145,7 @@ Database: INFORMATION_SCHEMA
 | TABLES                                |
 | TABLE_CONSTRAINTS                     |
 | TABLE_PRIVILEGES                      |
+| TABLE_STATISTICS                      |
 | TRIGGERS                              |
 | USER_PRIVILEGES                       |
 | VIEWS                                 |
