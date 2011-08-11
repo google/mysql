@@ -66,6 +66,11 @@ static bool audit_log_all_tables;
 static char *audit_log_table_list= NULL;
 
 /*
+  Keep track of the state of our audit_log hash table.
+*/
+static bool is_audit_hashtable_inited= false;
+
+/*
    Table that we want to force a log of queries on
 */
 static HASH audit_log_tables;
@@ -925,7 +930,7 @@ bool LOGGER::error_log_print(enum loglevel level, const char *format,
 }
 
 const uchar *audit_log_tables_get_key(const char *table,
-                                      uint *length,
+                                      size_t *length,
                                       my_bool not_used __attribute__((unused)))
 {
   *length= strlen(table);
@@ -942,19 +947,12 @@ void init_audit_logging(void)
   */
   for (int x= 0; x <= SQLCOM_END; x++)
     audit_stmt_filter[x]= false;
-
-  if (hash_init(&audit_log_tables, system_charset_info, 5,
-                0, 0, (hash_get_key) audit_log_tables_get_key,
-                0, 0))
-  {
-    sql_print_error("Initializing audit log tables failed.");
-    unireg_abort(1);
-  }
 }
 
 void free_audit_logging(void)
 {
-  hash_free(&audit_log_tables);
+  if (is_audit_hashtable_inited)
+    hash_free(&audit_log_tables);
   if (audit_log_table_list)
     free(audit_log_table_list);
 }
@@ -998,9 +996,9 @@ void LOGGER::init_base()
   inited= 1;
 
   /*
-    This function will initialize the hash table necessary for audit
-    logging, but will turn off audit logging itself.  This works
-    because we have not yet checked the command line options.
+    Here we initialize all of our audit log settings to the "off" position.
+    This works becase we have not het handled the command line parameters
+    that may set these values.
   */
   init_audit_logging();
 
@@ -5488,6 +5486,16 @@ void MYSQL_BIN_LOG::signal_update()
 
 void init_audit_log_tables(const char* comma_list)
 {
+
+  if (hash_init(&audit_log_tables, system_charset_info, 5,
+                0, 0, (hash_get_key) audit_log_tables_get_key,
+                0, 0))
+  {
+    sql_print_error("Initializing audit log tables failed.");
+    unireg_abort(1);
+  }
+  is_audit_hashtable_inited= true;
+
   if (comma_list == NULL || strlen(comma_list) == 0)
     return;
 
