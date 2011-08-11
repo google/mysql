@@ -936,8 +936,9 @@ static sys_var_log_state sys_var_slow_query_log(&vars, "slow_query_log", &opt_sl
 /* Synonym of "slow_query_log" for consistency with SHOW VARIABLES output */
 static sys_var_log_state sys_var_log_slow(&vars, "log_slow_queries",
                                           &opt_slow_log, QUERY_LOG_SLOW);
-static sys_var_log_state sys_var_audit_log(&vars, "audit_log", &opt_audit_log,
-                                           QUERY_LOG_AUDIT);
+static sys_var_const sys_var_audit_log(&vars, "audit_log",
+                                       OPT_GLOBAL, SHOW_BOOL,
+                                       (uchar*) &opt_audit_log);
 sys_var_str sys_var_general_log_path(&vars, "general_log_file", sys_check_log_path,
 				     sys_update_general_log_path,
 				     sys_default_general_log_path,
