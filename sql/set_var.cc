@@ -2625,6 +2625,7 @@ bool update_sys_var_str_path(THD *thd, sys_var_str *var_str,
       break;
     case QUERY_LOG_GENERAL:
       file_log->open_query_log(sys_var_general_log_path.value);
+      break;
     case QUERY_LOG_AUDIT:
       file_log->open_audit_log(sys_var_audit_log_path.value);
       break;
