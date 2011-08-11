@@ -972,6 +972,7 @@ enum enum_schema_tables
   SCH_TABLE_CONSTRAINTS,
   SCH_TABLE_NAMES,
   SCH_TABLE_PRIVILEGES,
+  SCH_TABLE_STATISTICS,
   SCH_TRIGGERS,
   SCH_USER_PRIVILEGES,
   SCH_VARIABLES,
@@ -1799,4 +1800,3 @@ static inline void dbug_tmp_restore_column_maps(MY_BITMAP *read_set,
 
 
 size_t max_row_length(TABLE *table, const uchar *data);
-

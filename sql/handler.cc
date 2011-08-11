@@ -3629,6 +3629,52 @@ int handler::index_next_same(uchar *buf, const uchar *key, uint keylen)
   DBUG_RETURN(error);
 }
 
+/**
+  Updates the global table stats with the TABLE this handler represents.
+*/
+
+void handler::update_global_table_stats()
+{
+  /*
+    TODO(jtolmer): Uncomment for now so that table stats actually contains
+    some data. Revert with next patch which adds stats updating.
+
+    if (!rows_read && !rows_changed)
+      return;                                     // Nothing to update.
+  */
+
+  if (!current_thd)
+  {
+    /*
+      Only *known* scenario in which this happens is during shutdown
+      of a slave which replicated temporary tables and this call is
+      being generated on the kill_server_thread out of
+      st_relay_log_info::close_temporary_tables.
+    */
+    sql_print_error("No current_thd available to update_global_table_stats. "
+                    "Skipping updating table stats.");
+    return;
+  }
+
+  pthread_mutex_lock(&LOCK_global_table_stats);
+
+  if (!get_table_stats(current_thd, table, &cached_table_stats,
+                       &version_table_stats))
+  {
+    // Updates the global table stats.
+    cached_table_stats->rows_read+= rows_read;
+    cached_table_stats->rows_changed+= rows_changed;
+    cached_table_stats->rows_changed_x_indexes+=
+      rows_changed * (table->s->keys ? table->s->keys : 1);
+  }
+  /*
+    TODO(jtolmer): User stats
+    current_thd->diff_total_read_rows+= rows_read;
+  */
+  rows_read= rows_changed= 0;
+
+  pthread_mutex_unlock(&LOCK_global_table_stats);
+}
 
 void handler::get_dynamic_partition_info(PARTITION_INFO *stat_info,
                                          uint part_id)

@@ -68,6 +68,7 @@ STATISTICS
 TABLES
 TABLE_CONSTRAINTS
 TABLE_PRIVILEGES
+TABLE_STATISTICS
 TRIGGERS
 USER_PRIVILEGES
 VIEWS
@@ -114,6 +115,7 @@ c	table_name
 TABLES	TABLES
 TABLE_CONSTRAINTS	TABLE_CONSTRAINTS
 TABLE_PRIVILEGES	TABLE_PRIVILEGES
+TABLE_STATISTICS	TABLE_STATISTICS
 TRIGGERS	TRIGGERS
 tables_priv	tables_priv
 time_zone	time_zone
@@ -133,6 +135,7 @@ c	table_name
 TABLES	TABLES
 TABLE_CONSTRAINTS	TABLE_CONSTRAINTS
 TABLE_PRIVILEGES	TABLE_PRIVILEGES
+TABLE_STATISTICS	TABLE_STATISTICS
 TRIGGERS	TRIGGERS
 tables_priv	tables_priv
 time_zone	time_zone
@@ -152,6 +155,7 @@ c	table_name
 TABLES	TABLES
 TABLE_CONSTRAINTS	TABLE_CONSTRAINTS
 TABLE_PRIVILEGES	TABLE_PRIVILEGES
+TABLE_STATISTICS	TABLE_STATISTICS
 TRIGGERS	TRIGGERS
 tables_priv	tables_priv
 time_zone	time_zone
@@ -644,6 +648,7 @@ Tables_in_information_schema (T%)
 TABLES
 TABLE_CONSTRAINTS
 TABLE_PRIVILEGES
+TABLE_STATISTICS
 TRIGGERS
 create database information_schema;
 ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
@@ -653,6 +658,7 @@ Tables_in_information_schema (T%)	Table_type
 TABLES	SYSTEM VIEW
 TABLE_CONSTRAINTS	SYSTEM VIEW
 TABLE_PRIVILEGES	SYSTEM VIEW
+TABLE_STATISTICS	SYSTEM VIEW
 TRIGGERS	SYSTEM VIEW
 create table t1(a int);
 ERROR 42S02: Unknown table 't1' in information_schema
@@ -665,6 +671,7 @@ Tables_in_information_schema (T%)
 TABLES
 TABLE_CONSTRAINTS
 TABLE_PRIVILEGES
+TABLE_STATISTICS
 TRIGGERS
 select table_name from tables where table_name='user';
 table_name
@@ -861,13 +868,14 @@ STATISTICS	TABLE_NAME	select
 TABLES	TABLE_NAME	select
 TABLE_CONSTRAINTS	TABLE_NAME	select
 TABLE_PRIVILEGES	TABLE_NAME	select
+TABLE_STATISTICS	TABLE_NAME	select
 VIEWS	TABLE_NAME	select
 delete from mysql.user where user='mysqltest_4';
 delete from mysql.db where user='mysqltest_4';
 flush privileges;
 SELECT table_schema, count(*) FROM information_schema.TABLES WHERE table_schema IN ('mysql', 'INFORMATION_SCHEMA', 'test', 'mysqltest') AND table_name<>'ndb_binlog_index' AND table_name<>'ndb_apply_status' GROUP BY TABLE_SCHEMA;
 table_schema	count(*)
-information_schema	35
+information_schema	36
 mysql	23
 create table t1 (i int, j int);
 create trigger trg1 before insert on t1 for each row
@@ -1279,6 +1287,7 @@ STATISTICS	TABLE_SCHEMA
 TABLES	TABLE_SCHEMA
 TABLE_CONSTRAINTS	CONSTRAINT_SCHEMA
 TABLE_PRIVILEGES	TABLE_SCHEMA
+TABLE_STATISTICS	TABLE_SCHEMA
 TRIGGERS	TRIGGER_SCHEMA
 USER_PRIVILEGES	GRANTEE
 VIEWS	TABLE_SCHEMA
@@ -1329,6 +1338,7 @@ STATISTICS	TABLE_SCHEMA
 TABLES	TABLE_SCHEMA
 TABLE_CONSTRAINTS	CONSTRAINT_SCHEMA
 TABLE_PRIVILEGES	TABLE_SCHEMA
+TABLE_STATISTICS	TABLE_SCHEMA
 TRIGGERS	TRIGGER_SCHEMA
 USER_PRIVILEGES	GRANTEE
 VIEWS	TABLE_SCHEMA
@@ -1437,6 +1447,7 @@ STATISTICS	information_schema.STATISTICS	1
 TABLES	information_schema.TABLES	1
 TABLE_CONSTRAINTS	information_schema.TABLE_CONSTRAINTS	1
 TABLE_PRIVILEGES	information_schema.TABLE_PRIVILEGES	1
+TABLE_STATISTICS	information_schema.TABLE_STATISTICS	1
 TRIGGERS	information_schema.TRIGGERS	1
 USER_PRIVILEGES	information_schema.USER_PRIVILEGES	1
 VIEWS	information_schema.VIEWS	1

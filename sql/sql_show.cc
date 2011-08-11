@@ -5577,6 +5577,48 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
 }
 
 
+/**
+   Write result to network for SHOW TABLE_STATISTICS
+
+  @param[in]  thd                   thread handler
+  @param[in]  wild                  wild string
+
+  @return
+    0             success
+    1             error
+*/
+
+int fill_schema_table_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
+{
+  TABLE *table= tables->table;
+
+  restore_record(table, s->default_values);
+
+  // Iterates through all the global table stats and sends them to the client.
+  // Pattern matching on the table name is supported.
+  pthread_mutex_lock(&LOCK_global_table_stats);
+  for (ulong i= 0; i < global_table_stats.records; ++i)
+  {
+    TABLE_STATS *table_stats=
+      (TABLE_STATS *) hash_element(&global_table_stats, i);
+    char* table_name_str= strstr(table_stats->table, ".") + 1;
+    table->field[0]->store(table_name_str, strlen(table_name_str),
+                           system_charset_info);
+    table->field[1]->store(table_stats->table,
+                           table_name_str - table_stats->table - 1,
+                           system_charset_info);
+    table->field[2]->store((longlong) table_stats->rows_read, TRUE);
+    table->field[3]->store((longlong) table_stats->rows_changed, TRUE);
+    table->field[4]->store((longlong) table_stats->rows_changed_x_indexes,
+                           TRUE);
+    schema_table_store_record(thd, table);
+  }
+  pthread_mutex_unlock(&LOCK_global_table_stats);
+
+  return 0;
+}
+
+
 /*
   Fill and store records into I_S.referential_constraints table
 
@@ -6866,6 +6908,24 @@ ST_FIELD_INFO referential_constraints_fields_info[]=
 };
 
 
+ST_FIELD_INFO table_statistics_fields_info[]=
+{
+  {"TABLE_NAME", NAME_CHAR_LEN, MYSQL_TYPE_STRING, 0, 0, "Table",
+   SKIP_OPEN_TABLE},
+  {"TABLE_SCHEMA", NAME_CHAR_LEN, MYSQL_TYPE_STRING, 0, 0, "Db",
+   SKIP_OPEN_TABLE},
+  {"ROWS_READ", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG,
+   0, 0, "Rows_read", SKIP_OPEN_TABLE},
+  {"ROWS_CHANGED", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG,
+   0, 0, "Rows_changed", SKIP_OPEN_TABLE},
+  {"ROWS_CHANGED_X_#INDEXES", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG,
+   0, 0, "Rows_changed_x_#indexes", SKIP_OPEN_TABLE},
+  // In 5.0 there was also an engine column. That wasn't ported to 5.1 because
+  // it is duplicated from INFORMATION_SCHEMA.TABLES.
+  {0, 0, MYSQL_TYPE_STRING, 0, 0, 0, SKIP_OPEN_TABLE}
+};
+
+
 /*
   Description of ST_FIELD_INFO in table.h
 
@@ -6942,6 +7002,8 @@ ST_SCHEMA_TABLE schema_tables[]=
    get_all_tables, make_table_names_old_format, 0, 1, 2, 1, 0},
   {"TABLE_PRIVILEGES", table_privileges_fields_info, create_schema_table,
    fill_schema_table_privileges, 0, 0, -1, -1, 0, 0},
+  {"TABLE_STATISTICS", table_statistics_fields_info, create_schema_table,
+   fill_schema_table_statistics, make_old_format, 0, -1, -1, 0, 0},
   {"TRIGGERS", triggers_fields_info, create_schema_table,
    get_all_tables, make_old_format, get_schema_triggers_record, 5, 6, 0,
    OPEN_TABLE_ONLY},

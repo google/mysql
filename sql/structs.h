@@ -389,3 +389,24 @@ public:
   Discrete_interval* get_tail() const { return tail; };
   Discrete_interval* get_current() const { return current; };
 };
+
+/*
+  The length of an array to store an account name, IP address or
+  hostname. The hostname might be truncated. The real size of the
+  field is this + 1 to null-terminate the value.
+*/
+#define USER_STATS_NAME_LENGTH USERNAME_LENGTH
+
+typedef struct st_table_stats {
+  /*
+    [db] + '.' + [table] + [optional '.' + 'username'] + '\0'
+
+    The table field is also used as the hash key. That is why
+    db and table and user are all concat'ed together in this
+    one field even though they are not displayed as one in
+    response to queries.
+  */
+  char table[NAME_LEN * 2 + USER_STATS_NAME_LENGTH + 3];
+  ulonglong rows_read, rows_changed;
+  ulonglong rows_changed_x_indexes;
+} TABLE_STATS;

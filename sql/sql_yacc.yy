@@ -1207,6 +1207,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  TABLES
 %token  TABLESPACE
 %token  TABLE_REF_PRIORITY
+%token  TABLE_STATS_SYM
 %token  TABLE_SYM                     /* SQL-2003-R */
 %token  TABLE_CHECKSUM_SYM
 %token  TEMPORARY                     /* SQL-2003-N */
@@ -10463,6 +10464,13 @@ show_param:
             if (prepare_schema_table(YYTHD, lex, 0, SCH_PROCEDURES))
               MYSQL_YYABORT;
           }
+        | TABLE_STATS_SYM
+          {
+            LEX *lex= Lex;
+            lex->sql_command= SQLCOM_SHOW_TABLE_STATS;
+            if (prepare_schema_table(YYTHD, lex, 0, SCH_TABLE_STATISTICS))
+              MYSQL_YYABORT;
+          }
         | PROCEDURE CODE_SYM sp_name
           {
 #ifdef DBUG_OFF
@@ -10643,6 +10651,8 @@ flush_option:
           { Lex->type|= REFRESH_DES_KEY_FILE; }
         | RESOURCES
           { Lex->type|= REFRESH_USER_RESOURCES; }
+        | TABLE_STATS_SYM
+          { Lex->type|= REFRESH_TABLE_STATS; }
         ;
 
 opt_table_list:
@@ -11972,6 +11982,7 @@ keyword_sp:
         | SWITCHES_SYM             {}
         | TABLES                   {}
         | TABLE_CHECKSUM_SYM       {}
+        | TABLE_STATS_SYM          {}
         | TABLESPACE               {}
         | TEMPORARY                {}
         | TEMPTABLE_SYM            {}

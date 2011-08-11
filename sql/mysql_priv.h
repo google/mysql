@@ -1091,7 +1091,9 @@ void mysql_init_multi_delete(LEX *lex);
 bool multi_delete_set_locks_and_link_aux_tables(LEX *lex);
 void init_max_user_conn(void);
 void init_update_queries(void);
+void init_global_table_stats(void);
 void free_max_user_conn(void);
+void free_global_table_stats(void);
 pthread_handler_t handle_bootstrap(void *arg);
 int mysql_execute_command(THD *thd);
 bool do_command(THD *thd);
@@ -1578,7 +1580,10 @@ TABLE *open_temporary_table(THD *thd, const char *path, const char *db,
 bool rm_temporary_table(handlerton *base, char *path);
 void free_io_cache(TABLE *entry);
 void intern_close_table(TABLE *entry);
-bool close_thread_table(THD *thd, TABLE **table_ptr);
+void update_table_stats(TABLE *table_ptr, bool follow_next);
+int get_table_stats(THD *thd, TABLE *table, TABLE_STATS **cached_stats,
+                    int *cached_version);
+bool close_thread_table(THD *thd, TABLE **table_ptr, bool update_stats);
 void close_temporary_tables(THD *thd);
 void close_tables_for_reopen(THD *thd, TABLE_LIST **tables);
 TABLE_LIST *find_table_in_list(TABLE_LIST *table,
@@ -2106,6 +2111,8 @@ extern struct system_variables max_system_variables;
 extern struct system_status_var global_status_var;
 extern struct rand_struct sql_rand;
 extern pthread_mutex_t LOCK_stats;
+extern HASH global_table_stats;
+extern pthread_mutex_t LOCK_global_table_stats;
 
 extern const char *opt_date_time_formats[];
 extern KNOWN_DATE_TIME_FORMAT known_date_time_formats[];

@@ -723,6 +723,7 @@ pthread_mutex_t LOCK_mysql_create_db, LOCK_Acl, LOCK_open, LOCK_thread_count,
                 LOCK_connection_count;
 pthread_mutex_t LOCK_cleanup;
 pthread_mutex_t LOCK_stats;
+pthread_mutex_t LOCK_global_table_stats;
 /**
   The below lock protects access to two global server variables:
   max_prepared_stmt_count and prepared_stmt_count. These variables
@@ -1468,6 +1469,7 @@ void clean_up(bool print_message)
   x_free(opt_secure_file_priv);
   bitmap_free(&temp_pool);
   free_max_user_conn();
+  free_global_table_stats();
 #ifdef HAVE_REPLICATION
   end_slave_list();
 #endif
@@ -1587,6 +1589,7 @@ static void clean_up_mutexes()
   (void) pthread_cond_destroy(&COND_manager);
   (void) pthread_mutex_destroy(&LOCK_cleanup);
   (void) pthread_mutex_destroy(&LOCK_stats);
+  (void) pthread_mutex_destroy(&LOCK_global_table_stats);
 }
 
 #endif /*EMBEDDED_LIBRARY*/
@@ -3266,6 +3269,7 @@ SHOW_VAR com_status_vars[]= {
   {"show_storage_engines", (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_STORAGE_ENGINES]), SHOW_LONG_STATUS},
   {"show_table_status",    (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TABLE_STATUS]), SHOW_LONG_STATUS},
   {"show_tables",          (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TABLES]), SHOW_LONG_STATUS},
+  {"show_table_statistics",(char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TABLE_STATS]), SHOW_LONG_STATUS},
   {"show_triggers",        (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TRIGGERS]), SHOW_LONG_STATUS},
   {"show_variables",       (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_VARIABLES]), SHOW_LONG_STATUS},
   {"show_warnings",        (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_WARNS]), SHOW_LONG_STATUS},
@@ -3732,6 +3736,7 @@ static int init_thread_environment()
   (void) pthread_cond_init(&COND_server_started,NULL);
   (void) pthread_mutex_init(&LOCK_cleanup, MY_MUTEX_INIT_FAST);
   (void) pthread_mutex_init(&LOCK_stats, MY_MUTEX_INIT_FAST);
+  (void) pthread_mutex_init(&LOCK_global_table_stats, MY_MUTEX_INIT_FAST);
   sp_cache_init();
 #ifdef HAVE_EVENT_SCHEDULER
   Events::init_mutexes();
@@ -3926,6 +3931,8 @@ static int init_server_components()
     sql_print_error("Out of memory");
     unireg_abort(1);
   }
+
+  init_global_table_stats();
 
   /* need to configure logging before initializing storage engines */
   if (opt_update_log)

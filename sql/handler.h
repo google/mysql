@@ -1154,6 +1154,9 @@ public:
   */
   uint auto_inc_intervals_count;
 
+  ulonglong rows_read;
+  ulonglong rows_changed;
+
   handler(handlerton *ht_arg, TABLE_SHARE *share_arg)
     :table_share(share_arg), table(0),
     estimation_rows_to_insert(0), ht(ht_arg),
@@ -1162,7 +1165,8 @@ public:
     ft_handler(0), inited(NONE),
     locked(FALSE), implicit_emptied(0),
     pushed_cond(0), next_insert_id(0), insert_id_for_cur_row(0),
-    auto_inc_intervals_count(0)
+    auto_inc_intervals_count(0), rows_read(0), rows_changed(0),
+    cached_table_stats(NULL), version_table_stats(0)
     {}
   virtual ~handler(void)
   {
@@ -1287,6 +1291,9 @@ public:
   {
     table= table_arg;
     table_share= share;
+    rows_read= rows_changed= 0;
+    cached_table_stats= NULL;
+    version_table_stats= 0;
   }
   virtual double scan_time()
   { return ulonglong2double(stats.data_file_length) / IO_SIZE + 2; }
@@ -1631,6 +1638,8 @@ public:
   virtual bool is_crashed() const  { return 0; }
   virtual bool auto_repair() const { return 0; }
 
+  void update_global_table_stats();
+
 
 #define CHF_CREATE_FLAG 0
 #define CHF_DELETE_FLAG 1
@@ -1948,6 +1957,14 @@ private:
   { return HA_ERR_WRONG_COMMAND; }
   virtual int rename_partitions(const char *path)
   { return HA_ERR_WRONG_COMMAND; }
+
+  /*
+    cached_table_stats is valid when not NULL and
+    version_table_stats == global_table_stats_version. It avoids
+    a hash table lookup when valid.
+  */
+  TABLE_STATS *cached_table_stats;
+  int version_table_stats;
 };
 
 
