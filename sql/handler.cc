@@ -2147,6 +2147,7 @@ int handler::ha_open(TABLE *table_arg, const char *name, int mode,
       dup_ref=ref+ALIGN_SIZE(ref_length);
     cached_table_flags= table_flags();
   }
+  rows_read= rows_changed= 0;
   DBUG_RETURN(error);
 }
 
@@ -3601,13 +3602,8 @@ int handler::index_next_same(uchar *buf, const uchar *key, uint keylen)
 
 void handler::update_global_table_stats()
 {
-  /*
-    TODO(jtolmer): Uncomment for now so that table stats actually contains
-    some data. Revert with next patch which adds stats updating.
-
     if (!rows_read && !rows_changed)
       return;                                     // Nothing to update.
-  */
 
   if (!current_thd)
   {
