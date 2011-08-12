@@ -1,0 +1,148 @@
+create table t1 (a int not null primary key, b int not null) engine=MyISAM;
+create table t2 (a int not null primary key, b int not null) engine=MyISAM;
+create table t3 (a int not null primary key, b int not null, index bx(b)) engine=MyISAM;
+""
+Test insert
+""
+flush table_statistics;
+insert into t1 values (1,1), (2,2);
+test.t1 should have 0 read, 2 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t1	test	0	2	2
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t1	test	0	2	2
+""
+Test insert select
+""
+flush table_statistics;
+insert into t2 select * from t1;
+test.t1 should have 2 read, 0 changed
+test.t2 should have 0 read, 2 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t2	test	0	2	2
+t1	test	2	0	0
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t1	test	2	0	0
+t2	test	0	2	2
+""
+Test update with PK scans
+""
+insert into t1 values (0,0);
+select count(*) from t1;
+count(*)
+3
+flush table_statistics;
+update t1 set a = 3 where a = 1;
+update t1 set a = 4 where b = 2;
+test.t1 should have 4 (MyISAM) or 5 (InnoDB) read, 2 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t1	test	4	2	2
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t1	test	4	2	2
+""
+Test update with secondary index scans
+""
+insert into t3 values (0,0);
+insert into t3 values (1,1);
+insert into t3 values (2,2);
+flush table_statistics;
+update t3 set a = 4 where b = 1;
+test.t3 should have 1 (MyISAM) or 2 (InnoDB) read, 1 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t3	test	1	1	2
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t3	test	1	1	2
+""
+Test delete with PK scans
+""
+flush table_statistics;
+delete from t1 where a = 3;
+delete from t1 where b = 2;
+test.t1 should have 3 read, 2 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t1	test	3	2	2
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t1	test	3	2	2
+""
+Test delete with secondary index scans
+""
+flush table_statistics;
+delete from t3 where b = 1;
+test.t3 should have 1 read, 1 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t3	test	1	1	2
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t3	test	1	1	2
+""
+Test select with PK scans
+""
+insert into t1 values (1,1), (2,2);
+flush table_statistics;
+select count(*) from t1 where a = 1;
+count(*)
+1
+select count(*) from t1 where b < 0;
+count(*)
+0
+test.t1 should have 4 read, 0 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t1	test	4	0	0
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t1	test	4	0	0
+""
+Test select with secondary scans
+""
+insert into t3 values (1,1);
+flush table_statistics;
+select * from t3 where b = 1;
+a	b
+1	1
+select * from t3 where b < 0;
+a	b
+test.t3 should have 2 (MyISAM) or 4 (InnoDB) read, 0 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+t3	test	2	0	0
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+t3	test	2	0	0
+""
+Test temporary table
+""
+flush table_statistics;
+create temporary table aa (a int not null primary key) engine=MyISAM;
+insert into aa values (1), (2), (3), (4);
+drop table aa;
+create temporary table aa (a int not null primary key) engine=MyISAM;
+insert into aa values (1), (2), (3), (4);
+drop table aa;
+create temporary table aa (a int not null primary key) engine=MyISAM;
+insert into aa values (1), (2), (3), (4);
+drop table aa;
+create temporary table aa (a int not null primary key) engine=MyISAM;
+insert into aa values (1), (2), (3), (4);
+drop table aa;
+test.aa.root should have 0 read, 16 changed
+show table_statistics;
+Table	Db	Rows_read	Rows_changed	Rows_changed_x_#indexes
+aa.root	test	0	16	16
+select * from INFORMATION_SCHEMA.TABLE_STATISTICS order by TABLE_NAME;
+TABLE_NAME	TABLE_SCHEMA	ROWS_READ	ROWS_CHANGED	ROWS_CHANGED_X_#INDEXES
+aa.root	test	0	16	16
+drop table t1;
+drop table t2;
+drop table t3;
