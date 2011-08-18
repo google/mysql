@@ -5581,7 +5581,8 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
    Write result to network for SHOW TABLE_STATISTICS
 
   @param[in]  thd                   thread handler
-  @param[in]  wild                  wild string
+  @param[in]  tables                I_S table table_list
+  @param[in]  cond                  WHERE condition
 
   @return
     0             success
@@ -5595,7 +5596,6 @@ int fill_schema_table_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
   restore_record(table, s->default_values);
 
   // Iterates through all the global table stats and sends them to the client.
-  // Pattern matching on the table name is supported.
   pthread_mutex_lock(&LOCK_global_table_stats);
   for (ulong i= 0; i < global_table_stats.records; ++i)
   {
@@ -5607,11 +5607,15 @@ int fill_schema_table_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
     table->field[1]->store(table_stats->table,
                            table_name_str - table_stats->table - 1,
                            system_charset_info);
-    table->field[2]->store((longlong) table_stats->rows_read, TRUE);
-    table->field[3]->store((longlong) table_stats->rows_changed, TRUE);
+    table->field[2]->store((longlong) table_stats->rows_read, true);
+    table->field[3]->store((longlong) table_stats->rows_changed, true);
     table->field[4]->store((longlong) table_stats->rows_changed_x_indexes,
-                           TRUE);
-    schema_table_store_record(thd, table);
+                           true);
+    if (schema_table_store_record(thd, table))
+    {
+      pthread_mutex_unlock(&LOCK_global_table_stats);
+      return 1;
+    }
   }
   pthread_mutex_unlock(&LOCK_global_table_stats);
 
