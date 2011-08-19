@@ -397,7 +397,7 @@ public:
 */
 #define USER_STATS_NAME_LENGTH USERNAME_LENGTH
 
-typedef struct st_table_stats {
+struct TABLE_STATS {
   /*
     [db] + '.' + [table] + [optional '.' + 'username'] + '\0'
 
@@ -409,4 +409,4 @@ typedef struct st_table_stats {
   char table[NAME_LEN * 2 + USER_STATS_NAME_LENGTH + 3];
   ulonglong rows_read, rows_changed;
   ulonglong rows_changed_x_indexes;
-} TABLE_STATS;
+};

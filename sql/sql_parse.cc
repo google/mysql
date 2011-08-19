@@ -100,10 +100,6 @@ const char *xa_state_names[]={
   "NON-EXISTING", "ACTIVE", "IDLE", "PREPARED", "ROLLBACK ONLY"
 };
 
-HASH global_table_stats;
-// Incremented when global_table_stats is flushed
-int global_table_stats_version= 0;
-
 /**
   Mark a XA transaction as rollback-only if the RM unilaterally
   rolled back the transaction branch.
@@ -283,34 +279,6 @@ static bool some_non_temp_table_to_be_updated(THD *thd, TABLE_LIST *tables)
   return 0;
 }
 
-void free_global_table_stats(void)
-{
-  hash_free(&global_table_stats);
-}
-
-extern "C" uchar *get_key_table_stats(const TABLE_STATS *table_stats,
-                                      size_t *length,
-                                      my_bool not_used __attribute__((unused)))
-{
-  *length= strlen(table_stats->table);
-  return (uchar *) table_stats->table;
-}
-
-extern "C" void free_table_stats(TABLE_STATS *table_stats)
-{
-  my_free((uchar *) table_stats, MYF(0));
-}
-
-void init_global_table_stats(void)
-{
-  if (hash_init(&global_table_stats, system_charset_info, max_connections,
-                0, 0, (hash_get_key) get_key_table_stats,
-                (hash_free_key) free_table_stats, 0)) {
-    sql_print_error("Initializing global_table_stats failed.");
-    unireg_abort(1);
-  }
-  global_table_stats_version++;
-}
 
 /**
   Mark all commands that somehow changes a table.
@@ -454,108 +422,6 @@ bool is_log_table_write_query(enum enum_sql_command command)
 {
   DBUG_ASSERT(command >= 0 && command <= SQLCOM_END);
   return (sql_command_flags[command] & CF_WRITE_LOGS_COMMAND) != 0;
-}
-
-// 'mysql_system_user' is used for when the user is not defined for a THD.
-static char mysql_system_user[] = "#mysql_system#";
-
-/**
-  Returns 'user' if it's not NULL.  Returns 'mysql_system_user' otherwise.
-*/
-
-static char *get_valid_user_string(char *user)
-{
-  return user ? user : mysql_system_user;
-}
-
-/**
-  Get the TABLE_STATS object for the table_name.
-
-  Use the cached object when it is valid and update the cache fields
-  when it is not.
-
-  @param          table           table for which an object is returned
-  @param[in,out]  cached_stats    pointer to TABLE_STATS object
-  @param[in,out]  cached_version  value of global_table_stats_version at
-                                  which cached_stats is valid.
-
-  @return         status
-    @retval       0               OK
-    @retval       != 0            Error
-*/
-
-int
-get_table_stats(THD *thd, TABLE *table, TABLE_STATS **cached_stats,
-                int *cached_version)
-{
-  TABLE_STATS* table_stats;
-  // [db] + '.' + [table] + [optional '.' + 'username'] + '\0'
-  // If the table is a temporary table, the username is appended.
-  char table_key[NAME_LEN * 2 + USER_STATS_NAME_LENGTH + 3];
-  int table_key_len;
-  char *name= get_valid_user_string(thd->main_security_ctx.user);
-
-  safe_mutex_assert_owner(&LOCK_global_table_stats);
-
-  if (*cached_stats && *cached_version == global_table_stats_version)
-    return 0;
-
-  if (!table->s || !table->s->db.str || !table->s->table_name.str)
-  {
-    sql_print_error("No key for table stats.");
-    return -1;
-  }
-
-  if (table->s->tmp_table == NO_TMP_TABLE)
-  {
-    if (snprintf(table_key, sizeof(table_key), "%s.%s", table->s->db.str,
-                 table->s->table_name.str) < 3)
-    {
-      sql_print_error("Cannot generate name for table stats.");
-      return -1;
-    }
-  }
-  else
-  {
-    // Temporary tables have the username appended.
-    if (snprintf(table_key, sizeof(table_key), "%s.%s.%s", table->s->db.str,
-                 table->s->table_name.str, name) < 5)
-    {
-      sql_print_error("Cannot generate name for temp table stats.");
-      return -1;
-    }
-  }
-  table_key_len= strlen(table_key);
-
-  // Gets or creates the TABLE_STATS object for this table.
-  if (!(table_stats= (TABLE_STATS *) hash_search(&global_table_stats,
-                                                 (uchar *) table_key,
-                                                 table_key_len)))
-  {
-    if (!(table_stats= ((TABLE_STATS *) my_malloc(sizeof(TABLE_STATS),
-                                                  MYF(MY_WME)))))
-    {
-      // Out of memory.
-      sql_print_error("Allocating table stats failed.");
-      return -1;
-    }
-    memcpy(table_stats->table, table_key, sizeof(table_key));
-    table_stats->rows_read= 0;
-    table_stats->rows_changed= 0;
-    table_stats->rows_changed_x_indexes= 0;
-
-    if (my_hash_insert(&global_table_stats, (uchar *) table_stats))
-    {
-      // Out of memory.
-      sql_print_error("Inserting table stats failed.");
-      my_free((char *) table_stats, 0);
-      return -1;
-    }
-  }
-  *cached_stats= table_stats;
-  *cached_version= global_table_stats_version;
-
-  return 0;
 }
 
 void execute_init_command(THD *thd, sys_var_str *init_command_var,
@@ -7583,12 +7449,7 @@ bool reload_acl_and_cache(THD *thd, ulong options, TABLE_LIST *tables,
  if (options & REFRESH_USER_RESOURCES)
    reset_mqh((LEX_USER *) NULL, 0);             /* purecov: inspected */
  if (options & REFRESH_TABLE_STATS)
- {
-   pthread_mutex_lock(&LOCK_global_table_stats);
-   free_global_table_stats();
-   init_global_table_stats();
-   pthread_mutex_unlock(&LOCK_global_table_stats);
- }
+   refresh_global_table_stats();
  if (*write_to_binlog != -1)
    *write_to_binlog= tmp_write_to_binlog;
  /*
