@@ -71,6 +71,7 @@ TABLE_PRIVILEGES
 TABLE_STATISTICS
 TRIGGERS
 USER_PRIVILEGES
+USER_STATISTICS
 VIEWS
 INNODB_CMP_RESET
 INNODB_TRX
@@ -875,7 +876,7 @@ delete from mysql.db where user='mysqltest_4';
 flush privileges;
 SELECT table_schema, count(*) FROM information_schema.TABLES WHERE table_schema IN ('mysql', 'INFORMATION_SCHEMA', 'test', 'mysqltest') AND table_name<>'ndb_binlog_index' AND table_name<>'ndb_apply_status' GROUP BY TABLE_SCHEMA;
 table_schema	count(*)
-information_schema	36
+information_schema	37
 mysql	23
 create table t1 (i int, j int);
 create trigger trg1 before insert on t1 for each row
@@ -1290,6 +1291,7 @@ TABLE_PRIVILEGES	TABLE_SCHEMA
 TABLE_STATISTICS	TABLE_SCHEMA
 TRIGGERS	TRIGGER_SCHEMA
 USER_PRIVILEGES	GRANTEE
+USER_STATISTICS	USER
 VIEWS	TABLE_SCHEMA
 INNODB_CMP_RESET	page_size
 INNODB_TRX	trx_id
@@ -1341,6 +1343,7 @@ TABLE_PRIVILEGES	TABLE_SCHEMA
 TABLE_STATISTICS	TABLE_SCHEMA
 TRIGGERS	TRIGGER_SCHEMA
 USER_PRIVILEGES	GRANTEE
+USER_STATISTICS	USER
 VIEWS	TABLE_SCHEMA
 INNODB_CMP_RESET	page_size
 INNODB_TRX	trx_id
@@ -1450,6 +1453,7 @@ TABLE_PRIVILEGES	information_schema.TABLE_PRIVILEGES	1
 TABLE_STATISTICS	information_schema.TABLE_STATISTICS	1
 TRIGGERS	information_schema.TRIGGERS	1
 USER_PRIVILEGES	information_schema.USER_PRIVILEGES	1
+USER_STATISTICS	information_schema.USER_STATISTICS	1
 VIEWS	information_schema.VIEWS	1
 create table t1(f1 int);
 create view v1 as select f1+1 as a from t1;

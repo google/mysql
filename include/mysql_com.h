@@ -128,6 +128,7 @@ enum enum_server_command
 #define REFRESH_MASTER          128     /* Remove all bin logs in the index
 					   and truncate the index */
 #define REFRESH_TABLE_STATS     512     /* Refresh table stats hash table */
+#define REFRESH_USER_STATS      1024    /* Refresh user stats hash table */
 
 /* The following can't be set with mysql_refresh() */
 #define REFRESH_READ_LOCK	16384	/* Lock tables for read */

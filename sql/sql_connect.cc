@@ -1342,6 +1342,7 @@ static bool login_connection(THD *thd)
       my_sleep(1000);				/* must wait after eof() */
 #endif
     statistic_increment(aborted_connects,&LOCK_status);
+    increment_denied_connects(thd);
     DBUG_RETURN(1);
   }
   /* Connect completed, set read/write timeouts back to default */
@@ -1519,6 +1520,7 @@ pthread_handler_t handle_one_connection(void *arg)
   for (;;)
   {
     NET *net= &thd->net;
+    bool update_stats= false;
 
     lex_start(thd);
     if (login_connection(thd))
@@ -1533,9 +1535,15 @@ pthread_handler_t handle_one_connection(void *arg)
 	break;
     }
     end_connection(thd);
-   
+    update_stats= true;
+
 end_thread:
     close_connection(thd, 0, 1);
+    if (update_stats)
+    {
+      thd->update_stats(false);
+      update_global_user_stats(thd, time(NULL));
+    }
     if (thread_scheduler.end_thread(thd,1))
       return 0;                                 // Probably no-threads
 

@@ -576,6 +576,7 @@ static SYMBOL symbols[] = {
   { "USE",		SYM(USE_SYM)},
   { "USER",		SYM(USER)},
   { "USER_RESOURCES",	SYM(RESOURCES)},
+  { "USER_STATISTICS",	SYM(USER_STATS_SYM)},
   { "USE_FRM",		SYM(USE_FRM)},
   { "USING",		SYM(USING)},
   { "UTC_DATE",         SYM(UTC_DATE_SYM)},

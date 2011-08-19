@@ -32,10 +32,17 @@
 #ifndef SQL_STATS_INCLUDED
 #define SQL_STATS_INCLUDED
 
+// Variables for table statistics.
 extern HASH global_table_stats;
 extern int global_table_stats_version;
 extern pthread_mutex_t LOCK_global_table_stats;
 
+// Variables for user statistics.
+extern HASH global_user_stats;
+extern int global_user_stats_version;
+extern pthread_mutex_t LOCK_global_user_stats;
+
+// Functions for table statistics.
 void init_global_table_stats(void);
 void free_global_table_stats(void);
 void refresh_global_table_stats(void);
@@ -43,5 +50,13 @@ void refresh_global_table_stats(void);
 void update_table_stats(TABLE *table_ptr, bool follow_next);
 int get_table_stats(THD *thd, TABLE *table, TABLE_STATS **cached_stats,
                     int *cached_version);
+
+// Functions for user statistics.
+void init_global_user_stats(void);
+void free_global_user_stats(void);
+int refresh_global_user_stats(THD *thd);
+
+void update_global_user_stats(THD *thd, time_t now);
+void increment_denied_connects(THD *thd);
 
 #endif /* SQL_STATS_INCLUDED */

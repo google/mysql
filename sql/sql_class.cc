@@ -615,6 +615,8 @@ THD::THD()
    first_successful_insert_id_in_cur_stmt(0),
    stmt_depends_on_first_successful_insert_id_in_prev_stmt(FALSE),
    examined_row_count(0),
+   sent_row_count_last_seen(0L),
+   updated_row_count(0L),
    global_read_lock(0),
    semi_sync_slave(false),
    failed_com_change_user(0),
@@ -627,6 +629,8 @@ THD::THD()
    bootstrap(0),
    derived_tables_processing(FALSE),
    spcont(NULL),
+   thd_user_stats(NULL),
+   thd_user_stats_version(0),
    m_parser_state(NULL)
 #if defined(ENABLED_DEBUG_SYNC)
    , debug_sync_control(0)
@@ -882,6 +886,8 @@ void THD::init(void)
   reset_current_stmt_binlog_row_based();
   bzero((char *) &status_var, sizeof(status_var));
   sql_log_bin_toplevel= options & OPTION_BIN_LOG;
+  thd_user_stats= NULL;
+  thd_user_stats_version= 0;
 
 #if defined(ENABLED_DEBUG_SYNC)
   /* Initialize the Debug Sync Facility. See debug_sync.cc. */
@@ -995,6 +1001,9 @@ void THD::cleanup(void)
   my_free(repl_wait_binlog_name, MYF(MY_ALLOW_ZERO_PTR));
   repl_wait_binlog_name= NULL;
   repl_wait_binlog_pos= 0;
+
+  thd_user_stats= NULL;
+  thd_user_stats_version= 0;
 
   cleanup_done=1;
   DBUG_VOID_RETURN;
@@ -1224,6 +1233,120 @@ bool THD::restore_globals()
   return 0;
 }
 
+/**
+  Update cached USER_STATS pointer
+
+  @param  stats  pointer to cache
+*/
+
+void THD::cache_user_stats(USER_STATS *stats)
+{
+  safe_mutex_assert_owner(&LOCK_global_user_stats);
+  thd_user_stats= stats;
+  thd_user_stats_version= global_user_stats_version;
+}
+
+/**
+  Resets the 'diff' stats, which are used to update global stats.
+*/
+
+void THD::reset_diff_stats(void)
+{
+  diff_total_busy_time= 0;
+  diff_total_cpu_time= 0;
+  diff_total_bytes_received= 0;
+  diff_total_bytes_sent= 0;
+  diff_total_binlog_bytes_written= 0;
+  diff_total_sent_rows= 0;
+  diff_total_updated_rows= 0;
+  diff_total_read_rows= 0;
+  diff_select_commands= 0;
+  diff_update_commands= 0;
+  diff_other_commands= 0;
+  diff_commit_trans= 0;
+  diff_rollback_trans= 0;
+  diff_denied_connections= 0;
+  diff_lost_connections= 0;
+  diff_access_denied_errors= 0;
+  diff_empty_queries= 0;
+}
+
+/**
+  Updates 'diff' stats of a THD.
+
+  @param  ran_command  true when called immediately after a cmd has been run
+*/
+
+void THD::update_stats(bool ran_command)
+{
+  ha_rows diff_sent_row_count= sent_row_count - sent_row_count_last_seen;
+  diff_total_busy_time+= busy_time;
+  diff_total_cpu_time+= cpu_time;
+  diff_total_bytes_received+= bytes_received;
+  diff_total_bytes_sent+= bytes_sent;
+  diff_total_binlog_bytes_written+= binlog_bytes_written;
+  diff_total_sent_rows+= diff_sent_row_count;
+  diff_total_updated_rows+= updated_row_count;
+  // diff_total_read_rows is updated in handler.cc.
+
+  if (ran_command)
+  {
+    // The replication thread has the COM_CONNECT command.
+    if ((command == COM_QUERY || command == COM_CONNECT) &&
+        (lex->sql_command >= 0 && lex->sql_command < SQLCOM_END))
+    {
+      // A SQL query.
+      if (lex->sql_command == SQLCOM_SELECT)
+      {
+        // TODO(jtolmer): orig_sql_command has been removed so need to adapt.
+        /*
+        if (lex->orig_sql_command == SQLCOM_END)
+        {
+          diff_select_commands++;
+          if (!diff_sent_row_count)
+            diff_empty_queries++;
+        }
+        else
+        {
+          // 'SHOW ' commands become SQLCOM_SELECT.
+          diff_other_commands++;
+          // 'SHOW ' commands shouldn't inflate total sent row count.
+          diff_total_sent_rows-= diff_sent_row_count;
+        }
+        */
+      }
+      else if (is_update_query(lex->sql_command))
+      {
+        diff_update_commands++;
+      }
+      else
+      {
+        diff_other_commands++;
+      }
+    }
+  }
+  // diff_commit_trans is updated in handler.cc.
+  // diff_rollback_trans is updated in handler.cc.
+  // diff_denied_connections is updated in sql_parse.cc.
+  // diff_lost_connections is updated in sql_parse.cc.
+  // diff_access_denied_errors is updated in sql_parse.cc.
+
+  /*
+    Reset counters to zero to avoid double-counting since values
+    are already store in diff_total_*.
+  */
+  busy_time= 0;
+  cpu_time= 0;
+  bytes_received= 0;
+  bytes_sent= 0;
+  binlog_bytes_written= 0;
+  updated_row_count= 0;
+  /*
+    Save the value of sent_row_count, so don't need to zero it
+    since it might be used elsewhere by MySQL.
+  */
+  sent_row_count_last_seen= sent_row_count;
+}
 
 /*
   Cleanup after query.

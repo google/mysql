@@ -380,6 +380,7 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_SHOW_PROFILE]= CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_BINLOG_INFO_FOR]= CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_TABLE_STATS]= CF_STATUS_COMMAND;
+  sql_command_flags[SQLCOM_SHOW_USER_STATS]= CF_STATUS_COMMAND;
 
    sql_command_flags[SQLCOM_SHOW_TABLES]=       (CF_STATUS_COMMAND |
                                                  CF_SHOW_TABLE_COMMAND |
@@ -2051,6 +2052,7 @@ int prepare_schema_table(THD *thd, LEX *lex, Table_ident *table_ident,
   case SCH_TABLE_CONSTRAINTS:
   case SCH_KEY_COLUMN_USAGE:
   case SCH_TABLE_STATISTICS:
+  case SCH_USER_STATISTICS:
   default:
     break;
   }
@@ -2499,6 +2501,7 @@ mysql_execute_command(THD *thd)
   case SQLCOM_SHOW_PROFILE:
   case SQLCOM_SELECT:
   case SQLCOM_SHOW_TABLE_STATS:
+  case SQLCOM_SHOW_USER_STATS:
     thd->status_var.last_query_cost= 0.0;
     if (all_tables)
     {
@@ -6450,6 +6453,10 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
     *found_semicolon= NULL;
   }
 
+  // Updates THD stats and the global user stats.
+  thd->update_stats(true);
+  update_global_user_stats(thd, time(NULL));
+
   DBUG_VOID_RETURN;
 }
 
@@ -7450,6 +7457,8 @@ bool reload_acl_and_cache(THD *thd, ulong options, TABLE_LIST *tables,
    reset_mqh((LEX_USER *) NULL, 0);             /* purecov: inspected */
  if (options & REFRESH_TABLE_STATS)
    refresh_global_table_stats();
+ if (options & REFRESH_USER_STATS && refresh_global_user_stats(thd))
+   result= 1;
  if (*write_to_binlog != -1)
    *write_to_binlog= tmp_write_to_binlog;
  /*

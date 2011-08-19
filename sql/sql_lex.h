@@ -122,6 +122,7 @@ enum enum_sql_command {
   SQLCOM_SHOW_PROFILE, SQLCOM_SHOW_PROFILES,
   SQLCOM_SHOW_BINLOG_INFO_FOR,
   SQLCOM_SHOW_TABLE_STATS,
+  SQLCOM_SHOW_USER_STATS,
 
   /*
     When a command is added here, be sure it's also added in mysqld.cc
