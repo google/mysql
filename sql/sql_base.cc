@@ -1183,27 +1183,6 @@ static void mark_used_tables_as_free_for_reuse(THD *thd, TABLE *table)
   }
 }
 
-/**
-  Update global table statistics for this table.
-
-  Will optionally update statistics for tables linked via TABLE::next.
-
-  @param  tablep       the table for which global table stats are updated
-  @param  follow_next  when true, update global stats for tables linked
-                       via TABLE::next
-*/
-
-void update_table_stats(TABLE *tablep, bool follow_next)
-{
-  for (; tablep; tablep= tablep->next)
-  {
-    if (tablep->file)
-      tablep->file->update_global_table_stats();
-
-    if (!follow_next)
-      return;
-  }
-}
 
 /**
   Auxiliary function to close all tables in the open_tables list.

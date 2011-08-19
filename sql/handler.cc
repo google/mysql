@@ -3602,8 +3602,8 @@ int handler::index_next_same(uchar *buf, const uchar *key, uint keylen)
 
 void handler::update_global_table_stats()
 {
-    if (!rows_read && !rows_changed)
-      return;                                     // Nothing to update.
+  if (!rows_read && !rows_changed)
+    return;                                     // Nothing to update.
 
   if (!current_thd)
   {

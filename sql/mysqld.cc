@@ -712,7 +712,6 @@ pthread_mutex_t LOCK_mysql_create_db, LOCK_Acl, LOCK_open, LOCK_thread_count,
 		LOCK_user_conn, LOCK_slave_list, LOCK_active_mi,
                 LOCK_connection_count;
 pthread_mutex_t LOCK_stats;
-pthread_mutex_t LOCK_global_table_stats;
 /**
   The below lock protects access to two global server variables:
   max_prepared_stmt_count and prepared_stmt_count. These variables
