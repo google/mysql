@@ -107,6 +107,7 @@ Database: information_schema
 | TABLE_STATISTICS                      |
 | TRIGGERS                              |
 | USER_PRIVILEGES                       |
+| USER_STATISTICS                       |
 | VIEWS                                 |
 | INNODB_CMP_RESET                      |
 | INNODB_TRX                            |
@@ -148,6 +149,7 @@ Database: INFORMATION_SCHEMA
 | TABLE_STATISTICS                      |
 | TRIGGERS                              |
 | USER_PRIVILEGES                       |
+| USER_STATISTICS                       |
 | VIEWS                                 |
 | INNODB_CMP_RESET                      |
 | INNODB_TRX                            |

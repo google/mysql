@@ -1743,6 +1743,10 @@ public:
   */
   ha_rows    examined_row_count;
 
+  /* records sent_row_count last seen in THD::update_stats() */
+  ha_rows    sent_row_count_last_seen;
+  ha_rows    updated_row_count;
+
   USER_CONN *user_connect;
   CHARSET_INFO *db_charset;
   /*
@@ -1880,6 +1884,55 @@ public:
   */
   LOG_INFO*  current_linfo;
   NET*       slave_net;			// network connection from slave -> m.
+
+  /*
+    Used to update global user stats.  The global user stats are updated
+    occasionally with the 'diff' variables.  After the update, the 'diff'
+    variables are reset to 0.
+  */
+  // Time when the current thread connected to MySQL.
+  time_t current_connect_time;
+  // Last time when THD stats were updated in global_user_stats.
+  time_t last_global_update_time;
+  // Busy (non-idle) time for just one command.
+  double busy_time;
+  // Busy time not updated in global_user_stats yet.
+  double diff_total_busy_time;
+  // Cpu (non-idle) time for just one thread.
+  double cpu_time;
+  // Cpu time not updated in global_user_stats yet.
+  double diff_total_cpu_time;
+  /* bytes counting */
+  ulonglong bytes_received;
+  ulonglong diff_total_bytes_received;
+  ulonglong bytes_sent;
+  ulonglong diff_total_bytes_sent;
+  ulonglong binlog_bytes_written;
+  ulonglong diff_total_binlog_bytes_written;
+
+  // Number of rows not reflected in global_user_stats yet.
+  ha_rows diff_total_sent_rows, diff_total_updated_rows, diff_total_read_rows;
+  // Number of commands not reflected in global_user_stats yet.
+  ulonglong diff_select_commands, diff_update_commands, diff_other_commands;
+  // Number of transactions not reflected in global_user_stats yet.
+  ulonglong diff_commit_trans, diff_rollback_trans;
+  // Number of connection errors not reflected in global_user_stats yet.
+  ulonglong diff_denied_connections, diff_lost_connections;
+  // Number of db access denied, not reflected in global_user_stats yet.
+  ulonglong diff_access_denied_errors;
+  // Number of queries that return 0 rows
+  ulonglong diff_empty_queries;
+
+  /*
+    Cache pointer to USER_STATS object for the user. Valid when
+    thd_user_stats_version == global_user_stats_version. Should only be
+    set when USER_STATS::concurrent_connections has been incremented as
+    USER_STATS::concurrent_connections is decremented by THD::cleanup()
+    when thd_user_stats_version is > 0.
+  */
+  USER_STATS* thd_user_stats;
+  int thd_user_stats_version;
+
   /* Used by the sys_var class to store temporary values */
   union
   {
@@ -1950,6 +2003,9 @@ public:
   void cleanup_after_query();
   bool store_globals();
   bool restore_globals();
+  void cache_user_stats(USER_STATS *stats);
+  void reset_diff_stats(void);
+  void update_stats(bool ran_command);
 #ifdef SIGNAL_WITH_VIO_CLOSE
   inline void set_active_vio(Vio* vio)
   {

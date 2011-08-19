@@ -410,3 +410,30 @@ struct TABLE_STATS {
   ulonglong rows_read, rows_changed;
   ulonglong rows_changed_x_indexes;
 };
+
+struct USER_STATS {
+  // User name for user stats.
+  char user[USER_STATS_NAME_LENGTH + 1];
+  /*
+    TODO(jtolmer): Mapped User
+
+    Account name the user is mapped to when this is a user from mapped_user.
+    Otherwise, the same value as user.
+
+    char priv_user[USER_STATS_NAME_LENGTH + 1];
+  */
+  uint total_connections;
+  uint concurrent_connections;
+  time_t connected_time;                        // in seconds
+  double busy_time;                             // in seconds
+  double cpu_time;                              // in seconds
+  ulonglong bytes_received;
+  ulonglong bytes_sent;
+  ulonglong binlog_bytes_written;
+  ha_rows rows_fetched, rows_updated, rows_read;
+  ulonglong select_commands, update_commands, other_commands;
+  ulonglong commit_trans, rollback_trans;
+  ulonglong denied_connections, lost_connections;
+  ulonglong access_denied_errors;
+  ulonglong empty_queries;
+};

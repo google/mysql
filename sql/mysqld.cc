@@ -1434,6 +1434,7 @@ void clean_up(bool print_message)
   bitmap_free(&temp_pool);
   free_max_user_conn();
   free_global_table_stats();
+  free_global_user_stats();
 #ifdef HAVE_REPLICATION
   end_slave_list();
 #endif
@@ -1550,6 +1551,7 @@ static void clean_up_mutexes()
   (void) pthread_cond_destroy(&COND_manager);
   (void) pthread_mutex_destroy(&LOCK_stats);
   (void) pthread_mutex_destroy(&LOCK_global_table_stats);
+  (void) pthread_mutex_destroy(&LOCK_global_user_stats);
 }
 
 #endif /*EMBEDDED_LIBRARY*/
@@ -3235,6 +3237,7 @@ SHOW_VAR com_status_vars[]= {
   {"show_tables",          (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TABLES]), SHOW_LONG_STATUS},
   {"show_table_statistics",(char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TABLE_STATS]), SHOW_LONG_STATUS},
   {"show_triggers",        (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_TRIGGERS]), SHOW_LONG_STATUS},
+  {"show_user_statistics", (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_USER_STATS]), SHOW_LONG_STATUS},
   {"show_variables",       (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_VARIABLES]), SHOW_LONG_STATUS},
   {"show_warnings",        (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SHOW_WARNS]), SHOW_LONG_STATUS},
   {"slave_start",          (char*) offsetof(STATUS_VAR, com_stat[(uint) SQLCOM_SLAVE_START]), SHOW_LONG_STATUS},
@@ -3696,6 +3699,7 @@ static int init_thread_environment()
   (void) pthread_cond_init(&COND_server_started,NULL);
   (void) pthread_mutex_init(&LOCK_stats, MY_MUTEX_INIT_FAST);
   (void) pthread_mutex_init(&LOCK_global_table_stats, MY_MUTEX_INIT_FAST);
+  (void) pthread_mutex_init(&LOCK_global_user_stats, MY_MUTEX_INIT_FAST);
   sp_cache_init();
 #ifdef HAVE_EVENT_SCHEDULER
   Events::init_mutexes();
@@ -4302,6 +4306,7 @@ a file name for --log-bin-index option", opt_binlog_index_name);
 
   init_max_user_conn();
   init_update_queries();
+  init_global_user_stats();
   DBUG_RETURN(0);
 }
 

@@ -1255,6 +1255,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  UPGRADE_SYM
 %token  USAGE                         /* SQL-2003-N */
 %token  USER                          /* SQL-2003-R */
+%token  USER_STATS_SYM
 %token  USE_FRM
 %token  USE_SYM
 %token  USING                         /* SQL-2003-R */
@@ -10465,6 +10466,13 @@ show_param:
             if (prepare_schema_table(YYTHD, lex, 0, SCH_TABLE_STATISTICS))
               MYSQL_YYABORT;
           }
+        | USER_STATS_SYM
+          {
+            LEX *lex= Lex;
+            lex->sql_command= SQLCOM_SHOW_USER_STATS;
+            if (prepare_schema_table(YYTHD, lex, 0, SCH_USER_STATISTICS))
+              MYSQL_YYABORT;
+          }
         | PROCEDURE CODE_SYM sp_name
           {
 #ifdef DBUG_OFF
@@ -10647,6 +10655,8 @@ flush_option:
           { Lex->type|= REFRESH_USER_RESOURCES; }
         | TABLE_STATS_SYM
           { Lex->type|= REFRESH_TABLE_STATS; }
+        | USER_STATS_SYM
+          { Lex->type|= REFRESH_USER_STATS; }
         ;
 
 opt_table_list:
@@ -11999,6 +12009,7 @@ keyword_sp:
         | UNKNOWN_SYM              {}
         | UNTIL_SYM                {}
         | USER                     {}
+        | USER_STATS_SYM           {}
         | USE_FRM                  {}
         | VARIABLES                {}
         | VIEW_SYM                 {}

@@ -5578,7 +5578,7 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
 
 
 /**
-   Write result to network for SHOW TABLE_STATISTICS
+  Write result to network for SHOW TABLE_STATISTICS.
 
   @param[in]  thd                   thread handler
   @param[in]  tables                I_S table table_list
@@ -5622,6 +5622,63 @@ int fill_schema_table_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
   return 0;
 }
 
+
+/**
+  Write result to network for SHOW USER_STATISTICS.
+
+  @param[in]  thd                   thread handler
+  @param[in]  tables                I_S table table_list
+  @param[in]  cond                  WHERE condition
+
+  @return
+    0             success
+    1             error
+*/
+
+int fill_schema_user_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
+{
+  TABLE *table= tables->table;
+
+  update_global_user_stats(thd, time(NULL));
+
+  restore_record(table, s->default_values);
+
+  pthread_mutex_lock(&LOCK_global_user_stats);
+  for (ulong i= 0; i < global_user_stats.records; ++i)
+  {
+    USER_STATS *user_stats= (USER_STATS *) hash_element(&global_user_stats, i);
+    table->field[0]->store(user_stats->user, strlen(user_stats->user),
+                           system_charset_info);
+    table->field[1]->store((longlong) user_stats->total_connections, true);
+    table->field[2]->store((longlong) user_stats->concurrent_connections, true);
+    table->field[3]->store((longlong) user_stats->connected_time, false);
+    table->field[4]->store((double) user_stats->busy_time);
+    table->field[5]->store((double) user_stats->cpu_time);
+    table->field[6]->store((longlong) user_stats->bytes_received, true);
+    table->field[7]->store((longlong) user_stats->bytes_sent, true);
+    table->field[8]->store((longlong) user_stats->binlog_bytes_written, true);
+    table->field[9]->store((longlong) user_stats->rows_fetched, true);
+    table->field[10]->store((longlong) user_stats->rows_updated, true);
+    table->field[11]->store((longlong) user_stats->rows_read, true);
+    table->field[12]->store((longlong) user_stats->select_commands, true);
+    table->field[13]->store((longlong) user_stats->update_commands, true);
+    table->field[14]->store((longlong) user_stats->other_commands, true);
+    table->field[15]->store((longlong) user_stats->commit_trans, true);
+    table->field[16]->store((longlong) user_stats->rollback_trans, true);
+    table->field[17]->store((longlong) user_stats->denied_connections, true);
+    table->field[18]->store((longlong) user_stats->lost_connections, true);
+    table->field[19]->store((longlong) user_stats->access_denied_errors, true);
+    table->field[20]->store((longlong) user_stats->empty_queries, true);
+    if (schema_table_store_record(thd, table))
+    {
+      pthread_mutex_unlock(&LOCK_global_user_stats);
+      return 1;
+    }
+  }
+  pthread_mutex_unlock(&LOCK_global_user_stats);
+
+  return 0;
+}
 
 /*
   Fill and store records into I_S.referential_constraints table
@@ -6931,6 +6988,51 @@ ST_FIELD_INFO table_statistics_fields_info[]=
 };
 
 
+ST_FIELD_INFO user_statistics_fields_info[]=
+{
+  {"USER", USERNAME_LENGTH, MYSQL_TYPE_STRING, 0, 0, "User", SKIP_OPEN_TABLE},
+  {"TOTAL_CONNECTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Total_connections", SKIP_OPEN_TABLE},
+  {"CONCURRENT_CONNECTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG,
+   0, 0, "Concurrent_connections", SKIP_OPEN_TABLE},
+  {"CONNECTED_TIME", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Connected_time", SKIP_OPEN_TABLE},
+  {"BUSY_TIME", 12, MYSQL_TYPE_DOUBLE, 0, 0, "Busy_time", SKIP_OPEN_TABLE},
+  {"CPU_TIME", 12, MYSQL_TYPE_DOUBLE, 0, 0, "Cpu_time", SKIP_OPEN_TABLE},
+  {"BYTES_RECEIVED", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Bytes_received", SKIP_OPEN_TABLE},
+  {"BYTES_SENT", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Bytes_sent", SKIP_OPEN_TABLE},
+  {"BINLOG_BYTES_WRITTEN", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG,
+   0, 0, "Binlog_bytes_written", SKIP_OPEN_TABLE},
+  {"ROWS_FETCHED", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Rows_fetched", SKIP_OPEN_TABLE},
+  {"ROWS_UPDATED", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Rows_updated", SKIP_OPEN_TABLE},
+  {"TABLE_ROWS_READ", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Table_rows_read", SKIP_OPEN_TABLE},
+  {"SELECT_COMMANDS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Select_commands", SKIP_OPEN_TABLE},
+  {"UPDATE_COMMANDS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Update_commands", SKIP_OPEN_TABLE},
+  {"OTHER_COMMANDS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Other_commands", SKIP_OPEN_TABLE},
+  {"COMMIT_TRANSACTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0,
+   0, "Commit_transactions", SKIP_OPEN_TABLE},
+  {"ROLLBACK_TRANSACTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG,
+   0, 0, "Rollback_transactions", SKIP_OPEN_TABLE},
+  {"DENIED_CONNECTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0,
+   0, "Denied_connections", SKIP_OPEN_TABLE},
+  {"LOST_CONNECTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Lost_connections", SKIP_OPEN_TABLE},
+  {"ACCESS_DENIED", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Access_denied", SKIP_OPEN_TABLE},
+  {"EMPTY_QUERIES", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
+   "Empty_queries", SKIP_OPEN_TABLE},
+  {0, 0, MYSQL_TYPE_STRING, 0, 0, 0, SKIP_OPEN_TABLE}
+};
+
+
 /*
   Description of ST_FIELD_INFO in table.h
 
@@ -7014,6 +7116,8 @@ ST_SCHEMA_TABLE schema_tables[]=
    OPEN_TABLE_ONLY},
   {"USER_PRIVILEGES", user_privileges_fields_info, create_schema_table, 
    fill_schema_user_privileges, 0, 0, -1, -1, 0, 0},
+  {"USER_STATISTICS", user_statistics_fields_info, create_schema_table,
+   fill_schema_user_statistics, make_old_format, 0, -1, -1, 0, 0},
   {"VARIABLES", variables_fields_info, create_schema_table, fill_variables,
    make_old_format, 0, 0, -1, 1, 0},
   {"VIEWS", view_fields_info, create_schema_table, 

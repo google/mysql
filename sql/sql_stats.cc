@@ -29,6 +29,57 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+  SHOW USER_STATISTICS
+  * must display correct concurrent connections per account
+  * must not create mutex hot spots
+  * require SUPER to see stats for all users
+
+  FLUSH USER_STATISTICS
+  * remove all entries with concurrent_connections==0
+  * reset all entries with concurrent_connections>0
+
+  Create connection failure:
+  * Call increment_denied_connects() to increment count of failed
+    connection attempts when the account name is valid.
+
+  Create connection:
+  * Call increment_connection_count() to increment count of total and
+    concurrent connections for this account.
+  * call THD::cache_user_stats() to cache USER_STATS pointers
+
+  Complete command:
+  * Call update_global_user_stats() to update counts in USER_STATS entry
+    in global_user_stats.
+
+  Close connection
+  * Call update_global_user_stats() to update counts in USER_STATS entry
+    in global_user_stats.
+
+  Notes:
+
+  * global table stats are not flushed until possibly cached tables are
+    closed. In many cases, this occurs at the start of the next command
+    rather than the end of the current command. To compensate for this,
+    some stats related commands call update_global_user_stats() prior to
+    doing other work, such as displaying stats for all accounts, to
+    guarantee that any work done by previous commands in the current
+    THD is displayed or reset.
+
+  * SHOW USER_STATS used to lock LOCK_global_user_stats and
+    LOCK_thread_count and then iterate over all threads to determine the
+    count of concurrent connections per thread. That is a mutex hot spot.
+    The current code depends on the concurrent_connections count to be
+    updated on connection create and connection end. The count has been
+    incremented for a THD when THD::thd_user_stats_version is != 0.
+    NOTE: The iteration of all threads was put back in, not for concurrent
+    connections, but for connected_time.
+
+  * Some internal threads do not use the normal connection creation code
+    path to create a thread. In that case update_global_user_stats() may
+    be called with THD::thd_user_stats_version==0.
+*/
+
 #include "mysql_priv.h"
 
 // Contains TABLE_STATS entries with db.table[.user] as the key.
@@ -40,6 +91,15 @@ int global_table_stats_version= 0;
 // Protects global table stats hash and version.
 pthread_mutex_t LOCK_global_table_stats;
 
+// Contains USER_STATS entries with account name as the key.
+HASH global_user_stats;
+
+// Incremented when global_user_stats is flushed.
+int global_user_stats_version= 0;
+
+// Protects global user stats hash and version.
+pthread_mutex_t LOCK_global_user_stats;
+
 // 'mysql_system_user' is used for when the user is not defined for a THD.
 static char mysql_system_user[] = "#mysql_system#";
 
@@ -47,9 +107,24 @@ static char mysql_system_user[] = "#mysql_system#";
   Returns 'user' if it's not NULL.  Returns 'mysql_system_user' otherwise.
 */
 
-static char *get_valid_user_string(char *user)
+static const char *get_valid_user_string(const char *user)
 {
   return user ? user : mysql_system_user;
+}
+
+/**
+  strcpy which enforces max length and NULL-termination.
+
+  Copies up to 'max_len' characters from the 'from' string to the 'to'
+  string and NULL-terminates the result. The 'to' string must have room
+  for at least 'max_len' + 1 characters.
+*/
+
+static void strncpy_with_nul(char *to, const char *from, size_t max_len)
+{
+  size_t len= min(strlen(from), max_len);
+  strncpy(to, from, len);
+  *(to + len)= '\0';
 }
 
 /**
@@ -154,7 +229,7 @@ int get_table_stats(THD *thd, TABLE *table, TABLE_STATS **cached_stats,
   // If the table is a temporary table, the username is appended.
   char table_key[NAME_LEN * 2 + USER_STATS_NAME_LENGTH + 3];
   int table_key_len;
-  char *name= get_valid_user_string(thd->main_security_ctx.user);
+  const char *name= get_valid_user_string(thd->main_security_ctx.user);
 
   safe_mutex_assert_owner(&LOCK_global_table_stats);
 
@@ -190,7 +265,7 @@ int get_table_stats(THD *thd, TABLE *table, TABLE_STATS **cached_stats,
 
   // Gets or creates the TABLE_STATS object for this table.
   if (!(table_stats= (TABLE_STATS *) hash_search(&global_table_stats,
-                                                 (uchar *) table_key,
+                                                 (const uchar *) table_key,
                                                  table_key_len)))
   {
     if (!(table_stats= ((TABLE_STATS *) my_malloc(sizeof(TABLE_STATS),
@@ -217,4 +292,428 @@ int get_table_stats(THD *thd, TABLE *table, TABLE_STATS **cached_stats,
   *cached_version= global_table_stats_version;
 
   return 0;
+}
+
+/**
+  hash_get_key for user stats hash.
+*/
+
+uchar *get_key_user_stats(USER_STATS *user_stats, size_t *length,
+                          my_bool not_used __attribute__((unused)))
+{
+  *length = strlen(user_stats->user);
+  return (uchar *) user_stats->user;
+}
+
+/**
+  hash_free for user stats hash.
+*/
+
+void free_user_stats(USER_STATS *user_stats)
+{
+  my_free((uchar *) user_stats, MYF(0));
+}
+
+/**
+  Initializes the global user stats hash.
+*/
+
+void init_global_user_stats(void)
+{
+  if (hash_init(&global_user_stats, system_charset_info, max_connections,
+                0, 0, (hash_get_key) get_key_user_stats,
+                (hash_free_key) free_user_stats, 0))
+  {
+    sql_print_error("Initializing global_user_stats failed.");
+    unireg_abort(1);
+  }
+  global_user_stats_version++;
+}
+
+/**
+  Frees the global user stats hash.
+*/
+
+void free_global_user_stats(void)
+{
+  hash_free(&global_user_stats);
+}
+
+/**
+  Returns the length of the key for a hash table of USER_STATS entries.
+
+  The key must be small enough to fit in user_stats->user when nul-terminated
+  and some of the input keys might need truncation.
+
+  @param  name  the user name input
+*/
+
+static inline int get_user_stats_name_len(const char *name)
+{
+  return min(USER_STATS_NAME_LENGTH, strlen(name));
+}
+
+/**
+  Get the USER_STATS object for the user associated with this THD.
+
+  Use the cached object when it is valid. Cache the object when
+  it is found.
+
+  @param          thd     THD for which an object is returned
+  @param          name    the account name
+
+  @return         pointer to USER_STATS object, NULL when one does not exist
+*/
+
+static USER_STATS *get_user_stats(THD *thd, const char *name)
+{
+  int name_len= get_user_stats_name_len(name);
+  safe_mutex_assert_owner(&LOCK_global_user_stats);
+  if (thd->thd_user_stats_version == global_user_stats_version)
+  {
+    // The cached object is valid, return it.
+    DBUG_ASSERT(thd->thd_user_stats);
+    return thd->thd_user_stats;
+  }
+
+  USER_STATS *user_stats=
+    (USER_STATS *) hash_search(&global_user_stats, (const uchar *) name,
+                               name_len);
+  if (user_stats)
+  {
+    thd->cache_user_stats(user_stats);
+    return user_stats;
+  }
+
+  return NULL;
+}
+
+/**
+  Initialize fields of a USER_STATS entry.
+*/
+void init_user_stats(USER_STATS *user_stats,
+                     const char *user,
+                     uint total_connections,
+                     uint concurrent_connections,
+                     time_t connected_time,
+                     double busy_time,
+                     double cpu_time,
+                     ulonglong bytes_received,
+                     ulonglong bytes_sent,
+                     ulonglong binlog_bytes_written,
+                     ha_rows rows_fetched,
+                     ha_rows rows_updated,
+                     ha_rows rows_read,
+                     ulonglong select_commands,
+                     ulonglong update_commands,
+                     ulonglong other_commands,
+                     ulonglong commit_trans,
+                     ulonglong rollback_trans,
+                     ulonglong denied_connections,
+                     ulonglong lost_connections,
+                     ulonglong access_denied_errors,
+                     ulonglong empty_queries)
+{
+  strncpy_with_nul(user_stats->user, user, USER_STATS_NAME_LENGTH);
+
+  user_stats->total_connections= total_connections;
+  user_stats->concurrent_connections= concurrent_connections;
+  user_stats->connected_time= connected_time;
+  user_stats->busy_time= busy_time;
+  user_stats->cpu_time= cpu_time;
+  user_stats->bytes_received= bytes_received;
+  user_stats->bytes_sent= bytes_sent;
+  user_stats->binlog_bytes_written= binlog_bytes_written;
+  user_stats->rows_fetched= rows_fetched;
+  user_stats->rows_updated= rows_updated;
+  user_stats->rows_read= rows_read;
+  user_stats->select_commands= select_commands;
+  user_stats->update_commands= update_commands;
+  user_stats->other_commands= other_commands;
+  user_stats->commit_trans= commit_trans;
+  user_stats->rollback_trans= rollback_trans;
+  user_stats->denied_connections= denied_connections;
+  user_stats->lost_connections= lost_connections;
+  user_stats->access_denied_errors= access_denied_errors;
+  user_stats->empty_queries= empty_queries;
+}
+
+/**
+  Add an entry to global_user_stats.
+
+  LOCK_global_user_stats must be locked when this is called.
+
+  @param  name        user name
+  @param  thd         THD for which entry is added
+  @param  on_connect  true when called for a new connection, false
+                      when called for a denied connection attempt
+
+  @return pointer to new entry on success, NULL on failure
+*/
+
+static USER_STATS *add_user_stats_entry(const char *name, THD *thd,
+                                        bool on_connect)
+{
+  USER_STATS *user_stats;
+
+  safe_mutex_assert_owner(&LOCK_global_user_stats);
+  DBUG_ASSERT(!hash_search(&global_user_stats, (const uchar *) name,
+                           get_user_stats_name_len(name)));
+
+  // First connection for this user
+  if (!(user_stats =
+        ((USER_STATS *) my_malloc(sizeof(USER_STATS), MYF(MY_WME)))))
+  {
+    sql_print_error("add_user_stats_entry: malloc failed");
+    return NULL;                                // Out of memory
+  }
+
+  init_user_stats(user_stats, name,
+                  // connections
+                  0, 0,
+                  // time
+                  0, 0, 0,
+                  // bytes sent, received and written
+                  0, 0, 0,
+                  // rows fetched, updated and read
+                  0, 0, 0,
+                  // select, update and other commands
+                  0, 0, 0,
+                  // commit and rollback trans
+                  0, 0,
+                  // denied connections
+                  0,
+                  // lost connections
+                  0,
+                  // access denied errors
+                  0,
+                  // empty queries
+                  0);
+
+  if (my_hash_insert(&global_user_stats, (uchar *) user_stats))
+  {
+    sql_print_error("add_user_stats_entry: insert failed");
+    my_free((char *) user_stats, 0);
+    return NULL;                                // Out of memory
+  }
+
+  if (on_connect)
+  {
+    user_stats->total_connections= 1;
+    user_stats->concurrent_connections= 1;
+    thd->cache_user_stats(user_stats);
+  }
+  else
+  {
+    user_stats->denied_connections= 1;
+    // Do not call THD::cache_user_stats() as concurrent_connections
+    // has not been incremented.
+  }
+
+  return user_stats;
+}
+
+/**
+  Used to update the global user stats.
+*/
+
+static void update_user_stats_with_user(THD *thd,
+                                        USER_STATS *user_stats,
+                                        time_t now)
+{
+  user_stats->connected_time+= now - thd->last_global_update_time;
+  thd->last_global_update_time= now;
+  user_stats->busy_time+= thd->diff_total_busy_time;
+  user_stats->cpu_time+= thd->diff_total_cpu_time;
+  user_stats->bytes_received+= thd->diff_total_bytes_received;
+  user_stats->bytes_sent+= thd->diff_total_bytes_sent;
+  user_stats->binlog_bytes_written+= thd->diff_total_binlog_bytes_written;
+  user_stats->rows_fetched+= thd->diff_total_sent_rows;
+  user_stats->rows_updated+= thd->diff_total_updated_rows;
+  user_stats->rows_read+= thd->diff_total_read_rows;
+  user_stats->select_commands+= thd->diff_select_commands;
+  user_stats->update_commands+= thd->diff_update_commands;
+  user_stats->other_commands+= thd->diff_other_commands;
+  user_stats->commit_trans+= thd->diff_commit_trans;
+  user_stats->rollback_trans+= thd->diff_rollback_trans;
+  user_stats->denied_connections+= thd->diff_denied_connections;
+  user_stats->lost_connections+= thd->diff_lost_connections;
+  user_stats->access_denied_errors+= thd->diff_access_denied_errors;
+  user_stats->empty_queries+= thd->diff_empty_queries;
+}
+
+/**
+  Updates the global stats of a user.
+
+  See notes on 'global table stats' in the file comment to understand why
+  this is called prior to doing stats related work for some commands.
+
+  @param  thd  connection for which stats are updated
+  @param  now  current time
+*/
+
+void update_global_user_stats(THD *thd, time_t now)
+{
+  const char *user_string= get_valid_user_string(thd->main_security_ctx.user);
+
+  USER_STATS *user_stats;
+  pthread_mutex_lock(&LOCK_global_user_stats);
+
+  /*
+    get_user_stats() may return NULL as there are a few internal
+    threads that do not go through the main connection creation code path.
+  */
+
+  // Update by user name.
+  user_stats= get_user_stats(thd, user_string);
+  if (!user_stats)
+  {
+    user_stats= add_user_stats_entry(user_string, thd, true);
+  }
+  if (user_stats)
+    update_user_stats_with_user(thd, user_stats, now);
+  else
+    sql_print_error("update user stats failed for %s", user_string);
+
+  thd->reset_diff_stats();
+  pthread_mutex_unlock(&LOCK_global_user_stats);
+}
+
+/**
+  Reset all fields except concurrent_connections to 0.
+
+  This function is called for entries in global_user_stats. We depend on
+  an accurate count of concurrent_connections per account, so that field
+  is never reset. It is incremented and decremented as connections come
+  and go.
+
+  @param  user_stats  the user stats entry to reset
+*/
+
+static void reset_user_stats(USER_STATS *user_stats)
+{
+  user_stats->total_connections= 0;
+  /* DO NOT RESET -- user_stats->concurrent_connections */
+  user_stats->connected_time=0;
+  user_stats->busy_time= 0;
+  user_stats->cpu_time= 0;
+  user_stats->bytes_received= 0;
+  user_stats->bytes_sent= 0;
+  user_stats->binlog_bytes_written= 0;
+  user_stats->rows_fetched= 0;
+  user_stats->rows_updated= 0;
+  user_stats->rows_read= 0;
+  user_stats->select_commands= 0;
+  user_stats->update_commands= 0;
+  user_stats->other_commands= 0;
+  user_stats->commit_trans= 0;
+  user_stats->rollback_trans= 0;
+  user_stats->denied_connections= 0;
+  user_stats->lost_connections= 0;
+  user_stats->access_denied_errors= 0;
+  user_stats->empty_queries= 0;
+}
+
+/**
+  Resets the hash table of global user statistics.
+
+  This function removes all entries for which
+  USER_STATS::concurrent_connections==0 and clears all fields except
+  concurrent_connections for the remaining entries. LOCK_global_user_stats
+  must be held when this is called.
+
+  @param  stats_hash     hash table of USER_STATS for global user statistics
+  @param  stats_version  pointer to global_user_stats_version
+
+  @return         status
+    @retval       0               OK
+    @retval       != 0            Error
+*/
+
+int reset_global_user_stats(HASH *stats_hash, int *stats_version)
+{
+  DYNAMIC_ARRAY delete_items;
+  safe_mutex_assert_owner(&LOCK_global_user_stats);
+
+  if (my_init_dynamic_array(&delete_items, sizeof(USER_STATS *),
+                            stats_hash->records, 1))
+  {
+    sql_print_error("reset global stats: cannot initialize dynamic array");
+    my_message(ER_OUTOFMEMORY, ER(ER_OUTOFMEMORY), MYF(0));
+    return 1;
+  }
+
+  for (ulong i= 0; i < stats_hash->records; ++i)
+  {
+    USER_STATS *entry= (USER_STATS *) hash_element(stats_hash, i);
+    if (entry->concurrent_connections)
+    {
+      reset_user_stats(entry);
+    }
+    else
+    {
+      if (insert_dynamic(&delete_items, (uchar *) &entry))
+      {
+        delete_dynamic(&delete_items);
+        sql_print_error("reset global stats: insert_dynamic failed");
+        my_message(ER_OUTOFMEMORY, ER(ER_OUTOFMEMORY), MYF(0));
+        return 1;
+      }
+    }
+  }
+
+  for (uint i= 0; i < delete_items.elements; ++i)
+  {
+    USER_STATS **entryp= (USER_STATS **) dynamic_array_ptr(&delete_items, i);
+    my_bool r= hash_delete(stats_hash, (uchar *) *entryp);
+    if (r)
+      unireg_abort(1);
+  }
+  delete_dynamic(&delete_items);
+  (*stats_version)++;
+  return 0;
+}
+
+/**
+  Refreshes global user stats in response to a FLUSH command.
+*/
+
+int refresh_global_user_stats(THD *thd)
+{
+  int result= 0;
+
+  update_global_user_stats(thd, time(NULL));
+
+  pthread_mutex_lock(&LOCK_global_user_stats);
+  if (reset_global_user_stats(&global_user_stats, &global_user_stats_version))
+    result = 1;
+  pthread_mutex_unlock(&LOCK_global_user_stats);
+  return result;
+}
+
+/**
+  Increment count of denied connections.
+
+  USER_STATS entries are added when none are found in global_user_stats
+  as this is only called when the THD uses a valid account name.
+
+  @param  thd  describes account and (IP or hostname) to increment
+*/
+
+void increment_denied_connects(THD *thd)
+{
+  const char *name= get_valid_user_string(thd->main_security_ctx.user);
+  int name_len= get_user_stats_name_len(name);
+
+  pthread_mutex_lock(&LOCK_global_user_stats);
+
+  USER_STATS *user_stats=
+      (USER_STATS *) hash_search(&global_user_stats, (const uchar *) name,
+                                 name_len);
+  if (!user_stats)
+    add_user_stats_entry(name, thd, false);
+  else
+    user_stats->denied_connections++;
+
+  pthread_mutex_unlock(&LOCK_global_user_stats);
 }
