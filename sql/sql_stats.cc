@@ -149,7 +149,7 @@ void update_table_stats(TABLE *tablep, bool follow_next)
 int get_table_stats(THD *thd, TABLE *table, TABLE_STATS **cached_stats,
                     int *cached_version)
 {
-  TABLE_STATS* table_stats;
+  TABLE_STATS *table_stats;
   // [db] + '.' + [table] + [optional '.' + 'username'] + '\0'
   // If the table is a temporary table, the username is appended.
   char table_key[NAME_LEN * 2 + USER_STATS_NAME_LENGTH + 3];
