@@ -868,8 +868,9 @@ static int acl_compare(ACL_ACCESS *a,ACL_ACCESS *b)
   RETURN VALUE
     0  success: thd->priv_user, thd->priv_host, thd->master_access, mqh are
        updated
-    1  user not found or authentication failure
+    1  user not found
     2  user found, has long (4.1.1) salt, but passwd is in old (3.23) format.
+    3  user found and authentication failure
    -1  user found, has short (3.23) salt, but passwd is in new (4.1.1) format.
 */
 
@@ -907,6 +908,8 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     {
       if (compare_hostname(&acl_user_tmp->host, sctx->host, sctx->ip))
       {
+        res= 3;
+
         /* check password: it should be empty or valid */
         if (passwd_len == acl_user_tmp->salt_len)
         {

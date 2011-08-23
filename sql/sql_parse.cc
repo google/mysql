@@ -1186,6 +1186,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
      */
     if (passwd >= packet_end)
     {
+      increment_connection_count(thd);
       my_message(ER_UNKNOWN_COM_ERROR, ER(ER_UNKNOWN_COM_ERROR), MYF(0));
       break;
     }
@@ -1203,6 +1204,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     */
     if (db >= packet_end)
     {
+      increment_connection_count(thd);
       my_message(ER_UNKNOWN_COM_ERROR, ER(ER_UNKNOWN_COM_ERROR), MYF(0));
       break;
     }
@@ -1216,6 +1218,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       CHARSET_INFO *cs;
       if (ptr + 2 > packet_end)
       {
+        increment_connection_count(thd);
         my_message(ER_UNKNOWN_COM_ERROR, ER(ER_UNKNOWN_COM_ERROR), MYF(0));
         break;
       }
@@ -1225,6 +1228,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
           !is_supported_parser_charset(cs))
       {
         /* Disallow non-supported parser character sets: UCS2, UTF16, UTF32 */
+        increment_connection_count(thd);
         my_error(ER_WRONG_VALUE_FOR_VAR, MYF(0), "character_set_client",
                  cs->csname);
         break;
@@ -1245,6 +1249,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     if (!(thd->security_ctx->user= my_strdup(user, MYF(0))))
     {
       thd->security_ctx->user= save_security_ctx.user;
+      increment_connection_count(thd);
       my_message(ER_OUT_OF_RESOURCES, ER(ER_OUT_OF_RESOURCES), MYF(0));
       break;
     }
@@ -1261,6 +1266,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       thd->user_connect= save_user_connect;
       thd->db= save_db;
       thd->db_length= save_db_length;
+      increment_connection_count(thd);
     }
     else
     {

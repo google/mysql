@@ -451,7 +451,7 @@ check_user(THD *thd, enum enum_server_command command,
         if (!count_ok)
         {                                         // too many connections
           my_error(ER_CON_COUNT_ERROR, MYF(0));
-          DBUG_RETURN(1);
+          DBUG_RETURN(-2);
         }
       }
 
@@ -497,7 +497,7 @@ check_user(THD *thd, enum enum_server_command command,
             &ur))
       {
         /* The error is set by get_or_create_user_conn(). */
-	DBUG_RETURN(1);
+	DBUG_RETURN(-2);
       }
       if (thd->user_connect &&
 	  (thd->user_connect->user_resources.conn_per_hour ||
@@ -506,7 +506,7 @@ check_user(THD *thd, enum enum_server_command command,
 	  check_for_max_user_connections(thd, thd->user_connect))
       {
         /* The error is set in check_for_max_user_connections(). */
-        DBUG_RETURN(1);
+        DBUG_RETURN(-2);
       }
 
       /* Change database if necessary */
@@ -517,9 +517,18 @@ check_user(THD *thd, enum enum_server_command command,
           /* mysql_change_db() has pushed the error message. */
           if (thd->user_connect)
             decrease_user_connections(thd->user_connect);
-          DBUG_RETURN(1);
+          DBUG_RETURN(-2);
         }
       }
+
+      if (increment_connection_count(thd))
+      {
+        my_error(ER_OUTOFMEMORY, MYF(0));
+        if (thd->user_connect)
+          decrease_user_connections(thd->user_connect);
+        DBUG_RETURN(-2);
+      }
+
       my_ok(thd);
       thd->password= test(passwd_len);          // remember for error messages 
 #ifndef EMBEDDED_LIBRARY
@@ -554,6 +563,11 @@ check_user(THD *thd, enum enum_server_command command,
                     thd->main_security_ctx.user,
                     thd->main_security_ctx.host_or_ip,
                     passwd_len ? ER(ER_YES) : ER(ER_NO));
+
+  // user found and authentication or resource failure
+  if (res == 3)
+    DBUG_RETURN(-2);
+
   DBUG_RETURN(1);
 #endif /* NO_EMBEDDED_ACCESS_CHECKS */
 }
@@ -867,6 +881,7 @@ char *get_length_encoded_string(char **buffer,
   RETURN
      0  success, OK is sent to user, thd is updated.
     -1  error, which is sent to user
+    -2  access denied, which is sent to the user
    > 0  error code (not sent to user)
 */
 
@@ -1332,7 +1347,11 @@ static bool login_connection(THD *thd)
       my_sleep(1000);				/* must wait after eof() */
 #endif
     statistic_increment(aborted_connects,&LOCK_status);
-    increment_denied_connects(thd);
+
+    /* Only increment denied connections for valid account names. */
+    if (error == -2)
+      increment_denied_connects(thd);
+
     DBUG_RETURN(1);
   }
   /* Connect completed, set read/write timeouts back to default */

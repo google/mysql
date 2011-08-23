@@ -586,9 +586,7 @@ void update_global_user_stats(THD *thd, time_t now)
   // Update by user name.
   user_stats= get_user_stats(thd, user_string);
   if (!user_stats)
-  {
     user_stats= add_user_stats_entry(user_string, thd, true);
-  }
   if (user_stats)
     update_user_stats_with_user(thd, user_stats, now);
   else
@@ -711,6 +709,40 @@ int refresh_global_user_stats(THD *thd)
 }
 
 /**
+  Increments the global user concurrent connection count.
+
+  LOCK_global_user_stats is locked/unlocked inside this function.
+
+  @param  thd  update count for user authenticated in this session
+
+  @return         status
+    @retval       0               OK
+    @retval       != 0            Error
+*/
+
+int increment_connection_count(THD *thd)
+{
+  const char *user_string= get_valid_user_string(thd->main_security_ctx.user);
+  int return_value= 0;
+
+  pthread_mutex_lock(&LOCK_global_user_stats);
+
+  USER_STATS *user_stats= get_user_stats(thd, user_string);
+  if (user_stats != NULL)
+  {
+    user_stats->total_connections++;
+    user_stats->concurrent_connections++;
+  }
+  else if (!(user_stats= add_user_stats_entry(user_string, thd, true)))
+  {
+    return_value= 1;
+  }
+
+  pthread_mutex_unlock(&LOCK_global_user_stats);
+  return return_value;
+}
+
+/**
   Increment count of denied connections.
 
   USER_STATS entries are added when none are found in global_user_stats
@@ -730,9 +762,65 @@ void increment_denied_connects(THD *thd)
       (USER_STATS *) hash_search(&global_user_stats, (const uchar *) name,
                                  name_len);
   if (!user_stats)
-    add_user_stats_entry(name, thd, false);
+    user_stats= add_user_stats_entry(name, thd, false);
   else
     user_stats->denied_connections++;
+
+  pthread_mutex_unlock(&LOCK_global_user_stats);
+}
+
+/**
+  Decrements the global user concurrent connection count.
+
+  LOCK_global_user_stats is locked/unlocked inside this function.
+
+  @param  thd  account for which the count is decremented
+*/
+
+void decrement_connection_count(THD *thd)
+{
+  USER_STATS *user_stats= 0;
+
+  pthread_mutex_lock(&LOCK_global_user_stats);
+
+  if (thd->thd_user_stats_version == 0)
+  {
+    // Do nothing as the count was never incremented for this THD.
+  }
+  else if (thd->thd_user_stats_version == global_user_stats_version)
+  {
+    user_stats= thd->thd_user_stats;
+  }
+  else
+  {
+    const char *name= get_valid_user_string(thd->main_security_ctx.user);
+    user_stats= (USER_STATS *) hash_search(&global_user_stats,
+                                           (const uchar *) name,
+                                           get_user_stats_name_len(name));
+  }
+
+  if (user_stats)
+  {
+    if (user_stats->concurrent_connections == 0)
+    {
+      sql_print_error("Cannot decrement concurrent_connections for %s. "
+                      "Will intentionally KILL the process.",
+                      get_valid_user_string(thd->main_security_ctx.user));
+      /*
+        Used to use unireg_abort() here, but found that it caused deadlocks
+        when initiated from handle_slave_io.
+
+        A unireg_abort call ends up resulting in a call to InnoDB's
+        logs_empty_and_mark_files_at_shutdown which will sit in a loop
+        until there are no pending transactions. However, when
+        called here from handle_slave_io, the thread owns LOCK_thread_count,
+        which prevents any threads from being created or destroyed and so
+        any pending transactions stay that way forever.
+      */
+      kill(getpid(), SIGKILL);
+    }
+    --(user_stats->concurrent_connections);
+  }
 
   pthread_mutex_unlock(&LOCK_global_user_stats);
 }
