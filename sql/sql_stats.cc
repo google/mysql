@@ -601,6 +601,73 @@ void update_global_user_stats(THD *thd, time_t now)
 }
 
 /**
+  Makes sure connection times are up-to-date for all current connections.
+
+  Needed because mysql_binlog_send and long-running queries may have long
+  intervals between calls to update_global_user_stats.
+*/
+
+void set_connections_stats(void)
+{
+  const time_t user_stats_full_update_max_freq= 120;
+  static time_t last_update_time= 0;
+  USER_STATS *user_stats;
+
+  safe_mutex_assert_owner(&LOCK_global_user_stats);
+
+  time_t now = time(NULL);
+  if (now - last_update_time > user_stats_full_update_max_freq)
+  {
+    pthread_mutex_lock(&LOCK_thread_count);
+
+    I_List_iterator<THD> it(threads);
+    THD *thd;
+    /* Iterates through the current threads. */
+    while ((thd= it++))
+    {
+      if (thd->thd_user_stats_version == 0)
+      {
+        /*
+          Do nothing as the count was never incremented for this THD.
+
+          This check is the same check which is done in
+          decrement_connection_count. We don't want to take any action
+          if the condition is met because get_user_stats would end up
+          setting thd_user_stats_version by calling cache_user_stats.
+          thd_user_stats_version doesn't typically get set until
+          check_user is called during connect. However, if the connection
+          fails due to ER_HANDSHAKE_ERROR or a password error, then
+          check_user won't call increment_connection_count, and our setting
+          thd_user_stats_version here would cause decrement to try to do
+          work and the connection count to go negative.
+        */
+        continue;
+      }
+
+      const char *name= get_valid_user_string(thd->main_security_ctx.user);
+
+      /*
+        get_user_stats() may return NULL as there are a few internal
+        threads that do not go through the main connection creation code path.
+        We do not update stats for those threads to try to keep the time spent
+        in the loop down.
+      */
+
+      /* Update by user name. */
+      user_stats= get_user_stats(thd, name);
+      if (user_stats != NULL)
+      {
+        update_user_stats_with_user(thd, user_stats, now);
+        thd->reset_diff_stats();
+      }
+    }
+
+    pthread_mutex_unlock(&LOCK_thread_count);
+    last_update_time= now;
+  }
+}
+
+/**
   Reset all fields except concurrent_connections to 0.
 
   This function is called for entries in global_user_stats. We depend on

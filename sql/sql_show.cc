@@ -5697,6 +5697,7 @@ int fill_schema_user_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
   */
   if (thd->security_ctx->master_access & SUPER_ACL)
   {
+    set_connections_stats();
     for (ulong i= 0; i < global_user_stats.records; ++i)
     {
       USER_STATS *user_stats=
