@@ -5624,6 +5624,51 @@ int fill_schema_table_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
 
 
 /**
+  Fills the fields for a single user_stats entry.
+
+  Helper for fill_schema_user_statistics.
+
+  @param[in]  thd                   thread handler
+  @param[in]  table                 I_S table
+  @param[in]  user_stats            USER_STATS entry
+
+  @return
+    0             success
+    1             error
+*/
+
+int fill_fields_user_statistics(THD *thd, TABLE *table,
+                                const USER_STATS *user_stats)
+{
+  table->field[0]->store(user_stats->user, strlen(user_stats->user),
+                         system_charset_info);
+  table->field[1]->store((longlong) user_stats->total_connections, true);
+  table->field[2]->store((longlong) user_stats->concurrent_connections, true);
+  table->field[3]->store((longlong) user_stats->connected_time, false);
+  table->field[4]->store((double) user_stats->busy_time);
+  table->field[5]->store((double) user_stats->cpu_time);
+  table->field[6]->store((longlong) user_stats->bytes_received, true);
+  table->field[7]->store((longlong) user_stats->bytes_sent, true);
+  table->field[8]->store((longlong) user_stats->binlog_bytes_written, true);
+  table->field[9]->store((longlong) user_stats->rows_fetched, true);
+  table->field[10]->store((longlong) user_stats->rows_updated, true);
+  table->field[11]->store((longlong) user_stats->rows_read, true);
+  table->field[12]->store((longlong) user_stats->select_commands, true);
+  table->field[13]->store((longlong) user_stats->update_commands, true);
+  table->field[14]->store((longlong) user_stats->other_commands, true);
+  table->field[15]->store((longlong) user_stats->commit_trans, true);
+  table->field[16]->store((longlong) user_stats->rollback_trans, true);
+  table->field[17]->store((longlong) user_stats->denied_connections, true);
+  table->field[18]->store((longlong) user_stats->lost_connections, true);
+  table->field[19]->store((longlong) user_stats->access_denied_errors, true);
+  table->field[20]->store((longlong) user_stats->empty_queries, true);
+  if (schema_table_store_record(thd, table))
+    return 1;
+  return 0;
+}
+
+
+/**
   Write result to network for SHOW USER_STATISTICS.
 
   @param[in]  thd                   thread handler
@@ -5638,46 +5683,41 @@ int fill_schema_table_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
 int fill_schema_user_statistics(THD *thd, TABLE_LIST *tables, COND *cond)
 {
   TABLE *table= tables->table;
+  int status= 0;
 
   update_global_user_stats(thd, time(NULL));
 
   restore_record(table, s->default_values);
 
   pthread_mutex_lock(&LOCK_global_user_stats);
-  for (ulong i= 0; i < global_user_stats.records; ++i)
+
+  /*
+    Seeing statistics for all users requires SUPER. Other users only get to
+    see their own statistics.
+  */
+  if (thd->security_ctx->master_access & SUPER_ACL)
   {
-    USER_STATS *user_stats= (USER_STATS *) hash_element(&global_user_stats, i);
-    table->field[0]->store(user_stats->user, strlen(user_stats->user),
-                           system_charset_info);
-    table->field[1]->store((longlong) user_stats->total_connections, true);
-    table->field[2]->store((longlong) user_stats->concurrent_connections, true);
-    table->field[3]->store((longlong) user_stats->connected_time, false);
-    table->field[4]->store((double) user_stats->busy_time);
-    table->field[5]->store((double) user_stats->cpu_time);
-    table->field[6]->store((longlong) user_stats->bytes_received, true);
-    table->field[7]->store((longlong) user_stats->bytes_sent, true);
-    table->field[8]->store((longlong) user_stats->binlog_bytes_written, true);
-    table->field[9]->store((longlong) user_stats->rows_fetched, true);
-    table->field[10]->store((longlong) user_stats->rows_updated, true);
-    table->field[11]->store((longlong) user_stats->rows_read, true);
-    table->field[12]->store((longlong) user_stats->select_commands, true);
-    table->field[13]->store((longlong) user_stats->update_commands, true);
-    table->field[14]->store((longlong) user_stats->other_commands, true);
-    table->field[15]->store((longlong) user_stats->commit_trans, true);
-    table->field[16]->store((longlong) user_stats->rollback_trans, true);
-    table->field[17]->store((longlong) user_stats->denied_connections, true);
-    table->field[18]->store((longlong) user_stats->lost_connections, true);
-    table->field[19]->store((longlong) user_stats->access_denied_errors, true);
-    table->field[20]->store((longlong) user_stats->empty_queries, true);
-    if (schema_table_store_record(thd, table))
+    for (ulong i= 0; i < global_user_stats.records; ++i)
     {
-      pthread_mutex_unlock(&LOCK_global_user_stats);
-      return 1;
+      USER_STATS *user_stats=
+        (USER_STATS *) hash_element(&global_user_stats, i);
+      if (fill_fields_user_statistics(thd, table, user_stats))
+      {
+        status= 1;
+        break;
+      }
     }
+  }
+  else
+  {
+    USER_STATS *user_stats= get_user_stats_for_thd(thd);
+    if (user_stats == NULL ||
+        fill_fields_user_statistics(thd, table, user_stats))
+      status= 1;
   }
   pthread_mutex_unlock(&LOCK_global_user_stats);
 
-  return 0;
+  return status;
 }
 
 /*
