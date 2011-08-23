@@ -1002,6 +1002,7 @@ void THD::cleanup(void)
   repl_wait_binlog_name= NULL;
   repl_wait_binlog_pos= 0;
 
+  decrement_connection_count(this);
   thd_user_stats= NULL;
   thd_user_stats_version= 0;
 
