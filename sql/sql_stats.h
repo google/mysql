@@ -58,6 +58,8 @@ int refresh_global_user_stats(THD *thd);
 
 USER_STATS *get_user_stats_for_thd(THD *thd);
 void update_global_user_stats(THD *thd, time_t now);
+void set_connections_stats(void);
+
 int increment_connection_count(THD *thd);
 void increment_denied_connects(THD *thd);
 void decrement_connection_count(THD *thd);

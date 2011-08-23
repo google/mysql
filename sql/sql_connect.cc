@@ -1409,6 +1409,8 @@ static void prepare_new_connection_state(THD* thd)
   netware_reg_user(sctx->ip, sctx->user, "MySQL");
 #endif
 
+  thd->reset_stats();
+
   if (thd->variables.max_join_size == HA_POS_ERROR)
     thd->options |= OPTION_BIG_SELECTS;
   if (thd->client_capabilities & CLIENT_COMPRESS)

@@ -2004,6 +2004,7 @@ public:
   bool store_globals();
   bool restore_globals();
   void cache_user_stats(USER_STATS *stats);
+  void reset_stats(void);
   void reset_diff_stats(void);
   void update_stats(bool ran_command);
 #ifdef SIGNAL_WITH_VIO_CLOSE

@@ -885,6 +885,7 @@ void THD::init(void)
   reset_current_stmt_binlog_row_based();
   bzero((char *) &status_var, sizeof(status_var));
   sql_log_bin_toplevel= options & OPTION_BIN_LOG;
+  reset_stats();
   thd_user_stats= NULL;
   thd_user_stats_version= 0;
 
@@ -1244,6 +1245,16 @@ void THD::cache_user_stats(USER_STATS *stats)
   safe_mutex_assert_owner(&LOCK_global_user_stats);
   thd_user_stats= stats;
   thd_user_stats_version= global_user_stats_version;
+}
+
+/**
+  Resets stats in a THD.
+*/
+void THD::reset_stats(void)
+{
+  current_connect_time= time(NULL);
+  last_global_update_time= current_connect_time;
+  reset_diff_stats();
 }
 
 /**
