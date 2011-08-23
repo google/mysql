@@ -547,6 +547,25 @@ static void update_user_stats_with_user(THD *thd,
 }
 
 /**
+  Return the USER_STATS entry for the thd's user.
+
+  Requires that LOCK_global_user_stats is locked.
+
+  @param  thd  connection for which entry is obtained
+
+  @return      pointer to USER_STATS object, NULL when one does not exist
+*/
+USER_STATS *get_user_stats_for_thd(THD *thd)
+{
+  const char *name= get_valid_user_string(thd->main_security_ctx.user);
+  int name_len= get_user_stats_name_len(name);
+
+  safe_mutex_assert_owner(&LOCK_global_user_stats);
+  return (USER_STATS *) hash_search(&global_user_stats, (const uchar *) name,
+                                    name_len);
+}
+
+/**
   Updates the global stats of a user.
 
   See notes on 'global table stats' in the file comment to understand why
