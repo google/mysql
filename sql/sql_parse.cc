@@ -6035,6 +6035,8 @@ void mysql_reset_thd_for_next_command(THD *thd)
   thd->total_warn_count=0;			// Warnings for this query
   thd->rand_used= 0;
   thd->sent_row_count= thd->examined_row_count= 0;
+  thd->busy_time= 0;
+  thd->cpu_time= 0;
 
   /*
     Because we come here only for start of top-statements, binlog format is
@@ -6227,6 +6229,28 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
 
   DBUG_EXECUTE_IF("parser_debug", turn_parser_debug_on(););
 
+  int start_time_error= 0;
+  int end_time_error= 0;
+  struct timeval start_time, end_time;
+  double start_usecs= 0;
+  double end_usecs= 0;
+  /* cpu time */
+  int cputime_error= 0;
+  double start_cpu_nsecs= 0;
+  double end_cpu_nsecs= 0;
+
+#ifdef HAVE_CLOCK_GETTIME
+  struct timespec tp;
+
+  // Gets the start cputime.
+  if (!(cputime_error= clock_gettime(CLOCK_THREAD_CPUTIME_ID, &tp)))
+    start_cpu_nsecs= tp.tv_sec * 1000000000.0 + tp.tv_nsec;
+#endif
+
+  // Gets the start time, in order to measure how long this command takes.
+  if (!(start_time_error= gettimeofday(&start_time, NULL)))
+    start_usecs= start_time.tv_sec * 1000000.0 + start_time.tv_usec;
+
   /*
     Warning.
     The purpose of query_cache_send_result_to_client() is to lookup the
@@ -6326,6 +6350,39 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
     /* There are no multi queries in the cache. */
     *found_semicolon= NULL;
   }
+
+  // Gets the end time.
+  if (!(end_time_error= gettimeofday(&end_time, NULL)))
+    end_usecs= end_time.tv_sec * 1000000.0 + end_time.tv_usec;
+
+  // Calculates the difference between the end and start times.
+  if (end_usecs >= start_usecs && !start_time_error && !end_time_error)
+  {
+    thd->busy_time= (end_usecs - start_usecs) / 1000000;
+    // In case there are bad values, 2629743 is the #seconds in a month.
+    if (thd->busy_time > 2629743)
+    {
+      statistic_increment(gettimeofday_errors, &LOCK_status);
+      thd->busy_time= 0;
+    }
+  }
+  else
+  {
+    // end time went back in time, or gettimeofday() failed.
+    statistic_increment(gettimeofday_errors, &LOCK_status);
+    thd->busy_time= 0;
+  }
+
+#ifdef HAVE_CLOCK_GETTIME
+  // Gets the end cputime.
+  if (!cputime_error &&
+      !(cputime_error= clock_gettime(CLOCK_THREAD_CPUTIME_ID, &tp)))
+    end_cpu_nsecs= tp.tv_sec * 1000000000.0 + tp.tv_nsec;
+#endif
+  if (!cputime_error)
+    thd->cpu_time= (end_cpu_nsecs - start_cpu_nsecs) / 1000000000;
+  else
+    thd->cpu_time= 0;
 
   // Updates THD stats and the global user stats.
   thd->update_stats(true);

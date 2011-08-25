@@ -616,6 +616,7 @@ ulong max_prepared_stmt_count;
   statements.
 */
 ulong prepared_stmt_count=0;
+ulong gettimeofday_errors= 0;
 ulong thread_id=1L,current_pid;
 ulong slow_launch_threads = 0, sync_binlog_period;
 ulong expire_logs_days = 0;
@@ -7972,6 +7973,7 @@ SHOW_VAR status_vars[]= {
   {"Delayed_writes",           (char*) &delayed_insert_writes,  SHOW_LONG},
   {"Failover",                 (char*) &failover,   SHOW_BOOL},
   {"Flush_commands",           (char*) &refresh_version,        SHOW_LONG_NOFLUSH},
+  {"Gettimeofday_errors",      (char*) &gettimeofday_errors,    SHOW_LONG},
   {"Handler_commit",           (char*) offsetof(STATUS_VAR, ha_commit_count), SHOW_LONG_STATUS},
   {"Handler_delete",           (char*) offsetof(STATUS_VAR, ha_delete_count), SHOW_LONG_STATUS},
   {"Handler_discover",         (char*) offsetof(STATUS_VAR, ha_discover_count), SHOW_LONG_STATUS},
