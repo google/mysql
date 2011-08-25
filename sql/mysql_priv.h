@@ -2107,6 +2107,7 @@ extern struct system_variables max_system_variables;
 extern struct system_status_var global_status_var;
 extern struct rand_struct sql_rand;
 extern pthread_mutex_t LOCK_stats;
+extern ulong gettimeofday_errors;
 
 extern const char *opt_date_time_formats[];
 extern KNOWN_DATE_TIME_FORMAT known_date_time_formats[];

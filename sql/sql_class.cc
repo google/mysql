@@ -703,6 +703,8 @@ THD::THD()
   active_vio = 0;
 #endif
   pthread_mutex_init(&LOCK_thd_data, MY_MUTEX_INIT_FAST);
+  busy_time= 0;
+  cpu_time= 0;
 
   /* Variables with default values */
   proc_info="login";
