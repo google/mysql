@@ -48,9 +48,6 @@
 char server_version[SERVER_VERSION_LENGTH];
 ulong server_id = 0;
 
-// needed by net_serv.c
-ulong bytes_sent = 0L, bytes_received = 0L;
-ulong mysqld_net_retry_count = 10L;
 ulong open_files_limit;
 uint test_flags = 0; 
 static uint opt_protocol= 0;
@@ -2137,4 +2134,3 @@ int main(int argc, char** argv)
 #include "my_decimal.cc"
 #include "log_event.cc"
 #include "log_event_old.cc"
-

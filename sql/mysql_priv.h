@@ -2033,7 +2033,7 @@ extern pthread_mutex_t LOCK_mysql_create_db,LOCK_Acl,LOCK_open, LOCK_lock_db,
        LOCK_slave_list, LOCK_active_mi, LOCK_manager, LOCK_global_read_lock,
        LOCK_global_system_variables, LOCK_user_conn,
        LOCK_prepared_stmt_count,
-       LOCK_bytes_sent, LOCK_bytes_received, LOCK_connection_count;
+       LOCK_connection_count;
 extern MYSQL_PLUGIN_IMPORT pthread_mutex_t LOCK_thread_count;
 #ifdef HAVE_OPENSSL
 extern pthread_mutex_t LOCK_des_key_file;
