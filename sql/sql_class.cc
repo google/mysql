@@ -705,6 +705,8 @@ THD::THD()
   pthread_mutex_init(&LOCK_thd_data, MY_MUTEX_INIT_FAST);
   busy_time= 0;
   cpu_time= 0;
+  bytes_received= 0;
+  bytes_sent= 0;
 
   /* Variables with default values */
   proc_info="login";
@@ -3002,6 +3004,7 @@ void thd_increment_bytes_sent(ulong length)
   if (likely(thd != 0))
   { /* current_thd==0 when close_connection() calls net_send_error() */
     thd->status_var.bytes_sent+= length;
+    thd->bytes_sent+= length;
   }
 }
 
@@ -3009,6 +3012,7 @@ void thd_increment_bytes_sent(ulong length)
 void thd_increment_bytes_received(ulong length)
 {
   current_thd->status_var.bytes_received+= length;
+  current_thd->bytes_received+= length;
 }
 
 
