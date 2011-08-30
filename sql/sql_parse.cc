@@ -1858,6 +1858,14 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   net_end_statement(thd);
   query_cache_end_of_result(thd);
 
+  /*
+    Updates THD stats and the global user stats. Done here after
+    net_end_statement so that bytes_sent & bytes_received have been
+    updated.
+  */
+  thd->update_stats(true);
+  update_global_user_stats(thd, time(NULL));
+
   thd->proc_info= "closing tables";
   /* Free tables */
   close_thread_tables(thd);
@@ -6037,6 +6045,8 @@ void mysql_reset_thd_for_next_command(THD *thd)
   thd->sent_row_count= thd->examined_row_count= 0;
   thd->busy_time= 0;
   thd->cpu_time= 0;
+  thd->bytes_received= 0;
+  thd->bytes_sent= 0;
 
   /*
     Because we come here only for start of top-statements, binlog format is
@@ -6383,10 +6393,6 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
     thd->cpu_time= (end_cpu_nsecs - start_cpu_nsecs) / 1000000000;
   else
     thd->cpu_time= 0;
-
-  // Updates THD stats and the global user stats.
-  thd->update_stats(true);
-  update_global_user_stats(thd, time(NULL));
 
   DBUG_VOID_RETURN;
 }
