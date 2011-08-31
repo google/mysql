@@ -6047,6 +6047,7 @@ void mysql_reset_thd_for_next_command(THD *thd)
   thd->cpu_time= 0;
   thd->bytes_received= 0;
   thd->bytes_sent= 0;
+  thd->binlog_bytes_written= 0;
 
   /*
     Because we come here only for start of top-statements, binlog format is

@@ -706,6 +706,7 @@ THD::THD()
   cpu_time= 0;
   bytes_received= 0;
   bytes_sent= 0;
+  binlog_bytes_written= 0;
 
   /* Variables with default values */
   proc_info="login";
