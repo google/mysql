@@ -1315,22 +1315,9 @@ void THD::update_stats(bool ran_command)
       // A SQL query.
       if (lex->sql_command == SQLCOM_SELECT)
       {
-        // TODO(jtolmer): orig_sql_command has been removed so need to adapt.
-        /*
-        if (lex->orig_sql_command == SQLCOM_END)
-        {
-          diff_select_commands++;
-          if (!diff_sent_row_count)
-            diff_empty_queries++;
-        }
-        else
-        {
-          // 'SHOW ' commands become SQLCOM_SELECT.
-          diff_other_commands++;
-          // 'SHOW ' commands shouldn't inflate total sent row count.
-          diff_total_sent_rows-= diff_sent_row_count;
-        }
-        */
+        diff_select_commands++;
+        if (!diff_sent_row_count)
+          diff_empty_queries++;
       }
       else if (is_update_query(lex->sql_command))
       {

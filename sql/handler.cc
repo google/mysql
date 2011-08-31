@@ -3663,10 +3663,7 @@ void handler::update_global_table_stats()
     cached_table_stats->rows_changed_x_indexes+=
       rows_changed * (table->s->keys ? table->s->keys : 1);
   }
-  /*
-    TODO(jtolmer): User stats
-    current_thd->diff_total_read_rows+= rows_read;
-  */
+  current_thd->diff_total_read_rows+= rows_read;
   rows_read= rows_changed= 0;
 
   pthread_mutex_unlock(&LOCK_global_table_stats);

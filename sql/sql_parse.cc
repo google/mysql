@@ -6175,6 +6175,8 @@ void mysql_reset_thd_for_next_command(THD *thd)
   thd->total_warn_count=0;			// Warnings for this query
   thd->rand_used= 0;
   thd->sent_row_count= thd->examined_row_count= 0;
+  thd->sent_row_count_last_seen= 0;
+  thd->updated_row_count= 0;
   thd->busy_time= 0;
   thd->cpu_time= 0;
   thd->bytes_received= 0;
