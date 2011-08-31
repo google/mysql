@@ -5231,6 +5231,8 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                              group_id_to_use);
           if (e.write(file, file != &log_file))
             goto err;
+          if (file == &log_file)
+            thd->binlog_bytes_written+= e.data_written;
         }
         if (thd->auto_inc_intervals_in_cur_stmt_for_binlog.nb_elements() > 0)
         {
@@ -5242,6 +5244,8 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                              minimum(), group_id_to_use);
           if (e.write(file, file != &log_file))
             goto err;
+          if (file == &log_file)
+            thd->binlog_bytes_written+= e.data_written;
         }
         if (thd->rand_used)
         {
@@ -5249,6 +5253,8 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                            group_id_to_use);
           if (e.write(file, file != &log_file))
             goto err;
+          if (file == &log_file)
+            thd->binlog_bytes_written+= e.data_written;
         }
         if (thd->user_var_events.elements)
         {
@@ -5265,6 +5271,8 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                                  group_id_to_use);
             if (e.write(file, file != &log_file))
               goto err;
+            if (file == &log_file)
+              thd->binlog_bytes_written+= e.data_written;
           }
         }
       }
@@ -5287,6 +5295,8 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
 
     if (file == &log_file) // we are writing to the real log (disk)
     {
+      thd->binlog_bytes_written+= event_info->data_written;
+
       if (flush_and_sync())
 	goto err;
 
@@ -5767,6 +5777,7 @@ bool MYSQL_BIN_LOG::write_incident(THD *thd, bool lock,
     ev.group_id= *group_id_to_use;
 
   error= ev.write(&log_file, false /* only_checksum_body */);
+  thd->binlog_bytes_written+= ev.data_written;
 
   // Consume the group_id.
   if (group_id_to_use == NULL && !error)
@@ -5878,6 +5889,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
       if (!is_autocommit_ddl &&
           qinfo.write(&log_file, false /* only_checksum_body */))
         goto err;
+      thd->binlog_bytes_written+= qinfo.data_written;
 
       DBUG_EXECUTE_IF("crash_before_writing_xid",
                       {
@@ -5891,6 +5903,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
 
       if ((write_error= write_cache(cache, false, false, group_id_to_use)))
         goto err;
+      thd->binlog_bytes_written+= my_b_tell(cache);
       DBUG_EXECUTE_IF("half_binlogged_transaction", goto DBUG_skip_commit;);
 
       if (!is_autocommit_ddl && commit_event)
@@ -5904,6 +5917,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
 
         if (commit_event->write(&log_file, false /* only_checksum_body */))
           goto err;
+        thd->binlog_bytes_written+= commit_event->data_written;
       }
 
       if (incident && write_incident(thd, FALSE, &group_id_to_use))
