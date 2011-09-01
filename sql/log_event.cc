@@ -3569,6 +3569,9 @@ int Query_log_event::do_apply_event(Relay_log_info const *rli,
       mysql_parse(thd, thd->query(), thd->query_length(), &found_semicolon);
       log_slow_statement(thd);
 
+      /* Update user stats command counts. */
+      thd->update_stats(true);
+
       /*
         Resetting the enable_slow_log thd variable.
 
