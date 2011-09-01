@@ -1378,6 +1378,7 @@ static void end_connection(THD *thd)
   if (thd->killed || (net->error && net->vio != 0))
   {
     statistic_increment(aborted_threads,&LOCK_status);
+    thd->diff_lost_connections++;
   }
 
   if (net->error && net->vio != 0)
