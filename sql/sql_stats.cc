@@ -66,14 +66,15 @@
     guarantee that any work done by previous commands in the current
     THD is displayed or reset.
 
-  * SHOW USER_STATS used to lock LOCK_global_user_stats and
+  * SHOW USER_STATS used to always lock LOCK_global_user_stats and
     LOCK_thread_count and then iterate over all threads to determine the
     count of concurrent connections per thread. That is a mutex hot spot.
     The current code depends on the concurrent_connections count to be
     updated on connection create and connection end. The count has been
     incremented for a THD when THD::thd_user_stats_version is != 0.
-    NOTE: The iteration of all threads was put back in, not for concurrent
-    connections, but for connected_time.
+    Now, SHOW USER_STATS only takes the locks and iterates the threads
+    in order to make sure that connected_time is accurate for the binlog
+    dump threads and long running queries.
 
   * Some internal threads do not use the normal connection creation code
     path to create a thread. In that case update_global_user_stats() may

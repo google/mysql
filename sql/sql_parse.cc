@@ -1864,7 +1864,6 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     updated.
   */
   thd->update_stats(true);
-  update_global_user_stats(thd, time(NULL));
 
   thd->proc_info= "closing tables";
   /* Free tables */
