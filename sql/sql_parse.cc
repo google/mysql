@@ -1888,7 +1888,6 @@ skip_cmd_execution:
     updated.
   */
   thd->update_stats(true);
-  update_global_user_stats(thd, time(NULL));
 
   thd->proc_info= "closing tables";
   /* Free tables */
