@@ -1211,6 +1211,10 @@ int ha_commit_trans(THD *thd, bool all)
         goto end;
       }
     }
+
+    if (is_real_trans)
+      thd->diff_commit_trans++;
+
 end:
     if (rw_trans)
       start_waiting_global_read_lock(thd);
@@ -1341,6 +1345,8 @@ int ha_rollback_trans(THD *thd, bool all)
   /* Always cleanup. Even if there nht==0. There may be savepoints. */
   if (is_real_trans)
     thd->transaction.cleanup();
+
+  thd->diff_rollback_trans++;
 #endif /* USING_TRANSACTIONS */
   if (all)
     thd->transaction_rollback_request= FALSE;
@@ -1780,6 +1786,7 @@ int ha_rollback_to_savepoint(THD *thd, SAVEPOINT *sv)
     ha_info->reset(); /* keep it conveniently zero-filled */
   }
   trans->ha_list= sv->ha_list;
+  thd->diff_rollback_trans++;
   DBUG_RETURN(error);
 }
 
