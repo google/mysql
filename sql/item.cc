@@ -4436,6 +4436,7 @@ bool Item_field::fix_fields(THD *thd, Item **reference)
                                              db, tab, field_name) &
                             VIEW_ANY_ACL)))
     {
+      thd->diff_access_denied_errors++;
       my_error(ER_COLUMNACCESS_DENIED_ERROR, MYF(0),
                "ANY", thd->security_ctx->priv_user,
                thd->security_ctx->host_or_ip, field_name, tab);

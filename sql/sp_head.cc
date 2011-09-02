@@ -1555,6 +1555,7 @@ sp_head::execute_trigger(THD *thd,
     char priv_desc[128];
     get_privilege_desc(priv_desc, sizeof(priv_desc), TRIGGER_ACL);
 
+    thd->diff_access_denied_errors++;
     my_error(ER_TABLEACCESS_DENIED_ERROR, MYF(0), priv_desc,
              thd->security_ctx->priv_user, thd->security_ctx->host_or_ip,
              table_name->str);
@@ -4066,4 +4067,3 @@ sp_add_to_query_tables(THD *thd, LEX *lex,
   lex->add_to_query_tables(table);
   return table;
 }
-

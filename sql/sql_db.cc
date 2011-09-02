@@ -1694,6 +1694,7 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
       !(db_access & DB_ACLS) &&
       check_grant_db(thd, new_db_file_name.str))
   {
+    thd->diff_access_denied_errors++;
     my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
              sctx->priv_user,
              sctx->priv_host,

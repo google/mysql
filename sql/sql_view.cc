@@ -315,6 +315,7 @@ bool create_view_precheck(THD *thd, TABLE_LIST *tables, TABLE_LIST *view,
       */
       if (check_some_access(thd, VIEW_ANY_ACL, tbl))
       {
+        thd->diff_access_denied_errors++;
         my_error(ER_TABLEACCESS_DENIED_ERROR, MYF(0),
                  "ANY", thd->security_ctx->priv_user,
                  thd->security_ctx->priv_host, tbl->table_name);
@@ -472,6 +473,7 @@ bool mysql_create_view(THD *thd, TABLE_LIST *views,
   {
     if (!(thd->security_ctx->master_access & SUPER_ACL))
     {
+      thd->diff_access_denied_errors++;
       my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
       res= TRUE;
       goto err;
@@ -634,6 +636,7 @@ bool mysql_create_view(THD *thd, TABLE_LIST *views,
     
     if (!final_priv && report_item)
     {
+      thd->diff_access_denied_errors++;
       my_error(ER_COLUMNACCESS_DENIED_ERROR, MYF(0),
                "create view", thd->security_ctx->priv_user,
                thd->security_ctx->priv_host, report_item->name,

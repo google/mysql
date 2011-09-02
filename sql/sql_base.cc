@@ -8089,6 +8089,7 @@ insert_fields(THD *thd, Name_resolution_context *context, const char *db_name,
                                 field_table_name, fld->field_name) &
                VIEW_ANY_ACL)))
         {
+          thd->diff_access_denied_errors++;
           my_error(ER_TABLEACCESS_DENIED_ERROR, MYF(0), "ANY",
                    thd->security_ctx->priv_user,
                    thd->security_ctx->host_or_ip,

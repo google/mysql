@@ -2200,6 +2200,7 @@ bool sp_process_definer(THD *thd)
                        thd->security_ctx->priv_host)) &&
         check_global_access(thd, SUPER_ACL))
     {
+      thd->diff_access_denied_errors++;
       my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
       DBUG_RETURN(TRUE);
     }
@@ -5552,6 +5553,7 @@ check_access(THD *thd, ulong want_access, const char *db, ulong *save_priv,
       if (!no_errors)
       {
         const char *db_name= db ? db : thd->db;
+        thd->diff_access_denied_errors++;
         my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
                  sctx->priv_user, sctx->priv_host, db_name);
       }
@@ -5584,12 +5586,15 @@ check_access(THD *thd, ulong want_access, const char *db, ulong *save_priv,
   {						// We can never grant this
     DBUG_PRINT("error",("No possible access"));
     if (!no_errors)
+    {
+      thd->diff_access_denied_errors++;
       my_error(ER_ACCESS_DENIED_ERROR, MYF(0),
                sctx->priv_user,
                sctx->priv_host,
                (thd->password ?
                 ER(ER_YES) :
                 ER(ER_NO)));                    /* purecov: tested */
+    }
     DBUG_RETURN(TRUE);				/* purecov: tested */
   }
 
@@ -5615,11 +5620,14 @@ check_access(THD *thd, ulong want_access, const char *db, ulong *save_priv,
 
   DBUG_PRINT("error",("Access denied"));
   if (!no_errors)
+  {
+    thd->diff_access_denied_errors++;
     my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
              sctx->priv_user, sctx->priv_host,
              (db ? db : (thd->db ?
                          thd->db :
                          "unknown")));          /* purecov: tested */
+  }
   DBUG_RETURN(TRUE);				/* purecov: tested */
 }
 
@@ -5648,6 +5656,7 @@ static bool check_show_access(THD *thd, TABLE_LIST *table)
 
     if (!thd->col_access && check_grant_db(thd, dst_db_name))
     {
+      thd->diff_access_denied_errors++;
       my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
                thd->security_ctx->priv_user,
                thd->security_ctx->priv_host,
@@ -5729,9 +5738,12 @@ check_table_access(THD *thd, ulong want_access,TABLE_LIST *tables,
         (want_access & ~(SELECT_ACL | EXTRA_ACL | FILE_ACL)))
     {
       if (!no_errors)
+      {
+        thd->diff_access_denied_errors++;
         my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
                  sctx->priv_user, sctx->priv_host,
                  INFORMATION_SCHEMA_NAME.str);
+      }
       return TRUE;
     }
     /*
@@ -5894,6 +5906,7 @@ bool check_global_access(THD *thd, ulong want_access)
   if ((thd->security_ctx->master_access & want_access))
     return 0;
   get_privilege_desc(command, sizeof(command), want_access);
+  thd->diff_access_denied_errors++;
   my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), command);
   return 1;
 #else
