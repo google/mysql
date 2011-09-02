@@ -559,6 +559,7 @@ check_user(THD *thd, enum enum_server_command command,
     general_log_print(thd, COM_CONNECT, ER(ER_NOT_SUPPORTED_AUTH_MODE));
     DBUG_RETURN(1);
   }
+  thd->diff_access_denied_errors++;
   my_error(ER_ACCESS_DENIED_ERROR, MYF(0),
            thd->main_security_ctx.user,
            thd->main_security_ctx.host_or_ip,

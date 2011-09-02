@@ -683,6 +683,7 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
   {
     if (check_global_access(thd, SUPER_ACL))
     {
+      thd->diff_access_denied_errors++;
       my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
       return TRUE;
     }

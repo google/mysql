@@ -3347,6 +3347,7 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
         char command[128];
         get_privilege_desc(command, sizeof(command),
                            table_list->grant.want_privilege);
+        thd->diff_access_denied_errors++;
         my_error(ER_TABLEACCESS_DENIED_ERROR, MYF(0),
                  command, thd->security_ctx->priv_user,
                  thd->security_ctx->host_or_ip, table_list->alias);
@@ -4360,6 +4361,7 @@ err:
   {
     char command[128];
     get_privilege_desc(command, sizeof(command), want_access);
+    thd->diff_access_denied_errors++;
     my_error(ER_TABLEACCESS_DENIED_ERROR, MYF(0),
              command,
              sctx->priv_user,
@@ -4427,6 +4429,7 @@ err:
   rw_unlock(&LOCK_grant);
   char command[128];
   get_privilege_desc(command, sizeof(command), want_access);
+  thd->diff_access_denied_errors++;
   my_error(ER_COLUMNACCESS_DENIED_ERROR, MYF(0),
            command,
            sctx->priv_user,
@@ -4592,6 +4595,7 @@ err:
     Do not give an error message listing a column name unless the user has
     privilege to see all columns.
   */
+  thd->diff_access_denied_errors++;
   if (using_column_privileges)
     my_error(ER_TABLEACCESS_DENIED_ERROR, MYF(0),
              command, sctx->priv_user,
@@ -4727,6 +4731,7 @@ err:
       command= "alter routine";
     else if (want_access & GRANT_ACL)
       command= "grant";
+    thd->diff_access_denied_errors++;
     my_error(ER_PROCACCESS_DENIED_ERROR, MYF(0),
              command, user, host, table ? buff : "unknown");
   }

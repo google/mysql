@@ -1127,6 +1127,7 @@ static int sys_check_ftb_syntax(THD *thd,  set_var *var)
             -1 : 0);
   else
   {
+    thd->diff_access_denied_errors++;
     my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
     return 1;
   }
@@ -3384,6 +3385,7 @@ static int check_log_update(THD *thd, set_var *var)
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   if (!(thd->security_ctx->master_access & SUPER_ACL))
   {
+    thd->diff_access_denied_errors++;
     my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
     return 1;
   }
@@ -3422,6 +3424,7 @@ static int check_pseudo_thread_id(THD *thd, set_var *var)
     return 0;
   else
   {
+    thd->diff_access_denied_errors++;
     my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
     return 1;
   }

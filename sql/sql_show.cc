@@ -669,6 +669,7 @@ public:
     case ER_TABLEACCESS_DENIED_ERROR:
       if (!strcmp(get_view_access_denied_message(), message))
       {
+        thd->diff_access_denied_errors++;
         /* Access to top view is not granted, don't interfere. */
         is_handled= FALSE;
         break;
@@ -826,6 +827,7 @@ bool mysqld_show_create_db(THD *thd, char *dbname,
 		sctx->master_access);
   if (!(db_access & DB_ACLS) && check_grant_db(thd,dbname))
   {
+    thd->diff_access_denied_errors++;
     my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
              sctx->priv_user, sctx->host_or_ip, dbname);
     general_log_print(thd,COM_INIT_DB,ER(ER_DBACCESS_DENIED_ERROR),
@@ -7480,6 +7482,7 @@ bool show_create_trigger(THD *thd, const sp_name *trg_name)
 
   if (check_table_access(thd, TRIGGER_ACL, lst, 1, TRUE))
   {
+    thd->diff_access_denied_errors++;
     my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "TRIGGER");
     return TRUE;
   }

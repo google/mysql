@@ -3760,6 +3760,7 @@ bool TABLE_LIST::prepare_view_securety_context(THD *thd)
         }
         else
         {
+          thd->diff_access_denied_errors++;
            my_error(ER_ACCESS_DENIED_ERROR, MYF(0),
                     thd->security_ctx->priv_user,
                     thd->security_ctx->priv_host,
