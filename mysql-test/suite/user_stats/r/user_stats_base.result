@@ -1,0 +1,289 @@
+update mysql.db set User = 'hide' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+create table t2 (a int not null primary key, b int not null) engine=innodb;
+create table t3 (a int not null primary key, b int not null, index bx(b)) engine=myisam;
+""
+Test user statistics
+""
+flush user_statistics;
+Empty_queries should be 0 and is 0
+Rows_fetched should be 1 and is 1
+Update_commands should be 0 and is 0
+Select_commands should be 0 and is 0
+Other_commands should be 5 and is 5
+Table_rows_read should be 0 and is 0
+select User, Empty_queries, Rows_fetched, Update_commands, Select_commands, Other_commands, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Empty_queries	Rows_fetched	Update_commands	Select_commands	Other_commands	Table_rows_read
+root	0	6	0	0	7	0
+""
+Test create table
+""
+flush user_statistics;
+create table t1 (a int not null primary key, b int not null) engine=innodb;
+Update_commands should be 1 and is 1
+Select_commands should be 0 and is 0
+Other_commands should be 3 and is 3
+select User, Update_commands, Select_commands, Other_commands
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Other_commands
+root	1	0	4
+""
+Test insert
+""
+flush user_statistics;
+insert into t1 values (1,1), (2,2);
+Update_commands should be 1 and is 1
+Select_commands should be 0 and is 0
+Other_commands should be 3 and is 3
+Rows_updated should be 2 and is 2
+Rows_fetched should be 4 and is 4
+Table_rows_read should be 0 and is 0
+select User, Update_commands, Select_commands, Other_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Other_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	1	0	7	2	6	0
+""
+Test insert select
+""
+flush user_statistics;
+insert into t2 select * from t1;
+Update_commands should be 1 and is 1
+Select_commands should be 0 and is 0
+Rows_updated should be 2 and is 2
+Rows_fetched should be 3 and is 3
+Table_rows_read should be 2 and is 2
+select User, Update_commands, Select_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	1	0	2	5	2
+""
+Test update with PK scans
+""
+insert into t1 values (0,0);
+select count(*) from t1;
+count(*)
+3
+flush user_statistics;
+update t1 set a = 3 where a = 1;
+Table_rows_read should be 1 and is 1
+update t1 set a = 4 where b = 2;
+Update_commands should be 2 and is 2
+Select_commands should be 0 and is 0
+Rows_updated should be 2 and is 2
+Rows_fetched should be 4 and is 4
+Table_rows_read should be 5 and is 5
+select User, Update_commands, Select_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	2	0	2	6	5
+""
+Test update with secondary index scans and MyISAM
+""
+insert into t3 values (0,0);
+insert into t3 values (1,1);
+insert into t3 values (2,2);
+flush user_statistics;
+update t3 set a = 4 where b = 1;
+Update_commands should be 1 and is 1
+Select_commands should be 0 and is 0
+Rows_updated should be 1 and is 1
+Rows_fetched should be 3 and is 3
+Table_rows_read should be 1 and is 1
+select User, Update_commands, Select_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	1	0	1	5	1
+""
+Test delete with PK scans
+""
+flush user_statistics;
+delete from t1 where a = 3;
+Table_rows_read should be 1 and is 1
+select User, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Table_rows_read
+root	1
+delete from t1 where b = 2;
+Update_commands should be 2 and is 2
+Select_commands should be 1 and is 1
+Rows_updated should be 2 and is 2
+Rows_fetched should be 5 and is 5
+Table_rows_read should be 3 and is 3
+select User, Update_commands, Select_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	2	1	2	7	3
+""
+Test delete with secondary index scans
+""
+flush user_statistics;
+delete from t3 where b = 1;
+Update_commands should be 1 and is 1
+Select_commands should be 0 and is 0
+Rows_updated should be 1 and is 1
+Rows_fetched should be 3 and is 3
+Table_rows_read should be 1 and is 1
+select User, Update_commands, Select_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	1	0	1	5	1
+""
+Test select with PK scans
+""
+insert into t1 values (1,1), (2,2);
+flush user_statistics;
+select count(*) from t1 where a = 1;
+count(*)
+1
+Table_rows_read should be 1 and is 1
+select User, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Table_rows_read
+root	1
+select count(*) from t1 where b < 0;
+count(*)
+0
+Update_commands should be 0 and is 0
+Select_commands should be 3 and is 3
+Rows_updated should be 0 and is 0
+Rows_fetched should be 7 and is 7
+Table_rows_read should be 4 and is 4
+select User, Update_commands, Select_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	0	3	0	9	4
+""
+Test select with secondary scans
+""
+insert into t3 values (1,1);
+analyze table t3;
+Table	Op	Msg_type	Msg_text
+test.t3	analyze	status	OK
+explain select * from t3 where b < 0;
+id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
+1	SIMPLE	t3	range	bx	bx	4	NULL	1	Using where
+flush user_statistics;
+select * from t3 where b = 1;
+a	b
+1	1
+Table_rows_read should be 1 and is 1
+select * from t3 where b < 0;
+a	b
+Update_commands should be 0 and is 0
+Select_commands should be 2 and is 2
+Rows_updated should be 0 and is 0
+Rows_fetched should be 5 and is 5
+Table_rows_read should be 2 and is 2
+select User, Update_commands, Select_commands, Rows_updated, Rows_fetched, Table_rows_read
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Update_commands	Select_commands	Rows_updated	Rows_fetched	Table_rows_read
+root	0	2	0	7	2
+""
+Test denied connections
+""
+create user foo@localhost identified by 'bar';
+grant select, insert, drop, delete, update on test.t1 to foo@localhost with max_user_connections 2;
+flush user_statistics;
+select current_user();
+current_user()
+foo@localhost
+total_connections should be 1
+concurrent_connections should be 1
+select total_connections, concurrent_connections from information_schema.user_statistics where User = 'foo';
+total_connections	concurrent_connections
+1	1
+connect(localhost,foo,wrong,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'foo'@'localhost' (using password: YES)
+total_connections should be 1
+denied_connections should be 1
+select total_connections, denied_connections from information_schema.user_statistics where User = 'foo';
+total_connections	denied_connections
+1	1
+""
+Test rollback and commit
+echo ""
+set autocommit=0;
+flush user_statistics;
+insert into t1 values (10,10);
+commit;
+Commit_transactions should be 1 and is 1
+Rollback_transactions should be 0 and is 0
+select User, Commit_transactions, Rollback_transactions
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Commit_transactions	Rollback_transactions
+root	1	0
+insert into t1 values (11,11);
+rollback;
+Commit_transactions should be 1 and is 1
+Rollback_transactions should be 1 and is 1
+select User, Commit_transactions, Rollback_transactions
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Commit_transactions	Rollback_transactions
+root	1	1
+select * from t1;
+a	b
+0	0
+1	1
+2	2
+10	10
+""
+Test empty queries
+echo ""
+flush user_statistics;
+select * from t1 where a < -1;
+a	b
+select * from t1 where a < -3;
+a	b
+Empty_queries should be 2 and is 2
+select User, Empty_queries
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Empty_queries
+root	2
+""
+Test lost connections
+""
+set global wait_timeout = 1;
+set global interactive_timeout = 1;
+flush user_statistics;
+Lost_connections should be 1 and is 1
+select User, Lost_connections
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Lost_connections
+root	1
+set global wait_timeout = DEFAULT;
+set global interactive_timeout = DEFAULT;
+""
+Test non-existent users
+echo ""
+flush user_statistics;
+connect(localhost,userDNE,,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'userDNE'@'localhost' (using password: NO)
+select user from information_schema.user_statistics where user = 'userDNE';
+user
+Confirm USER_STATS is correct after open connection and FLUSH USER_STATS
+grant select on test.t1 to foo@localhost;
+select * from test.t1 where a=0;
+a	b
+0	0
+flush user_statistics;
+select * from test.t1 where a=0;
+a	b
+0	0
+Concurrent_connections should be 1 and is 1
+Select_commands should be 2 and is 2
+select User, Concurrent_connections, Select_commands
+from INFORMATION_SCHEMA.USER_STATISTICS;
+User	Concurrent_connections	Select_commands
+foo	1	2
+drop table t1;
+drop table t2;
+drop table t3;
+drop user foo@localhost;
+update mysql.db set User='' where User='hide';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

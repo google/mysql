@@ -1,0 +1,324 @@
+flush user_statistics;
+create database mysqltest;
+show create database mysqltest;
+Database	Create Database
+mysqltest	CREATE DATABASE `mysqltest` /*!40100 DEFAULT CHARACTER SET latin1 */
+create table mysqltest.t1(a int);
+create table mysqltest.empty(a int);
+insert into mysqltest.t1 values(1);
+grant select on `mysqltest`.* to mysqltest_1@localhost;
+grant create user on *.* to mysqltest_1@localhost;
+select current_user();
+current_user()
+mysqltest_1@localhost
+select * from mysqltest.empty;
+a
+drop database mysqltest;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'mysqltest'
+create database mysqltest_db;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'mysqltest_db'
+show create database mysqltest_db;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'mysqltest_db'
+grant all privileges on `my\_1`.* to mysqltest_2@localhost with grant option;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'my\_1'
+grant all privileges on `my_%`.* to mysqltest_3@localhost with grant option;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'my_%'
+show grants for root@localhost;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'mysql'
+grant select on `my\_1`.* to mysqltest_2@localhost;
+ERROR 42000: Access denied for user 'mysqltest_1'@'localhost' to database 'my\_1'
+mysqltest_1 access_denied=7
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_1';
+user	access_denied
+mysqltest_1	7
+select current_user();
+current_user()
+root@localhost
+create database information_schema;
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+alter database information_schema character set = utf8;
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+drop database information_schema;
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+drop table information_schema.tables;
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+alter table information_schema.tables;
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+revoke select on `mysqltest`.* from mysqltest_1@localhost;
+use information_schema;
+create temporary table schemata(f1 char(10));
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+grant all on information_schema.* to 'user1'@'localhost';
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+grant select on information_schema.* to 'user1'@'localhost';
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
+root access_denied=8
+select user, access_denied from information_schema.user_statistics where user = 'root';
+user	access_denied
+root	8
+drop user mysqltest_1@localhost;
+drop database mysqltest;
+show tables;
+Tables_in_test
+connect(localhost,root,z,test2,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'root'@'localhost' (using password: YES)
+connect(localhost,root,z,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'root'@'localhost' (using password: YES)
+root access_denied=8
+select user, access_denied from information_schema.user_statistics where user = 'root';
+user	access_denied
+root	8
+grant ALL on *.* to test@localhost identified by "gambling";
+grant ALL on *.* to test@127.0.0.1 identified by "gambling";
+show tables;
+Tables_in_test
+connect(localhost,test,,test2,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'test'@'localhost' (using password: NO)
+connect(localhost,test,,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'test'@'localhost' (using password: NO)
+connect(localhost,test,zorro,test2,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'test'@'localhost' (using password: YES)
+connect(localhost,test,zorro,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'test'@'localhost' (using password: YES)
+test denied_connections=4
+select user, denied_connections from information_schema.user_statistics where user = 'test';
+user	denied_connections
+test	4
+drop user test@localhost;
+drop user test@127.0.0.1;
+flush privileges;
+SET NAMES binary;
+create database mysqltest_1;
+create database mysqltest_2;
+create table mysqltest_1.t1 select 1 a, 2 q;
+create table mysqltest_1.t2 select 1 b, 2 r;
+create table mysqltest_2.t1 select 1 c, 2 s;
+create table mysqltest_2.t2 select 1 d, 2 t;
+grant update (a) on mysqltest_1.t1 to mysqltest_3@localhost;
+grant select (b) on mysqltest_1.t2 to mysqltest_3@localhost;
+grant select (c) on mysqltest_2.t1 to mysqltest_3@localhost;
+grant update (d) on mysqltest_2.t2 to mysqltest_3@localhost;
+SELECT * FROM INFORMATION_SCHEMA.COLUMN_PRIVILEGES
+WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_NAME,COLUMN_NAME,PRIVILEGE_TYPE;
+GRANTEE	TABLE_CATALOG	TABLE_SCHEMA	TABLE_NAME	COLUMN_NAME	PRIVILEGE_TYPE	IS_GRANTABLE
+'mysqltest_3'@'localhost'	NULL	mysqltest_1	t1	a	UPDATE	NO
+'mysqltest_3'@'localhost'	NULL	mysqltest_2	t1	c	SELECT	NO
+'mysqltest_3'@'localhost'	NULL	mysqltest_1	t2	b	SELECT	NO
+'mysqltest_3'@'localhost'	NULL	mysqltest_2	t2	d	UPDATE	NO
+SELECT * FROM INFORMATION_SCHEMA.TABLE_PRIVILEGES
+WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_NAME,PRIVILEGE_TYPE;
+GRANTEE	TABLE_CATALOG	TABLE_SCHEMA	TABLE_NAME	PRIVILEGE_TYPE	IS_GRANTABLE
+SELECT * from INFORMATION_SCHEMA.SCHEMA_PRIVILEGES
+WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_SCHEMA,PRIVILEGE_TYPE;
+GRANTEE	TABLE_CATALOG	TABLE_SCHEMA	PRIVILEGE_TYPE	IS_GRANTABLE
+SELECT * from INFORMATION_SCHEMA.USER_PRIVILEGES
+WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_CATALOG,PRIVILEGE_TYPE;
+GRANTEE	TABLE_CATALOG	PRIVILEGE_TYPE	IS_GRANTABLE
+'mysqltest_3'@'localhost'	NULL	USAGE	NO
+mysqltest_3 access_denied=0
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_3';
+user	access_denied
+mysqltest_3	0
+update mysqltest_1.t1, mysqltest_1.t2 set q=10 where b=1;
+ERROR 42000: UPDATE command denied to user 'mysqltest_3'@'localhost' for column 'q' in table 't1'
+update mysqltest_1.t2, mysqltest_2.t2 set d=20 where d=1;
+ERROR 42000: SELECT command denied to user 'mysqltest_3'@'localhost' for column 'd' in table 't2'
+update mysqltest_1.t1, mysqltest_2.t2 set d=20 where d=1;
+ERROR 42000: SELECT command denied to user 'mysqltest_3'@'localhost' for table 't1'
+update mysqltest_2.t1, mysqltest_1.t2 set c=20 where b=1;
+ERROR 42000: UPDATE command denied to user 'mysqltest_3'@'localhost' for table 't1'
+update mysqltest_2.t1, mysqltest_2.t2 set d=10 where s=2;
+ERROR 42000: SELECT command denied to user 'mysqltest_3'@'localhost' for column 's' in table 't1'
+mysqltest_3 access_denied=5
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_3';
+user	access_denied
+mysqltest_3	5
+update mysqltest_1.t1, mysqltest_2.t2 set a=10,d=10;
+update mysqltest_1.t1, mysqltest_2.t1 set a=20 where c=20;
+select t1.*,t2.* from mysqltest_1.t1,mysqltest_1.t2;
+a	q	b	r
+10	2	1	2
+select t1.*,t2.* from mysqltest_2.t1,mysqltest_2.t2;
+c	s	d	t
+1	2	10	2
+revoke all on mysqltest_1.t1 from mysqltest_3@localhost;
+revoke all on mysqltest_1.t2 from mysqltest_3@localhost;
+revoke all on mysqltest_2.t1 from mysqltest_3@localhost;
+revoke all on mysqltest_2.t2 from mysqltest_3@localhost;
+grant all on mysqltest_2.* to mysqltest_3@localhost;
+grant select on *.* to mysqltest_3@localhost;
+grant select on mysqltest_2.t1 to mysqltest_3@localhost;
+flush privileges;
+use mysqltest_1;
+update mysqltest_2.t1, mysqltest_2.t2 set c=500,d=600;
+update mysqltest_1.t1, mysqltest_1.t2 set a=100,b=200;
+ERROR 42000: UPDATE command denied to user 'mysqltest_3'@'localhost' for table 't1'
+use mysqltest_2;
+update mysqltest_1.t1, mysqltest_1.t2 set a=100,b=200;
+ERROR 42000: UPDATE command denied to user 'mysqltest_3'@'localhost' for table 't1'
+update mysqltest_2.t1, mysqltest_1.t2 set c=100,b=200;
+ERROR 42000: UPDATE command denied to user 'mysqltest_3'@'localhost' for table 't2'
+update mysqltest_1.t1, mysqltest_2.t2 set a=100,d=200;
+ERROR 42000: UPDATE command denied to user 'mysqltest_3'@'localhost' for table 't1'
+mysqltest_3 access_denied=9
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_3';
+user	access_denied
+mysqltest_3	9
+select t1.*,t2.* from mysqltest_1.t1,mysqltest_1.t2;
+a	q	b	r
+10	2	1	2
+select t1.*,t2.* from mysqltest_2.t1,mysqltest_2.t2;
+c	s	d	t
+500	2	600	2
+delete from mysql.user where user='mysqltest_3';
+delete from mysql.db where user="mysqltest_3";
+delete from mysql.tables_priv where user="mysqltest_3";
+delete from mysql.columns_priv where user="mysqltest_3";
+flush privileges;
+drop database mysqltest_1;
+drop database mysqltest_2;
+create database mysqltest_2;
+grant select, insert, update on `mysqltest\_2`.* to mysqltest_1@localhost;
+grant select on test.* to mysqltest_2@localhost;
+set sql_log_off = 1;
+ERROR 42000: Access denied; you need the SUPER privilege for this operation
+set sql_log_bin = 0;
+ERROR 42000: Access denied; you need the SUPER privilege for this operation
+mysqltest_2 access_denied=2
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_2';
+user	access_denied
+mysqltest_2	2
+drop user mysqltest_1@localhost;
+delete from mysql.user where user like 'mysqltest\_2';
+delete from mysql.db where user like 'mysqltest\_2';
+drop database mysqltest_2;
+flush privileges;
+create database db2;
+use db2;
+create table t2 (s1 int);
+insert into t2 values (0);
+grant usage on db2.* to user1@localhost;
+grant select on db2.* to user1@localhost;
+grant usage on db2.* to user2@localhost;
+grant select,insert,update,delete,create routine on db2.* to user2@localhost;
+grant create routine on db2.* to user1@localhost;
+flush privileges;
+create procedure p () insert into t2 values (1);
+call p();
+ERROR 42000: execute command denied to user 'user2'@'localhost' for routine 'db2.p'
+user2 access_denied=1
+select user, access_denied from information_schema.user_statistics where user = 'user2';
+user	access_denied
+user2	1
+user1 access_denied=0
+select user, access_denied from information_schema.user_statistics where user = 'user1';
+user	access_denied
+user1	0
+create procedure q () insert into t2 values (2);
+grant usage on procedure db2.q to user2@localhost with grant option;
+grant execute on procedure db2.q to user1@localhost;
+alter procedure p modifies sql data;
+drop procedure p;
+alter procedure q modifies sql data;
+ERROR 42000: alter routine command denied to user 'user1'@'localhost' for routine 'db2.q'
+drop procedure q;
+ERROR 42000: alter routine command denied to user 'user1'@'localhost' for routine 'db2.q'
+user1 access_denied=2
+select user, access_denied from information_schema.user_statistics where user = 'user1';
+user	access_denied
+user1	2
+user2 access_denied=1
+select user, access_denied from information_schema.user_statistics where user = 'user2';
+user	access_denied
+user2	1
+use db2;
+alter procedure q modifies sql data;
+drop procedure q;
+revoke all on db2.* from user1@localhost;
+revoke all on db2.* from user2@localhost;
+flush privileges;
+use test;
+select type,db,name from mysql.proc;
+type	db	name
+PROCEDURE	mtr	add_suppression
+PROCEDURE	mtr	check_testcase
+PROCEDURE	mtr	check_warnings
+drop database db2;
+select type,db,name from mysql.proc;
+type	db	name
+PROCEDURE	mtr	add_suppression
+PROCEDURE	mtr	check_testcase
+PROCEDURE	mtr	check_warnings
+delete from mysql.user where user='user1' or user='user2';
+delete from mysql.user where user='' and host='%';
+delete from mysql.procs_priv where user='user1' or user='user2';
+delete from mysql.procs_priv where user='' and host='%';
+delete from mysql.db where user='user2';
+flush privileges;
+grant select on test.* to usera@localhost;
+grant select on test.* to userb@localhost;
+grant select on test.* to userc@localhost;
+create database sptest;
+create table t1 ( u varchar(64), i int );
+create procedure sptest.p1(i int) insert into test.t1 values (user(), i);
+grant insert on t1 to usera@localhost;
+grant execute on procedure sptest.p1 to usera@localhost;
+show grants for usera@localhost;
+Grants for usera@localhost
+GRANT USAGE ON *.* TO 'usera'@'localhost'
+GRANT SELECT ON `test`.* TO 'usera'@'localhost'
+GRANT INSERT ON `test`.`t1` TO 'usera'@'localhost'
+GRANT EXECUTE ON PROCEDURE `sptest`.`p1` TO 'usera'@'localhost'
+grant execute on procedure sptest.p1 to userc@localhost with grant option;
+show grants for userc@localhost;
+Grants for userc@localhost
+GRANT USAGE ON *.* TO 'userc'@'localhost'
+GRANT SELECT ON `test`.* TO 'userc'@'localhost'
+GRANT EXECUTE ON PROCEDURE `sptest`.`p1` TO 'userc'@'localhost' WITH GRANT OPTION
+call sptest.p1(1);
+grant execute on procedure sptest.p1 to userb@localhost;
+ERROR 42000: grant command denied to user 'usera'@'localhost' for routine 'sptest.p1'
+drop procedure sptest.p1;
+ERROR 42000: alter routine command denied to user 'usera'@'localhost' for routine 'sptest.p1'
+usera access_denied=2
+select user, access_denied from information_schema.user_statistics where user = 'usera';
+user	access_denied
+usera	2
+call sptest.p1(2);
+ERROR 42000: execute command denied to user 'userb'@'localhost' for routine 'sptest.p1'
+grant execute on procedure sptest.p1 to userb@localhost;
+ERROR 42000: execute command denied to user 'userb'@'localhost' for routine 'sptest.p1'
+drop procedure sptest.p1;
+ERROR 42000: alter routine command denied to user 'userb'@'localhost' for routine 'sptest.p1'
+userb access_denied=3
+select user, access_denied from information_schema.user_statistics where user = 'userb';
+user	access_denied
+userb	3
+call sptest.p1(3);
+grant execute on procedure sptest.p1 to userb@localhost;
+drop procedure sptest.p1;
+ERROR 42000: alter routine command denied to user 'userc'@'localhost' for routine 'sptest.p1'
+userc access_denied=1
+select user, access_denied from information_schema.user_statistics where user = 'userc';
+user	access_denied
+userc	1
+call sptest.p1(4);
+grant execute on procedure sptest.p1 to userb@localhost;
+ERROR 42000: grant command denied to user 'userb'@'localhost' for routine 'sptest.p1'
+drop procedure sptest.p1;
+ERROR 42000: alter routine command denied to user 'userb'@'localhost' for routine 'sptest.p1'
+userb access_denied=5
+select user, access_denied from information_schema.user_statistics where user = 'userb';
+user	access_denied
+userb	5
+use test;
+drop database sptest;
+drop user usera@localhost;
+drop user userb@localhost;
+drop user userc@localhost;
+drop table t1;
+flush privileges;

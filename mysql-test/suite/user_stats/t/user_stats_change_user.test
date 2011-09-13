@@ -1,0 +1,23 @@
+# Tests that concurrent connection counts are correct after change user fails.
+#
+# Has to be done by invoking $MYSQL_TEST because change_user failing causes
+# $MYSQL_TEST to exit with an error.
+
+flush user_statistics;
+
+select user(), current_user();
+select User, Concurrent_connections from information_schema.user_statistics;
+echo Connections for root should be 1;
+
+--error 1
+--exec echo "--change_user root,,inexistent" | $MYSQL_TEST 2>&1
+
+--error 1
+--exec echo "--change_user inexistent,,test" | $MYSQL_TEST 2>&1
+
+--error 1
+--exec echo "--change_user root,inexistent,test" | $MYSQL_TEST 2>&1
+
+select user(), current_user();
+select User, Concurrent_connections from information_schema.user_statistics;
+echo Connections for root should be 1;

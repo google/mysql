@@ -1,0 +1,18 @@
+flush user_statistics;
+select user(), current_user();
+user()	current_user()
+root@localhost	root@localhost
+select User, Concurrent_connections from information_schema.user_statistics;
+User	Concurrent_connections
+root	1
+Connections for root should be 1
+mysqltest: At line 1: change user failed: Unknown database 'inexistent'
+mysqltest: At line 1: change user failed: Access denied for user 'inexistent'@'localhost' (using password: NO)
+mysqltest: At line 1: change user failed: Access denied for user 'root'@'localhost' (using password: YES)
+select user(), current_user();
+user()	current_user()
+root@localhost	root@localhost
+select User, Concurrent_connections from information_schema.user_statistics;
+User	Concurrent_connections
+root	1
+Connections for root should be 1

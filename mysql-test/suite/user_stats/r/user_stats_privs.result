@@ -1,0 +1,46 @@
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+flush user_statistics;
+create table test.t1 (i int primary key);
+insert into test.t1 values (1);
+select * from t1 where i=1;
+i
+1
+create user u@localhost;
+grant select on test.* to u@localhost;
+create user s@localhost;
+grant select on test.* to s@localhost;
+grant super on *.* to s@localhost;
+select user(), current_user();
+user()	current_user()
+u@localhost	u@localhost
+select user(), current_user();
+user()	current_user()
+s@localhost	s@localhost
+'show user_stats for super shows all users'
+select User, Total_connections from information_schema.user_statistics order by user;
+User	Total_connections
+root	0
+s	1
+u	1
+show user_stats for non-super only shows that user
+select User, Total_connections from information_schema.user_statistics order by user;
+User	Total_connections
+u	1
+select User, Total_connections from information_schema.user_statistics order by user;
+User	Total_connections
+u	2
+select User, Total_connections from information_schema.user_statistics order by user;
+User	Total_connections
+root	1
+s	2
+u	2
+drop user u@localhost;
+drop user s@localhost;
+drop table t1;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;

@@ -1,0 +1,519 @@
+# Test of counter for Access_denied for "show user_statistics".
+#
+# The errors to be counted include
+# from *** include/mysqld_error.h:
+# ER_DBACCESS_DENIED_ERROR
+# ER_ACCESS_DENIED_ERROR
+# ER_TABLEACCESS_DENIED_ERROR
+# ER_COLUMNACCESS_DENIED_ERROR
+# ER_SPECIFIC_ACCESS_DENIED_ERROR
+# ER_PROCACCESS_DENIED_ERROR
+#
+# All test cases are gleaned from other tests,
+# specifically, for the counter Access_denied
+# Access_denied is #20 from "show user_statistics".
+# shield all other counters to make the test deterministic
+
+# Grant tests not performed with embedded server
+-- source include/not_embedded.inc
+
+#
+# ER_DBACCESS_DENIED_ERROR
+#
+
+flush user_statistics;
+
+#
+# Test of access_denied
+#
+
+create database mysqltest;
+show create database mysqltest;
+create table mysqltest.t1(a int);
+create table mysqltest.empty(a int);
+insert into mysqltest.t1 values(1);
+grant select on `mysqltest`.* to mysqltest_1@localhost;
+
+# User with 1 empty query
+connection default;
+grant create user on *.* to mysqltest_1@localhost;
+connect (user1,localhost,mysqltest_1,,mysqltest);
+select current_user();
+select * from mysqltest.empty;
+
+--error ER_DBACCESS_DENIED_ERROR
+drop database mysqltest;
+
+--error ER_DBACCESS_DENIED_ERROR
+create database mysqltest_db;
+
+--error ER_DBACCESS_DENIED_ERROR
+show create database mysqltest_db;
+
+--error ER_DBACCESS_DENIED_ERROR
+grant all privileges on `my\_1`.* to mysqltest_2@localhost with grant option;
+
+--error ER_DBACCESS_DENIED_ERROR
+grant all privileges on `my_%`.* to mysqltest_3@localhost with grant option;
+
+--error ER_DBACCESS_DENIED_ERROR
+show grants for root@localhost;
+
+--error ER_DBACCESS_DENIED_ERROR
+grant select on `my\_1`.* to mysqltest_2@localhost;
+
+--echo mysqltest_1 access_denied=7
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_1';
+
+connection default;
+
+disconnect user1;
+
+select current_user();
+
+--error ER_DBACCESS_DENIED_ERROR
+create database information_schema;
+
+--error ER_DBACCESS_DENIED_ERROR
+alter database information_schema character set = utf8;
+
+--error ER_DBACCESS_DENIED_ERROR
+drop database information_schema;
+
+--error ER_DBACCESS_DENIED_ERROR
+drop table information_schema.tables;
+
+--error ER_DBACCESS_DENIED_ERROR
+alter table information_schema.tables;
+
+revoke select on `mysqltest`.* from mysqltest_1@localhost;
+
+#
+# Bug #9683 INFORMATION_SCH: Creation of temporary table allowed in Information_schema DB
+#
+use information_schema;
+--error ER_DBACCESS_DENIED_ERROR
+create temporary table schemata(f1 char(10));
+
+#
+# Bug #10734 Grant of privileges other than 'select' and 'create view' should fail on schema
+#
+--error ER_DBACCESS_DENIED_ERROR
+grant all on information_schema.* to 'user1'@'localhost';
+
+--error ER_DBACCESS_DENIED_ERROR
+grant select on information_schema.* to 'user1'@'localhost';
+
+--echo root access_denied=8
+select user, access_denied from information_schema.user_statistics where user = 'root';
+
+drop user mysqltest_1@localhost;
+
+drop database mysqltest;
+
+#
+# ========================= end of error ER_DBACCESS_DENIED_ERROR ==============================
+#
+
+#
+# error ER_ACCESS_DENIED_ERROR
+#
+# This test is to check various cases of connections
+# with right and wrong password, with and without database
+# Unfortunately the check is incomplete as we can't connect without database
+
+
+connect (con1,localhost,root,,test);
+show tables;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (fail_con,localhost,root,z,test2);
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (fail_con,localhost,root,z,);
+# Let error counts get updated
+sleep 1;
+
+--echo root access_denied=8
+select user, access_denied from information_schema.user_statistics where user = 'root';
+
+grant ALL on *.* to test@localhost identified by "gambling";
+grant ALL on *.* to test@127.0.0.1 identified by "gambling";
+
+disconnect con1;
+
+# Now check this user with different databases
+connect (con4,localhost,test,gambling,test);
+show tables;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (fail_con,localhost,test,,test2);
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (fail_con,localhost,test,,"");
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (fail_con,localhost,test,zorro,test2);
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (fail_con,localhost,test,zorro,);
+# Let error counts get updated
+sleep 1;
+
+--echo test denied_connections=4
+select user, denied_connections from information_schema.user_statistics where user = 'test';
+
+# clean up
+drop user test@localhost;
+drop user test@127.0.0.1;
+flush privileges;
+
+disconnect con4;
+
+
+#
+# ========================= end of error ER_ACCESS_DENIED_ERROR ================================
+#
+
+
+#
+# error ER_TABLEACCESS_DENIED_ERROR and ER_COLUMNACCESS_DENIED_ERROR
+#
+
+connect (master,localhost,root,,);
+connection master;
+SET NAMES binary;
+
+#
+# Bug#7391: Cross-database multi-table UPDATE security problem
+#
+create database mysqltest_1;
+create database mysqltest_2;
+create table mysqltest_1.t1 select 1 a, 2 q;
+create table mysqltest_1.t2 select 1 b, 2 r;
+create table mysqltest_2.t1 select 1 c, 2 s;
+create table mysqltest_2.t2 select 1 d, 2 t;
+
+#test the column privileges
+grant update (a) on mysqltest_1.t1 to mysqltest_3@localhost;
+grant select (b) on mysqltest_1.t2 to mysqltest_3@localhost;
+grant select (c) on mysqltest_2.t1 to mysqltest_3@localhost;
+grant update (d) on mysqltest_2.t2 to mysqltest_3@localhost;
+
+connect (conn1,localhost,mysqltest_3,,mysqltest_1);
+connection conn1;
+
+# the following four stmts generate no error messages.
+# check_access in sql_parse.cc needs !no_errors predicate
+SELECT * FROM INFORMATION_SCHEMA.COLUMN_PRIVILEGES
+ WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_NAME,COLUMN_NAME,PRIVILEGE_TYPE;
+SELECT * FROM INFORMATION_SCHEMA.TABLE_PRIVILEGES
+ WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_NAME,PRIVILEGE_TYPE;
+SELECT * from INFORMATION_SCHEMA.SCHEMA_PRIVILEGES
+ WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_SCHEMA,PRIVILEGE_TYPE;
+SELECT * from INFORMATION_SCHEMA.USER_PRIVILEGES
+ WHERE GRANTEE = '''mysqltest_3''@''localhost'''
+ ORDER BY TABLE_CATALOG,PRIVILEGE_TYPE;
+
+--echo mysqltest_3 access_denied=0
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_3';
+
+--error ER_COLUMNACCESS_DENIED_ERROR
+update mysqltest_1.t1, mysqltest_1.t2 set q=10 where b=1;
+--error ER_COLUMNACCESS_DENIED_ERROR
+update mysqltest_1.t2, mysqltest_2.t2 set d=20 where d=1;
+--error ER_TABLEACCESS_DENIED_ERROR
+update mysqltest_1.t1, mysqltest_2.t2 set d=20 where d=1;
+--error ER_TABLEACCESS_DENIED_ERROR
+update mysqltest_2.t1, mysqltest_1.t2 set c=20 where b=1;
+--error ER_COLUMNACCESS_DENIED_ERROR
+update mysqltest_2.t1, mysqltest_2.t2 set d=10 where s=2;
+
+--echo mysqltest_3 access_denied=5
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_3';
+
+#the following two should work
+update mysqltest_1.t1, mysqltest_2.t2 set a=10,d=10;
+update mysqltest_1.t1, mysqltest_2.t1 set a=20 where c=20;
+connection master;
+select t1.*,t2.* from mysqltest_1.t1,mysqltest_1.t2;
+select t1.*,t2.* from mysqltest_2.t1,mysqltest_2.t2;
+revoke all on mysqltest_1.t1 from mysqltest_3@localhost;
+revoke all on mysqltest_1.t2 from mysqltest_3@localhost;
+revoke all on mysqltest_2.t1 from mysqltest_3@localhost;
+revoke all on mysqltest_2.t2 from mysqltest_3@localhost;
+
+#test the db/table level privileges
+grant all on mysqltest_2.* to mysqltest_3@localhost;
+grant select on *.* to mysqltest_3@localhost;
+# Next grant is needed to trigger bug#7391. Do not optimize!
+grant select on mysqltest_2.t1 to mysqltest_3@localhost;
+flush privileges;
+disconnect conn1;
+connect (conn2,localhost,mysqltest_3,,);
+connection conn2;
+use mysqltest_1;
+update mysqltest_2.t1, mysqltest_2.t2 set c=500,d=600;
+# the following failed before, should fail now.
+--error ER_TABLEACCESS_DENIED_ERROR
+update mysqltest_1.t1, mysqltest_1.t2 set a=100,b=200;
+use mysqltest_2;
+#the following used to succeed, it must fail now.
+--error ER_TABLEACCESS_DENIED_ERROR
+update mysqltest_1.t1, mysqltest_1.t2 set a=100,b=200;
+--error ER_TABLEACCESS_DENIED_ERROR
+update mysqltest_2.t1, mysqltest_1.t2 set c=100,b=200;
+--error ER_TABLEACCESS_DENIED_ERROR
+update mysqltest_1.t1, mysqltest_2.t2 set a=100,d=200;
+
+
+--echo mysqltest_3 access_denied=9
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_3';
+
+#lets see the result
+connection master;
+select t1.*,t2.* from mysqltest_1.t1,mysqltest_1.t2;
+select t1.*,t2.* from mysqltest_2.t1,mysqltest_2.t2;
+
+delete from mysql.user where user='mysqltest_3';
+delete from mysql.db where user="mysqltest_3";
+delete from mysql.tables_priv where user="mysqltest_3";
+delete from mysql.columns_priv where user="mysqltest_3";
+flush privileges;
+drop database mysqltest_1;
+drop database mysqltest_2;
+
+#
+# =========== end of error ER_TABLEACCESS_DENIED_ERROR / ER_COLUMNACCESS_DENIED_ERROR ==========
+#
+
+
+#
+# error ER_SPECIFIC_ACCESS_DENIED_ERROR
+#
+
+create database mysqltest_2;
+grant select, insert, update on `mysqltest\_2`.* to mysqltest_1@localhost;
+grant select on test.* to mysqltest_2@localhost;
+connect (con10,localhost,mysqltest_2,,);
+connection con10;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+set sql_log_off = 1;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+set sql_log_bin = 0;
+
+--echo mysqltest_2 access_denied=2
+select user, access_denied from information_schema.user_statistics where user = 'mysqltest_2';
+
+disconnect con10;
+connection default;
+drop user mysqltest_1@localhost;
+delete from mysql.user where user like 'mysqltest\_2';
+delete from mysql.db where user like 'mysqltest\_2';
+drop database mysqltest_2;
+flush privileges;
+
+#
+# ========================= end of error ER_SPECIFIC_ACCESS_DENIED_ERROR =======================
+#
+
+#
+# error ER_PROCACCESS_DENIED_ERROR
+#
+#
+# Testing SQL SECURITY of stored procedures
+#
+
+connect (con1root,localhost,root,,);
+
+#
+# BUG#2777
+#
+
+connection con1root;
+
+
+create database db2;
+
+use db2;
+
+create table t2 (s1 int);
+insert into t2 values (0);
+
+grant usage on db2.* to user1@localhost;
+grant select on db2.* to user1@localhost;
+grant usage on db2.* to user2@localhost;
+grant select,insert,update,delete,create routine on db2.* to user2@localhost;
+grant create routine on db2.* to user1@localhost;
+flush privileges;
+
+connect (con2user1,localhost,user1,,db2);
+
+create procedure p () insert into t2 values (1);
+
+connect (con4user2,localhost,user2,,db2);
+
+# This should not work, since p is executed with definer's (user1's) rights.
+--error ER_PROCACCESS_DENIED_ERROR
+call p();
+
+--echo user2 access_denied=1
+select user, access_denied from information_schema.user_statistics where user = 'user2';
+
+connection con2user1;
+--echo user1 access_denied=0
+select user, access_denied from information_schema.user_statistics where user = 'user1';
+
+connection con4user2;
+create procedure q () insert into t2 values (2);
+
+connection con1root;
+grant usage on procedure db2.q to user2@localhost with grant option;
+
+connection con4user2;
+grant execute on procedure db2.q to user1@localhost;
+
+# still connection con2user1 in db2
+connection con2user1;
+
+# This should work:
+alter procedure p modifies sql data;
+drop procedure p;
+
+# This should NOT work
+--error ER_PROCACCESS_DENIED_ERROR
+alter procedure q modifies sql data;
+--error ER_PROCACCESS_DENIED_ERROR
+drop procedure q;
+
+--echo user1 access_denied=2
+select user, access_denied from information_schema.user_statistics where user = 'user1';
+
+connection con4user2;
+--echo user2 access_denied=1
+select user, access_denied from information_schema.user_statistics where user = 'user2';
+
+connection con1root;
+use db2;
+# But root always can
+alter procedure q modifies sql data;
+drop procedure q;
+
+
+# Clean up
+#Still connection con1root;
+
+revoke all on db2.* from user1@localhost;
+revoke all on db2.* from user2@localhost;
+
+flush privileges;
+
+disconnect con2user1;
+
+disconnect con4user2;
+use test;
+select type,db,name from mysql.proc;
+
+
+drop database db2;
+
+# Make sure the routines are gone
+select type,db,name from mysql.proc;
+# Get rid of the users
+delete from mysql.user where user='user1' or user='user2';
+delete from mysql.user where user='' and host='%';
+# And any routine privileges
+delete from mysql.procs_priv where user='user1' or user='user2';
+# Delete the grants to user ''@'%' that was created above
+delete from mysql.procs_priv where user='' and host='%';
+delete from mysql.db where user='user2';
+flush privileges;
+
+#
+# Test the new security acls
+#
+grant select on test.* to usera@localhost;
+grant select on test.* to userb@localhost;
+grant select on test.* to userc@localhost;
+create database sptest;
+create table t1 ( u varchar(64), i int );
+create procedure sptest.p1(i int) insert into test.t1 values (user(), i);
+grant insert on t1 to usera@localhost;
+grant execute on procedure sptest.p1 to usera@localhost;
+show grants for usera@localhost;
+grant execute on procedure sptest.p1 to userc@localhost with grant option;
+show grants for userc@localhost;
+
+connect (con2usera,localhost,usera,,);
+connect (con3userb,localhost,userb,,);
+connect (con4userc,localhost,userc,,);
+
+connection con2usera;
+call sptest.p1(1);
+--error ER_PROCACCESS_DENIED_ERROR
+grant execute on procedure sptest.p1 to userb@localhost;
+
+--error ER_PROCACCESS_DENIED_ERROR
+drop procedure sptest.p1;
+
+--echo usera access_denied=2
+select user, access_denied from information_schema.user_statistics where user = 'usera';
+
+connection con3userb;
+--error ER_PROCACCESS_DENIED_ERROR
+call sptest.p1(2);
+--error ER_PROCACCESS_DENIED_ERROR
+grant execute on procedure sptest.p1 to userb@localhost;
+--error ER_PROCACCESS_DENIED_ERROR
+drop procedure sptest.p1;
+
+--echo userb access_denied=3
+select user, access_denied from information_schema.user_statistics where user = 'userb';
+
+
+connection con4userc;
+call sptest.p1(3);
+grant execute on procedure sptest.p1 to userb@localhost;
+--error ER_PROCACCESS_DENIED_ERROR
+drop procedure sptest.p1;
+
+--echo userc access_denied=1
+select user, access_denied from information_schema.user_statistics where user = 'userc';
+
+connection con3userb;
+call sptest.p1(4);
+--error ER_PROCACCESS_DENIED_ERROR
+grant execute on procedure sptest.p1 to userb@localhost;
+--error ER_PROCACCESS_DENIED_ERROR
+drop procedure sptest.p1;
+
+--echo userb access_denied=5
+select user, access_denied from information_schema.user_statistics where user = 'userb';
+
+connection default;
+
+#cleanup
+disconnect con4userc;
+disconnect con3userb;
+disconnect con2usera;
+disconnect conn2;
+disconnect master;
+disconnect con1root;
+use test;
+drop database sptest;
+drop user usera@localhost;
+drop user userb@localhost;
+drop user userc@localhost;
+drop table t1;
+flush privileges;
+
+#
+# ========================= end of error ER_PROCACCESS_DENIED_ERROR ============================
+#
+
