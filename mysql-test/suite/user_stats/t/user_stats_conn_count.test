@@ -1,0 +1,246 @@
+# Confirm that the connection count in SHOW USER_STATS is correct for
+#   after normal connections
+#   after normal disconnect
+#   after reconnect
+#   after flush
+#   after change user
+#   after connection is killed
+#   after failure to connect with max connection limit exceeded
+#   after failure to connect with account connection limit exceeded
+
+# start clean
+flush user_statistics;
+
+# change privs so that default user is not used
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+# setup
+
+create user p@localhost identified by 'pw';
+grant select on test.* to p@localhost;
+grant process on *.* to p@localhost;
+
+#
+# Confirm that counts are correct
+#
+echo Confirm count is correct after connect;
+
+connect (c1_p,localhost,p,pw,test);
+connection default;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+echo Total Connections for p should be 1;
+
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+echo Total Connections for root should be 0;
+
+#
+# Confirm they are still correct after flush
+#
+echo Confirm count is correct after flush;
+
+flush user_statistics;
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+echo Total Connections for p should be 0;
+
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+echo Total Connections for root should be 0;
+
+#
+# Confirm count is correct after disconnect
+#
+echo Confirm count is correct after disconnect;
+
+connection default;
+disconnect c1_p;
+
+# avoid race between disconnect of c1_p and query by root connection
+sleep 2;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 0;
+
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+echo Total Connections for p should be 0;
+
+#
+# Confirm count is correct after reconnect
+#
+echo Confirm count is correct after reconnect;
+
+connect (c1_p,localhost,p,pw,test);
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+echo Total Connections for p should be 1;
+
+#
+# Confirm count is correct after change user
+#
+echo Confirm count is correct after change user;
+
+connect (c_root,localhost,root,,test);
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+echo Connections for root should be 2;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+echo Total Connections for root should be 1;
+
+change_user p,pw,test;
+connection default;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+echo Connections for root should be 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+echo Total Connections for p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+echo Total Connections for root should be 1;
+
+connection default;
+disconnect c_root;
+sleep 2;
+
+#
+# Confirm count is correct after failed connection attempt
+#
+echo Confirm count is correct after failed connection attempt;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (c2_p,localhost,p,bad_pw,test);
+
+connection default;
+sleep 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+echo Total Connections for p should be 2;
+
+select User, Denied_connections from information_schema.user_statistics where user = 'p';
+echo Denied Connections for p should be 1;
+
+#
+# Confirm correct count after per account max connection limits reached
+#
+echo Confirm correct count after per account max connection limits reached;
+
+connection default;
+update mysql.user set max_connections=2,max_user_connections=1 where User='p';
+flush privileges;
+disconnect c1_p;
+
+sleep 2;
+
+connect (c1_p,localhost,p,pw,test);
+connection default;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_USER_LIMIT_REACHED
+connect (c2_p,localhost,p,pw,test);
+
+connection default;
+sleep 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Denied_connections from information_schema.user_statistics where user = 'p';
+echo Denied Connections for p should be 2;
+
+connection default;
+update mysql.user set max_connections=100,max_user_connections=100 where User='p';
+flush privileges;
+
+#
+# Confirm correct count after global max connection limits reached
+#
+echo Confirm correct count after global max connection limits reached;
+
+connection default;
+
+let $maxconn=query_get_value(show variables like 'max_connections', Value, 1);
+set global max_connections=2;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_CON_COUNT_ERROR
+connect (c2_p,localhost,p,pw,test);
+
+connection default;
+sleep 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Denied_connections from information_schema.user_statistics where user = 'p';
+echo Denied Connections for p should be 3;
+
+eval set global max_connections = $maxconn;
+
+#
+# Confirm correct count after connections are killed
+#
+echo Confirm correct count after connections closed for the idle timeout;
+
+connection default;
+
+connect (c2_p,localhost,p,pw,test);
+let $pid=query_get_value(select connection_id() as id, id, 1);
+
+connection default;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 2;
+
+--disable_query_log
+eval kill $pid;
+--enable_query_log
+sleep 2;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+echo Connections for p should be 1;
+
+select User, Lost_connections from information_schema.user_statistics where user = 'p';
+echo Lost Connections for p should be 1;
+
+#
+# cleanup
+#
+
+connection default;
+
+disconnect c1_p;
+drop user p@localhost;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+
+

@@ -1,0 +1,50 @@
+include/master-slave.inc
+[connection master]
+flush user_statistics;
+include/stop_slave.inc
+include/start_slave.inc
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+User	Total_connections
+root	1
+Total Connections for root should be 1
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+User	Concurrent_connections
+root	6
+Concurrent Connections for root should be 6
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+User	Total_connections
+root	0
+Total Connections for root should be 0
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+User	Concurrent_connections
+root	4
+Concurrent Connections for root should be 4
+select User, Total_connections from information_schema.user_statistics where user = '#mysql_system#';
+User	Total_connections
+#mysql_system#	2
+Total Connections for system should be 2
+select User, Concurrent_connections from information_schema.user_statistics where user = '#mysql_system#';
+User	Concurrent_connections
+#mysql_system#	2
+Concurrent Connections for system should be 2
+include/stop_slave_sql.inc
+select User, Total_connections from information_schema.user_statistics where user = '#mysql_system#';
+User	Total_connections
+#mysql_system#	2
+Total Connections for system should be 2
+select User, Concurrent_connections from information_schema.user_statistics where user = '#mysql_system#';
+User	Concurrent_connections
+#mysql_system#	1
+Concurrent Connections system should be 1
+include/start_slave.inc
+include/stop_slave.inc
+select User, Total_connections from information_schema.user_statistics where user = '#mysql_system#';
+User	Total_connections
+#mysql_system#	3
+Total Connections for system should be 3
+select User, Concurrent_connections from information_schema.user_statistics where user = '#mysql_system#';
+User	Concurrent_connections
+#mysql_system#	0
+Concurrent Connections system should be 0
+include/start_slave.inc
+include/rpl_end.inc

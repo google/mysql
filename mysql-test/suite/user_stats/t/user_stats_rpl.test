@@ -1,0 +1,56 @@
+source include/master-slave.inc;
+
+# Start clean
+#
+# Note that flush user_statistics replicates;
+flush user_statistics;
+
+sync_slave_with_master;
+--source include/stop_slave.inc
+--source include/start_slave.inc
+
+connection master;
+
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+echo Total Connections for root should be 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+echo Concurrent Connections for root should be 6;
+
+connection slave;
+
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+echo Total Connections for root should be 0;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+echo Concurrent Connections for root should be 4;
+
+select User, Total_connections from information_schema.user_statistics where user = '#mysql_system#';
+echo Total Connections for system should be 2;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = '#mysql_system#';
+echo Concurrent Connections for system should be 2;
+
+--source include/stop_slave_sql.inc
+
+select User, Total_connections from information_schema.user_statistics where user = '#mysql_system#';
+echo Total Connections for system should be 2;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = '#mysql_system#';
+echo Concurrent Connections system should be 1;
+
+--source include/start_slave.inc
+
+--source include/stop_slave.inc
+
+select User, Total_connections from information_schema.user_statistics where user = '#mysql_system#';
+echo Total Connections for system should be 3;
+
+select User, Concurrent_connections from information_schema.user_statistics where user = '#mysql_system#';
+echo Concurrent Connections system should be 0;
+
+--source include/start_slave.inc
+
+connection default;
+
+--source include/rpl_end.inc

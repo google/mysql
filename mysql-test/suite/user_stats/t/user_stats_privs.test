@@ -1,0 +1,74 @@
+# Confirm:
+#   show user_stats for super shows all users
+#   show user_stats for non-super only shows that user
+#   enforcement works with change user
+#
+
+# change privs so that default user is not used
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+flush user_statistics;
+
+create table test.t1 (i int primary key);
+insert into test.t1 values (1);
+select * from t1 where i=1;
+
+create user u@localhost;
+grant select on test.* to u@localhost;
+
+create user s@localhost;
+grant select on test.* to s@localhost;
+grant super on *.* to s@localhost;
+
+connect (conn_u,localhost,u,,test);
+select user(), current_user();
+connection default;
+
+connect (conn_s,localhost,s,,test);
+select user(), current_user();
+connection default;
+
+#
+# Confirm that show user_stats for super shows all users
+#
+echo 'show user_stats for super shows all users';
+
+connection conn_s;
+select User, Total_connections from information_schema.user_statistics order by user;
+
+#
+# Confirm that show user_stats for non-super only shows that user
+#
+echo show user_stats for non-super only shows that user;
+
+connection conn_u;
+select User, Total_connections from information_schema.user_statistics order by user;
+
+#
+# Confirm that enforcement is done after change user
+#
+connect (cu_conn,localhost,root,,test);
+
+change_user u,,test;
+select User, Total_connections from information_schema.user_statistics order by user;
+
+change_user s,,test;
+select User, Total_connections from information_schema.user_statistics order by user;
+
+# cleanup
+connection default;
+
+disconnect conn_u;
+disconnect conn_s;
+
+drop user u@localhost;
+drop user s@localhost;
+drop table t1;
+
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;

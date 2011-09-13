@@ -1,0 +1,151 @@
+flush user_statistics;
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+create user p@localhost identified by 'pw';
+grant select on test.* to p@localhost;
+grant process on *.* to p@localhost;
+Confirm count is correct after connect
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+User	Total_connections
+p	1
+Total Connections for p should be 1
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+User	Total_connections
+root	0
+Total Connections for root should be 0
+Confirm count is correct after flush
+flush user_statistics;
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+User	Total_connections
+p	0
+Total Connections for p should be 0
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+User	Total_connections
+root	0
+Total Connections for root should be 0
+Confirm count is correct after disconnect
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	0
+Connections for p should be 0
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+User	Total_connections
+p	0
+Total Connections for p should be 0
+Confirm count is correct after reconnect
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+User	Total_connections
+p	1
+Total Connections for p should be 1
+Confirm count is correct after change user
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+User	Concurrent_connections
+root	2
+Connections for root should be 2
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+User	Total_connections
+root	1
+Total Connections for root should be 1
+select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+User	Concurrent_connections
+root	1
+Connections for root should be 1
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	2
+Connections for p should be 2
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+User	Total_connections
+p	2
+Total Connections for p should be 2
+select User, Total_connections from information_schema.user_statistics where user = 'root';
+User	Total_connections
+root	1
+Total Connections for root should be 1
+Confirm count is correct after failed connection attempt
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+connect(localhost,p,bad_pw,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'p'@'localhost' (using password: YES)
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Total_connections from information_schema.user_statistics where user = 'p';
+User	Total_connections
+p	2
+Total Connections for p should be 2
+select User, Denied_connections from information_schema.user_statistics where user = 'p';
+User	Denied_connections
+p	1
+Denied Connections for p should be 1
+Confirm correct count after per account max connection limits reached
+update mysql.user set max_connections=2,max_user_connections=1 where User='p';
+flush privileges;
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+connect(localhost,p,pw,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 42000: User 'p' has exceeded the 'max_user_connections' resource (current value: 1)
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Denied_connections from information_schema.user_statistics where user = 'p';
+User	Denied_connections
+p	2
+Denied Connections for p should be 2
+update mysql.user set max_connections=100,max_user_connections=100 where User='p';
+flush privileges;
+Confirm correct count after global max connection limits reached
+set global max_connections=2;
+connect(localhost,p,pw,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 08004: Too many connections
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Denied_connections from information_schema.user_statistics where user = 'p';
+User	Denied_connections
+p	3
+Denied Connections for p should be 3
+set global max_connections = 151;
+Confirm correct count after connections closed for the idle timeout
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	2
+Connections for p should be 2
+select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+User	Concurrent_connections
+p	1
+Connections for p should be 1
+select User, Lost_connections from information_schema.user_statistics where user = 'p';
+User	Lost_connections
+p	1
+Lost Connections for p should be 1
+drop user p@localhost;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
