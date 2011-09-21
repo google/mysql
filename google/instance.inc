@@ -24,7 +24,7 @@ then
 else
   LAST_PORT=$(echo 51000 $(find instance/ -name 'mysql.*port' | xargs cat) | fmt -1 | sort -n | tail -n1)
   HTTP_PORT=$((${LAST_PORT} + 1))
-  echo ${HTTP} > ${INSTANCE_DIR}/mysql.http_port
+  echo ${HTTP_PORT} > ${INSTANCE_DIR}/mysql.http_port
 fi
 
 if [[ -a ${INSTANCE_DIR}/mysql.port ]]
