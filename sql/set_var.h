@@ -1390,6 +1390,20 @@ public:
 };
 
 
+/* For SET FAILOVER */
+
+class set_var_failover: public set_var_base
+{
+  bool in_failover;
+public:
+  set_var_failover(bool in_failover_arg)
+    :in_failover(in_failover_arg)
+  {}
+  int check(THD *thd);
+  int update(THD *thd);
+};
+
+
 extern "C"
 {
   typedef int (*process_key_cache_t) (const char *, KEY_CACHE *);

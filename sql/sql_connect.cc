@@ -20,6 +20,7 @@
 */
 
 #include "mysql_priv.h"
+#include "sql_repl.h"
 
 /** Size of the header fields of an authentication packet. */
 #define AUTH_PACKET_HEADER_SIZE_PROTO_41    32
@@ -387,6 +388,23 @@ check_user(THD *thd, enum enum_server_command command,
                   passwd_len ? "yes": "no",
                   thd->main_security_ctx.master_access,
                   (thd->db ? thd->db : "*none*")));
+
+      /*
+        If the user has neither SUPER nor REPL, then they cannot connect
+        when in failover mode or via the replication port.
+      */
+      if (!(thd->security_ctx->master_access & (SUPER_ACL | REPL_SLAVE_ACL)))
+      {
+        DBUG_PRINT("info", ("missing super, repl"));
+        if (failover)
+        {
+          DBUG_PRINT("info", ("in failover mode"));
+          my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
+                     "failover in progress", MYF(0));
+          // TODO(jtolmer): change back to -2 in user-stats branch
+          DBUG_RETURN(1);
+        }
+      }
 
       if (check_count)
       {
