@@ -52,6 +52,7 @@
 #include "sql_db.h"
 #include "sql_array.h"
 #include "sql_hset.h"
+#include "sql_repl.h"
 
 #include "sql_plugin_compat.h"
 
@@ -12753,6 +12754,24 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
   }
   else
     sctx->skip_grants();
+
+#ifdef HAVE_REPLICATION
+  /*
+    If the user has neither SUPER nor REPL, then they cannot connect
+    when in failover mode or via the replication port.
+  */
+  if (!(thd->security_ctx->master_access & (SUPER_ACL | REPL_SLAVE_ACL)))
+  {
+    DBUG_PRINT("info", ("missing super, repl"));
+    if (failover)
+    {
+      DBUG_PRINT("info", ("in failover mode"));
+      my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
+                 "failover in progress", MYF(0));
+      DBUG_RETURN(1);
+    }
+  }
+#endif
 
   if (thd->user_connect &&
       (thd->user_connect->user_resources.conn_per_hour ||

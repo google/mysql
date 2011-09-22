@@ -34,6 +34,7 @@
 #include "derror.h"
 #include "tztime.h"     // my_tz_find, my_tz_SYSTEM, struct Time_zone
 #include "sql_acl.h"    // SUPER_ACL
+#include "sql_repl.h"
 #include "sql_select.h" // free_underlaid_joins
 #include "sql_view.h"   // updatable_views_with_limit_typelib
 #include "lock.h"                               // lock_global_read_lock,
@@ -848,6 +849,25 @@ int set_var_password::update(THD *thd)
   return 0;
 #endif
 }
+
+#ifdef HAVE_REPLICATION
+
+/*****************************************************************************
+  Functions to handle SET FAILOVER
+*****************************************************************************/
+
+int set_var_failover::check(THD *thd)
+{
+  return check_global_access(thd, SUPER_ACL);
+}
+
+int set_var_failover::update(THD *thd)
+{
+  set_failover(thd, in_failover);
+  return 0;
+}
+
+#endif
 
 /*****************************************************************************
   Functions to handle SET ROLE

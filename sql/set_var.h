@@ -312,6 +312,24 @@ public:
 };
 
 
+#ifdef HAVE_REPLICATION
+
+/* For SET FAILOVER */
+
+class set_var_failover: public set_var_base
+{
+  bool in_failover;
+public:
+  set_var_failover(bool in_failover_arg)
+    :in_failover(in_failover_arg)
+  {}
+  int check(THD *thd);
+  int update(THD *thd);
+};
+
+#endif
+
+
 /* optional things, have_* variables */
 extern SHOW_COMP_OPTION have_csv, have_innodb;
 extern SHOW_COMP_OPTION have_ndbcluster, have_partitioning;

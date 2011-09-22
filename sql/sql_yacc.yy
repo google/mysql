@@ -973,10 +973,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %parse-param { THD *thd }
 %lex-param { THD *thd }
 /*
-  Currently there are 163 shift/reduce conflicts.
+  Currently there are 164 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 163
+%expect 164
 
 /*
    Comments for TOKENS.
@@ -1177,6 +1177,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  EXTENDED_SYM
 %token  EXTENT_SIZE_SYM
 %token  EXTRACT_SYM                   /* SQL-2003-N */
+%token  FAILOVER_SYM
 %token  FALSE_SYM                     /* SQL-2003-R */
 %token  FAST_SYM
 %token  FAULTS_SYM
@@ -14202,6 +14203,7 @@ keyword_sp:
         | EXPORT_SYM               {}
         | EXTENDED_SYM             {}
         | EXTENT_SIZE_SYM          {}
+        | FAILOVER_SYM             {}
         | FAULTS_SYM               {}
         | FAST_SYM                 {}
         | FOUND_SYM                {}
@@ -14713,6 +14715,15 @@ option_value_no_option_type:
             Lex->autocommit= TRUE;
             if (Lex->sphead)
               Lex->sphead->m_flags|= sp_head::HAS_SET_AUTOCOMMIT_STMT;
+          }
+        | FAILOVER_SYM EQ ulong_num
+          {
+#ifdef HAVE_REPLICATION
+            Lex->var_list.push_back(new set_var_failover($3));
+#else
+            my_parse_error(ER(ER_SYNTAX_ERROR));
+            MYSQL_YYABORT;
+#endif
           }
         ;
 

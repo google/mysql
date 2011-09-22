@@ -34,6 +34,8 @@ typedef struct st_slave_info
 
 struct slave_connection_state;
 
+extern bool failover;
+
 extern my_bool opt_show_slave_auth_info;
 extern char *master_host, *master_info_file;
 extern bool server_id_supplied;
@@ -44,6 +46,7 @@ extern my_bool opt_sporadic_binlog_dump_fail;
 int start_slave(THD* thd, Master_info* mi, bool net_report);
 int stop_slave(THD* thd, Master_info* mi, bool net_report);
 bool change_master(THD* thd, Master_info* mi, bool *master_info_added);
+void set_failover(THD* thd, bool in_failover);
 bool mysql_show_binlog_events(THD* thd);
 int reset_slave(THD *thd, Master_info* mi);
 int reset_master(THD* thd, rpl_gtid *init_state, uint32 init_state_len);
