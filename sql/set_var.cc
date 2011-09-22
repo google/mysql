@@ -63,6 +63,7 @@
 #include <my_dir.h>
 
 #include "events.h"
+#include "sql_repl.h"
 
 /* WITH_NDBCLUSTER_STORAGE_ENGINE */
 #ifdef WITH_NDBCLUSTER_STORAGE_ENGINE
@@ -3714,6 +3715,21 @@ int set_var_password::update(THD *thd)
 #else
   return 0;
 #endif
+}
+
+/*****************************************************************************
+  Functions to handle SET FAILOVER
+*****************************************************************************/
+
+int set_var_failover::check(THD *thd)
+{
+  return check_global_access(thd, SUPER_ACL);
+}
+
+int set_var_failover::update(THD *thd)
+{
+  set_failover(thd, in_failover);
+  return 0;
 }
 
 /****************************************************************************

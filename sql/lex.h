@@ -203,6 +203,7 @@ static SYMBOL symbols[] = {
   { "EXTENDED",		SYM(EXTENDED_SYM)},
   { "EXTENT_SIZE",	SYM(EXTENT_SIZE_SYM)},
   { "FALSE",		SYM(FALSE_SYM)},
+  { "FAILOVER",         SYM(FAILOVER_SYM)},
   { "FAST",		SYM(FAST_SYM)},
   { "FAULTS",  SYM(FAULTS_SYM)},
   { "FETCH",            SYM(FETCH_SYM)},

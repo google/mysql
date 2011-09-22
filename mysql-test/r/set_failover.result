@@ -1,0 +1,36 @@
+create database mysqltest;
+create table mysqltest.t1 (a int);
+insert into mysqltest.t1 values (3);
+create table mysqltest.t2 (a int);
+insert into mysqltest.t2 values (3);
+grant replication client on *.* to test_repl_client@localhost;
+grant replication slave on *.* to test_repl_slave@localhost;
+grant super on *.* to test_superman@localhost;
+grant select on *.* to test_repl_client@localhost;
+grant select on *.* to test_repl_slave@localhost;
+grant select on *.* to test_superman@localhost;
+grant all on mysqltest.t1 to test_1@localhost;
+flush user_resources;
+select * from mysqltest.t1;
+a
+3
+set failover= 1;
+select * from mysqltest.t1;
+Got one of the listed errors
+select * from mysqltest.t1;
+Got one of the listed errors
+select * from mysqltest.t1;
+Got one of the listed errors
+select * from mysqltest.t1;
+a
+3
+set failover= 0;
+select * from mysqltest.t1;
+a
+3
+delete from mysql.user where user like 'test\_%';
+delete from mysql.db where user like 'test\_%';
+delete from mysql.tables_priv where user like 'test\_%';
+delete from mysql.columns_priv where user like 'test\_%';
+flush privileges;
+drop database mysqltest;

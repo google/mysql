@@ -25,12 +25,16 @@
 #include <my_dir.h>
 #include "debug_sync.h"
 
+bool failover= 0;
+
 int max_binlog_dump_events = 0; // unlimited
 my_bool opt_sporadic_binlog_dump_fail = 0;
 my_bool rpl_crash_on_binlog_io_error;
 #ifndef DBUG_OFF
 static int binlog_dump_count = 0;
 #endif
+
+static void start_failover(THD* thd);
 
 /*
     fake_rotate_event() builds a fake (=which does not exist physically in any
@@ -1898,6 +1902,69 @@ int init_replication_sys_vars()
     unireg_abort(1);
   }
   return 0;
+}
+
+
+/**
+  Make the current database a primary.
+
+  The function handles the following sql commands:
+  . SET FAILOVER = 1;  kill sessions and deny new connections for
+                       non-super users
+  . SET FAILOVER = 0;  allow new connections
+
+  @param  thd          the current thread
+  @param  in_failover  kill all non-super sessions and deny all new
+                       non-super connections if specified
+*/
+
+void set_failover(THD *thd, bool in_failover)
+{
+  DBUG_ENTER("set_failover");
+  sql_print_information("SET FAILOVER = %d", in_failover);
+
+  if (in_failover)
+  {
+    start_failover(thd);
+  }
+  else
+  {
+    failover= 0;
+  }
+  DBUG_VOID_RETURN;
+}
+
+/**
+  Set the status indicating that we are in failover, deny all non-super
+  user access and kill all non-super sessions.
+
+  @param  thd           thread that we operate on
+*/
+
+static void start_failover(THD *thd)
+{
+  failover= 1;
+  THD *kill_thd;
+
+  pthread_mutex_lock(&LOCK_thread_count);      // for unlink from list
+  I_List_iterator<THD> it(threads);
+  while ((kill_thd= it++))
+  {
+    /*
+      Do not kill sessions with replication privs.
+      Do not kill the current session.
+    */
+    if (!(kill_thd->main_security_ctx.master_access & REPL_SLAVE_ACL) &&
+        !pthread_equal(kill_thd->real_id, thd->real_id))
+    {
+      // prevent thread from being deleted
+      pthread_mutex_lock(&kill_thd->LOCK_thd_data);
+      // ask the thread to die
+      kill_thd->awake(THD::KILL_CONNECTION);
+      pthread_mutex_unlock(&kill_thd->LOCK_thd_data);
+    }
+  }
+  pthread_mutex_unlock(&LOCK_thread_count);
 }
 
 #endif /* HAVE_REPLICATION */
