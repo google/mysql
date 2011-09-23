@@ -1096,7 +1096,7 @@ int reset_slave(THD *thd, Master_info* mi)
   ha_reset_slave(thd);
 
   // delete relay logs, clear relay log coordinates
-  if ((error= purge_relay_logs(&mi->rli,
+  if ((error= purge_relay_logs(&mi->rli, thd,
 			       1 /* just reset */,
 			       &errmsg)))
   {
@@ -1429,7 +1429,7 @@ bool change_master(THD* thd, Master_info* mi)
   {
     relay_log_purge= 1;
     thd_proc_info(thd, "Purging old relay logs");
-    if (purge_relay_logs(&mi->rli,
+    if (purge_relay_logs(&mi->rli, thd,
 			 0 /* not only reset, but also reinit */,
 			 &errmsg))
     {
@@ -1536,7 +1536,7 @@ int reset_master(THD* thd)
     return 1;
   }
 
-  int result= mysql_bin_log.reset_logs(true /* need_lock */);
+  int result= mysql_bin_log.reset_logs(thd, true /* need_lock */);
   (void) mysql_bin_log.complete_reset_logs(thd);
   return result;
 }

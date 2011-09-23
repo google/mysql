@@ -906,7 +906,8 @@ void Relay_log_info::close_temporary_tables()
     Assumes to have a run lock on rli and that no slave thread are running.
 */
 
-int purge_relay_logs(Relay_log_info *rli, bool just_reset, const char **errmsg)
+int purge_relay_logs(Relay_log_info* rli, THD *thd, bool just_reset,
+                     const char** errmsg)
 {
   int error=0;
   DBUG_ENTER("purge_relay_logs");
@@ -957,7 +958,7 @@ int purge_relay_logs(Relay_log_info *rli, bool just_reset, const char **errmsg)
     rli->cur_log_fd= -1;
   }
 
-  if (rli->relay_log.reset_logs(true /* need_lock */))
+  if (rli->relay_log.reset_logs(thd, true /* need_lock */))
   {
     *errmsg = "Failed during log reset";
     error=1;

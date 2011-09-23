@@ -293,6 +293,7 @@ int init_slave()
     */
     const char *errmsg= NULL;
     if (purge_relay_logs(&active_mi->rli,
+                         NULL                   /* thd */,
                          0                      /* also reinit */,
                          &errmsg))
     {
