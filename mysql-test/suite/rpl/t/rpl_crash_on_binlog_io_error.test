@@ -1,18 +1,23 @@
 source include/master-slave.inc;
 
 call mtr.add_suppression("Failed in mysql_binlog_send.*binlog truncated in the middle of event");
-call mtr.add_suppression("Error in Log_event::read_log_event(): 'read error', data_len: [0-9]+, event_type: [0-9]+");
+call mtr.add_suppression("Error in Log_event::read_log_event..: 'read error', data_len: [0-9]+, event_type: [0-9]+");
 
-connection slave;
+sync_slave_with_master;
 --source include/stop_slave.inc
 
 connection master;
+let $slave_file= query_get_value(show master status, File, 1);
+let $slave_pos= query_get_value(show master status, Position, 1);
+
 create table t1 (a int primary key);
 create table t2 (b int primary key);
-let $start_log_pos= query_get_value(show binlog events, Pos, 3);
-let $end_log_pos= query_get_value(show binlog events, End_log_pos, 3);
-let $new_pos= `select round($start_log_pos + ($end_log_pos - $start_log_pos)/2)`;
---exec truncate -s $new_pos $MYSQLTEST_VARDIR/mysqld.1/data/master-bin.000001;
+
+let $start_log_pos= query_get_value(show binlog events in '$slave_file' from $slave_pos, Pos, 2);
+let $end_log_pos= query_get_value(show binlog events in '$slave_file' from $slave_pos, End_log_pos, 2);
+let $new_pos= query_get_value(select round($start_log_pos + ($end_log_pos - $start_log_pos)/2) as Pos, Pos, 1);
+
+--exec truncate -s $new_pos $MYSQLTEST_VARDIR/mysqld.1/data/$slave_file;
 
 --exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 
