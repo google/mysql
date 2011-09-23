@@ -3532,6 +3532,7 @@ err:
 
   The new index file will only contain this file.
 
+  @param  thd        Thread, NULL when called from init_slave
   @param  need_lock  Set this to 1 if the parent doesn't already have a
                      lock on LOCK_index
 
@@ -3544,10 +3545,8 @@ err:
     1   error
 */
 
-bool MYSQL_BIN_LOG::reset_logs(bool need_lock)
+bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
 {
-  /* current_thd will be NULL when called from init_slave. */
-  THD* thd= current_thd;
   LOG_INFO linfo;
   bool error=0;
   const char* save_name;
@@ -7737,7 +7736,7 @@ int MYSQL_BIN_LOG::update_group_id(THD *thd, ulonglong group_id_arg,
     repl_hier_cache_clear();
 
     pthread_mutex_lock(&LOCK_index);
-    (void) reset_logs(false /* need_lock */);
+    (void) reset_logs(thd, false /* need_lock */);
     pthread_mutex_unlock(&LOCK_index);
 
     rpl_hier_cache_frequency_real= rpl_hier_cache_freq_save;
