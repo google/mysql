@@ -3556,6 +3556,15 @@ bool MYSQL_BIN_LOG::reset_logs(bool need_lock)
   // If called from init_slave() it is just to purge relay logs so no
   // need to notify the storage engines.
   if (thd) ha_reset_logs(thd);
+
+  /*
+    The following mutex is needed to ensure that no threads call
+    'delete thd' as we would then risk missing a 'rollback' from this
+    thread. If the transaction involved MyISAM tables, it should go
+    into binlog even on rollback.
+  */
+  pthread_mutex_lock(&LOCK_thread_count);
+
   if (need_lock)
   {
     /*
@@ -3567,14 +3576,6 @@ bool MYSQL_BIN_LOG::reset_logs(bool need_lock)
   }
   safe_mutex_assert_owner(&LOCK_log);
   safe_mutex_assert_owner(&LOCK_index);
-
-  /*
-    The following mutex is needed to ensure that no threads call
-    'delete thd' as we would then risk missing a 'rollback' from this
-    thread. If the transaction involved MyISAM tables, it should go
-    into binlog even on rollback.
-  */
-  pthread_mutex_lock(&LOCK_thread_count);
 
   /* Save variables so that we can reopen the log */
   save_name=name;
