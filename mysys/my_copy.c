@@ -59,6 +59,7 @@ int my_copy(const char *from, const char *to, myf MyFlags)
   File from_file,to_file;
   uchar buff[IO_SIZE];
   MY_STAT stat_buff,new_stat_buff;
+  gid_t gid;
   DBUG_ENTER("my_copy");
   DBUG_PRINT("my",("from %s to %s MyFlags %d", from, to, MyFlags));
 
@@ -113,8 +114,19 @@ int my_copy(const char *from, const char *to, myf MyFlags)
       goto err;
     }
 #if !defined(__WIN__) && !defined(__NETWARE__)
+    /* Refresh the new_stat_buff */
+    if (!my_stat((char*) to, &new_stat_buff, MYF(0)))
+    {
+      my_errno= errno;
+      goto err;
+    }
+
     /* Copy ownership */
-    if (chown(to, stat_buff.st_uid,stat_buff.st_gid))
+    if (stat_buff.st_gid == new_stat_buff.st_gid)
+      gid= -1;
+    else
+      gid= stat_buff.st_gid;
+    if (chown(to, stat_buff.st_uid, gid))
     {
       my_errno= errno;
       if (MyFlags & (MY_FAE+MY_WME))

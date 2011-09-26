@@ -78,6 +78,8 @@ end:
 int my_copystat(const char *from, const char *to, int MyFlags)
 {
   struct stat statbuf;
+  struct stat statbuf_to;
+  gid_t gid;
 
   if (stat(from, &statbuf))
   {
@@ -87,6 +89,16 @@ int my_copystat(const char *from, const char *to, int MyFlags)
     return -1;				/* Can't get stat on input file */
   }
   if ((statbuf.st_mode & S_IFMT) != S_IFREG)
+    return 1;
+
+  if (stat(to, &statbuf_to))
+  {
+    my_errno= errno;
+    if (MyFlags & (MY_FAE+MY_WME))
+      my_error(EE_STAT, MYF(ME_BELL+ME_WAITTANG), from, errno);
+    return -1;
+  }
+  if ((statbuf_to.st_mode & S_IFMT) != S_IFREG)
     return 1;
 
   /* Copy modes */
@@ -105,7 +117,11 @@ int my_copystat(const char *from, const char *to, int MyFlags)
       my_error(EE_LINK_WARNING,MYF(ME_BELL+ME_WAITTANG),from,statbuf.st_nlink);
   }
   /* Copy ownership */
-  if (chown(to, statbuf.st_uid, statbuf.st_gid))
+  if (statbuf.st_gid == statbuf_to.st_gid)
+    gid= -1;
+  else
+    gid= statbuf.st_gid;
+  if (chown(to, statbuf.st_uid, gid))
   {
     my_errno= errno;
     if (MyFlags & (MY_FAE+MY_WME))
