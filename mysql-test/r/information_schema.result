@@ -97,6 +97,7 @@ help_relation
 help_topic
 host
 index_stats
+mapped_user
 plugin
 proc
 procs_priv

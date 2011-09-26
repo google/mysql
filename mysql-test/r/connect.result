@@ -16,6 +16,7 @@ host
 index_stats
 innodb_index_stats
 innodb_table_stats
+mapped_user
 plugin
 proc
 procs_priv
@@ -58,6 +59,7 @@ host
 index_stats
 innodb_index_stats
 innodb_table_stats
+mapped_user
 plugin
 proc
 procs_priv
@@ -108,6 +110,7 @@ host
 index_stats
 innodb_index_stats
 innodb_table_stats
+mapped_user
 plugin
 proc
 procs_priv

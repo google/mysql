@@ -24,6 +24,7 @@ def	mysql	PRIMARY	mysql	host	PRIMARY KEY
 def	mysql	PRIMARY	mysql	index_stats	PRIMARY KEY
 def	mysql	PRIMARY	mysql	innodb_index_stats	PRIMARY KEY
 def	mysql	PRIMARY	mysql	innodb_table_stats	PRIMARY KEY
+def	mysql	PRIMARY	mysql	mapped_user	PRIMARY KEY
 def	mysql	PRIMARY	mysql	plugin	PRIMARY KEY
 def	mysql	PRIMARY	mysql	proc	PRIMARY KEY
 def	mysql	PRIMARY	mysql	procs_priv	PRIMARY KEY

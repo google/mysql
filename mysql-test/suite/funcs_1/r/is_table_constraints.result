@@ -74,6 +74,7 @@ def	mysql	PRIMARY	mysql	host
 def	mysql	PRIMARY	mysql	index_stats
 def	mysql	PRIMARY	mysql	innodb_index_stats
 def	mysql	PRIMARY	mysql	innodb_table_stats
+def	mysql	PRIMARY	mysql	mapped_user
 def	mysql	PRIMARY	mysql	plugin
 def	mysql	PRIMARY	mysql	proc
 def	mysql	PRIMARY	mysql	procs_priv

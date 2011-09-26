@@ -667,6 +667,8 @@ UPDATE user SET host=LOWER( host ) WHERE LOWER( host ) <> host;
 # MDEV-4332 longer user names
 alter table user         modify User         char(80)  binary not null default '';
 alter table system_user  modify User         char(80)  binary not null default '';
+alter table mapped_user  modify User         char(80)  binary not null default '',
+                         modify Role         char(80)  binary not null default '';
 alter table sniper_settings modify User      char(80)  binary not null default '';
 alter table db           modify User         char(80)  binary not null default '';
 alter table tables_priv  modify User         char(80)  binary not null default '';
@@ -711,5 +713,5 @@ ALTER TABLE table_stats ENGINE=InnoDB;
 ALTER TABLE column_stats ENGINE=InnoDB;
 ALTER TABLE index_stats ENGINE=InnoDB;
 ALTER TABLE system_user ENGINE=InnoDB;
-
+ALTER TABLE mapped_user ENGINE=InnoDB;
 

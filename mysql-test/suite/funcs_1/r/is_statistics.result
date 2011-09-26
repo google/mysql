@@ -122,6 +122,8 @@ def	mysql	innodb_index_stats	mysql	PRIMARY
 def	mysql	innodb_index_stats	mysql	PRIMARY
 def	mysql	innodb_table_stats	mysql	PRIMARY
 def	mysql	innodb_table_stats	mysql	PRIMARY
+def	mysql	mapped_user	mysql	PRIMARY
+def	mysql	mapped_user	mysql	PRIMARY
 def	mysql	plugin	mysql	PRIMARY
 def	mysql	proc	mysql	PRIMARY
 def	mysql	proc	mysql	PRIMARY
