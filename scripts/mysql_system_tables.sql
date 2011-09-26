@@ -104,3 +104,4 @@ CREATE TABLE IF NOT EXISTS ndb_binlog_index (Position BIGINT UNSIGNED NOT NULL, 
 CREATE TABLE IF NOT EXISTS system_user LIKE user;
 ALTER TABLE system_user comment='System user accounts and their global privileges';
 
+CREATE TABLE IF NOT EXISTS mapped_user (Role CHAR(16) binary DEFAULT '' NOT NULL, User CHAR(16) binary DEFAULT '' NOT NULL, Password CHAR(41) character set latin1 COLLATE latin1_bin DEFAULT '' NOT NULL, PasswordChanged timestamp, ssl_type enum('','ANY','X509', 'SPECIFIED') COLLATE utf8_general_ci DEFAULT '' NOT NULL, ssl_cipher BLOB NOT NULL, x509_issuer BLOB NOT NULL, x509_subject BLOB NOT NULL, PRIMARY KEY (User, Password)) ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_bin COMMENT 'Mapped users';
