@@ -976,7 +976,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
   Currently there are 164 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 164
+%expect 165
 
 /*
    Comments for TOKENS.
@@ -1227,6 +1227,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  IDENT
 %token  IDENTIFIED_SYM
 %token  IDENT_QUOTED
+%token  IDLE_SYM
 %token  IF
 %token  IGNORE_SYM
 %token  IGNORE_SERVER_IDS_SYM
@@ -13024,6 +13025,7 @@ kill:
             lex->users_list.empty();
             lex->sql_command= SQLCOM_KILL;
             lex->kill_type= KILL_TYPE_ID;
+            lex->type= 0;
           }
           kill_type kill_option kill_expr
           {
@@ -13044,6 +13046,11 @@ kill_option:
           {
             $$= (int) KILL_QUERY;
             Lex->kill_type= KILL_TYPE_QUERY;
+          }
+        | IDLE_SYM
+          {
+            $$= (int) KILL_CONNECTION;
+            Lex->type= ONLY_KILL_IDLE;
           }
         ;
 
@@ -14247,6 +14254,7 @@ keyword_sp:
         | HOUR_SYM                 {}
         | ID_SYM                   {}
         | IDENTIFIED_SYM           {}
+        | IDLE_SYM                 {}
         | IGNORE_SERVER_IDS_SYM    {}
         | INDEX_STATS_SYM          {}
         | INVOKER_SYM              {}

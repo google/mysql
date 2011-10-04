@@ -119,7 +119,8 @@
    "FUNCTION" : "PROCEDURE")
 
 static bool execute_sqlcom_select(THD *thd, TABLE_LIST *all_tables);
-static void sql_kill(THD *thd, longlong id, killed_state state, killed_type type);
+static void sql_kill(THD *thd, longlong id, killed_state state, killed_type type,
+                     bool only_kill_idle);
 static void sql_kill_user(THD *thd, LEX_USER *user, killed_state state);
 static bool lock_tables_precheck(THD *thd, TABLE_LIST *tables);
 static bool execute_show_status(THD *, TABLE_LIST *);
@@ -1687,7 +1688,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   {
     status_var_increment(thd->status_var.com_stat[SQLCOM_KILL]);
     ulong id=(ulong) uint4korr(packet);
-    sql_kill(thd, id, KILL_CONNECTION_HARD, KILL_TYPE_ID);
+    sql_kill(thd, id, KILL_CONNECTION_HARD, KILL_TYPE_ID, false);
     break;
   }
   case COM_SET_OPTION:
@@ -4331,7 +4332,8 @@ end_with_restore_list:
                    MYF(0));
         goto error;
       }
-      sql_kill(thd, it->val_int(), lex->kill_signal, lex->kill_type);
+      sql_kill(thd, it->val_int(), lex->kill_signal, lex->kill_type,
+               lex->type & ONLY_KILL_IDLE);
     }
     else
       sql_kill_user(thd, get_current_user(thd, lex->users_list.head()),
@@ -7413,7 +7415,8 @@ THD *find_thread_by_id(longlong id, bool query_id)
 */
 
 uint
-kill_one_thread(THD *thd, longlong id, killed_state kill_signal, killed_type type)
+kill_one_thread(THD *thd, longlong id, killed_state kill_signal, killed_type type,
+                bool only_kill_idle)
 {
   THD *tmp;
   uint error= (type == KILL_TYPE_QUERY ? ER_NO_SUCH_QUERY : ER_NO_SUCH_THREAD);
@@ -7446,7 +7449,13 @@ kill_one_thread(THD *thd, longlong id, killed_state kill_signal, killed_type typ
     if ((thd->security_ctx->master_access & SUPER_ACL) ||
         thd->security_ctx->user_matches(tmp->security_ctx))
     {
-      tmp->awake(kill_signal);
+      /*
+        Kill a session when either:
+          * It is sleeping and only_kill_idle is true
+          * only_kill_idle is false
+      */
+      if (!only_kill_idle || tmp->get_command() == COM_SLEEP)
+        tmp->awake(kill_signal);
       error=0;
     }
     else
@@ -7548,10 +7557,11 @@ static uint kill_threads_for_user(THD *thd, LEX_USER *user,
 */
 
 static
-void sql_kill(THD *thd, longlong id, killed_state state, killed_type type)
+void sql_kill(THD *thd, longlong id, killed_state state, killed_type type,
+              bool only_kill_idle)
 {
   uint error;
-  if (!(error= kill_one_thread(thd, id, state, type)))
+  if (!(error= kill_one_thread(thd, id, state, type, only_kill_idle)))
   {
     if ((!thd->killed))
       my_ok(thd);
