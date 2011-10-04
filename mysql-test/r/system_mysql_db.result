@@ -10,6 +10,7 @@ help_keyword
 help_relation
 help_topic
 host
+mapped_user
 ndb_binlog_index
 plugin
 proc
