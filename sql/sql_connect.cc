@@ -432,13 +432,10 @@ check_user(THD *thd, enum enum_server_command command,
 
         if (is_using_repl_port(thd))
         {
-          // Returns 0 if global access is correct
-          if (check_global_access(thd, SUPER_ACL | REPL_SLAVE_ACL))
-          {
-            net_send_error(thd, ER_SPECIFIC_ACCESS_DENIED_ERROR,
-                           "not authorized for repl_port");
-            DBUG_RETURN(-1);
-          }
+          my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
+                     "not authorized for repl_port", MYF(0));
+          // TODO(jtolmer): change back to -2 in user-stats branch
+          DBUG_RETURN(1);
         }
       }
 
