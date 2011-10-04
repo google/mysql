@@ -90,6 +90,7 @@ help_keyword
 help_relation
 help_topic
 host
+mapped_user
 plugin
 proc
 procs_priv
@@ -877,7 +878,7 @@ flush privileges;
 SELECT table_schema, count(*) FROM information_schema.TABLES WHERE table_schema IN ('mysql', 'INFORMATION_SCHEMA', 'test', 'mysqltest') AND table_name<>'ndb_binlog_index' AND table_name<>'ndb_apply_status' GROUP BY TABLE_SCHEMA;
 table_schema	count(*)
 information_schema	37
-mysql	23
+mysql	24
 create table t1 (i int, j int);
 create trigger trg1 before insert on t1 for each row
 begin
