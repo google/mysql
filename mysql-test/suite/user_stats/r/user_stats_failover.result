@@ -1,0 +1,33 @@
+flush user_statistics;
+create database mysqltest;
+create table mysqltest.t1 (a int);
+insert into mysqltest.t1 values (3);
+grant all on *.* to test_root@localhost;
+grant select on *.* to test_user@localhost;
+flush privileges;
+select * from mysqltest.t1;
+a
+3
+set failover= 1;
+select * from mysqltest.t1;
+ERROR 42000: failover in progress
+select * from mysqltest.t1;
+ERROR 42000: failover in progress
+select * from mysqltest.t1;
+ERROR 42000: failover in progress
+select * from mysqltest.t1;
+ERROR 42000: failover in progress
+select * from mysqltest.t1;
+ERROR 42000: failover in progress
+set failover= 0;
+select * from mysqltest.t1;
+a
+3
+select user, denied_connections, access_denied, lost_connections
+from information_schema.user_statistics
+where user = 'test_user';
+user	denied_connections	access_denied	lost_connections
+test_user	5	0	1
+delete from mysql.user where user like 'test\_%';
+flush privileges;
+drop database mysqltest;

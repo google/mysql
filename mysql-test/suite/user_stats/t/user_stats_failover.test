@@ -1,0 +1,57 @@
+-- source include/not_embedded.inc
+
+# setup
+
+flush user_statistics;
+
+create database mysqltest;
+create table mysqltest.t1 (a int);
+insert into mysqltest.t1 values (3);
+
+grant all on *.* to test_root@localhost;
+grant select on *.* to test_user@localhost;
+flush privileges;
+
+connect (root, localhost, test_root,,);
+connect (user, localhost, test_user,,);
+
+# the test
+
+connection user;
+--enable_reconnect
+select * from mysqltest.t1;
+
+connection root;
+set failover= 1;
+sleep 1;
+
+connection user;
+--disable_warnings
+let $i= 5;
+while ($i)
+{
+  --error 1227
+  select * from mysqltest.t1;
+  dec $i;
+}
+--enable_warnings
+
+connection root;
+set failover= 0;
+
+connection user;
+select * from mysqltest.t1;
+
+connection default;
+select user, denied_connections, access_denied, lost_connections
+from information_schema.user_statistics
+where user = 'test_user';
+
+# clean up
+delete from mysql.user where user like 'test\_%';
+flush privileges;
+
+disconnect root;
+disconnect user;
+
+drop database mysqltest;
