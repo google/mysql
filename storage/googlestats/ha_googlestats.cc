@@ -1623,8 +1623,7 @@ ha_googlestats::_fill_row_buffer()
 
   timer.set_rows_and_bytes(num_rows, packed_length);
 
-  //TODO(seanrees): uncomment this when table statistics are ported over.
-  //rows_read += num_rows;
+  rows_read += num_rows;
 
   max_buffered_rows = num_rows;
   num_buffered_rows = max_buffered_rows;
