@@ -677,10 +677,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 
 %pure_parser                                    /* We have threads */
 /*
-  Currently there are 170 shift/reduce conflicts.
+  Currently there are 171 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 170
+%expect 171
 
 /*
    Comments for TOKENS.
@@ -901,6 +901,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  IDENT
 %token  IDENTIFIED_SYM
 %token  IDENT_QUOTED
+%token  IDLE_SYM
 %token  IF
 %token  IGNORE_SYM
 %token  IMPORT
@@ -10668,6 +10669,7 @@ kill_option:
           /* empty */ { Lex->type= 0; }
         | CONNECTION_SYM { Lex->type= 0; }
         | QUERY_SYM      { Lex->type= ONLY_KILL_QUERY; }
+        | IDLE_SYM       { Lex->type= ONLY_KILL_IDLE; }
         ;
 
 /* change database */
@@ -11776,6 +11778,7 @@ keyword_sp:
         | HOSTS_SYM                {}
         | HOUR_SYM                 {}
         | IDENTIFIED_SYM           {}
+        | IDLE_SYM                 {}
         | INVOKER_SYM              {}
         | IMPORT                   {}
         | INDEXES                  {}

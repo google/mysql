@@ -223,6 +223,7 @@ enum enum_server_command
 #define NET_WAIT_TIMEOUT	8*60*60		/* Wait for new query */
 
 #define ONLY_KILL_QUERY         1
+#define ONLY_KILL_IDLE          2
 
 
 struct st_vio;					/* Only C */

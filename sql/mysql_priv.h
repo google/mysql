@@ -103,8 +103,10 @@ char *sql_strmake_with_convert(const char *str, size_t arg_length,
 			       CHARSET_INFO *from_cs,
 			       size_t max_res_length,
 			       CHARSET_INFO *to_cs, size_t *result_length);
-uint kill_one_thread(THD *thd, ulong id, bool only_kill_query);
-void sql_kill(THD *thd, ulong id, bool only_kill_query);
+uint kill_one_thread(THD *thd, ulong id, bool only_kill_query,
+                     bool only_kill_idle);
+void sql_kill(THD *thd, ulong id, bool only_kill_query,
+              bool only_kill_idle);
 bool net_request_file(NET* net, const char* fname);
 char* query_table_status(THD *thd,const char *db,const char *table_name);
 
