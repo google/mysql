@@ -1649,7 +1649,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   {
     status_var_increment(thd->status_var.com_stat[SQLCOM_KILL]);
     ulong id=(ulong) uint4korr(packet);
-    sql_kill(thd,id,false);
+    sql_kill(thd, id, false, false);
     break;
   }
   case COM_SET_OPTION:
@@ -4179,7 +4179,8 @@ end_with_restore_list:
 		 MYF(0));
       goto error;
     }
-    sql_kill(thd, (ulong)it->val_int(), lex->type & ONLY_KILL_QUERY);
+    sql_kill(thd, (ulong)it->val_int(), lex->type & ONLY_KILL_QUERY,
+             lex->type & ONLY_KILL_IDLE);
     break;
   }
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
@@ -7189,7 +7190,8 @@ bool reload_acl_and_cache(THD *thd, ulong options, TABLE_LIST *tables,
     This is written such that we have a short lock on LOCK_thread_count
 */
 
-uint kill_one_thread(THD *thd, ulong id, bool only_kill_query)
+uint kill_one_thread(THD *thd, ulong id, bool only_kill_query,
+                     bool only_kill_idle)
 {
   THD *tmp;
   uint error=ER_NO_SUCH_THREAD;
@@ -7231,7 +7233,13 @@ uint kill_one_thread(THD *thd, ulong id, bool only_kill_query)
     if ((thd->security_ctx->master_access & SUPER_ACL) ||
         thd->security_ctx->user_matches(tmp->security_ctx))
     {
-      tmp->awake(only_kill_query ? THD::KILL_QUERY : THD::KILL_CONNECTION);
+      /*
+        Kill a session when either:
+          * It is sleeping and only_kill_idle is true
+          * only_kill_idle is false
+      */
+      if (!only_kill_idle || tmp->command == COM_SLEEP)
+        tmp->awake(only_kill_query ? THD::KILL_QUERY : THD::KILL_CONNECTION);
       error=0;
     }
     else
@@ -7253,10 +7261,10 @@ uint kill_one_thread(THD *thd, ulong id, bool only_kill_query)
     only_kill_query     Should it kill the query or the connection
 */
 
-void sql_kill(THD *thd, ulong id, bool only_kill_query)
+void sql_kill(THD *thd, ulong id, bool only_kill_query, bool only_kill_idle)
 {
   uint error;
-  if (!(error= kill_one_thread(thd, id, only_kill_query)))
+  if (!(error= kill_one_thread(thd, id, only_kill_query, only_kill_idle)))
     my_ok(thd);
   else
     my_error(error, MYF(0), id);
