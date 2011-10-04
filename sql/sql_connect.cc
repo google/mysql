@@ -426,16 +426,14 @@ check_user(THD *thd, enum enum_server_command command,
           DBUG_PRINT("info", ("in failover mode"));
           my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
                      "failover in progress", MYF(0));
-          // TODO(jtolmer): change back to -2 in user-stats branch
-          DBUG_RETURN(1);
+          DBUG_RETURN(-2);
         }
 
         if (is_using_repl_port(thd))
         {
           my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
                      "not authorized for repl_port", MYF(0));
-          // TODO(jtolmer): change back to -2 in user-stats branch
-          DBUG_RETURN(1);
+          DBUG_RETURN(-2);
         }
       }
 
