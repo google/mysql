@@ -22,6 +22,7 @@
 #endif
 
 #include <my_tree.h>
+#include "hash_64.h"
 
 /*
   Class Item_sum is the base class used for special expressions that SQL calls
@@ -899,6 +900,8 @@ protected:
   ulonglong reset_bits,bits;
 
 public:
+  Item_sum_bit(List<Item> &list, ulonglong reset_arg)
+    :Item_sum_int(list), reset_bits(reset_arg), bits(reset_arg) {}
   Item_sum_bit(Item *item_par,ulonglong reset_arg)
     :Item_sum_int(item_par),reset_bits(reset_arg),bits(reset_arg) {}
   Item_sum_bit(THD *thd, Item_sum_bit *item):
@@ -947,6 +950,32 @@ class Item_sum_xor :public Item_sum_bit
   bool add();
   const char *func_name() const { return "bit_xor("; }
   Item *copy_or_same(THD* thd);
+};
+
+class Item_sum_unordered_checksum :public Item_sum_bit
+{
+public:
+  Item_sum_unordered_checksum(List<Item> &list)
+    :Item_sum_bit(list, HASH_64_INIT)
+  {
+    quick_group= true;
+  }
+  bool add();
+  const char *func_name() const { return "unordered_checksum"; }
+  unsigned int size_of() { return sizeof(*this); }
+};
+
+class Item_sum_ordered_checksum :public Item_sum_bit
+{
+public:
+  Item_sum_ordered_checksum(List<Item> &list)
+    :Item_sum_bit(list, HASH_64_INIT)
+  {
+    quick_group= true;
+  }
+  bool add();
+  const char *func_name() const { return "ordered_checksum"; }
+  unsigned int size_of() { return sizeof(*this); }
 };
 
 

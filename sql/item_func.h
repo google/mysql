@@ -1776,3 +1776,18 @@ public:
   bool check_partition_func_processor(uchar *int_arg) {return FALSE;}
 };
 
+
+class Item_func_hash :public Item_func
+{
+public:
+  Item_func_hash(List<Item> &list) :Item_func(list) {}
+  double val_real();
+  longlong val_int();
+  String *val_str(String *);
+
+  void fix_length_and_dec();
+  enum Item_result result_type () const { return INT_RESULT; }
+  unsigned int size_of() { return sizeof(*this); }
+  const char *func_name() const { return "hash"; }
+};
+

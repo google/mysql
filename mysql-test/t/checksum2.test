@@ -1,0 +1,37 @@
+# Tests for HASH(), ORDERED_CHECKSUM() and UNORDERED_CHECKSUM() functions.
+
+create table t2(dt datetime, da date, ti time, ts timestamp, y year);
+insert into t2 values (
+  '2006-01-01 10:00:00',
+  '2006-01-01',
+  '10:00:00',
+  '20060101100000',
+  2006
+);
+insert into t2 values (
+  '2007-01-01 11:00:00',
+  '2007-01-01',
+  '11:00:00',
+  '20060101110000',
+  2007
+);
+
+select hash(dt) from t2;
+select hash(da) from t2;
+select hash(ti) from t2;
+select hash(ts) from t2;
+select hash(y) from t2;
+
+select unordered_checksum(dt) from t2;
+select unordered_checksum(da) from t2;
+select unordered_checksum(ti) from t2;
+select unordered_checksum(ts) from t2;
+select unordered_checksum(y) from t2;
+
+select ordered_checksum(dt) from t2;
+select ordered_checksum(da) from t2;
+select ordered_checksum(ti) from t2;
+select ordered_checksum(ts) from t2;
+select ordered_checksum(y) from t2;
+
+drop table t2;
