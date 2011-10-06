@@ -1,0 +1,24 @@
+create table t4(e enum('1', '2'), s set('1', '2', '3'));
+insert into t4 values('1', '1,2');
+insert into t4 values('2', '2,3');
+select hash(e) from t4;
+hash(e)
+8691557201380153181
+8691557201380153182
+select hash(s) from t4;
+hash(s)
+12946304085128770083
+12947181495407893201
+select unordered_checksum(e) from t4;
+unordered_checksum(e)
+9521211207457086695
+select unordered_checksum(s) from t4;
+unordered_checksum(s)
+9522018248992175126
+select ordered_checksum(e) from t4;
+ordered_checksum(e)
+3899138484400632629
+select ordered_checksum(s) from t4;
+ordered_checksum(s)
+13528951836076377140
+drop table t4;

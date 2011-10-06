@@ -2210,6 +2210,21 @@ public:
 };
 
 
+class Item_func_hash :public Item_func
+{
+public:
+  Item_func_hash(List<Item> &list) :Item_func(list) {}
+  double val_real();
+  longlong val_int();
+  String *val_str(String *);
+
+  void fix_length_and_dec();
+  enum Item_result result_type () const { return INT_RESULT; }
+  unsigned int size_of() { return sizeof(*this); }
+  const char *func_name() const { return "hash"; }
+};
+
+
 Item *get_system_var(THD *thd, enum_var_type var_type, LEX_STRING name,
                      LEX_STRING component);
 extern bool check_reserved_words(LEX_STRING *name);

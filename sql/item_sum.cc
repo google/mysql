@@ -2772,6 +2772,42 @@ double Item_variance_field::val_real()
 }
 
 
+/*
+  Aggregate checksum function that is row order-independent.
+
+  Supports command:
+   * SELECT col1, UNORDERED_CHECKSUM(col2, col3) FROM foo
+     WHERE ... GROUP BY col1;
+
+  The checksum functions use a default value for null arguments. The result
+  is never null.
+*/
+bool Item_sum_unordered_checksum::add()
+{
+  // The hash for each row xor'd to make this row order independent.
+  bits^= hash_args(args, arg_count, HASH_64_INIT);
+  return 0;
+}
+
+
+/*
+  Aggregate checksum function that is row order-dependent.
+
+  Supports command:
+   * SELECT col1, ORDERED_CHECKSUM(col2, col3) FROM foo
+     WHERE ... GROUP BY col1;
+*/
+bool Item_sum_ordered_checksum::add()
+{
+  /*
+    The hash for each row is the initial hash for the next row to make
+    this row order dependent.
+  */
+  bits= hash_args(args, arg_count, bits);
+  return 0;
+}
+
+
 /****************************************************************************
 ** Functions to handle dynamic loadable aggregates
 ** Original source by: Alexis Mikhailov <root@medinf.chuvashia.su>

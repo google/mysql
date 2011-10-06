@@ -689,6 +689,7 @@ static SYMBOL sql_functions[] = {
   { "MID",		SYM(SUBSTRING)},	/* unireg function */
   { "MIN",		SYM(MIN_SYM)},
   { "NOW",		SYM(NOW_SYM)},
+  { "ORDERED_CHECKSUM", SYM(ORDERED_CHECKSUM_SYM)},
   { "POSITION",		SYM(POSITION_SYM)},
   { "SESSION_USER",     SYM(USER)},
   { "STD",		SYM(STD_SYM)},
@@ -702,6 +703,7 @@ static SYMBOL sql_functions[] = {
   { "SYSDATE",		SYM(SYSDATE)},
   { "SYSTEM_USER",      SYM(USER)},
   { "TRIM",		SYM(TRIM)},
+  { "UNORDERED_CHECKSUM",       SYM(UNORDERED_CHECKSUM_SYM)},
   { "VARIANCE",		SYM(VARIANCE_SYM)},
   { "VAR_POP",		SYM(VARIANCE_SYM)},
   { "VAR_SAMP",		SYM(VAR_SAMP_SYM)},

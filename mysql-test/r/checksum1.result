@@ -1,0 +1,111 @@
+create table t1(
+i int, i1 int, c1 char(1), c2 char(2), f float, d double,
+vc varchar(10)
+);
+insert into t1 values (1, 3, '1', '1', 1, 1, '1');
+insert into t1 values (2, 2, '2', '2', 2, 2, '2');
+insert into t1 values (3, 1, '3', '22', 3, 3, '22');
+select hash(i) from t1 order by i;
+hash(i)
+12125821063809463359
+7897639797670528794
+3669458531531594229
+select hash(c1) from t1 order by i;
+hash(c1)
+8691557201380153181
+8691557201380153182
+8691557201380153183
+select hash(c2) from t1 order by i;
+hash(c2)
+8691557201380153181
+8691557201380153182
+3899139583912260744
+select hash(f) from t1 order by i;
+hash(f)
+16354266212739168523
+16354002329948397860
+16353993533855372172
+select hash(d) from t1 order by i;
+hash(d)
+16354266212739168523
+16354002329948397860
+16353993533855372172
+select hash(vc) from t1 order by i;
+hash(vc)
+8691557201380153181
+8691557201380153182
+3899139583912260744
+select hash(i, c1, c2, f, d, vc) from t1 order by i;
+hash(i, c1, c2, f, d, vc)
+8260664520004307694
+4271355524914459424
+7874794455587051588
+select '1: not match1', unordered_checksum(i, c1, c2, f, d, vc) from t1;
+1: not match1	unordered_checksum(i, c1, c2, f, d, vc)
+1: not match1	11569713724669558126
+select '1: not match2', unordered_checksum(i1, c1, c2, f, d, vc) from t1;
+1: not match2	unordered_checksum(i1, c1, c2, f, d, vc)
+1: not match2	15606142839496559570
+select '2: not match1', ordered_checksum(i, c1, c2, f, d, vc) from t1;
+2: not match1	ordered_checksum(i, c1, c2, f, d, vc)
+2: not match1	4192927915844138010
+select '2: not match2', ordered_checksum(i1, c1, c2, f, d, vc) from t1;
+2: not match2	ordered_checksum(i1, c1, c2, f, d, vc)
+2: not match2	4145976810685705126
+select '3: match1', unordered_checksum(i) from t1;
+3: match1	unordered_checksum(i)
+3: match1	8292030422173955636
+select '3: match2', unordered_checksum(i1) from t1;
+3: match2	unordered_checksum(i1)
+3: match2	8292030422173955636
+select '4: not match1', ordered_checksum(i) from t1;
+4: not match1	ordered_checksum(i)
+4: not match1	6859764282969517028
+select '4: not match2', ordered_checksum(i1) from t1;
+4: not match2	ordered_checksum(i1)
+4: not match2	6074163440810017764
+select '5: not match1', unordered_checksum(i, c1, c2, f, d, vc)
+from t1 group by i1 order by i;
+5: not match1	unordered_checksum(i, c1, c2, f, d, vc)
+5: not match1	17762730987931112970
+5: not match1	13791363591642755012
+5: not match1	16819467897398740128
+select '5: not match2', unordered_checksum(i1, c1, c2, f, d, vc)
+from t1 group by i order by i;
+5: not match2	unordered_checksum(i1, c1, c2, f, d, vc)
+5: not match2	9841470782680298596
+5: not match2	13791363591642755012
+5: not match2	17249632850956161138
+select '6: not match1', unordered_checksum(i) from t1 group by i1 order by i;
+6: not match1	unordered_checksum(i)
+6: not match1	3199157890669439195
+6: not match1	16841262108792413182
+6: not match1	13172653091998467345
+select '6: not match2', unordered_checksum(i1) from t1 group by i order by i;
+6: not match2	unordered_checksum(i1)
+6: not match2	13172653091998467345
+6: not match2	16841262108792413182
+6: not match2	3199157890669439195
+select '7: not match1', ordered_checksum(i, c1, c2, f, d, vc)
+from t1 group by i1 order by i;
+7: not match1	ordered_checksum(i, c1, c2, f, d, vc)
+7: not match1	8260664520004307694
+7: not match1	4271355524914459424
+7: not match1	7874794455587051588
+select '7: not match2', ordered_checksum(i1, c1, c2, f, d, vc)
+from t1 group by i order by i;
+7: not match2	ordered_checksum(i1, c1, c2, f, d, vc)
+7: not match2	914739442277279872
+7: not match2	4271355524914459424
+7: not match2	7728496414611999894
+select '8: match1', ordered_checksum(i) from t1 group by i1 order by i;
+8: match1	ordered_checksum(i)
+8: match1	12125821063809463359
+8: match1	7897639797670528794
+8: match1	3669458531531594229
+select '8: match2', ordered_checksum(i1) from t1 group by i order by i;
+8: match2	ordered_checksum(i1)
+8: match2	3669458531531594229
+8: match2	7897639797670528794
+8: match2	12125821063809463359
+drop table t1;

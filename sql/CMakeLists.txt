@@ -93,6 +93,10 @@ SET (SQL_SOURCE
                rpl_gtid.cc rpl_parallel.cc
                table_cache.cc
                ${CMAKE_CURRENT_BINARY_DIR}/sql_builtin.cc
+
+               # added by Google:
+               hash_64.cc
+
                ${GEN_SOURCES}
                ${MYSYS_LIBWRAP_SOURCE}
 			   )

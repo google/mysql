@@ -7072,3 +7072,47 @@ void Item_func_last_value::fix_length_and_dec()
   maybe_null=          last_value->maybe_null;
   unsigned_flag=       last_value->unsigned_flag;
 }
+
+
+/*
+  An n-ary function to compute the hash of its input.
+
+  Supports command:
+   * SELECT HASH(col1, col2) FROM foo;
+
+  The input to the function exists when the val* functions are called.
+  A default value is substituted for null input arguments. These functions
+  also set a variable to indicate that the result is not null.
+*/
+
+String *Item_func_hash::val_str(String *str)
+{
+  ulonglong nr= (ulonglong) val_int();
+  str->set(nr, str->charset());
+  return str;
+}
+
+double Item_func_hash::val_real()
+{
+  ulonglong nr= (ulonglong) val_int();
+  return (double) nr;
+}
+
+longlong Item_func_hash::val_int()
+{
+  // This always evaluates to a non-null value.
+  null_value= 0;
+  return (longlong) hash_args(args, arg_count, HASH_64_INIT);
+}
+
+/*
+  Set the maximum length in characters of the result and whether the result
+  may be null. By design, the result of this command is never null.
+*/
+void Item_func_hash::fix_length_and_dec()
+{
+  decimals= 0;
+  max_length= MY_INT64_NUM_DECIMAL_DIGITS;
+  maybe_null= 0;
+  unsigned_flag= 1;
+}

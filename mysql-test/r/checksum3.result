@@ -1,0 +1,44 @@
+create table t3(bi binary(20), vb varbinary(20), bl blob, t text);
+insert into t3 values ('abc', 'def', 'ghi', 'jkl');
+insert into t3 values ('abc1', 'def1', 'ghi1', 'jkl1');
+select hash(bi) from t3;
+hash(bi)
+4478554303832697412
+6685928675122630325
+select hash(vb) from t3;
+hash(vb)
+12865066668494484353
+13061924616633172994
+select hash(bl) from t3;
+hash(bl)
+12867869323634226642
+14876206763629245415
+select hash(t) from t3;
+hash(t)
+12863085348540826711
+11754429369170763748
+select unordered_checksum(bi) from t3;
+unordered_checksum(bi)
+16630692778959206421
+select unordered_checksum(vb) from t3;
+unordered_checksum(vb)
+9506678692596656999
+select unordered_checksum(bl) from t3;
+unordered_checksum(bl)
+17925204920421440209
+select unordered_checksum(t) from t3;
+unordered_checksum(t)
+10772865288369850199
+select ordered_checksum(bi) from t3;
+ordered_checksum(bi)
+859002425947996949
+select ordered_checksum(vb) from t3;
+ordered_checksum(vb)
+9124841169666920627
+select ordered_checksum(bl) from t3;
+ordered_checksum(bl)
+12967862498748221529
+select ordered_checksum(t) from t3;
+ordered_checksum(t)
+18134691941644832235
+drop table t3;
