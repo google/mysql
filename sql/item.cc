@@ -27,6 +27,7 @@
 #include "sp_head.h"
 #include "sql_trigger.h"
 #include "sql_select.h"
+#include "hash_64.h"
 
 const String my_null_string("NULL", 4, default_charset_info);
 
@@ -7845,6 +7846,81 @@ void view_error_processor(THD *thd, void *data)
 {
   ((TABLE_LIST *)data)->hide_view_error(thd);
 }
+
+
+/**
+   Compute a hash value from all entries in 'args'.
+
+   Handles all datatypes. Uses a default value for nulls.
+
+   @param  args           values to hash
+   @param  arg_count      number of entries in args
+   @param  initial_value  the initial value for the hash function
+
+   @return 64-bit Fowler/Noll/Vo-0 hash for all args
+*/
+
+ulonglong hash_args(Item **args, uint arg_count,
+                    const ulonglong initial_value)
+{
+  uint null_default= 0x0a0b0c0d;
+  ulonglong row_hash= initial_value;
+  for (uint a= 0; a < arg_count; ++a)
+  {
+    // The argument is evaluated to determine when it is null.
+    Item_result result_type= args[a]->result_type();
+
+    /*
+      Timestamp format changed from MySQL 4 to 5. This makes the result
+      match that from 4 and uses val_int() for Timestamp which is faster.
+    */
+    if (result_type == STRING_RESULT &&
+        args[a]->field_type() == MYSQL_TYPE_TIMESTAMP)
+    {
+      result_type= INT_RESULT;
+    }
+
+    switch (result_type)
+    {
+    case STRING_RESULT:
+    case DECIMAL_RESULT:
+      {
+        String s;
+        String *sp= args[a]->val_str(&s);
+        if (!args[a]->null_value)
+          row_hash= hash64((const void *) sp->ptr(), sp->length(), row_hash);
+        else
+          row_hash= hash64((const void *) &null_default,
+                           sizeof(null_default), row_hash);
+        break;
+      }
+    case REAL_RESULT:
+      {
+        double value= args[a]->val_real();
+        if (!args[a]->null_value)
+          row_hash= hash64((const void *) &value, sizeof(value), row_hash);
+        else
+          row_hash= hash64((const void *) &null_default,
+                           sizeof(null_default), row_hash);
+        break;
+      }
+    case INT_RESULT:
+      {
+        longlong value= args[a]->val_int();
+        if (!args[a]->null_value)
+          row_hash= hash64((const void *) &value, sizeof(value), row_hash);
+        else
+          row_hash= hash64((const void *) &null_default,
+                           sizeof(null_default), row_hash);
+        break;
+      }
+    default:
+      break;
+    }
+  }
+  return row_hash;
+}
+
 
 /*****************************************************************************
 ** Instantiate templates

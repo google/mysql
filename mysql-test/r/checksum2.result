@@ -1,0 +1,66 @@
+create table t2(dt datetime, da date, ti time, ts timestamp, y year);
+insert into t2 values (
+'2006-01-01 10:00:00',
+'2006-01-01',
+'10:00:00',
+'20060101100000',
+2006
+);
+insert into t2 values (
+'2007-01-01 11:00:00',
+'2007-01-01',
+'11:00:00',
+'20060101110000',
+2007
+);
+select hash(dt) from t2;
+hash(dt)
+1124811441346647439
+6624559493394817197
+select hash(da) from t2;
+hash(da)
+17033052262703112724
+32887120971591149
+select hash(ti) from t2;
+hash(ti)
+6465380211724811991
+2265808870231976098
+select hash(ts) from t2;
+hash(ts)
+16880677880901653011
+4067825358518885486
+select hash(y) from t2;
+hash(y)
+12909222668951978241
+1610365786966397462
+select unordered_checksum(dt) from t2;
+unordered_checksum(dt)
+15010824031073790406
+select unordered_checksum(da) from t2;
+unordered_checksum(da)
+7509606444104536861
+select unordered_checksum(ti) from t2;
+unordered_checksum(ti)
+14045112056351017617
+select unordered_checksum(ts) from t2;
+unordered_checksum(ts)
+6203081360941601433
+select unordered_checksum(y) from t2;
+unordered_checksum(y)
+2404303847799132147
+select ordered_checksum(dt) from t2;
+ordered_checksum(dt)
+7656421153328024636
+select ordered_checksum(da) from t2;
+ordered_checksum(da)
+10643334536526376669
+select ordered_checksum(ti) from t2;
+ordered_checksum(ti)
+17104658564235541997
+select ordered_checksum(ts) from t2;
+ordered_checksum(ts)
+12430433059171515385
+select ordered_checksum(y) from t2;
+ordered_checksum(y)
+6515068423295669075
+drop table t2;

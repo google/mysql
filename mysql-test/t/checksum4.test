@@ -1,0 +1,15 @@
+# Tests for HASH(), ORDERED_CHECKSUM() and UNORDERED_CHECKSUM() functions.
+
+create table t4(e enum('1', '2'), s set('1', '2', '3'));
+insert into t4 values('1', '1,2');
+insert into t4 values('2', '2,3');
+
+select hash(e) from t4;
+select hash(s) from t4;
+
+select unordered_checksum(e) from t4;
+select unordered_checksum(s) from t4;
+select ordered_checksum(e) from t4;
+select ordered_checksum(s) from t4;
+
+drop table t4;

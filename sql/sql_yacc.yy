@@ -1045,6 +1045,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  ORDER_SYM                     /* SQL-2003-R */
 %token  OR_OR_SYM                     /* OPERATOR */
 %token  OR_SYM                        /* SQL-2003-R */
+%token  ORDERED_CHECKSUM_SYM
 %token  OUTER
 %token  OUTFILE
 %token  OUT_SYM                       /* SQL-2003-R */
@@ -1230,6 +1231,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  UNIQUE_SYM
 %token  UNKNOWN_SYM                   /* SQL-2003-R */
 %token  UNLOCK_SYM
+%token  UNORDERED_CHECKSUM_SYM
 %token  UNSIGNED
 %token  UNTIL_SYM
 %token  UPDATE_SYM                    /* SQL-2003-R */
@@ -8234,6 +8236,24 @@ sum_expr:
             if ($$ == NULL)
               MYSQL_YYABORT;
           }
+        | ORDERED_CHECKSUM_SYM '('
+          { Select->in_sum_expr++; }
+          expr_list
+          { Select->in_sum_expr--; }
+          ')'
+          { $$= new Item_sum_ordered_checksum(* $4); }
+        | UNORDERED_CHECKSUM_SYM '('
+          { Select->in_sum_expr++; }
+          expr_list
+          { Select->in_sum_expr--; }
+          ')'
+          { $$= new Item_sum_unordered_checksum(* $4); }
+        | HASH_SYM '('
+          { Select->in_sum_expr++; }
+          expr_list
+          { Select->in_sum_expr--; }
+          ')'
+          { $$= new Item_func_hash(* $4); }
         | MIN_SYM '(' in_sum_expr ')'
           {
             $$= new (YYTHD->mem_root) Item_sum_min($3);
@@ -11635,6 +11655,7 @@ keyword:
         | NO_SYM                {}
         | OPEN_SYM              {}
         | OPTIONS_SYM           {}
+        | ORDERED_CHECKSUM_SYM  {}
         | OWNER_SYM             {}
         | PARSER_SYM            {}
         | PARTITION_SYM         {}
@@ -11657,6 +11678,7 @@ keyword:
         | TRUNCATE_SYM          {}
         | UNICODE_SYM           {}
         | UNINSTALL_SYM         {}
+        | UNORDERED_CHECKSUM_SYM        {}
         | WRAPPER_SYM           {}
         | XA_SYM                {}
         | UPGRADE_SYM           {}

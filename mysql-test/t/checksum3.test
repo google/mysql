@@ -1,0 +1,22 @@
+# Tests for HASH(), ORDERED_CHECKSUM() and UNORDERED_CHECKSUM() functions.
+
+create table t3(bi binary(20), vb varbinary(20), bl blob, t text);
+insert into t3 values ('abc', 'def', 'ghi', 'jkl');
+insert into t3 values ('abc1', 'def1', 'ghi1', 'jkl1');
+
+select hash(bi) from t3;
+select hash(vb) from t3;
+select hash(bl) from t3;
+select hash(t) from t3;
+
+select unordered_checksum(bi) from t3;
+select unordered_checksum(vb) from t3;
+select unordered_checksum(bl) from t3;
+select unordered_checksum(t) from t3;
+
+select ordered_checksum(bi) from t3;
+select ordered_checksum(vb) from t3;
+select ordered_checksum(bl) from t3;
+select ordered_checksum(t) from t3;
+
+drop table t3;
