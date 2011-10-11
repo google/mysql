@@ -343,6 +343,7 @@ void lex_start(THD *thd)
   lex->allow_sum_func= 0;
   lex->in_sum_func= NULL;
   lex->protect_against_global_read_lock= FALSE;
+  lex->group_id= 0;
   /*
     ok, there must be a better solution for this, long-term
     I tried "bzero" in the sql_yacc.yy code, but that for
