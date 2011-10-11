@@ -4,6 +4,25 @@
 #ifndef GOOGLESTATS_STATUS_VARS_H_
 #define GOOGLESTATS_STATUS_VARS_H_
 
+// Number of FETCH and FETCH_MORE commands in GoogleStats.
+extern ulonglong google_fetch;
+
+// Time in microseconds waiting on read() after FETCH and FETCH_MORE
+extern ulonglong google_fetch_mics;
+
+// Average time for FETCH commands = google_fetch_mics / google_fetch
+extern ulonglong google_fetch_mics_per;
+
+// Number of commands other than FETCH and FETCH_MORE in GoogleStats.
+extern ulonglong google_nonfetch;
+
+// Time in microseconds waiting on read() after commands other than FETCH and
+// FETCH_MORE
+extern ulonglong google_nonfetch_mics;
+
+// Average time for non FETCH commands = google_nonfetch_mics / google_nonfetch
+extern ulonglong google_nonfetch_mics_per;
+
 // Export failed stats server connection attempts.
 extern ulong google_connect_failures;
 

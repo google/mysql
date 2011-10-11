@@ -3111,6 +3111,11 @@ bool reopen_table(TABLE *table)
   tmp.maybe_null=	table->maybe_null;
   tmp.status=		table->status;
 
+  /* copy the googlestats info we found earlier */
+  tmp.googlestats_version_query_id= table->googlestats_version_query_id;
+  tmp.googlestats_version_num=      table->googlestats_version_num;
+  tmp.googlestats_version_hash=     table->googlestats_version_hash;
+
   /* Get state */
   tmp.in_use=    	thd;
   tmp.reginfo.lock_type=table->reginfo.lock_type;
