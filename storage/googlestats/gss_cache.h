@@ -143,7 +143,12 @@ public:
   // See ::_setStatus for comments.
   static int setStatus()
   {
-    if (instance())
+    /*
+      Short circuit instance() call (which logs an error if uninitialized) with
+      a check of _instance; this prevents spam in mysql.err if someone calls
+      SHOW GLOBAL STATUS and GoogleStats is disabled.
+    */
+    if (_instance != 0 && instance())
       return (instance()->_setStatus());
     else
       return -1;

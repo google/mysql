@@ -32,6 +32,9 @@
 #include <my_dir.h>
 #include "debug_sync.h"
 #include "repl_semi_sync.h"
+/* For set_google_stats() */
+#include "../storage/googlestats/googlestats_ext.h"
+#include "../storage/googlestats/status_vars.h"
 
 #define STR_OR_NIL(S) ((S) ? (S) : "<nil>")
 
@@ -83,6 +86,41 @@ static void
 append_algorithm(TABLE_LIST *table, String *buff);
 
 static COND * make_cond_for_info_schema(COND *cond, TABLE_LIST *table);
+
+/**
+  Prepare GoogleStats status variables.
+
+  Synthesizes two variables ({non,}fetch_mics_per) and calls into
+  the GoogleStats table handler to do the same for its own internal
+  variables.
+*/
+static void set_google_stats()
+{
+  safe_mutex_assert_owner(&LOCK_status);
+  if (google_fetch)
+  {
+    google_fetch_mics_per=
+        (ulonglong) ((double)google_fetch_mics / (double) google_fetch);
+  }
+  else
+  {
+    google_fetch_mics_per= 0;
+  }
+
+  if (google_nonfetch)
+  {
+    google_nonfetch_mics_per=
+        (ulonglong) ((double)google_nonfetch_mics / (double) google_nonfetch);
+  }
+  else
+  {
+    google_nonfetch_mics_per= 0;
+  }
+
+  // Export more GoogleStats status variables.
+  googlestats_set_status();
+}
+
 
 /***************************************************************************
 ** List all table types supported
@@ -5618,7 +5656,10 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
 
   pthread_mutex_lock(&LOCK_status);
   if (option_type == OPT_GLOBAL)
+  {
     calc_sum_of_all_status(&tmp);
+    set_google_stats();
+  }
 
   // This is always done to show immediately whether semi-sync is up or down.
   semi_sync_replicator.set_export_stats();
