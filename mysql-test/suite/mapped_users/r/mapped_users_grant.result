@@ -1,0 +1,61 @@
+create table t1 (i int);
+insert into t1 values (1);
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+create user rolefoo@localhost identified by 'foo';
+grant usage on *.* to rolefoo@localhost;
+grant select on *.* to rolefoo@localhost;
+create mapped user bogusfoo@localhost identified by 'bar' role 'bogus';
+ERROR HY000: Operation CREATE MAPPED USER failed for 'bogusfoo'@'localhost'
+create mapped user bogusfoo identified by 'bar' role 'bogus';
+drop mapped user bogusfoo@localhost;
+ERROR HY000: Operation DROP USER failed for 'bogusfoo'@'localhost'
+create mapped user mapfoo identified by 'bar' role 'rolefoo';
+create mapped user dropfoo identified by 'bar' role 'rolefoo';
+connect(localhost,bogusfoo,bar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'bogusfoo'@'localhost' (using password: YES)
+drop mapped user bogusfoo;
+connect(localhost,mapfoo,foo,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'mapfoo'@'localhost' (using password: YES)
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+select user(), current_user();
+user()	current_user()
+dropfoo@localhost	rolefoo@localhost
+drop user dropfoo;
+ERROR HY000: Operation DROP USER failed for 'dropfoo'@'%'
+drop mapped user dropfoo;
+connect(localhost,dropfoo,foo,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'dropfoo'@'localhost' (using password: YES)
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+select User, Role from mysql.mapped_user;
+User	Role
+mapfoo	rolefoo
+create mapped user mapfoo identified by 'bar' role 'rolefoo';
+ERROR HY000: Operation CREATE MAPPED USER failed for 'mapfoo'@'%'
+create mapped user mapfoo1 identified by 'bar1' role 'rolefoo';
+drop mapped user mapfoo1;
+create mapped user mapfoo identified by 'bar1' role 'rolefoo';
+select User, Role from mysql.mapped_user;
+User	Role
+mapfoo	rolefoo
+mapfoo	rolefoo
+select distinct User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+User	Role	Password
+mapfoo	rolefoo	*50275DCAC24DA7E634D1139D15FED2AD08C72C06
+mapfoo	rolefoo	*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB
+drop table t1;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+drop mapped user mapfoo;
+select User, Role from mysql.mapped_user;
+User	Role
+drop user rolefoo@localhost;
+flush privileges;

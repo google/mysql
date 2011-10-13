@@ -1,0 +1,107 @@
+#
+# Test the mapped_user table
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+# Prepare play-ground
+create table t1 (i int);
+
+insert into t1 values (1);
+
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+create user rolefoo@localhost identified by 'foo';
+grant usage on *.* to rolefoo@localhost;
+grant select on *.* to rolefoo@localhost;
+
+# @localhost should not be set
+--error 1396
+create mapped user bogusfoo@localhost identified by 'bar' role 'bogus';
+
+create mapped user bogusfoo identified by 'bar' role 'bogus';
+
+# @localhost should not be set
+--error 1396
+drop mapped user bogusfoo@localhost;
+
+create mapped user mapfoo identified by 'bar' role 'rolefoo';
+create mapped user dropfoo identified by 'bar' role 'rolefoo';
+
+# account maps to invalid role
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error 1045
+connect (bogus_conn, localhost, bogusfoo, bar,);
+
+# drop early to avoid non-determinism when users are listed
+drop mapped user bogusfoo;
+
+# uses wrong password
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error 1045
+connect (bad_conn, localhost, mapfoo, foo,);
+
+connect (role_conn, localhost, rolefoo, foo,);
+select user(), current_user();
+
+connect (drop_conn, localhost, dropfoo, bar,);
+select user(), current_user();
+
+# Confirm that the mapped user can be dropped and not used after a drop
+connection default;
+disconnect drop_conn;
+
+# Must use 'drop mapped user'
+--error 1396
+drop user dropfoo;
+
+drop mapped user dropfoo;
+
+# Confirm that mapped user cannot be used after a drop
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error 1045
+connect (drop_conn, localhost, dropfoo, foo,);
+
+# Confirm that mapped user can be used after a create
+connect (foo_conn, localhost, mapfoo, bar,);
+connection foo_conn;
+select user(), current_user();
+
+connection default;
+
+select User, Role from mysql.mapped_user;
+
+# This matches an existing entry
+--error 1396
+create mapped user mapfoo identified by 'bar' role 'rolefoo';
+
+# This is a new entry
+create mapped user mapfoo1 identified by 'bar1' role 'rolefoo';
+drop mapped user mapfoo1;
+
+# This is a new entry
+create mapped user mapfoo identified by 'bar1' role 'rolefoo';
+
+select User, Role from mysql.mapped_user;
+select distinct User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+
+# Final cleanup
+disconnect foo_conn;
+drop table t1;
+
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+
+# This deletes all entries that match mapped_user.User
+drop mapped user mapfoo;
+select User, Role from mysql.mapped_user;
+
+drop user rolefoo@localhost;
+flush privileges;
+

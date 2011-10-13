@@ -1,0 +1,36 @@
+create table t1 (i int);
+insert into t1 values (1);
+delete from mysql.mapped_user;
+delete from mysql.user where user like 'role%';
+delete from mysql.db where user like 'role%';
+delete from mysql.tables_priv where user like 'role%';
+delete from mysql.columns_priv where user like 'role%';
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+create user role1@localhost;
+create mapped user mubug1 identified by 'mubug1' role role1;
+grant select on test.t1 to role1@localhost;
+show grants for role1@localhost;
+Grants for role1@localhost
+GRANT USAGE ON *.* TO 'role1'@'localhost'
+GRANT SELECT ON `test`.`t1` TO 'role1'@'localhost'
+select count(*) from t1;
+flush privileges;
+create user aa@localhost;
+create user zz@localhost;
+flush privileges;
+count(*)
+1
+drop table t1;
+drop user role1@localhost;
+drop user aa@localhost;
+drop user zz@localhost;
+drop mapped user mubug1;
+delete from mysql.mapped_user;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

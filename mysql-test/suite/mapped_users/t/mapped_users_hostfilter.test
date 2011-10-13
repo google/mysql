@@ -1,0 +1,103 @@
+#
+# Test host filter via mysql.user.Host for mapped users
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+create user rolefoo@localhost identified by 'foo';
+grant select on *.* to rolefoo@localhost;
+
+create mapped user mapfoo identified by 'bar' role 'rolefoo';
+
+connect (role_conn, localhost, rolefoo, foo,);
+
+connect (foo_conn, localhost, mapfoo, bar,);
+connection default;
+disconnect foo_conn;
+disconnect role_conn;
+connection default;
+
+#
+# Fails because connection is not from 172.%
+#
+
+echo "";
+echo "fails for 172";
+echo "";
+
+update mysql.user set Host = '172.%' where User = 'rolefoo';
+flush privileges;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error 1045
+connect (role_conn, localhost, rolefoo, foo,);
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error 1045
+connect (foo_conn, localhost, mapfoo, bar,);
+
+#
+# OK because connection is from '%'
+#
+
+echo "";
+echo "OK for wildcard";
+echo "";
+
+update mysql.user set Host = '%' where User = 'rolefoo';
+flush privileges;
+
+connect (role_conn, localhost, rolefoo, foo,);
+select 'rolefoo,rolefoo', current_user(), user();
+
+connect (foo_conn, localhost, mapfoo, bar,);
+select 'rolefoo,mapfoo', current_user(), user();
+
+connection default;
+disconnect foo_conn;
+disconnect role_conn;
+
+#
+# OK because connection is from 'localhost'
+#
+
+echo "";
+echo "OK for localhost";
+echo "";
+
+update mysql.user set Host = 'localhost' where User = 'rolefoo';
+flush privileges;
+
+connect (role_conn, localhost, rolefoo, foo,);
+select 'rolefoo,rolefoo', current_user(), user();
+
+connect (foo_conn, localhost, mapfoo, bar,);
+select 'rolefoo,mapfoo', current_user(), user();
+
+connection default;
+disconnect foo_conn;
+disconnect role_conn;
+
+#
+# Cleanup
+#
+
+connection default;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+
+# This deletes all entries that match mapped_user.User
+drop mapped user mapfoo;
+select User, Role from mysql.mapped_user;
+
+drop user rolefoo@'localhost';
+flush privileges;
+
