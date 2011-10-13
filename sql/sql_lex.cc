@@ -344,6 +344,7 @@ void lex_start(THD *thd)
   lex->in_sum_func= NULL;
   lex->protect_against_global_read_lock= FALSE;
   lex->group_id= 0;
+  lex->mapped_user= false;
   /*
     ok, there must be a better solution for this, long-term
     I tried "bzero" in the sql_yacc.yy code, but that for
@@ -3016,4 +3017,3 @@ bool st_lex::is_partition_management() const
           (alter_info.flags == ALTER_ADD_PARTITION ||
            alter_info.flags == ALTER_REORGANIZE_PARTITION));
 }
-

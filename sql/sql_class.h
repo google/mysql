@@ -808,6 +808,20 @@ public:
     ip - client IP
   */
   char   *host, *user, *priv_user, *current_user, *ip;
+
+  /* priv_user may use this to avoid allocating memory. */
+  char priv_user_buffer[USERNAME_LENGTH + 1];
+
+  /*
+    When TRUE:
+      - user authenticated with a role account.
+      - user == name from mapped_user table.
+      - priv_user == name from user table.
+      - In this case, priv_user is the role name and password authentication
+        used values from the mapped_user table.
+  */
+  bool uses_role;
+
   /* The host privilege we are using */
   char   priv_host[MAX_HOSTNAME];
   /* points to host if host is available, otherwise points to ip */

@@ -619,6 +619,8 @@ uint  max_user_connections= 0;
 ulong old_filesorts= 0;
 ulong new_filesorts= 0;
 
+my_bool opt_mapped_user;
+
 /**
   Limit of the total number of prepared statements in the server.
   Is necessary to protect the server against out-of-memory attacks.
@@ -6146,7 +6148,8 @@ enum options_mysqld
   OPT_SQL_LOG_CACHE_SIZE_MAX,
   OPT_RESTRICT_BKA_TO_GOOGLESTATS,
   OPT_USE_MRR_FOR_QUICK_RANGE,
-  OPT_ALLOW_DEFAULT_MRR_BKA
+  OPT_ALLOW_DEFAULT_MRR_BKA,
+  OPT_MAPPED_USERS
 };
 
 
@@ -7839,6 +7842,10 @@ thread is in the relay logs.",
    &global_system_variables.allow_default_mrr_bka,
    &max_system_variables.allow_default_mrr_bka,
    0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 0, 0},
+  {"mapped_users", OPT_MAPPED_USERS,
+   "Use the mapped_user table to map users to roles.",
+   &opt_mapped_user, &opt_mapped_user, 0, GET_BOOL, NO_ARG,
+   my_bool(0), 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 

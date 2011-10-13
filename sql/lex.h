@@ -313,6 +313,7 @@ static SYMBOL symbols[] = {
   { "LONGTEXT",		SYM(LONGTEXT)},
   { "LOOP",             SYM(LOOP_SYM)},
   { "LOW_PRIORITY",	SYM(LOW_PRIORITY)},
+  { "MAPPED",           SYM(MAPPED)},
   { "MASTER",           SYM(MASTER_SYM)},
   { "MASTER_CONNECT_RETRY",           SYM(MASTER_CONNECT_RETRY_SYM)},
   { "MASTER_HOST",           SYM(MASTER_HOST_SYM)},
@@ -458,6 +459,7 @@ static SYMBOL symbols[] = {
   { "REVOKE",		SYM(REVOKE)},
   { "RIGHT",		SYM(RIGHT)},
   { "RLIKE",		SYM(REGEXP)},	/* Like in mSQL2 */
+  { "ROLE",             SYM(ROLE_SYM)},
   { "ROLLBACK",		SYM(ROLLBACK_SYM)},
   { "ROLLUP",		SYM(ROLLUP_SYM)},
   { "ROUTINE",		SYM(ROUTINE_SYM)},

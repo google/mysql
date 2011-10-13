@@ -2056,6 +2056,8 @@ extern my_bool opt_sql_log_ddl, opt_sql_log_ddl_base64_encode_stmts;
 extern char *opt_sql_log_database;
 extern ulong sql_log_cache_disk_use;
 extern ulong sql_log_cache_size, sql_log_cache_size_max;
+/* Use the mapped_user table in the mysql database. */
+extern my_bool opt_mapped_user;
 
 extern my_bool opt_allow_delayed_write;
 extern my_bool opt_allow_stored_procedures;

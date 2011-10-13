@@ -426,6 +426,9 @@ static sys_var_const    sys_lower_case_table_names(&vars,
                                                    OPT_GLOBAL, SHOW_INT,
                                                    (uchar*)
                                                    &lower_case_table_names);
+static sys_var_const    sys_mapped_users(&vars, "mapped_users",
+                                         OPT_GLOBAL, SHOW_MY_BOOL,
+                                         (uchar *) &opt_mapped_user);
 static sys_var_thd_ulong_session_readonly sys_max_allowed_packet(&vars, "max_allowed_packet",
 					       &SV::max_allowed_packet,
                                                check_max_allowed_packet);

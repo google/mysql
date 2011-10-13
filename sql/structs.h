@@ -179,6 +179,7 @@ typedef int *(*update_var)(THD *, struct st_mysql_show_var *);
 
 typedef struct	st_lex_user {
   LEX_STRING user, host, password;
+  LEX_STRING role;
 } LEX_USER;
 
 /*
@@ -220,6 +221,11 @@ typedef struct  user_conn {
      is enabled, resources are counted for each user+host separately).
   */
   char *user;
+  /*
+    Pointer to the priv user, the name from the mysql.user table.  This is used
+    for mapped_users, to remember the entry in the mysql.user table.
+  */
+  char *priv_user;
   /* Pointer to host part of the key. */
   char *host;
   /**
@@ -415,13 +421,10 @@ struct USER_STATS {
   // User name for user stats.
   char user[USER_STATS_NAME_LENGTH + 1];
   /*
-    TODO(jtolmer): Mapped User
-
     Account name the user is mapped to when this is a user from mapped_user.
     Otherwise, the same value as user.
-
-    char priv_user[USER_STATS_NAME_LENGTH + 1];
   */
+  char priv_user[USER_STATS_NAME_LENGTH + 1];
   uint total_connections;
   uint concurrent_connections;
   time_t connected_time;                        // in seconds

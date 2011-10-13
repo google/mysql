@@ -43,8 +43,8 @@ static int get_or_create_user_conn(THD *thd, const char *user,
 				   USER_RESOURCES *mqh)
 {
   int return_val= 0;
-  size_t temp_len, user_len;
-  char temp_user[USER_HOST_BUFF_SIZE];
+  size_t temp_len, user_len, total_temp_len;
+  char temp_user[USER_HOST_BUFF_SIZE + USERNAME_LENGTH + 1];
   struct  user_conn *uc;
 
   DBUG_ASSERT(user != 0);
@@ -52,13 +52,21 @@ static int get_or_create_user_conn(THD *thd, const char *user,
 
   user_len= strlen(user);
   temp_len= (strmov(strmov(temp_user, user)+1, host) - temp_user)+1;
+
+  /*
+    total_temp_len is the total length of:
+    user, '\0', host, '\0', priv_user, '\0'
+  */
+  total_temp_len= (strmov(temp_user + temp_len,
+                          thd->main_security_ctx.priv_user) - temp_user) + 1;
+
   (void) pthread_mutex_lock(&LOCK_user_conn);
   if (!(uc = (struct  user_conn *) hash_search(&hash_user_connections,
 					       (uchar*) temp_user, temp_len)))
   {
     /* First connection for user; Create a user connection object */
     if (!(uc= ((struct user_conn*)
-	       my_malloc(sizeof(struct user_conn) + temp_len+1,
+	       my_malloc(sizeof(struct user_conn) + total_temp_len,
 			 MYF(MY_WME)))))
     {
       /* MY_WME ensures an error is set in THD. */
@@ -66,7 +74,8 @@ static int get_or_create_user_conn(THD *thd, const char *user,
       goto end;
     }
     uc->user=(char*) (uc+1);
-    memcpy(uc->user,temp_user,temp_len+1);
+    memcpy(uc->user, temp_user, total_temp_len);
+    uc->priv_user= (char *) (uc->user + temp_len);
     uc->host= uc->user + user_len +  1;
     uc->len= temp_len;
     uc->connections= uc->questions= uc->updates= uc->conn_per_hour= 0;
@@ -363,6 +372,7 @@ check_user(THD *thd, enum enum_server_command command,
 
   USER_RESOURCES ur;
   int res= acl_getroot(thd, &ur, passwd, passwd_len);
+  DBUG_PRINT("info", ("acl_getroot first call returned %d", res));
 #ifndef EMBEDDED_LIBRARY
   if (res == -1)
   {
@@ -394,11 +404,13 @@ check_user(THD *thd, enum enum_server_command command,
     /* Final attempt to check the user based on reply */
     /* So as passwd is short, errcode is always >= 0 */
     res= acl_getroot(thd, &ur, (char *) net->read_pos, SCRAMBLE_LENGTH_323);
+    DBUG_PRINT("info", ("acl_getroot second call returned %d", res));
   }
 #endif /*EMBEDDED_LIBRARY*/
   /* here res is always >= 0 */
   if (res == 0)
   {
+    DBUG_PRINT("info", ("ok so far"));
     if (!(thd->main_security_ctx.master_access &
           NO_ACCESS)) // authentication is OK
     {
@@ -432,6 +444,7 @@ check_user(THD *thd, enum enum_server_command command,
 
         if (is_using_repl_port(thd))
         {
+          DBUG_PRINT("info", ("using repl port"));
           my_message(ER_SPECIFIC_ACCESS_DENIED_ERROR,
                      "not authorized for repl_port", MYF(0));
           DBUG_RETURN(-2);
@@ -459,21 +472,19 @@ check_user(THD *thd, enum enum_server_command command,
         check the log for the tried login tried and also to detect
         break-in attempts.
       */
+      char *msg;
+      if (thd->main_security_ctx.uses_role ||
+          thd->main_security_ctx.priv_user == thd->main_security_ctx.user)
+        msg= (char *) "%s@%s on %s";
+      else
+        msg= (char *) "%s@%s as anonymous on %s";
       if (opt_audit_log_connections)
-        audit_log_print(thd, command,
-                        (thd->main_security_ctx.priv_user ==
-                         thd->main_security_ctx.user ?
-                         (char*) "%s@%s on %s" :
-                         (char*) "%s@%s as anonymous on %s"),
+        audit_log_print(thd, command, msg,
                         thd->main_security_ctx.user,
                         thd->main_security_ctx.host_or_ip,
                         db ? db : (char*) "");
 
-      general_log_print(thd, command,
-                        (thd->main_security_ctx.priv_user ==
-                         thd->main_security_ctx.user ?
-                         (char*) "%s@%s on %s" :
-                         (char*) "%s@%s as anonymous on %s"),
+      general_log_print(thd, command, msg,
                         thd->main_security_ctx.user,
                         thd->main_security_ctx.host_or_ip,
                         db ? db : (char*) "");
@@ -489,8 +500,8 @@ check_user(THD *thd, enum enum_server_command command,
       if ((ur.questions || ur.updates || ur.conn_per_hour || ur.user_conn ||
 	   max_user_connections) &&
 	  get_or_create_user_conn(thd,
-            (opt_old_style_user_limits ? thd->main_security_ctx.user :
-             thd->main_security_ctx.priv_user),
+            ((opt_old_style_user_limits || thd->main_security_ctx.uses_role) ?
+             thd->main_security_ctx.user : thd->main_security_ctx.priv_user),
             (opt_old_style_user_limits ? thd->main_security_ctx.host_or_ip :
              thd->main_security_ctx.priv_host),
             &ur))
@@ -544,6 +555,7 @@ check_user(THD *thd, enum enum_server_command command,
       */
       thd->security_ctx->current_user= thd->security_ctx->user;
       /* Ready to handle queries */
+      DBUG_PRINT("exit", ("check_user returns 0"));
       DBUG_RETURN(0);
     }
   }
@@ -645,7 +657,7 @@ void reset_mqh(LEX_USER *lu, bool get_them= 0)
       USER_CONN *uc=(struct user_conn *) hash_element(&hash_user_connections,
 						      idx);
       if (get_them)
-	get_mqh(uc->user,uc->host,uc);
+        get_mqh(uc->priv_user, uc->host, uc);
       uc->questions=0;
       uc->updates=0;
       uc->conn_per_hour=0;

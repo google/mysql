@@ -3022,8 +3022,10 @@ void THD::set_status_var_init()
 void Security_context::init()
 {
   host= user= priv_user= ip= 0;
+  uses_role= false;
   host_or_ip= "connecting host";
   priv_host[0]= '\0';
+  priv_user_buffer[0]= '\0';
   master_access= 0;
   current_user= NULL;
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
@@ -3040,6 +3042,8 @@ void Security_context::destroy()
   if (user != delayed_user)
     safeFree(user);
   safeFree(ip);
+  priv_user= 0;
+  priv_user_buffer[0]= '\0';
 }
 
 
@@ -3049,7 +3053,9 @@ void Security_context::skip_grants()
   host_or_ip= (char *)"";
   master_access= ~NO_ACCESS;
   priv_user= (char *)"";
+  uses_role= false;
   *priv_host= '\0';
+  priv_user_buffer[0]= '\0';
 }
 
 
