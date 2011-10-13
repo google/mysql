@@ -1,0 +1,258 @@
+#
+# Test
+#   user and mapped user name have same value
+#   mapped user entries have:
+#     name  role  password
+#     same  same  same -> create raises error
+#     same  same  diff -> OK
+#     same  diff  same -> create raises error
+#     same  diff  diff -> password determines role
+#     diff  same  same -> name determines role
+#     diff  same  diff -> name determines role
+#     diff  diff  diff -> name determine role
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+# Prepare play-ground
+select user(), current_user();
+
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+create table t1 (i int);
+create table t2 (i int);
+
+insert into t1 values (1);
+insert into t2 values (1);
+
+create user rolefoo@localhost identified by 'bar';
+create user rolefoo2@localhost identified by 'bar';
+create user rolefoodup@localhost identified by 'bar';
+
+grant select on test.t1 to rolefoo@localhost;
+grant select on test.t1 to rolefoodup@localhost;
+grant select on test.t2 to rolefoo2@localhost;
+
+# Confirm use of mysql.user entry when mysql.mapped_user
+# entry has the same name.
+
+echo Test mysql.user entries are checked first;
+
+create mapped user rolefoo identified by 'bar' role bogus;
+connect (same_conn, localhost, rolefoo, bar,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect same_conn;
+
+# Test mapped user entries have:
+#   name  role  password
+#   same  same  same -> create raises error
+
+echo Test same,same,same;
+
+create mapped user same_mu identified by 'bar' role rolefoo;
+
+echo Create duplicate, error
+--error 1396
+create mapped user same_mu identified by 'bar' role rolefoo;
+
+connect (same_conn, localhost, same_mu, bar,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect same_conn;
+
+# Test mapped user entries have:
+#   name  role  password
+#   same  same  diff -> OK, sql_acl code retries until match found
+
+echo Test same,same,different;
+
+create mapped user mu1 identified by 'bar1' role rolefoo;
+create mapped user mu1 identified by 'bar2' role rolefoo;
+create mapped user mu1 identified by 'bar3' role rolefoo;
+create mapped user mu1 identified by 'bar4' role rolefoo;
+
+connect (mu1_conn,localhost,mu1,bar1,test);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+connect (mu1_conn,localhost,mu1,bar2,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+connect (mu1_conn, localhost, mu1, bar3,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+connect (mu1_conn, localhost, mu1, bar4,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+# Test mapped user entries have:
+#   name  role  password
+#   same  diff  same -> create raises error
+
+echo Test same,different,same;
+
+create mapped user sds identified by 'bar3' role rolefoo;
+
+echo Create duplicate, error;
+--error 1396
+create mapped user sds identified by 'bar3' role rolefoodup;
+
+connect (sds_conn, localhost, sds, bar3,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect sds_conn;
+
+# Test mapped user entries have:
+#   name  role  password
+#   same  diff  diff -> password determines role
+
+echo Test same,different,different;
+
+create mapped user sdd identified by 'bar5' role rolefoo;
+create mapped user sdd identified by 'bar6' role rolefoo2;
+
+connect (sdd_conn, localhost, sdd, bar5,);
+select user(), current_user();
+select count(*) from t1;
+# not allowed
+--error 1142
+select count(*) from t2;
+connection default;
+disconnect sdd_conn;
+
+connect (sdd_conn, localhost, sdd, bar6,);
+select user(), current_user();
+select count(*) from t2;
+# not allowed
+--error 1142
+select count(*) from t1;
+connection default;
+disconnect sdd_conn;
+
+# Test mapped user entries have:
+#   name  role  password
+#   diff  same  same -> name determines role
+
+echo Test different,same,same;
+
+create mapped user dss1 identified by 'bar7' role rolefoo;
+create mapped user dss2 identified by 'bar7' role rolefoo;
+
+connect (dss_conn, localhost, dss1, bar7,);
+select user(), current_user();
+select count(*) from t1;
+# not allowed
+--error 1142
+select count(*) from t2;
+connection default;
+disconnect dss_conn;
+
+connect (dss_conn, localhost, dss2, bar7,);
+select user(), current_user();
+select count(*) from t1;
+# not allowed
+--error 1142
+select count(*) from t2;
+connection default;
+disconnect dss_conn;
+
+# Test mapped user entries have:
+#   name  role  password
+#   diff  same  diff -> name determines role
+
+echo Test different,same,different;
+
+create mapped user dsd1 identified by 'bar8' role rolefoo;
+create mapped user dsd2 identified by 'bar9' role rolefoo;
+
+connect (dsd_conn, localhost, dsd1, bar8,);
+select user(), current_user();
+select count(*) from t1;
+# not allowed
+--error 1142
+select count(*) from t2;
+connection default;
+disconnect dsd_conn;
+
+connect (dsd_conn, localhost, dsd2, bar9,);
+select user(), current_user();
+select count(*) from t1;
+# not allowed
+--error 1142
+select count(*) from t2;
+connection default;
+disconnect dsd_conn;
+
+# Test mapped user entries have:
+#   name  role  password
+#   diff  diff  diff -> name determine role
+
+echo Test different,different,different;
+
+create mapped user ddd1 identified by 'bar8' role rolefoo;
+create mapped user ddd2 identified by 'bar9' role rolefoo2;
+
+connect (ddd_conn, localhost, ddd1, bar8,);
+select user(), current_user();
+select count(*) from t1;
+# not allowed
+--error 1142
+select count(*) from t2;
+connection default;
+disconnect ddd_conn;
+
+connect (ddd_conn, localhost, ddd2, bar9,);
+select user(), current_user();
+select count(*) from t2;
+# not allowed
+--error 1142
+select count(*) from t1;
+connection default;
+disconnect ddd_conn;
+
+# cleanup
+connection default;
+drop user rolefoo@localhost;
+drop user rolefoo2@localhost;
+drop user rolefoodup@localhost;
+drop mapped user rolefoo;
+drop mapped user mu1;
+drop mapped user same_mu;
+drop mapped user sds;
+drop mapped user sdd;
+drop mapped user dss1;
+drop mapped user dss2;
+drop mapped user dsd1;
+drop mapped user dsd2;
+drop mapped user ddd1;
+drop mapped user ddd2;
+
+select User, Role from mysql.mapped_user;
+
+drop table t1;
+drop table t2;
+
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;
+

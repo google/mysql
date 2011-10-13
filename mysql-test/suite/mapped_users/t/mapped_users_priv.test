@@ -1,0 +1,127 @@
+#
+# Test the mapped_user table
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+# Prepare play-ground
+create database foobar;
+create database foobar2;
+
+use foobar2;
+create table f1(i int);
+insert into f1 values (0);
+
+use foobar;
+
+create table t1(i int);
+insert into t1 values (1);
+
+create table t2(i int);
+insert into t2 values (1);
+
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+create user rolefoo@localhost identified by 'foo';
+create mapped user mapfoo identified by 'bar' role rolefoo;
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+
+# Test for select, but no insert, update, delete privs
+
+grant select on foobar.t1 to rolefoo@localhost;
+grant select on foobar.t2 to rolefoo@localhost;
+grant insert on foobar.t2 to rolefoo@localhost;
+
+connect (map_conn, localhost, mapfoo, bar, foobar);
+select count(*) from t1;
+
+--error 1142
+insert into t1 values (0);
+
+--error 1142
+update t1 set i=0 where i=1;
+
+--error 1142
+delete from t1;
+
+insert into t2 values (0);
+
+# Test for db privs
+
+--error 1142
+select count(*) from foobar2.f1;
+
+# Test for column privs
+connection default;
+disconnect map_conn;
+
+create table c1(i int, j int);
+grant select (i) on foobar.c1 to rolefoo@localhost;
+
+connect (map_conn, localhost, mapfoo, bar, foobar);
+
+--error 1143
+select j from c1;
+
+select i from c1;
+
+# Confirm a mapped user can kill self but not others sharing the role
+connect (map_connb, localhost, mapfoo, bar, foobar);
+let $pidb=query_get_value(select connection_id() as id, id, 1);
+
+connection default;
+connect (map_conn2, localhost, mapfoo2, bar, foobar);
+let $pid2=query_get_value(select connection_id() as id, id, 1);
+
+connection default;
+connect (role_conn, localhost, rolefoo, foo, foobar);
+let $pidr=query_get_value(select connection_id() as id, id, 1);
+
+# Can kill same mapped user
+connection map_conn;
+--disable_query_log
+eval kill $pidb;
+--enable_query_log
+
+# Cannot kill other mapped user that shares role
+--disable_query_log
+--error ER_KILL_DENIED_ERROR,1
+eval kill $pid2;
+--enable_query_log
+
+# Cannot kill base role
+--disable_query_log
+--error ER_KILL_DENIED_ERROR,1
+eval kill $pidr;
+--enable_query_log
+
+# wait for kill to get cleaned up
+sleep 1;
+
+--replace_column 1 # 6 #
+SHOW PROCESSLIST;
+
+# Final cleanup
+connection default;
+disconnect map_conn;
+disconnect map_conn2;
+disconnect map_connb;
+
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+
+# This deletes all entries that match mapped_user.User
+drop mapped user mapfoo;
+drop mapped user mapfoo2;
+select User, Role from mysql.mapped_user;
+
+drop user rolefoo@localhost;
+flush privileges;
+drop database foobar;
+drop database foobar2;

@@ -1,0 +1,175 @@
+select user(), current_user();
+user()	current_user()
+root@localhost	root@localhost
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+create table t1 (i int);
+create table t2 (i int);
+insert into t1 values (1);
+insert into t2 values (1);
+create user rolefoo@localhost identified by 'bar';
+create user rolefoo2@localhost identified by 'bar';
+create user rolefoodup@localhost identified by 'bar';
+grant select on test.t1 to rolefoo@localhost;
+grant select on test.t1 to rolefoodup@localhost;
+grant select on test.t2 to rolefoo2@localhost;
+Test mysql.user entries are checked first
+create mapped user rolefoo identified by 'bar' role bogus;
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+Test same,same,same
+create mapped user same_mu identified by 'bar' role rolefoo;
+Create duplicate, error
+--error 1396
+create mapped user same_mu identified by 'bar' role rolefoo
+select user(), current_user();
+user()	current_user()
+same_mu@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+Test same,same,different
+create mapped user mu1 identified by 'bar1' role rolefoo;
+create mapped user mu1 identified by 'bar2' role rolefoo;
+create mapped user mu1 identified by 'bar3' role rolefoo;
+create mapped user mu1 identified by 'bar4' role rolefoo;
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+Test same,different,same
+create mapped user sds identified by 'bar3' role rolefoo;
+Create duplicate, error
+create mapped user sds identified by 'bar3' role rolefoodup;
+ERROR HY000: Operation CREATE MAPPED USER failed for 'sds'@'%'
+select user(), current_user();
+user()	current_user()
+sds@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+Test same,different,different
+create mapped user sdd identified by 'bar5' role rolefoo;
+create mapped user sdd identified by 'bar6' role rolefoo2;
+select user(), current_user();
+user()	current_user()
+sdd@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+sdd@localhost	rolefoo2@localhost
+select count(*) from t2;
+count(*)
+1
+select count(*) from t1;
+ERROR 42000: SELECT command denied to user 'rolefoo2'@'localhost' for table 't1'
+Test different,same,same
+create mapped user dss1 identified by 'bar7' role rolefoo;
+create mapped user dss2 identified by 'bar7' role rolefoo;
+select user(), current_user();
+user()	current_user()
+dss1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+dss2@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+Test different,same,different
+create mapped user dsd1 identified by 'bar8' role rolefoo;
+create mapped user dsd2 identified by 'bar9' role rolefoo;
+select user(), current_user();
+user()	current_user()
+dsd1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+dsd2@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+Test different,different,different
+create mapped user ddd1 identified by 'bar8' role rolefoo;
+create mapped user ddd2 identified by 'bar9' role rolefoo2;
+select user(), current_user();
+user()	current_user()
+ddd1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+ddd2@localhost	rolefoo2@localhost
+select count(*) from t2;
+count(*)
+1
+select count(*) from t1;
+ERROR 42000: SELECT command denied to user 'rolefoo2'@'localhost' for table 't1'
+drop user rolefoo@localhost;
+drop user rolefoo2@localhost;
+drop user rolefoodup@localhost;
+drop mapped user rolefoo;
+drop mapped user mu1;
+drop mapped user same_mu;
+drop mapped user sds;
+drop mapped user sdd;
+drop mapped user dss1;
+drop mapped user dss2;
+drop mapped user dsd1;
+drop mapped user dsd2;
+drop mapped user ddd1;
+drop mapped user ddd2;
+select User, Role from mysql.mapped_user;
+User	Role
+drop table t1;
+drop table t2;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

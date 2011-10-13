@@ -1,0 +1,77 @@
+#
+# Test mapped users with old-style passwords
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+# Prepare play-ground
+select user(), current_user();
+
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+create table t1 (i int);
+create table t2 (i int);
+
+insert into t1 values (1);
+insert into t2 values (1);
+
+create user rolefoo@localhost identified by 'bar';
+grant select on test.t1 to rolefoo@localhost;
+
+# The role is missing
+--error 1396
+create mapped user badfoo identified by 'bar';
+
+create mapped user mapfoo identified by 'bar' role rolefoo;
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+
+# Confirm that access control works for the user
+connect (role_conn, localhost, rolefoo, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error 1142
+select * from t2;
+
+# Confirm that access control works for the mapped user
+connect (foo_conn, localhost, mapfoo, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error 1142
+select * from t2;
+
+# Confirm that access control works for the mapped user
+connect (foo2_conn, localhost, mapfoo2, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error 1142
+select * from t2;
+
+connection default;
+disconnect foo2_conn;
+disconnect foo_conn;
+disconnect role_conn;
+
+select User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+
+drop mapped user mapfoo2;
+drop mapped user mapfoo;
+drop user rolefoo@localhost;
+
+select User, Role from mysql.mapped_user;
+
+drop table t1;
+drop table t2;
+
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;
+

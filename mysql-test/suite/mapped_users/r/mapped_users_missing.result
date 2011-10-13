@@ -1,0 +1,122 @@
+select user(), current_user();
+user()	current_user()
+root@localhost	root@localhost
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+create table t1 (i int);
+create table t2 (i int);
+insert into t1 values (1);
+insert into t2 values (1);
+create user rolefoo@localhost identified by 'bar';
+grant select on test.t1 to rolefoo@localhost;
+create mapped user mapfoo identified by 'bar' role rolefoo;
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+show grants;
+Grants for rolefoo@localhost
+GRANT USAGE ON *.* TO 'rolefoo'@'localhost' IDENTIFIED BY PASSWORD '*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+GRANT SELECT ON `test`.`t1` TO 'rolefoo'@'localhost'
+select * from t1;
+i
+1
+select * from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+show grants;
+Grants for rolefoo@localhost
+GRANT USAGE ON *.* TO 'rolefoo'@'localhost' IDENTIFIED BY PASSWORD '*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+GRANT SELECT ON `test`.`t1` TO 'rolefoo'@'localhost'
+select * from t1;
+i
+1
+select * from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+delete from mysql.mapped_user where User='mapfoo2';
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+ERROR HY000: Operation CREATE MAPPED USER failed for 'mapfoo2'@'%'
+select user(), current_user();
+user()	current_user()
+mapfoo2@localhost	rolefoo@localhost
+select * from t1;
+i
+1
+select * from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select User, Role from mysql.mapped_user order by 1, 2;
+User	Role
+mapfoo	rolefoo
+drop mapped user mapfoo2;
+select User, Role from mysql.mapped_user order by 1, 2;
+User	Role
+mapfoo	rolefoo
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+select user(), current_user();
+user()	current_user()
+mapfoo2@localhost	rolefoo@localhost
+select * from t1;
+i
+1
+select * from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo3', Password('mapfoo3'), '2020-01-01');
+select User, Role from mysql.mapped_user order by 1, 2;
+User	Role
+mapfoo	rolefoo
+mapfoo2	rolefoo
+mapfoo3	rolefoo
+drop mapped user mapfoo3;
+select User, Role from mysql.mapped_user order by 1, 2;
+User	Role
+mapfoo	rolefoo
+mapfoo2	rolefoo
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo4', Password('mapfoo4'), '2020-01-01');
+select User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+User	Role	Password
+mapfoo	rolefoo	*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB
+mapfoo2	rolefoo	*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB
+mapfoo4	rolefoo	*B4794530A2E5E7D464ABC7E4A7456AFE5CA0B334
+create mapped user mapfoo4 identified by 'mapfoo4' role rolefoo;
+ERROR HY000: Operation CREATE MAPPED USER failed for 'mapfoo4'@'%'
+select User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+User	Role	Password
+mapfoo	rolefoo	*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB
+mapfoo2	rolefoo	*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB
+mapfoo4	rolefoo	*B4794530A2E5E7D464ABC7E4A7456AFE5CA0B334
+select User, Host, Password from mysql.user where User='rolefoo';
+User	Host	Password
+rolefoo	localhost	*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB
+flush privileges;
+select User, Role from mysql.mapped_user order by 1, 2;
+User	Role
+mapfoo	rolefoo
+mapfoo2	rolefoo
+mapfoo4	rolefoo
+select user(), current_user();
+user()	current_user()
+mapfoo4@localhost	rolefoo@localhost
+select * from t1;
+i
+1
+select * from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+drop table t1;
+drop table t2;
+drop mapped user mapfoo;
+drop mapped user mapfoo2;
+drop mapped user mapfoo4;
+drop user rolefoo@localhost;
+select User, Role from mysql.mapped_user;
+User	Role
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

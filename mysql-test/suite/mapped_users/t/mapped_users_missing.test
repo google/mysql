@@ -1,0 +1,125 @@
+#
+# Test mapped users when the on disk structures don't match the
+# in memory structures
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+# Prepare play-ground
+select user(), current_user();
+
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+
+create table t1 (i int);
+create table t2 (i int);
+
+insert into t1 values (1);
+insert into t2 values (1);
+
+create user rolefoo@localhost identified by 'bar';
+grant select on test.t1 to rolefoo@localhost;
+
+create mapped user mapfoo identified by 'bar' role rolefoo;
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+
+# Confirm that access control works for the user
+connect (role_conn, localhost, rolefoo, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error 1142
+select * from t2;
+
+# Confirm that access control works for the mapped user
+connect (foo_conn, localhost, mapfoo, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error 1142
+select * from t2;
+
+# Remove an entry from mysql.mapped_user that is still
+# cached in memory. And then create the mapped user again.
+# This should raise an error because the mapped user exists.
+connection default;
+delete from mysql.mapped_user where User='mapfoo2';
+--error 1396
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+
+# Confirm mapfoo2 still works
+connect (foo2_conn, localhost, mapfoo2, bar,);
+select user(), current_user();
+select * from t1;
+--error 1142
+select * from t2;
+
+# Make the memory cache match the disk data
+connection default;
+disconnect foo2_conn;
+select User, Role from mysql.mapped_user order by 1, 2;
+drop mapped user mapfoo2;
+select User, Role from mysql.mapped_user order by 1, 2;
+
+# And try to create the user again. This works.
+create mapped user mapfoo2 identified by 'bar' role rolefoo;
+connect (foo2_conn, localhost, mapfoo2, bar,);
+select user(), current_user();
+select * from t1;
+--error 1142
+select * from t2;
+
+connection default;
+
+# Now put an entry in the table that is not cached in memory
+# and then try to drop it. This works.
+insert into mysql.mapped_user values
+ ('rolefoo', 'mapfoo3', Password('mapfoo3'), '2020-01-01');
+select User, Role from mysql.mapped_user order by 1, 2;
+drop mapped user mapfoo3;
+select User, Role from mysql.mapped_user order by 1, 2;
+
+# Now put an entry in the table that is not cached in memory and
+# then try to create it. This raises an error.
+insert into mysql.mapped_user values
+ ('rolefoo', 'mapfoo4', Password('mapfoo4'), '2020-01-01');
+select User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+--error 1396
+create mapped user mapfoo4 identified by 'mapfoo4' role rolefoo;
+select User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+select User, Host, Password from mysql.user where User='rolefoo';
+
+flush privileges;
+select User, Role from mysql.mapped_user order by 1, 2;
+
+connect (foo_conn4, localhost, mapfoo4, mapfoo4,);
+select user(), current_user();
+select * from t1;
+--error 1142
+select * from t2;
+
+# Final cleanup
+connection default;
+disconnect foo_conn4;
+connection default;
+disconnect foo_conn;
+disconnect role_conn;
+drop table t1;
+drop table t2;
+
+drop mapped user mapfoo;
+drop mapped user mapfoo2;
+drop mapped user mapfoo4;
+drop user rolefoo@localhost;
+
+select User, Role from mysql.mapped_user;
+
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;
+
