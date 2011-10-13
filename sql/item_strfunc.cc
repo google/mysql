@@ -1858,7 +1858,16 @@ bool Item_func_user::init(const char *user, const char *host)
 {
   DBUG_ASSERT(fixed == 1);
 
-  // For system threads (e.g. replication SQL thread) user may be empty
+  /*
+    For system threads (e.g. replication SQL thread) user may be empty.
+    Set the values here to avoid printing junk and referencing
+    uninitialized values later.
+  */
+  if (!user)
+    user= "";
+  if (!host)
+    host= "";
+
   if (user)
   {
     CHARSET_INFO *cs= str_value.charset();

@@ -4253,6 +4253,12 @@ end_with_restore_list:
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   case SQLCOM_CREATE_USER:
   {
+    if (unlikely(!opt_mapped_user && lex->mapped_user))
+    {
+      my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--skip-mapped-user");
+      break;
+    }
+
     if (check_access(thd, INSERT_ACL, "mysql", 0, 1, 1, 0) &&
         check_global_access(thd,CREATE_USER_ACL))
       break;
@@ -4260,12 +4266,18 @@ end_with_restore_list:
       goto error;
     ddl_needs_endtrans= TRUE;
     /* Conditionally writes to binlog */
-    if (!(res= mysql_create_user(thd, lex->users_list)))
+    if (!(res= mysql_create_user(thd, lex->users_list, lex->mapped_user)))
       my_ok(thd);
     break;
   }
   case SQLCOM_DROP_USER:
   {
+    if (unlikely(!opt_mapped_user && lex->mapped_user))
+    {
+      my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--skip-mapped-user");
+      break;
+    }
+
     if (check_access(thd, DELETE_ACL, "mysql", 0, 1, 1, 0) &&
         check_global_access(thd,CREATE_USER_ACL))
       break;
@@ -4273,7 +4285,7 @@ end_with_restore_list:
       goto error;
     ddl_needs_endtrans= TRUE;
     /* Conditionally writes to binlog */
-    if (!(res= mysql_drop_user(thd, lex->users_list)))
+    if (!(res= mysql_drop_user(thd, lex->users_list, lex->mapped_user)))
       my_ok(thd);
     break;
   }
@@ -8234,6 +8246,9 @@ void get_default_definer(THD *thd, LEX_USER *definer)
   definer->host.str= (char *) sctx->priv_host;
   definer->host.length= strlen(definer->host.str);
 
+  definer->role.str= NULL;
+  definer->role.length= 0;
+
   definer->password.str= NULL;
   definer->password.length= 0;
 }
@@ -8287,6 +8302,8 @@ LEX_USER *create_definer(THD *thd, LEX_STRING *user_name, LEX_STRING *host_name)
 
   definer->user= *user_name;
   definer->host= *host_name;
+  definer->role.str= NULL;
+  definer->role.length= 0;
   definer->password.str= NULL;
   definer->password.length= 0;
 

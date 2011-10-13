@@ -47,6 +47,7 @@ enum GrantTable
   GRANT_PROCS_PRIV,
   GRANT_HOST,
   GRANT_SYSTEM_USER,
+  GRANT_MAPPED_USER,                            // valid if opt_mapped_user=1.
   GRANT_TABLES_MAX                              // preserve as the last entry.
 };
 
@@ -60,7 +61,9 @@ enum StructGrant {
   DB_STRUCT,                                    // acl_dbs
   COLUMN_STRUCT,                                // columns_priv_hash
   PROC_STRUCT,                                  // proc_priv_hash
-  FUNC_STRUCT                                   // func_priv_hash
+  FUNC_STRUCT,                                  // func_priv_hash
+  MAPPED_USER_STRUCT                            // acl_mapped_users when
+                                                //   opt_mapped_user=1
 };
 
 static const
@@ -204,7 +207,7 @@ static uchar* acl_entry_get_key(acl_entry *entry, size_t *length,
 #define ACL_KEY_LENGTH (IP_ADDR_STRLEN+1+NAME_LEN+1+USERNAME_LENGTH+1)
 
 static volatile uint64_t acl_version = 0;
-static DYNAMIC_ARRAY acl_hosts, acl_users, acl_system_users, acl_dbs;
+static DYNAMIC_ARRAY acl_hosts, acl_users, acl_system_users, acl_mapped_users, acl_dbs;
 static MEM_ROOT mem, memex;
 static bool initialized=0;
 static bool allow_all_hosts=1;
@@ -228,27 +231,68 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables);
 static my_bool grant_load(THD *thd, TABLE_LIST *tables);
 static inline void get_grantor(THD *thd, char* grantor);
 
-/*
-  Convert scrambled password to binary form, according to scramble type, 
-  Binary form is stored in user.salt.
+/**
+  Return the scrambled password from salt.
+
+  Salt is stored in the Password column of mysql.user and mysql.mapped_user.
+
+  @param[out]  buf       receives the scrambled password
+  @param       salt      the value read from the table
+  @param       salt_len  length of salt
+
+  @return
+    length of the scrambled password or -1 on error
 */
 
-static
-void
-set_user_salt(ACL_USER *acl_user, const char *password, uint password_len)
+static int
+scrambled_password_from_salt(char *buf, const uint8 *salt, const int salt_len)
+{
+  DBUG_ENTER("scambled_password_from_salt");
+  if (salt_len == SCRAMBLE_LENGTH)
+  {
+    make_password_from_salt(buf, salt);
+    DBUG_RETURN(SCRAMBLED_PASSWORD_CHAR_LENGTH);
+  }
+  else if (salt_len == SCRAMBLE_LENGTH_323)
+  {
+    make_password_from_salt_323(buf, (ulong *) salt);
+    DBUG_RETURN(SCRAMBLED_PASSWORD_CHAR_LENGTH_323);
+  }
+  else
+  {
+    DBUG_PRINT("error", ("Unsupported salt length %d", salt_len));
+    my_error(ER_PASSWD_LENGTH, MYF(0), SCRAMBLED_PASSWORD_CHAR_LENGTH);
+    DBUG_RETURN(-1);
+  }
+}
+
+/**
+  Convert scrambled password to binary form.
+
+  Conversion is done according to scramble type.
+
+  @param[out]  salt          receives the salt
+  @param[out]  salt_len      length of salt
+  @param       password      scrambled password for which to get the salt
+  @param       password_len  length of password
+*/
+
+static void
+set_user_salt(uint8 *salt, uint8 *salt_len, const char *password,
+              uint password_len)
 {
   if (password_len == SCRAMBLED_PASSWORD_CHAR_LENGTH)
   {
-    get_salt_from_password(acl_user->salt, password);
-    acl_user->salt_len= SCRAMBLE_LENGTH;
+    get_salt_from_password(salt, password);
+    *salt_len= SCRAMBLE_LENGTH;
   }
   else if (password_len == SCRAMBLED_PASSWORD_CHAR_LENGTH_323)
   {
-    get_salt_from_password_323((ulong *) acl_user->salt, password);
-    acl_user->salt_len= SCRAMBLE_LENGTH_323;
+    get_salt_from_password_323((ulong *) salt, password);
+    *salt_len= SCRAMBLE_LENGTH_323;
   }
   else
-    acl_user->salt_len= 0;
+    *salt_len= 0;
 }
 
 /*
@@ -324,6 +368,121 @@ my_bool acl_init(bool dont_read_acl_tables)
 }
 
 
+/**
+  Load the mysql.mapped_user table.
+
+  @param  thd                current thread
+  @param  mapped_user_table  open "mysql.mapped_user" table
+  @param  read_record_info   record buffer for a scan of mysql.mapped_user
+
+  @return
+    @retval false Success.
+    @retval true  An error occurred.
+*/
+
+static bool acl_load_mapped_user(THD *thd, TABLE *mapped_user_table,
+                                 READ_RECORD *read_record_info)
+{
+  DBUG_ENTER("acl_load_mapped_user");
+
+  mapped_user_table->use_all_columns();
+  int password_length= mapped_user_table->field[2]->field_length /
+      mapped_user_table->field[2]->charset()->mbmaxlen;
+  if (password_length < SCRAMBLED_PASSWORD_CHAR_LENGTH_323)
+  {
+    sql_print_error("Fatal error: mysql.mapped_user table is damaged or in "
+                    "unsupported 3.20 format.");
+    DBUG_RETURN(true);
+  }
+
+  DBUG_PRINT("info", ("mapped_user table fields: %d, password length: %d",
+                      mapped_user_table->s->fields, password_length));
+
+  pthread_mutex_lock(&LOCK_global_system_variables);
+  if (password_length < SCRAMBLED_PASSWORD_CHAR_LENGTH)
+  {
+    if (opt_secure_auth)
+    {
+      pthread_mutex_unlock(&LOCK_global_system_variables);
+      sql_print_error("Fatal error: mysql.mapped_user table is in old format, "
+                      "but server started with --secure-auth option.");
+      DBUG_RETURN(true);
+    }
+    sys_old_passwords.after_update= restrict_update_of_old_passwords_var;
+    if (global_system_variables.old_passwords)
+      pthread_mutex_unlock(&LOCK_global_system_variables);
+    else
+    {
+      global_system_variables.old_passwords= 1;
+      pthread_mutex_unlock(&LOCK_global_system_variables);
+      sql_print_warning("mysql.mapped_user table is not updated to new "
+                        "password format; disabling new password usage until "
+                        "mysql_fix_privilege_tables is run");
+    }
+    thd->variables.old_passwords= 1;
+  }
+  else
+  {
+    sys_old_passwords.after_update= 0;
+    pthread_mutex_unlock(&LOCK_global_system_variables);
+  }
+
+  init_read_record(read_record_info, thd, mapped_user_table, NULL, 1, 0, false);
+  while (!(read_record_info->read_record(read_record_info)))
+  {
+    ACL_MAPPED_USER mapped_user;
+    int next_field= 0;
+
+    /* mem is global (static to this file). */
+    mapped_user.role= get_field(&mem, mapped_user_table->field[next_field++]);
+    mapped_user.user= get_field(&mem, mapped_user_table->field[next_field++]);
+
+    const char *password= get_field(thd->mem_root,
+                                    mapped_user_table->field[next_field++]);
+    uint password_len= password ? strlen(password) : 0;
+
+    if (!mapped_user.user || !mapped_user.role || !password ||
+        !strcmp(mapped_user.user, "") || !strcmp(mapped_user.role, "") ||
+        !password_len)
+    {
+      /* The User, Role and Password columns must not be the empty string. */
+      continue;
+    }
+
+    set_user_salt(mapped_user.salt, &mapped_user.salt_len,
+                  password, password_len);
+    if (mapped_user.salt_len == 0 && password_len != 0)
+    {
+      sql_print_warning("Found invalid password for mapped_user: '%s' "
+                        "and role '%s'.", mapped_user.user, mapped_user.role);
+      continue;
+    }
+    else                                        /* password is correct */
+    {
+      /* Load and then ignore PasswordChanged column. */
+      (void) get_field(&mem, mapped_user_table->field[next_field++]);
+
+      mapped_user.sort= get_sort(1, mapped_user.user);
+      mapped_user.access= 0;
+
+      if (push_dynamic(&acl_mapped_users, (uchar *) &mapped_user))
+      {
+        sql_print_error("Allocation error, unable to add mapped_user for '%s' "
+                        "and role '%s'", mapped_user.user, mapped_user.role);
+        end_read_record(read_record_info);
+        DBUG_RETURN(true);
+      }
+    }
+  }
+  my_qsort((uchar *) dynamic_element(&acl_mapped_users, 0, ACL_MAPPED_USER*),
+           acl_mapped_users.elements, sizeof(ACL_MAPPED_USER),
+           (qsort_cmp) acl_compare);
+  end_read_record(read_record_info);
+  freeze_size(&acl_mapped_users);
+
+  DBUG_RETURN(false);
+}
+
 static void acl_load_users(THD *thd,
                            TABLE *table,
                            READ_RECORD *read_record_info,
@@ -356,7 +515,7 @@ static void acl_load_users(THD *thd,
 
     const char *password= get_field(thd->mem_root, table->field[2]);
     uint password_len= password ? strlen(password) : 0;
-    set_user_salt(&user, password, password_len);
+    set_user_salt(user.salt, &user.salt_len, password, password_len);
     if (user.salt_len == 0 && password_len != 0)
     {
       switch (password_len) {
@@ -644,6 +803,19 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   end_read_record(&read_record_info);
   freeze_size(&acl_users);
 
+  if (my_init_dynamic_array(&acl_mapped_users, sizeof(ACL_MAPPED_USER),
+                            50, 100))
+  {
+    sql_print_error("Unable to allocate memory for mapped users");
+    goto end;
+  }
+
+  if (opt_mapped_user)
+  {
+    if (acl_load_mapped_user(thd, tables[GRANT_MAPPED_USER].table, &read_record_info))
+      goto end;
+  }
+
   table= tables[GRANT_DB].table;
   init_read_record(&read_record_info, thd, table, NULL, 1, 0, FALSE);
   table->use_all_columns();
@@ -721,6 +893,7 @@ void acl_free(bool end)
   delete_dynamic(&acl_hosts);
   delete_dynamic(&acl_users);
   delete_dynamic(&acl_system_users);
+  delete_dynamic(&acl_mapped_users);
   delete_dynamic(&acl_dbs);
   delete_dynamic(&acl_wild_hosts);
   hash_free(&acl_check_hosts);
@@ -756,7 +929,8 @@ void acl_free(bool end)
 my_bool acl_reload(THD *thd)
 {
   TABLE_LIST tables[GRANT_TABLES_MAX];
-  DYNAMIC_ARRAY old_acl_hosts, old_acl_users, old_acl_system_users, old_acl_dbs;
+  DYNAMIC_ARRAY old_acl_hosts, old_acl_users, old_acl_system_users,
+                old_acl_mapped_users, old_acl_dbs;
   MEM_ROOT old_mem;
   bool old_initialized;
   my_bool return_val= TRUE;
@@ -779,21 +953,34 @@ my_bool acl_reload(THD *thd)
   tables[GRANT_DB].alias= tables[GRANT_DB].table_name= (char*) "db";
   tables[GRANT_SYSTEM_USER].alias= tables[GRANT_SYSTEM_USER].table_name=
     (char*) "system_user";
-  tables[GRANT_HOST].db= tables[GRANT_USER].db=
-    tables[GRANT_DB].db= tables[GRANT_SYSTEM_USER].db= (char*) "mysql";
+  tables[GRANT_MAPPED_USER].alias= tables[GRANT_MAPPED_USER].table_name=
+    (char*) "mapped_user";
+  tables[GRANT_HOST].db= tables[GRANT_USER].db= tables[GRANT_DB].db=
+    tables[GRANT_SYSTEM_USER].db= tables[GRANT_MAPPED_USER].db= (char*) "mysql";
   tables[GRANT_HOST].next_local= tables[GRANT_HOST].next_global=
     &tables[GRANT_USER];
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
     &tables[GRANT_DB];
+  TABLE_LIST *last_table= &tables[GRANT_DB];
   if (opt_system_user_table)
   {
     tables[GRANT_DB].next_local= tables[GRANT_DB].next_global=
       &tables[GRANT_SYSTEM_USER];
+    last_table= &tables[GRANT_SYSTEM_USER];
   }
   tables[GRANT_HOST].lock_type= tables[GRANT_USER].lock_type=
-    tables[GRANT_DB].lock_type= tables[GRANT_SYSTEM_USER].lock_type= TL_READ;
+    tables[GRANT_DB].lock_type= tables[GRANT_SYSTEM_USER].lock_type=
+    tables[GRANT_MAPPED_USER].lock_type= TL_READ;
   tables[GRANT_HOST].skip_temporary= tables[GRANT_USER].skip_temporary=
-    tables[GRANT_DB].skip_temporary= tables[GRANT_SYSTEM_USER].skip_temporary= TRUE;
+    tables[GRANT_DB].skip_temporary= tables[GRANT_SYSTEM_USER].skip_temporary=
+    tables[GRANT_MAPPED_USER].skip_temporary= TRUE;
+
+  if (opt_mapped_user)
+  {
+    /* Add mapped_users table to list of tables to be opened. */
+    last_table->next_local= last_table->next_global=
+      &tables[GRANT_MAPPED_USER];
+  }
 
   if (simple_open_n_lock_tables(thd, &tables[GRANT_HOST]))
   {
@@ -813,6 +1000,7 @@ my_bool acl_reload(THD *thd)
   old_acl_hosts=acl_hosts;
   old_acl_users=acl_users;
   old_acl_system_users=acl_system_users;
+  old_acl_mapped_users= acl_mapped_users;
   old_acl_dbs=acl_dbs;
   old_mem=mem;
   delete_dynamic(&acl_wild_hosts);
@@ -825,6 +1013,7 @@ my_bool acl_reload(THD *thd)
     acl_hosts=old_acl_hosts;
     acl_users=old_acl_users;
     acl_system_users=old_acl_system_users;
+    acl_mapped_users= old_acl_mapped_users;
     acl_dbs=old_acl_dbs;
     mem=old_mem;
     init_check_host();
@@ -835,6 +1024,7 @@ my_bool acl_reload(THD *thd)
     delete_dynamic(&old_acl_hosts);
     delete_dynamic(&old_acl_users);
     delete_dynamic(&old_acl_system_users);
+    delete_dynamic(&old_acl_mapped_users);
     delete_dynamic(&old_acl_dbs);
   }
   if (old_initialized)
@@ -1101,6 +1291,118 @@ static void find_db_access(Security_context *sctx,
 }
 
 
+/**
+  Seek ACL entry for a mapped_user.
+
+  Caller must lock acl_cache_lock. Returns an entry for which the user name
+  matches and the password matches. Both user name and password must be
+  non-empty.
+
+  @param       thd         thread handle. If all checks are OK,
+                           thd->security_ctx->priv_user/master_access are
+                           updated. thd->security_ctx->host/ip/user are used
+                           for checks.
+  @param       passwd      scrambled & crypted password, received from client
+                           (to check): thd->scramble or thd->scramble_323 is
+                           used to decrypt passwd, so they must contain
+                           original random string,
+  @param       passwd_len  length of passwd, must be one of 0, 8,
+                           SCRAMBLE_LENGTH_323, SCRAMBLE_LENGTH
+  @param[out]  res         pointer to result value to be returned from
+                           acl_getroot 'thd' and 'mqh' are updated on success
+
+  @return
+    *res returns same values as returned by acl_getroot.
+    When *res == 0, this returns the entry from acl_users that should be
+    used to provide privileges for this connection. Otherwise returns NULL.
+*/
+
+ACL_USER *find_mapped_user(THD *thd, const char *passwd, uint passwd_len,
+                           int *res)
+{
+  /*
+    Find matching entry from mapped_user. If found, map it to an entry in user.
+  */
+  ACL_MAPPED_USER *acl_mapped_user= 0;
+  ACL_USER *acl_user= 0;
+  Security_context *sctx= thd->security_ctx;
+
+  DBUG_ENTER("find_mapped_user");
+
+  for (uint i= 0; i < acl_mapped_users.elements; i++)
+  {
+    ACL_MAPPED_USER *acl_mapped_user_tmp=
+        dynamic_element(&acl_mapped_users, i, ACL_MAPPED_USER *);
+    DBUG_ASSERT(acl_mapped_user_tmp->user);
+    DBUG_PRINT("info", ("find_mapped_user compare with %s",
+                        acl_mapped_user_tmp->user));
+    if (!strcmp(sctx->user, acl_mapped_user_tmp->user))
+    {
+      /* Assume password does not match. */
+      *res= 3;
+
+      /* check password: it should be empty or valid. */
+      if (passwd_len == acl_mapped_user_tmp->salt_len)
+      {
+        if (acl_mapped_user_tmp->salt_len == 0 ||
+            (acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH ?
+             check_scramble(passwd, thd->scramble, acl_mapped_user_tmp->salt) :
+             check_scramble_323(passwd, thd->scramble,
+                                (ulong *) acl_mapped_user_tmp->salt)) == 0)
+        {
+          acl_mapped_user= acl_mapped_user_tmp;
+          break;                                /* Password matches. */
+        }
+      }
+      else if (passwd_len == SCRAMBLE_LENGTH &&
+               acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH_323)
+      {
+        DBUG_PRINT("info", ("password length mismatch"));
+        *res= -1;
+      }
+      else if (passwd_len == SCRAMBLE_LENGTH_323 &&
+               acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH)
+      {
+        DBUG_PRINT("info", ("password length mismatch"));
+        *res= 2;
+      }
+
+      /*
+        Don't break as there can be multiple entries per user to support
+        multiple passwords.
+      */
+    }
+  }
+
+  if (!acl_mapped_user)
+  {
+    DBUG_PRINT("info", ("find_mapped_user no match with result %d", *res));
+    DBUG_RETURN(NULL);
+  }
+
+  DBUG_PRINT("info", ("find_mapped_user search for role"));
+
+  /* Find entry from mysql.user to which this entry maps. */
+  for (uint i= 0; i < acl_users.elements; i++)
+  {
+    ACL_USER *acl_user_tmp= dynamic_element(&acl_users, i, ACL_USER *);
+    DBUG_ASSERT(acl_user_tmp->user);
+    if (!strcmp(acl_mapped_user->role, acl_user_tmp->user))
+    {
+      if (compare_hostname(&acl_user_tmp->host, sctx->host, sctx->ip))
+      {
+        acl_user= acl_user_tmp;
+        *res= 0;
+        DBUG_PRINT("info", ("find_mapped_user found role"));
+        break;
+      }
+    }
+  }
+
+  DBUG_RETURN(acl_user);
+}
+
+
 /*
   Seek ACL entry for a user, check password, SSL cypher, and if
   everything is OK, update THD user data and USER_RESOURCES struct.
@@ -1139,9 +1441,11 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
 {
   ulong user_access= NO_ACCESS;
   int res= 1;
+  bool mapped_user= false;
   ACL_USER *acl_user= 0;
   Security_context *sctx= thd->security_ctx;
   DBUG_ENTER("acl_getroot");
+  DBUG_PRINT("enter", ("search for %s", sctx->user));
 
   if (!initialized)
   {
@@ -1167,6 +1471,17 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     {
       acl_user= find_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
                                  passwd, passwd_len, &res);
+    }
+  }
+
+  sctx->uses_role= false;
+  if (res != 0)
+  {
+    acl_user= find_mapped_user(thd, passwd, passwd_len, &res);
+    if (acl_user)
+    {
+      mapped_user= true;
+      sctx->uses_role= true;
     }
   }
 
@@ -1303,10 +1618,32 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     }
     sctx->access_ver = acl_version;
     sctx->master_access= user_access;
-    sctx->priv_user= acl_user->user ? sctx->user : (char *) "";
-    sctx->salt_len= acl_user->salt_len;
-    memcpy(sctx->salt, acl_user->salt,
-           acl_user->salt_len * sizeof(acl_user->salt[0]));
+    if (!mapped_user)
+    {
+      sctx->priv_user= acl_user->user ? sctx->user : (char *) "";
+      sctx->salt_len= acl_user->salt_len;
+      memcpy(sctx->salt, acl_user->salt,
+             acl_user->salt_len * sizeof(acl_user->salt[0]));
+    }
+    else
+    {
+      /*
+        When a role is used, the privileges come from the entry in
+        mysql.user and the name for that account is in acl_user as sctx->user
+        is the name of the entry in mysql.mapped_user.
+      */
+      if (acl_user->user)
+      {
+        /*
+          Copy out acl_user->user as the lifetime for that buffer is different
+          than for sctx.
+        */
+        strncpy(sctx->priv_user_buffer, acl_user->user, USERNAME_LENGTH + 1);
+        sctx->priv_user= sctx->priv_user_buffer;
+      }
+      else
+        sctx->priv_user= (char *) "";
+    }
     *mqh= acl_user->user_resource;
 
     if (acl_user->host.hostname)
@@ -1316,6 +1653,7 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
   }
 
   VOID(pthread_mutex_unlock(&acl_cache->lock));
+  DBUG_PRINT("exit", ("acl_getroot returns %d", res));
   DBUG_RETURN(res);
 }
 
@@ -1351,6 +1689,7 @@ bool acl_getroot_no_password(Security_context *sctx, char *user, char *host,
   sctx->host= host;
   sctx->ip= ip;
   sctx->host_or_ip= host ? host : (ip ? ip : "");
+  sctx->uses_role= false;
 
   if (!initialized)
   {
@@ -1452,6 +1791,101 @@ static uchar* check_get_key(ACL_USER *buff, size_t *length,
   return (uchar*) buff->host.hostname;
 }
 
+/**
+  Update password for all cached entries from mysql.mapped_user that match.
+
+  Like acl_update_user but for mysql.mapped_user. But this matches
+  all entries that match (user,role) as there may be duplicates.
+
+  @param  user          find entries which match this user and...
+  @param  role          find entries which match this role
+  @param  password      new password value
+  @param  password_len  length of new password
+*/
+
+static void acl_update_mapped_user(const char *user, const char *role,
+                                   const char *password, uint password_len)
+{
+  DBUG_ENTER("acl_update_mapped_user");
+  DBUG_PRINT("enter", ("update for mapped user %s role %s", user, role));
+  safe_mutex_assert_owner(&acl_cache->lock);
+
+  /* user, role is not a PK on the mapped_user table. Update all matches. */
+  for (uint i= 0; i < acl_mapped_users.elements; i++)
+  {
+    ACL_MAPPED_USER *mapped_user=
+      dynamic_element(&acl_mapped_users, i, ACL_MAPPED_USER*);
+
+    /* Enforced on insert & update. */
+    DBUG_ASSERT(mapped_user->user && user && role && password && password_len);
+
+    if (!strcmp(user, mapped_user->user) &&
+        !my_strcasecmp(system_charset_info, role, mapped_user->role))
+    {
+      mapped_user->access= 0;
+      set_user_salt(mapped_user->salt, &mapped_user->salt_len,
+                    password, password_len);
+      DBUG_PRINT("info", ("found entry to update"));
+    }
+  }
+  DBUG_VOID_RETURN;
+}
+
+/**
+  Insert into cache of entries from mysql.mapped_user.
+
+  Like acl_insert_user but for mysql.mapped_user.
+
+  @param  user          user to insert
+  @param  role          role to insert
+  @param  password      password to insert
+  @param  password_len  length of password
+
+  @retval   0  success
+  @retval  -1  error
+*/
+
+static int acl_insert_mapped_user(const char *user, const char *role,
+                                  const char *password, uint password_len)
+{
+  ACL_MAPPED_USER mapped_user;
+  DBUG_ENTER("acl_insert_mapped_user");
+  DBUG_PRINT("enter", ("insert for mapped user %s role %s", user, role));
+
+  safe_mutex_assert_owner(&acl_cache->lock);
+
+  /* Enforced on insert & update. */
+  DBUG_ASSERT(user && role && password && password_len);
+
+  mapped_user.user= strdup_root(&mem, user);
+  mapped_user.role= strdup_root(&mem, role);
+
+  if (!mapped_user.role || !mapped_user.user)
+  {
+    sql_print_error("Allocation error, unable to insert mapped_user for '%s'.",
+                    user);
+    DBUG_RETURN(-1);
+  }
+
+  mapped_user.sort= get_sort(1, mapped_user.user);
+  mapped_user.access= 0;
+
+  set_user_salt(mapped_user.salt, &mapped_user.salt_len,
+                password, password_len);
+
+  if (push_dynamic(&acl_mapped_users, (uchar *) &mapped_user))
+  {
+    sql_print_error("Allocation error, unable to insert mapped_user for '%s'.",
+                    mapped_user.user);
+    DBUG_RETURN(-1);
+  }
+
+  my_qsort((uchar *) dynamic_element(&acl_mapped_users, 0, ACL_MAPPED_USER *),
+           acl_mapped_users.elements, sizeof(ACL_MAPPED_USER),
+           (qsort_cmp) acl_compare);
+
+  DBUG_RETURN(0);
+}
 
 static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
 {
@@ -1536,7 +1970,8 @@ static void acl_update_user(THD *thd, const char *user, const char *host,
           uint8 was_salt_len= acl_user->salt_len;
           memcpy(was_salt, acl_user->salt,
                  was_salt_len * sizeof(acl_user->salt[0]));
-          set_user_salt(acl_user, password, password_len);
+          set_user_salt(acl_user->salt, &acl_user->salt_len,
+                        password, password_len);
           if (was_salt_len != acl_user->salt_len ||
               memcmp(was_salt, acl_user->salt,
                      was_salt_len * sizeof(acl_user->salt[0])))
@@ -1578,7 +2013,7 @@ static void acl_insert_user(const char *user, const char *host,
   acl_user.x509_issuer= x509_issuer  ? strdup_root(&mem,x509_issuer) : 0;
   acl_user.x509_subject=x509_subject ? strdup_root(&mem,x509_subject) : 0;
 
-  set_user_salt(&acl_user, password, password_len);
+  set_user_salt(acl_user.salt, &acl_user.salt_len, password, password_len);
 
   VOID(push_dynamic(&acl_users,(uchar*) &acl_user));
   if (!acl_user.host.hostname ||
@@ -1968,7 +2403,8 @@ bool change_password(THD *thd, const char *host, const char *user,
     goto end;
   }
   /* update loaded acl entry: */
-  set_user_salt(acl_user, new_password, new_password_len);
+  set_user_salt(acl_user->salt, &acl_user->salt_len,
+                new_password, new_password_len);
   acl_kill_user_threads(thd, acl_user);
 
   if (update_user_table(thd, table,
@@ -2416,6 +2852,118 @@ end:
   DBUG_RETURN(error);
 }
 
+/**
+  Update mysql.mapped_user table
+
+  Like replace_user_table but for mysql.mapped_user. This does an update
+  or an insert.
+
+  @param  thd    the current thd
+  @param  table  the mapped_user table
+  @param  combo  the user info
+
+  @return Error status
+    @retval   0  OK
+    @retval  -1  Error
+*/
+
+static int replace_mapped_user_table(THD *thd, TABLE *table,
+                                     const LEX_USER &combo)
+{
+  int error= -1;
+  bool old_row_exists= false;
+  uchar user_key[MAX_KEY_LENGTH];
+  DBUG_ENTER("replace_mapped_user_table");
+  DBUG_ASSERT(combo.user.str && combo.role.str);
+  DBUG_PRINT("enter", ("replace_mapped_user_table for %s mapped to %s",
+                       combo.user.str, combo.role.str));
+  safe_mutex_assert_owner(&acl_cache->lock);
+
+  table->use_all_columns();
+  table->field[1]->store(combo.user.str, combo.user.length,
+                         system_charset_info);
+  table->field[2]->store(combo.password.str, combo.password.length,
+                         system_charset_info);
+  key_copy(user_key, table->record[0], table->key_info,
+           table->key_info->key_length);
+
+  if (table->file->index_read_idx_map(table->record[0], 0,
+                                      (uchar *) user_key, HA_WHOLE_KEY,
+                                      HA_READ_KEY_EXACT))
+  {
+    /* Did not find a matching row. */
+    old_row_exists= false;
+    restore_record(table, s->default_values);
+    table->field[0]->store(combo.role.str, combo.role.length,
+                           system_charset_info);
+    table->field[1]->store(combo.user.str, combo.user.length,
+                           system_charset_info);
+    table->field[2]->store(combo.password.str, combo.password.length,
+                           system_charset_info);
+  }
+  else
+  {
+    /* Found a matching row. */
+    old_row_exists= true;
+    store_record(table,record[1]);              /* Save copy for update. */
+    table->field[0]->store(combo.role.str, combo.role.length,
+                           system_charset_info);
+    /* SSL support would go here. */
+  }
+
+  DBUG_PRINT("info", ("table %s has %d fields",
+                      table->s->table_name.str, table->s->fields));
+  /*
+    Skip setting the PasswordChanged field as a value is set for that
+    on insert when not set here.
+  */
+
+  /* Update the existing row. */
+  if (old_row_exists)
+  {
+    /*
+      We should NEVER delete from the user table, as a user can still
+      use mysqld even if he doesn't have any privileges in the user table!
+    */
+    if (cmp_record(table,record[1]) &&
+        (error= table->file->ha_update_row(table->record[1], table->record[0])))
+    {
+      DBUG_PRINT("error", ("error %d on update_row for %s",
+                           error, table->s->table_name.str));
+      table->file->print_error(error, MYF(0));
+      error= -1;
+      goto end;
+    }
+  }
+  /* Insert a new row. */
+  else if ((error= table->file->ha_write_row(table->record[0])))
+  {
+    if (error && error != HA_ERR_FOUND_DUPP_KEY &&
+        error != HA_ERR_FOUND_DUPP_UNIQUE)
+    {
+      DBUG_PRINT("error", ("error %d on write_row for %s",
+                           error, table->s->table_name.str));
+      table->file->print_error(error, MYF(0));
+      error= -1;
+      goto end;
+    }
+  }
+  error= 0;
+
+end:
+  if (!error)
+  {
+    acl_cache->clear(1);
+    if (old_row_exists)
+      acl_update_mapped_user(combo.user.str, combo.role.str,
+                             combo.password.str, combo.password.length);
+    else
+      error= acl_insert_mapped_user(combo.user.str, combo.role.str,
+                                    combo.password.str, combo.password.length);
+  }
+  DBUG_PRINT("exit", ("replaced_mapped_user returns %d", error));
+  DBUG_RETURN(error);
+}
 
 /*
   change grants in the mysql.db table
@@ -5451,6 +5999,16 @@ int open_grant_tables(THD *thd, TABLE_LIST *tables)
     tables[GRANT_COLUMNS_PRIV].db= tables[GRANT_PROCS_PRIV].db=
     tables[GRANT_SYSTEM_USER].db= (char*) "mysql";
 
+  if (opt_mapped_user)
+  {
+    tables[GRANT_MAPPED_USER].alias= tables[GRANT_MAPPED_USER].table_name=
+      (char*) "mapped_user";
+    tables[GRANT_PROCS_PRIV].next_local= tables[GRANT_PROCS_PRIV].next_global=
+      &tables[GRANT_MAPPED_USER];
+    tables[GRANT_MAPPED_USER].lock_type= TL_WRITE;
+    tables[GRANT_MAPPED_USER].db= (char*) "mysql";
+  }
+
 #ifdef HAVE_REPLICATION
   /*
     GRANT and REVOKE are applied the slave in/exclusion rules as they are
@@ -5465,20 +6023,29 @@ int open_grant_tables(THD *thd, TABLE_LIST *tables)
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
       tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
       tables[GRANT_PROCS_PRIV].updating= 1;
+    if (opt_mapped_user)
+      tables[GRANT_MAPPED_USER].updating= 1;
     if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
+    {
+      DBUG_PRINT("error", ("tables_ok returned an error"));
       DBUG_RETURN(1);
+    }
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
       tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
       tables[GRANT_PROCS_PRIV].updating= 0;
+    if (opt_mapped_user)
+      tables[GRANT_MAPPED_USER].updating= 0;
   }
 #endif
 
   if (simple_open_n_lock_tables(thd, &tables[GRANT_USER]))
   {						// This should never happen
     close_thread_tables(thd);
+    DBUG_PRINT("error", ("simple_open_n_lock_tables returned an error"));
     DBUG_RETURN(-1);
   }
 
+  DBUG_PRINT("exit", ("open_grant_tables returns 0"));
   DBUG_RETURN(0);
 }
 
@@ -5534,6 +6101,7 @@ static int modify_grant_table(TABLE *table, Field *host_field,
 {
   int error;
   DBUG_ENTER("modify_grant_table");
+  DBUG_PRINT("enter", ("for %s", user_to ? "update" : "delete"));
 
   if (user_to)
   {
@@ -5546,7 +6114,11 @@ static int modify_grant_table(TABLE *table, Field *host_field,
     if ((error= table->file->ha_update_row(table->record[1], 
                                            table->record[0])) &&
         error != HA_ERR_RECORD_IS_THE_SAME)
+    {
+      DBUG_PRINT("error", ("update of %s has error %d",
+                           table->s->table_name.str, error));
       table->file->print_error(error, MYF(0));
+    }
     else
       error= 0;
   }
@@ -5554,7 +6126,11 @@ static int modify_grant_table(TABLE *table, Field *host_field,
   {
     /* delete */
     if ((error=table->file->ha_delete_row(table->record[0])))
+    {
+      DBUG_PRINT("error", ("delete of %s has error %d",
+                           table->s->table_name.str, error));
       table->file->print_error(error, MYF(0));
+    }
   }
 
   DBUG_RETURN(error);
@@ -5592,21 +6168,35 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
   int result= 0;
   int error;
   TABLE *table= tables[table_id].table;
-  Field *host_field= table->field[0];
-  Field *user_field= table->field[table_id != GRANT_USER ? 2 : 1];
-  char *host_str= user_from->host.str;
+  /* Has the value of mapped_user.Role when table_id=GRANT_MAPPED_USER. */
+  Field *host_or_role_field= table->field[0];
+  bool user_or_mapped_user=
+      table_id == GRANT_USER || table_id == GRANT_MAPPED_USER;
+  Field *user_field= table->field[user_or_mapped_user ? 1 : 2];
+  char *host_or_role_str= (table_id == GRANT_MAPPED_USER)
+      ? user_from->role.str : user_from->host.str;
+  int  host_or_role_len= (table_id == GRANT_MAPPED_USER)
+      ? user_from->role.length : user_from->host.length;
   char *user_str= user_from->user.str;
-  const char *host;
+  const char *host_or_role;
   const char *user;
   uchar user_key[MAX_KEY_LENGTH];
   uint key_prefix_length;
   DBUG_ENTER("handle_grant_table");
+  DBUG_PRINT("enter", ("for table ID %d", table_id));
+  DBUG_ASSERT(table_id != GRANT_MAPPED_USER || opt_mapped_user);
   THD *thd= current_thd;
 
   table->use_all_columns();
-  if (table_id == GRANT_USER)
+  if (table_id == GRANT_USER ||
+      (table_id == GRANT_MAPPED_USER && !drop && !user_to))
   {
     /*
+      mysql.user table or mysql.mapped_user table on inserts.
+      The insert case is special for mapped_user because DROP MAPPED USER
+      drops all entries that match by mapped_user.user, rather than
+      exactly one entry (matched by user, password) -- sorry.
+
       The 'user' table has an unique index on (host, user).
       Thus, we can handle everything with a single index access.
       The host- and user fields are consecutive in the user table records.
@@ -5616,12 +6206,36 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
       by the searched record, if it exists.
     */
     DBUG_PRINT("info",("read table: '%s'  search: '%s'@'%s'",
-                       table->s->table_name.str, user_str, host_str));
-    host_field->store(host_str, user_from->host.length, system_charset_info);
+                       table->s->table_name.str, user_str, host_or_role_str));
+
+    /*
+      PK on mysql.user is (Host, User).
+      PK on mysql.mapped_user is (User, Password).
+    */
     user_field->store(user_str, user_from->user.length, system_charset_info);
 
+    /*
+      Set the length for (user.Host + user.User) or for
+      (mapped_user.User + mapped_user.Password).
+    */
     key_prefix_length= (table->key_info->key_part[0].store_length +
                         table->key_info->key_part[1].store_length);
+
+    if (table_id == GRANT_USER)
+    {
+      /* Set the value for user.Host. */
+      host_or_role_field->store(host_or_role_str, host_or_role_len,
+                                system_charset_info);
+    }
+    else
+    {
+      DBUG_ASSERT(table_id == GRANT_MAPPED_USER);
+      /* Set the value for mapped_user.Password. */
+      table->field[2]->store(user_from->password.str,
+                             user_from->password.length,
+                             system_charset_info);
+    }
+
     key_copy(user_key, table->record[0], table->key_info, key_prefix_length);
 
     if ((error= table->file->index_read_idx_map(table->record[0], 0,
@@ -5630,6 +6244,8 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
     {
       if (error != HA_ERR_KEY_NOT_FOUND && error != HA_ERR_END_OF_FILE)
       {
+        DBUG_PRINT("error", ("not found error %d for %s",
+                             error, table->s->table_name.str));
         table->file->print_error(error, MYF(0));
         result= -1;
       }
@@ -5638,7 +6254,8 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
     {
       /* If requested, delete or update the record. */
       result= ((drop || user_to) &&
-               modify_grant_table(table, host_field, user_field, user_to)) ?
+               modify_grant_table(table, host_or_role_field,
+                                  user_field, user_to)) ?
         -1 : 1; /* Error or found. */
     }
     DBUG_PRINT("info",("read result: %d", result));
@@ -5652,6 +6269,8 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
     */
     if ((error= table->file->ha_rnd_init(1)))
     {
+      DBUG_PRINT("error", ("scan init error %d for %s",
+                           error, table->s->table_name.str));
       table->file->print_error(error, MYF(0));
       result= -1;
     }
@@ -5659,7 +6278,7 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
     {
 #ifdef EXTRA_DEBUG
       DBUG_PRINT("info",("scan table: '%s'  search: '%s'@'%s'",
-                         table->s->table_name.str, user_str, host_str));
+                         table->s->table_name.str, user_str, host_or_role_str));
 #endif
       while ((error= table->file->rnd_next(table->record[0])) != 
              HA_ERR_END_OF_FILE)
@@ -5670,26 +6289,34 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
           DBUG_PRINT("info",("scan error: %d", error));
           continue;
         }
-        if (! (host= get_field(thd->mem_root, host_field)))
-          host= "";
+        if (! (host_or_role= get_field(thd->mem_root, host_or_role_field)))
+          host_or_role= "";
         if (! (user= get_field(thd->mem_root, user_field)))
           user= "";
 
 #ifdef EXTRA_DEBUG
-        DBUG_PRINT("loop",("scan fields: '%s'@'%s' '%s' '%s' '%s'",
-                           user, host,
-                           get_field(thd->mem_root, table->field[1]) /*db*/,
-                           get_field(thd->mem_root, table->field[3]) /*table*/,
-                           get_field(thd->mem_root,
-                                     table->field[4]) /*column*/));
+        if (table_id != GRANT_MAPPED_USER)
+          DBUG_PRINT("loop",("scan fields: '%s'@'%s' '%s' '%s' '%s'",
+                             user, host_or_role,
+                             get_field(thd->mem_root, table->field[1]) /*db*/,
+                             get_field(thd->mem_root,
+                                       table->field[3]) /*table*/,
+                             get_field(thd->mem_root,
+                                       table->field[4]) /*column*/));
+        else
+          DBUG_PRINT("loop", ("scan fields: '%s' to '%s'",
+                              user, host_or_role));
 #endif
-        if (strcmp(user_str, user) ||
-            my_strcasecmp(system_charset_info, host_str, host))
+        if (strcmp(user_str, user))
+            continue;
+        if (table_id != GRANT_MAPPED_USER &&
+            my_strcasecmp(system_charset_info, host_or_role_str, host_or_role))
           continue;
 
         /* If requested, delete or update the record. */
         result= ((drop || user_to) &&
-                 modify_grant_table(table, host_field, user_field, user_to)) ?
+                 modify_grant_table(table, host_or_role_field,
+                                    user_field, user_to)) ?
           -1 : result ? result : 1; /* Error or keep result or found. */
         /* If search is requested, we do not need to search further. */
         if (! drop && ! user_to)
@@ -5700,6 +6327,7 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
     }
   }
 
+  DBUG_PRINT("exit", ("handle_grant_table returns %d", result));
   DBUG_RETURN(result);
 }
 
@@ -5730,15 +6358,30 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
   int result= 0;
   uint idx;
   uint elements;
-  const char *user;
-  const char *host;
+  const char *user= NULL;
+  const char *host= NULL;
+  const char *role= NULL;
+  const uint8 *salt= NULL;
+  int salt_len= 0;
   ACL_USER *acl_user= NULL;
+  ACL_MAPPED_USER *acl_mapped_user;
   ACL_DB *acl_db= NULL;
   GRANT_NAME *grant_name= NULL;
   HASH *grant_name_hash= NULL;
   DBUG_ENTER("handle_grant_struct");
   DBUG_PRINT("info",("scan struct: %u  search: '%s'@'%s'",
                      struct_id, user_from->user.str, user_from->host.str));
+
+  /*
+    Don't support update for mapped_user. If it were, then mysql_rename_user
+    must be updated.
+  */
+  DBUG_ASSERT(struct_id != MAPPED_USER_STRUCT || drop || !user_to);
+  if (struct_id == MAPPED_USER_STRUCT && !drop && user_to)
+  {
+    my_error(ER_NOT_SUPPORTED_YET, MYF(0), "rename for mapped users");
+    DBUG_RETURN(-1);
+  }
 
   LINT_INIT(user);
   LINT_INIT(host);
@@ -5765,8 +6408,11 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
     elements= func_priv_hash.records;
     grant_name_hash= &func_priv_hash;
     break;
+  case MAPPED_USER_STRUCT:
+    elements= acl_mapped_users.elements;
+    break;
   default:
-    return -1;
+    DBUG_RETURN(-1);
   }
 
 #ifdef EXTRA_DEBUG
@@ -5800,6 +6446,16 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
       host= grant_name->host.hostname;
       break;
 
+    case MAPPED_USER_STRUCT:
+      acl_mapped_user= dynamic_element(&acl_mapped_users, idx,
+                                       ACL_MAPPED_USER *);
+      user= acl_mapped_user->user;
+      salt= acl_mapped_user->salt;
+      salt_len= acl_mapped_user->salt_len;
+      host= "";
+      role= acl_mapped_user->role;
+      break;
+
     default:
       MY_ASSERT_UNREACHABLE();
     }
@@ -5807,14 +6463,48 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
       user= "";
     if (! host)
       host= "";
+    if (!role)
+      role= "";
 
 #ifdef EXTRA_DEBUG
     DBUG_PRINT("loop",("scan struct: %u  index: %u  user: '%s'  host: '%s'",
                        struct_no, idx, user, host));
 #endif
-    if (strcmp(user_from->user.str, user) ||
-        my_strcasecmp(system_charset_info, user_from->host.str, host))
+    if (strcmp(user_from->user.str, user))
       continue;
+
+    if (struct_id != MAPPED_USER_STRUCT)
+    {
+      /* For all tables except mapped_user, the match is on (host, user). */
+      if (my_strcasecmp(system_charset_info, user_from->host.str, host))
+        continue;
+    }
+    else
+    {
+      /*
+        For mapped_user when deleting, the match is only on user. And when
+        searching it is on (user, password). Updating is not supported
+        for mapped_user because mysql_rename_user does not support mapped_user.
+        If it were supported, then add !user_to.
+      */
+      if (!drop)
+      {
+        char passwd_buf[SCRAMBLED_PASSWORD_CHAR_LENGTH + 1];
+        int passwd_len= scrambled_password_from_salt(passwd_buf, salt,
+                                                     salt_len);
+
+        if (passwd_len == -1 || passwd_len != (int) user_from->password.length)
+        {
+          DBUG_PRINT("error", ("password length mismatch between %d and %d",
+                               passwd_len, (int) user_from->password.length));
+          my_error(ER_PASSWD_LENGTH, MYF(0), passwd_len);
+          DBUG_RETURN(-1);
+        }
+
+        if (memcmp(user_from->password.str, passwd_buf, passwd_len))
+          continue;
+      }
+    }
 
     result= 1; /* At least one element found. */
     if ( drop )
@@ -5834,6 +6524,10 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
       case FUNC_STRUCT:
         hash_delete(grant_name_hash, (uchar*) grant_name);
 	break;
+
+      case MAPPED_USER_STRUCT:
+        delete_dynamic_element(&acl_mapped_users, idx);
+        break;
       }
       elements--;
       /*
@@ -5902,6 +6596,11 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
           idx--;
           break;
         }
+      case MAPPED_USER_STRUCT:
+        DBUG_ASSERT(0);
+        my_error(ER_NOT_SUPPORTED_YET, MYF(0), "rename for mapped users");
+        DBUG_RETURN(-1);
+        break;
       }
     }
     else
@@ -5916,6 +6615,7 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
 
   ++acl_version;
 
+  DBUG_PRINT("error", ("handle_grant_struct returns %d", result));
   DBUG_RETURN(result);
 }
 
@@ -5930,6 +6630,7 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
     user_from                   The the user to be searched/dropped/renamed.
     user_to                     The new name for the user if to be renamed,
                                 NULL otherwise.
+    mapped_user                 When true, for a mapped_user entry
 
   DESCRIPTION
     Go through all grant tables and in-memory grant structures and apply
@@ -5945,14 +6646,17 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
 */
 
 static int handle_grant_data(TABLE_LIST *tables, bool drop,
-                             LEX_USER *user_from, LEX_USER *user_to)
+                             LEX_USER *user_from, LEX_USER *user_to,
+                             bool mapped_user)
 {
   int result= 0;
   int found;
   DBUG_ENTER("handle_grant_data");
+  DBUG_PRINT("enter", ("for mapped user %d", mapped_user));
 
   /* Handle user table. */
-  if ((found= handle_grant_table(tables, GRANT_USER,
+  if ((found= handle_grant_table(tables,
+                                 mapped_user ? GRANT_MAPPED_USER : GRANT_USER,
                                  drop, user_from, user_to)) < 0)
   {
     /* Handle of table failed, don't touch the in-memory array. */
@@ -5961,7 +6665,7 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   else
   {
     /* Handle user array. */
-    if ((handle_grant_struct(USER_STRUCT,
+    if ((handle_grant_struct(mapped_user ? MAPPED_USER_STRUCT : USER_STRUCT,
                              drop, user_from, user_to) && !result) || found)
     {
       result= 1; /* At least one record/element found. */
@@ -5969,6 +6673,13 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
       if (! drop && ! user_to)
         goto end;
     }
+  }
+
+  if (mapped_user)
+  {
+    // For mapped_user entries, there are no associated entries in the other
+    // tables to be dropped. They are lightweight and map to entries in user.
+    goto end;
   }
 
   /* Handle db table. */
@@ -5982,7 +6693,7 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   {
     /* Handle db array. */
     if (((handle_grant_struct(DB_STRUCT, drop, user_from, user_to)
-	  && !result) || found) && !result)
+          && !result) || found) && !result)
     {
       result= 1; /* At least one record/element found. */
       /* If search is requested, we do not need to search further. */
@@ -6002,7 +6713,7 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   {
     /* Handle procs array. */
     if (((handle_grant_struct(PROC_STRUCT, drop, user_from, user_to)
-	  && !result) || found) && !result)
+          && !result) || found) && !result)
     {
       result= 1; /* At least one record/element found. */
       /* If search is requested, we do not need to search further. */
@@ -6011,7 +6722,7 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
     }
     /* Handle funcs array. */
     if (((handle_grant_struct(FUNC_STRUCT, drop, user_from, user_to)
-	  && !result) || found) && !result)
+          && !result) || found) && !result)
     {
       result= 1; /* At least one record/element found. */
       /* If search is requested, we do not need to search further. */
@@ -6048,11 +6759,12 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
     {
       /* Handle columns hash. */
       if (((handle_grant_struct(COLUMN_STRUCT, drop, user_from, user_to)
-	    && !result) || found) && !result)
+            && !result) || found) && !result)
         result= 1; /* At least one record/element found. */
     }
   }
  end:
+  DBUG_PRINT("error", ("handle_grant_data returns %d", result));
   DBUG_RETURN(result);
 }
 
@@ -6068,6 +6780,13 @@ static void append_user(String *str, LEX_USER *user)
   str->append('\'');
 }
 
+static bool empty_or_null(LEX_STRING *lstr)
+{
+  return (!lstr ||
+          lstr->str == NULL ||
+          lstr->length == 0 ||
+          !strcmp("", lstr->str));
+}
 
 /*
   Create a list of users.
@@ -6076,13 +6795,14 @@ static void append_user(String *str, LEX_USER *user)
     mysql_create_user()
     thd                         The current thread.
     list                        The users to create.
+    mapped_user                 true for entries from mysql.mapped_user
 
   RETURN
     FALSE       OK.
     TRUE        Error.
 */
 
-bool mysql_create_user(THD *thd, List <LEX_USER> &list)
+bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool mapped_user)
 {
   int result;
   String wrong_users;
@@ -6092,6 +6812,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list)
   bool some_users_created= FALSE;
   bool save_binlog_row_based;
   DBUG_ENTER("mysql_create_user");
+  DBUG_PRINT("enter", ("mapped_user is %d", mapped_user));
 
   /*
     This statement will be replicated as a statement, even when using
@@ -6109,6 +6830,13 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list)
     DBUG_RETURN(result != 1);
   }
 
+  if (mapped_user && thd->lex->ssl_type != SSL_TYPE_NOT_SPECIFIED)
+  {
+    thd->current_stmt_binlog_row_based= save_binlog_row_based;
+    my_error(ER_NOT_SUPPORTED_YET, MYF(0), "SSL for mapped users");
+    DBUG_RETURN(-1);
+  }
+
   rw_wrlock(&LOCK_grant);
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
@@ -6120,11 +6848,41 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list)
       continue;
     }
 
+    if (mapped_user)
+    {
+      if (empty_or_null(&user_name->user) ||
+          empty_or_null(&user_name->role))
+      {
+        DBUG_PRINT("error", ("empty user or role"));
+        result= TRUE;
+        append_user(&wrong_users, user_name);
+        continue;
+      }
+
+      int password_len= user_name->password.length;
+      if (password_len != SCRAMBLED_PASSWORD_CHAR_LENGTH &&
+          password_len != SCRAMBLED_PASSWORD_CHAR_LENGTH_323)
+      {
+        DBUG_PRINT("error", ("unsupported password length %d", password_len));
+        result= TRUE;
+        append_user(&wrong_users, user_name);
+        continue;
+      }
+
+      if (user_name->host.length != 1 || strcmp(user_name->host.str, "%"))
+      {
+        DBUG_PRINT("error", ("cannot set host for mapped users"));
+        result= TRUE;
+        append_user(&wrong_users, user_name);
+        continue;
+      }
+    }
+
     /*
       Search all in-memory structures and grant tables
       for a mention of the new user name.
     */
-    if (handle_grant_data(tables, false, user_name, NULL))
+    if (handle_grant_data(tables, false, user_name, NULL, mapped_user))
     {
       append_user(&wrong_users, user_name);
       result= TRUE;
@@ -6132,17 +6890,31 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list)
     }
 
     some_users_created= TRUE;
-    if (replace_user_table(thd, tables[GRANT_USER].table, *user_name, 0, 0, 1, 0))
+    if (!mapped_user)
     {
-      append_user(&wrong_users, user_name);
-      result= TRUE;
+      if (replace_user_table(thd, tables[GRANT_USER].table, *user_name, 0, 0, 1, 0))
+      {
+        append_user(&wrong_users, user_name);
+        result= TRUE;
+      }
+    }
+    else
+    {
+      if (replace_mapped_user_table(thd, tables[GRANT_MAPPED_USER].table, *user_name))
+      {
+        append_user(&wrong_users, user_name);
+        result= TRUE;
+      }
     }
   }
 
   VOID(pthread_mutex_unlock(&acl_cache->lock));
 
   if (result)
-    my_error(ER_CANNOT_USER, MYF(0), "CREATE USER", wrong_users.c_ptr_safe());
+  {
+    const char *msg= mapped_user ? "CREATE MAPPED USER" : "CREATE USER";
+    my_error(ER_CANNOT_USER, MYF(0), msg, wrong_users.c_ptr_safe());
+  }
 
   if (some_users_created)
     result |= write_bin_log(thd, FALSE, thd->query(), thd->query_length());
@@ -6162,13 +6934,14 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list)
     mysql_drop_user()
     thd                         The current thread.
     list                        The users to drop.
+    mapped_user                 true for entries from mysql.mapped_user
 
   RETURN
     FALSE       OK.
     TRUE        Error.
 */
 
-bool mysql_drop_user(THD *thd, List <LEX_USER> &list)
+bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool mapped_user)
 {
   int result;
   String wrong_users;
@@ -6179,6 +6952,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list)
   ulong old_sql_mode= thd->variables.sql_mode;
   bool save_binlog_row_based;
   DBUG_ENTER("mysql_drop_user");
+  DBUG_PRINT("enter", ("mapped_user is %d", mapped_user));
 
   /*
     This statement will be replicated as a statement, even when using
@@ -6214,7 +6988,28 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list)
       result= TRUE;
       continue;
     }
-    if (handle_grant_data(tables, true, user_name, NULL) <= 0)
+
+    if (mapped_user)
+    {
+      if (empty_or_null(&user_name->user))
+      {
+        DBUG_PRINT("error", ("empty user"));
+        result= TRUE;
+        append_user(&wrong_users, user_name);
+        continue;
+      }
+
+      if (user_name->host.length != 1 ||
+          strcmp(user_name->host.str, "%"))
+      {
+        DBUG_PRINT("error", ("cannot set host for mapped users"));
+        result= TRUE;
+        append_user(&wrong_users, user_name);
+        continue;
+      }
+    }
+
+    if (handle_grant_data(tables, true, user_name, NULL, mapped_user) <= 0)
     {
       append_user(&wrong_users, user_name);
       result= TRUE;
@@ -6224,7 +7019,8 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list)
   }
 
   /* Rebuild 'acl_check_hosts' since 'acl_users' has been modified */
-  rebuild_check_host();
+  if (!mapped_user)
+    rebuild_check_host();
 
   VOID(pthread_mutex_unlock(&acl_cache->lock));
 
@@ -6239,6 +7035,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list)
   thd->variables.sql_mode= old_sql_mode;
   /* Restore the state of binlog format */
   thd->current_stmt_binlog_row_based= save_binlog_row_based;
+  DBUG_PRINT("exit", ("mysql_drop_user returns %d", result));
   DBUG_RETURN(result);
 }
 
@@ -6313,8 +7110,8 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
       Search all in-memory structures and grant tables
       for a mention of the new user name.
     */
-    if (handle_grant_data(tables, false, user_to, NULL) ||
-        handle_grant_data(tables, false, user_from, user_to) <= 0)
+    if (handle_grant_data(tables, false, user_to, NULL, false) ||
+        handle_grant_data(tables, false, user_from, user_to, false) <= 0)
     {
       append_user(&wrong_users, user_from);
       result= TRUE;
@@ -6338,6 +7135,7 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
   close_thread_tables(thd);
   /* Restore the state of binlog format */
   thd->current_stmt_binlog_row_based= save_binlog_row_based;
+  DBUG_PRINT("exit", ("mysql_rename_user returns %d", result));
   DBUG_RETURN(result);
 }
 

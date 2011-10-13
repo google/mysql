@@ -979,6 +979,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  LOOP_SYM
 %token  LOW_PRIORITY
 %token  LT                            /* OPERATOR */
+%token  MAPPED
 %token  MASTER_CONNECT_RETRY_SYM
 %token  MASTER_HOST_SYM
 %token  MASTER_LOG_FILE_SYM
@@ -1135,6 +1136,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  RETURN_SYM                    /* SQL-2003-R */
 %token  REVOKE                        /* SQL-2003-R */
 %token  RIGHT                         /* SQL-2003-R */
+%token  ROLE_SYM
 %token  ROLLBACK_SYM                  /* SQL-2003-R */
 %token  ROLLUP_SYM                    /* SQL-2003-R */
 %token  ROUTINE_SYM                   /* SQL-2003-N */
@@ -1318,6 +1320,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         IDENT_sys TEXT_STRING_sys TEXT_STRING_literal
         NCHAR_STRING opt_component key_cache_name
         sp_opt_label BIN_NUM label_ident TEXT_STRING_filesystem ident_or_empty
+        opt_role
 
 %type <lex_str_ptr>
         opt_table_alias
@@ -1939,7 +1942,7 @@ create:
           }
           view_or_trigger_or_sp_or_event
           {}
-        | CREATE USER clear_privileges grant_list
+        | CREATE opt_mapped USER clear_privileges grant_list_with_opt_role
           {
             Lex->sql_command = SQLCOM_CREATE_USER;
           }
@@ -9643,7 +9646,7 @@ drop:
             lex->drop_if_exists= $3;
             lex->spname= $4;
           }
-        | DROP USER clear_privileges user_list
+        | DROP opt_mapped USER clear_privileges user_list
           {
             Lex->sql_command = SQLCOM_DROP_USER;
           }
@@ -9696,6 +9699,11 @@ table_name:
             if (!Select->add_table_to_list(YYTHD, $1, NULL, TL_OPTION_UPDATING))
               MYSQL_YYABORT;
           }
+        ;
+
+opt_mapped:
+        /* empty */ {}
+        | MAPPED { Lex->mapped_user= true; }
         ;
 
 table_alias_ref_list:
@@ -11672,6 +11680,7 @@ user:
             $$->user = $1;
             $$->host.str= (char *) "%";
             $$->host.length= 1;
+            $$->role.str= NULL; $$->role.length= 0;
 
             if (check_string_char_length(&$$->user, ER(ER_USERNAME),
                                          USERNAME_CHAR_LENGTH,
@@ -11684,6 +11693,7 @@ user:
             if (!($$=(LEX_USER*) thd->alloc(sizeof(st_lex_user))))
               MYSQL_YYABORT;
             $$->user = $1; $$->host=$3;
+            $$->role.str= NULL; $$->role.length= 0;
 
             if (check_string_char_length(&$$->user, ER(ER_USERNAME),
                                          USERNAME_CHAR_LENGTH,
@@ -11735,6 +11745,7 @@ keyword:
         | HOST_SYM              {}
         | INSTALL_SYM           {}
         | LANGUAGE_SYM          {}
+        | MAPPED                {}
         | NO_SYM                {}
         | OPEN_SYM              {}
         | OPTIONS_SYM           {}
@@ -11748,6 +11759,7 @@ keyword:
         | REPAIR                {}
         | RESET_SYM             {}
         | RESTORE_SYM           {}
+        | ROLE_SYM              {}
         | ROLLBACK_SYM          {}
         | SAVEPOINT_SYM         {}
         | SECURITY_SYM          {}
@@ -12333,8 +12345,15 @@ option_value:
             }
             if (!(user=(LEX_USER*) thd->alloc(sizeof(LEX_USER))))
               MYSQL_YYABORT;
+            if (thd->security_ctx->uses_role)
+            {
+              my_error(ER_NOT_SUPPORTED_YET, MYF(0),
+                       "CHANGE PASSWORD for mapped users");
+              MYSQL_YYABORT;
+            }
             user->host=null_lex_str;
             user->user.str=thd->security_ctx->priv_user;
+            user->role.str= NULL; user->role.length= 0;
             set_var_password *var= new set_var_password(user, $3);
             if (var == NULL)
               MYSQL_YYABORT;
@@ -12925,6 +12944,41 @@ grant_list:
           {
             if (Lex->users_list.push_back($3))
               MYSQL_YYABORT;
+          }
+        ;
+
+grant_list_with_opt_role:
+          grant_user opt_role
+          {
+            $1->role= $2;
+            if (Lex->users_list.push_back($1))
+              MYSQL_YYABORT;
+          }
+        | grant_list ',' grant_user opt_role
+          {
+            $3->role= $4;
+            if (Lex->users_list.push_back($3))
+              MYSQL_YYABORT;
+          }
+        ;
+
+opt_role:
+          /* empty */
+          {
+            $$.str= NULL; $$.length= 0;
+          }
+        | ROLE_SYM ident_or_text
+          {
+            if (!Lex->mapped_user)
+            {
+              my_error(ER_WRONG_USAGE, MYF(0), "CREATE USER", "ROLE");
+              MYSQL_YYABORT;
+            }
+            else if (check_string_char_length(&$2, ER(ER_USERNAME),
+                                              USERNAME_CHAR_LENGTH,
+                                              system_charset_info, 0))
+              MYSQL_YYABORT;
+            $$= $2;
           }
         ;
 

@@ -402,6 +402,7 @@ static USER_STATS *get_user_stats(THD *thd, const char *name)
 */
 void init_user_stats(USER_STATS *user_stats,
                      const char *user,
+                     const char *priv_user,
                      uint total_connections,
                      uint concurrent_connections,
                      time_t connected_time,
@@ -424,6 +425,7 @@ void init_user_stats(USER_STATS *user_stats,
                      ulonglong empty_queries)
 {
   strncpy_with_nul(user_stats->user, user, USER_STATS_NAME_LENGTH);
+  strncpy_with_nul(user_stats->priv_user, priv_user, USER_STATS_NAME_LENGTH);
 
   user_stats->total_connections= total_connections;
   user_stats->concurrent_connections= concurrent_connections;
@@ -453,6 +455,7 @@ void init_user_stats(USER_STATS *user_stats,
   LOCK_global_user_stats must be locked when this is called.
 
   @param  name        user name
+  @param  role_name   user's role or a bogus value
   @param  thd         THD for which entry is added
   @param  on_connect  true when called for a new connection, false
                       when called for a denied connection attempt
@@ -460,8 +463,8 @@ void init_user_stats(USER_STATS *user_stats,
   @return pointer to new entry on success, NULL on failure
 */
 
-static USER_STATS *add_user_stats_entry(const char *name, THD *thd,
-                                        bool on_connect)
+static USER_STATS *add_user_stats_entry(const char *name, const char *role_name,
+                                        THD *thd, bool on_connect)
 {
   USER_STATS *user_stats;
 
@@ -477,7 +480,7 @@ static USER_STATS *add_user_stats_entry(const char *name, THD *thd,
     return NULL;                                // Out of memory
   }
 
-  init_user_stats(user_stats, name,
+  init_user_stats(user_stats, name, role_name,
                   // connections
                   0, 0,
                   // time
@@ -595,7 +598,9 @@ void update_global_user_stats(THD *thd, time_t now)
   // Update by user name.
   user_stats= get_user_stats(thd, user_string);
   if (!user_stats)
-    user_stats= add_user_stats_entry(user_string, thd, true);
+    user_stats= add_user_stats_entry(user_string,
+                                     thd->main_security_ctx.priv_user,
+                                     thd, true);
   if (user_stats)
     update_user_stats_with_user(thd, user_stats, now);
   else
@@ -813,7 +818,10 @@ int increment_connection_count(THD *thd)
     user_stats->total_connections++;
     user_stats->concurrent_connections++;
   }
-  else if (!(user_stats= add_user_stats_entry(user_string, thd, true)))
+  else if (!(user_stats=
+             add_user_stats_entry(user_string,
+                                  thd->main_security_ctx.priv_user,
+                                  thd, true)))
   {
     return_value= 1;
   }
@@ -836,13 +844,17 @@ void increment_denied_connects(THD *thd)
   const char *name= get_valid_user_string(thd->main_security_ctx.user);
   int name_len= get_user_stats_name_len(name);
 
+  /* priv_user may not be set since the connection was denied. */
+  const char *role_name= thd->main_security_ctx.priv_user ?
+    thd->main_security_ctx.priv_user : "";
+
   pthread_mutex_lock(&LOCK_global_user_stats);
 
   USER_STATS *user_stats=
       (USER_STATS *) hash_search(&global_user_stats, (const uchar *) name,
                                  name_len);
   if (!user_stats)
-    user_stats= add_user_stats_entry(name, thd, false);
+    user_stats= add_user_stats_entry(name, role_name, thd, false);
   else
     user_stats->denied_connections++;
 

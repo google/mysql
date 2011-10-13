@@ -204,6 +204,27 @@ public:
 };
 
 
+/*
+  This almost provides roles. Each entry in the mapped_user table maps to one
+  entry in the user table where role == mysql.user.User. Privileges are
+  associated with entries in the user table. They are not associated with
+  entries in the mapped_user table. To add many users with the same
+  privileges, create one entry in the user table, and hundreds in the
+  mapped_user table.
+*/
+class ACL_MAPPED_USER :public ACL_ACCESS
+{
+public:
+  char *user;
+  char *role;
+
+  /* scrambled password in binary form. */
+  uint8 salt[SCRAMBLE_LENGTH + 1];
+
+  /* 0 - no password, 4 - 3.20, 8 - 3.23, 20 - 4.1.1 */
+  uint8 salt_len;
+};
+
 class ACL_DB :public ACL_ACCESS
 {
 public:
@@ -259,8 +280,8 @@ ulong get_column_grant(THD *thd, GRANT_INFO *grant,
 bool mysql_show_grants(THD *thd, LEX_USER *user);
 void get_privilege_desc(char *to, uint max_length, ulong access);
 void get_mqh(const char *user, const char *host, USER_CONN *uc);
-bool mysql_create_user(THD *thd, List <LEX_USER> &list);
-bool mysql_drop_user(THD *thd, List <LEX_USER> &list);
+bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool mapped_user);
+bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool mapped_user);
 bool mysql_rename_user(THD *thd, List <LEX_USER> &list);
 bool mysql_revoke_all(THD *thd, List <LEX_USER> &list);
 void fill_effective_table_privileges(THD *thd, GRANT_INFO *grant,

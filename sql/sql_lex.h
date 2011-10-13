@@ -1858,6 +1858,9 @@ typedef struct st_lex : public Query_tables_list
   /* Used for SHOW BINLOG INFO FOR. */
   ulonglong group_id;
 
+  /* The command is for mapped users rather than regular users. */
+  bool mapped_user;
+
   st_lex();
 
   virtual ~st_lex()
