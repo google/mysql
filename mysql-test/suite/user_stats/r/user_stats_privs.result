@@ -10,8 +10,10 @@ select * from t1 where i=1;
 i
 1
 create user u@localhost;
+create mapped user mu identified by 'pw' role u;
 grant select on test.* to u@localhost;
 create user s@localhost;
+create mapped user ms identified by 'pw' role s;
 grant select on test.* to s@localhost;
 grant super on *.* to s@localhost;
 select user(), current_user();
@@ -19,10 +21,25 @@ user()	current_user()
 u@localhost	u@localhost
 select user(), current_user();
 user()	current_user()
+mu@localhost	u@localhost
+select user(), current_user();
+user()	current_user()
 s@localhost	s@localhost
+select user(), current_user();
+user()	current_user()
+ms@localhost	s@localhost
 'show user_stats for super shows all users'
 select User, Total_connections from information_schema.user_statistics order by user;
 User	Total_connections
+ms	1
+mu	1
+root	0
+s	1
+u	1
+select User, Total_connections from information_schema.user_statistics order by user;
+User	Total_connections
+ms	1
+mu	1
 root	0
 s	1
 u	1
@@ -32,14 +49,21 @@ User	Total_connections
 u	1
 select User, Total_connections from information_schema.user_statistics order by user;
 User	Total_connections
+mu	1
+select User, Total_connections from information_schema.user_statistics order by user;
+User	Total_connections
 u	2
 select User, Total_connections from information_schema.user_statistics order by user;
 User	Total_connections
+ms	1
+mu	1
 root	1
 s	2
 u	2
 drop user u@localhost;
 drop user s@localhost;
+drop mapped user mu;
+drop mapped user ms;
 drop table t1;
 update mysql.db set User='' where User='root';
 insert into mysql.user select * from mysql.user_bak;

@@ -1968,12 +1968,12 @@ int fill_schema_processlist(THD* thd, TABLE_LIST* tables, COND* cond)
 {
   TABLE *table= tables->table;
   CHARSET_INFO *cs= system_charset_info;
-  char *user;
+  const char *user;
   time_t now= my_time(0);
   DBUG_ENTER("fill_process_list");
 
   user= thd->security_ctx->master_access & PROCESS_ACL ?
-        NullS : thd->security_ctx->priv_user;
+        NullS : thd->security_ctx->user;
 
   VOID(pthread_mutex_lock(&LOCK_thread_count));
 
@@ -2054,6 +2054,10 @@ int fill_schema_processlist(THD* thd, TABLE_LIST* tables, COND* cond)
         table->field[7]->set_notnull();
       }
       pthread_mutex_unlock(&tmp->LOCK_thd_data);
+
+      /* ROLE */
+      val= tmp_sctx->priv_user ? tmp_sctx->priv_user : "";
+      table->field[8]->store(val, strlen(val), cs);
 
       if (schema_table_store_record(thd, table))
       {
@@ -5743,26 +5747,28 @@ int fill_fields_user_statistics(THD *thd, TABLE *table,
 {
   table->field[0]->store(user_stats->user, strlen(user_stats->user),
                          system_charset_info);
-  table->field[1]->store((longlong) user_stats->total_connections, true);
-  table->field[2]->store((longlong) user_stats->concurrent_connections, true);
-  table->field[3]->store((longlong) user_stats->connected_time, false);
-  table->field[4]->store((double) user_stats->busy_time);
-  table->field[5]->store((double) user_stats->cpu_time);
-  table->field[6]->store((longlong) user_stats->bytes_received, true);
-  table->field[7]->store((longlong) user_stats->bytes_sent, true);
-  table->field[8]->store((longlong) user_stats->binlog_bytes_written, true);
-  table->field[9]->store((longlong) user_stats->rows_fetched, true);
-  table->field[10]->store((longlong) user_stats->rows_updated, true);
-  table->field[11]->store((longlong) user_stats->rows_read, true);
-  table->field[12]->store((longlong) user_stats->select_commands, true);
-  table->field[13]->store((longlong) user_stats->update_commands, true);
-  table->field[14]->store((longlong) user_stats->other_commands, true);
-  table->field[15]->store((longlong) user_stats->commit_trans, true);
-  table->field[16]->store((longlong) user_stats->rollback_trans, true);
-  table->field[17]->store((longlong) user_stats->denied_connections, true);
-  table->field[18]->store((longlong) user_stats->lost_connections, true);
-  table->field[19]->store((longlong) user_stats->access_denied_errors, true);
-  table->field[20]->store((longlong) user_stats->empty_queries, true);
+  table->field[1]->store(user_stats->priv_user, strlen(user_stats->priv_user),
+                         system_charset_info);
+  table->field[2]->store((longlong) user_stats->total_connections, true);
+  table->field[3]->store((longlong) user_stats->concurrent_connections, true);
+  table->field[4]->store((longlong) user_stats->connected_time, false);
+  table->field[5]->store((double) user_stats->busy_time);
+  table->field[6]->store((double) user_stats->cpu_time);
+  table->field[7]->store((longlong) user_stats->bytes_received, true);
+  table->field[8]->store((longlong) user_stats->bytes_sent, true);
+  table->field[9]->store((longlong) user_stats->binlog_bytes_written, true);
+  table->field[10]->store((longlong) user_stats->rows_fetched, true);
+  table->field[11]->store((longlong) user_stats->rows_updated, true);
+  table->field[12]->store((longlong) user_stats->rows_read, true);
+  table->field[13]->store((longlong) user_stats->select_commands, true);
+  table->field[14]->store((longlong) user_stats->update_commands, true);
+  table->field[15]->store((longlong) user_stats->other_commands, true);
+  table->field[16]->store((longlong) user_stats->commit_trans, true);
+  table->field[17]->store((longlong) user_stats->rollback_trans, true);
+  table->field[18]->store((longlong) user_stats->denied_connections, true);
+  table->field[19]->store((longlong) user_stats->lost_connections, true);
+  table->field[20]->store((longlong) user_stats->access_denied_errors, true);
+  table->field[21]->store((longlong) user_stats->empty_queries, true);
   if (schema_table_store_record(thd, table))
     return 1;
   return 0;
@@ -7001,6 +7007,7 @@ ST_FIELD_INFO processlist_fields_info[]=
   {"STATE", 64, MYSQL_TYPE_STRING, 0, 1, "State", SKIP_OPEN_TABLE},
   {"INFO", PROCESS_LIST_INFO_WIDTH, MYSQL_TYPE_STRING, 0, 1, "Info",
    SKIP_OPEN_TABLE},
+  {"ROLE", USERNAME_LENGTH, MYSQL_TYPE_STRING, 0, 0, "Role", SKIP_OPEN_TABLE},
   {0, 0, MYSQL_TYPE_STRING, 0, 0, 0, SKIP_OPEN_TABLE}
 };
 
@@ -7132,6 +7139,7 @@ ST_FIELD_INFO table_statistics_fields_info[]=
 ST_FIELD_INFO user_statistics_fields_info[]=
 {
   {"USER", USERNAME_LENGTH, MYSQL_TYPE_STRING, 0, 0, "User", SKIP_OPEN_TABLE},
+  {"ROLE", USERNAME_LENGTH, MYSQL_TYPE_STRING, 0, 0, "Role", SKIP_OPEN_TABLE},
   {"TOTAL_CONNECTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG, 0, 0,
    "Total_connections", SKIP_OPEN_TABLE},
   {"CONCURRENT_CONNECTIONS", MY_INT64_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONGLONG,
