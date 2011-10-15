@@ -3754,7 +3754,7 @@ end_with_restore_list:
     mysqld_list_processes(thd,
 			  (thd->security_ctx->master_access & PROCESS_ACL ?
                            NullS :
-                           thd->security_ctx->priv_user),
+                           thd->security_ctx->user),
                           lex->verbose);
     break;
   case SQLCOM_SHOW_AUTHORS:

@@ -1,4 +1,4 @@
-# Confirm that the connection count in SHOW USER_STATS is correct for
+# Confirm that the connection count in SHOW USER_STATISTICS is correct
 #   after normal connections
 #   after normal disconnect
 #   after reconnect
@@ -21,6 +21,7 @@ flush privileges;
 # setup
 
 create user p@localhost identified by 'pw';
+create mapped user mp identified by 'pw' role p;
 grant select on test.* to p@localhost;
 grant process on *.* to p@localhost;
 
@@ -30,15 +31,28 @@ grant process on *.* to p@localhost;
 echo Confirm count is correct after connect;
 
 connect (c1_p,localhost,p,pw,test);
+connect (c1_mp,localhost,mp,pw,test);
 connection default;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Total_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where User = 'p';
 echo Total Connections for p should be 1;
 
-select User, Total_connections from information_schema.user_statistics where user = 'root';
+select User, Total_connections from information_schema.user_statistics where User = 'mp';
+echo Total Connections for mp should be 1;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where User = 'root';
 echo Total Connections for root should be 0;
 
 #
@@ -47,13 +61,25 @@ echo Total Connections for root should be 0;
 echo Confirm count is correct after flush;
 
 flush user_statistics;
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Total_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where User = 'p';
 echo Total Connections for p should be 0;
 
-select User, Total_connections from information_schema.user_statistics where user = 'root';
+select User, Total_connections from information_schema.user_statistics where User = 'mp';
+echo Total Connections for mp should be 0;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 0;
+
+select User, Total_connections from information_schema.user_statistics where User = 'root';
 echo Total Connections for root should be 0;
 
 #
@@ -62,16 +88,29 @@ echo Total Connections for root should be 0;
 echo Confirm count is correct after disconnect;
 
 connection default;
+disconnect c1_mp;
 disconnect c1_p;
 
 # avoid race between disconnect of c1_p and query by root connection
 sleep 2;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 0;
 
-select User, Total_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 0;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 0;
+
+select User, Total_connections from information_schema.user_statistics where User = 'p';
 echo Total Connections for p should be 0;
+
+select User, Total_connections from information_schema.user_statistics where User = 'mp';
+echo Total Connections for mp should be 0;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 0;
 
 #
 # Confirm count is correct after reconnect
@@ -79,12 +118,26 @@ echo Total Connections for p should be 0;
 echo Confirm count is correct after reconnect;
 
 connect (c1_p,localhost,p,pw,test);
+connect (c1_mp,localhost,mp,pw,test);
+connection default;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Total_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where User = 'p';
 echo Total Connections for p should be 1;
+
+select User, Total_connections from information_schema.user_statistics where User = 'mp';
+echo Total Connections for mp should be 1;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 2;
 
 #
 # Confirm count is correct after change user
@@ -93,28 +146,46 @@ echo Confirm count is correct after change user;
 
 connect (c_root,localhost,root,,test);
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'root';
 echo Connections for root should be 2;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Total_connections from information_schema.user_statistics where user = 'root';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where User = 'root';
 echo Total Connections for root should be 1;
 
 change_user p,pw,test;
 connection default;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'root';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'root';
 echo Connections for root should be 1;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 2;
 
-select User, Total_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 3;
+
+select User, Total_connections from information_schema.user_statistics where User = 'p';
 echo Total Connections for p should be 2;
 
-select User, Total_connections from information_schema.user_statistics where user = 'root';
+select User, Total_connections from information_schema.user_statistics where User = 'mp';
+echo Total Connections for mp should be 1;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 3;
+
+select User, Total_connections from information_schema.user_statistics where User = 'root';
 echo Total Connections for root should be 1;
 
 connection default;
@@ -126,8 +197,14 @@ sleep 2;
 #
 echo Confirm count is correct after failed connection attempt;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
 
 --replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
 --error ER_ACCESS_DENIED_ERROR
@@ -136,14 +213,39 @@ connect (c2_p,localhost,p,bad_pw,test);
 connection default;
 sleep 1;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (c2_mp,localhost,mp,bad_pw,test);
+
+connection default;
+sleep 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Total_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Total_connections from information_schema.user_statistics where User = 'p';
 echo Total Connections for p should be 2;
 
-select User, Denied_connections from information_schema.user_statistics where user = 'p';
+select User, Total_connections from information_schema.user_statistics where User = 'mp';
+echo Total Connections for mp should be 1;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 3;
+
+select User, Denied_connections from information_schema.user_statistics where User = 'p';
 echo Denied Connections for p should be 1;
+
+select User, Denied_connections from information_schema.user_statistics where User = 'mp';
+echo Denied Connections for mp should be 1;
+
+select Role, Sum(Denied_connections) from information_schema.user_statistics where Role = 'p';
+echo Denied Connections for Role p should be 2;
 
 #
 # Confirm correct count after per account max connection limits reached
@@ -154,14 +256,25 @@ connection default;
 update mysql.user set max_connections=2,max_user_connections=1 where User='p';
 flush privileges;
 disconnect c1_p;
+disconnect c1_mp;
 
 sleep 2;
 
 connect (c1_p,localhost,p,pw,test);
+connect (c1_mp,localhost,mp,pw,test);
 connection default;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 5;
 
 --replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
 --error ER_USER_LIMIT_REACHED
@@ -170,11 +283,33 @@ connect (c2_p,localhost,p,pw,test);
 connection default;
 sleep 1;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_USER_LIMIT_REACHED
+connect (c2_mp,localhost,mp,pw,test);
+
+connection default;
+sleep 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Denied_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Denied_connections from information_schema.user_statistics where User = 'p';
 echo Denied Connections for p should be 2;
+
+select User, Denied_connections from information_schema.user_statistics where User = 'mp';
+echo Denied Connections for mp should be 2;
+
+select Role, Sum(Denied_connections) from information_schema.user_statistics where Role = 'p';
+echo Denied Connections for Role p should be 4;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 5;
 
 connection default;
 update mysql.user set max_connections=100,max_user_connections=100 where User='p';
@@ -188,7 +323,7 @@ echo Confirm correct count after global max connection limits reached;
 connection default;
 
 let $maxconn=query_get_value(show variables like 'max_connections', Value, 1);
-set global max_connections=2;
+set global max_connections=3;
 
 --replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
 --error ER_CON_COUNT_ERROR
@@ -197,11 +332,33 @@ connect (c2_p,localhost,p,pw,test);
 connection default;
 sleep 1;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_CON_COUNT_ERROR
+connect (c2_mp,localhost,mp,pw,test);
+
+connection default;
+sleep 1;
+
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Denied_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Denied_connections from information_schema.user_statistics where User = 'p';
 echo Denied Connections for p should be 3;
+
+select User, Denied_connections from information_schema.user_statistics where User = 'mp';
+echo Denied Connections for mp should be 3;
+
+select Role, Sum(Denied_connections) from information_schema.user_statistics where Role = 'p';
+echo Denied Connections for Role p should be 6;
+
+select Role, Sum(Total_connections) from information_schema.user_statistics where Role = 'p';
+echo Total Connections for Role p should be 5;
 
 eval set global max_connections = $maxconn;
 
@@ -215,21 +372,43 @@ connection default;
 connect (c2_p,localhost,p,pw,test);
 let $pid=query_get_value(select connection_id() as id, id, 1);
 
+connect (c2_mp,localhost,mp,pw,test);
+let $mpid=query_get_value(select connection_id() as id, id, 1);
+
 connection default;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 2;
+
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 2;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 4;
 
 --disable_query_log
 eval kill $pid;
+eval kill $mpid;
 --enable_query_log
 sleep 2;
 
-select User, Concurrent_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'p';
 echo Connections for p should be 1;
 
-select User, Lost_connections from information_schema.user_statistics where user = 'p';
+select User, Concurrent_connections from information_schema.user_statistics where User = 'mp';
+echo Connections for mp should be 1;
+
+select Role, Sum(Concurrent_connections) from information_schema.user_statistics where Role = 'p';
+echo Connections for Role p should be 2;
+
+select User, Lost_connections from information_schema.user_statistics where User = 'p';
 echo Lost Connections for p should be 1;
+
+select User, Lost_connections from information_schema.user_statistics where User = 'mp';
+echo Lost Connections for mp should be 1;
+
+select Role, Sum(Lost_connections) from information_schema.user_statistics where Role = 'p';
+echo Lost Connections for Role p should be 2;
 
 #
 # cleanup
@@ -238,7 +417,9 @@ echo Lost Connections for p should be 1;
 connection default;
 
 disconnect c1_p;
+disconnect c1_mp;
 drop user p@localhost;
+drop mapped user mp;
 update mysql.db set User='' where User='root';
 insert into mysql.user select * from mysql.user_bak;
 drop table mysql.user_bak;

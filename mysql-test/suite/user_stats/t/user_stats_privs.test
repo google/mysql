@@ -18,9 +18,11 @@ insert into test.t1 values (1);
 select * from t1 where i=1;
 
 create user u@localhost;
+create mapped user mu identified by 'pw' role u;
 grant select on test.* to u@localhost;
 
 create user s@localhost;
+create mapped user ms identified by 'pw' role s;
 grant select on test.* to s@localhost;
 grant super on *.* to s@localhost;
 
@@ -28,24 +30,38 @@ connect (conn_u,localhost,u,,test);
 select user(), current_user();
 connection default;
 
+connect (conn_mu,localhost,mu,pw,test);
+select user(), current_user();
+connection default;
+
 connect (conn_s,localhost,s,,test);
 select user(), current_user();
 connection default;
 
+connect (conn_ms,localhost,ms,pw,test);
+select user(), current_user();
+connection default;
+
 #
-# Confirm that show user_stats for super shows all users
+# Confirm that show user_stats for super shows all users.
 #
 echo 'show user_stats for super shows all users';
 
 connection conn_s;
 select User, Total_connections from information_schema.user_statistics order by user;
 
+connection conn_ms;
+select User, Total_connections from information_schema.user_statistics order by user;
+
 #
-# Confirm that show user_stats for non-super only shows that user
+# Confirm that show user_stats for non-super only shows that user.
 #
 echo show user_stats for non-super only shows that user;
 
 connection conn_u;
+select User, Total_connections from information_schema.user_statistics order by user;
+
+connection conn_mu;
 select User, Total_connections from information_schema.user_statistics order by user;
 
 #
@@ -63,10 +79,14 @@ select User, Total_connections from information_schema.user_statistics order by 
 connection default;
 
 disconnect conn_u;
+disconnect conn_mu;
 disconnect conn_s;
+disconnect conn_ms;
 
 drop user u@localhost;
 drop user s@localhost;
+drop mapped user mu;
+drop mapped user ms;
 drop table t1;
 
 update mysql.db set User='' where User='root';
