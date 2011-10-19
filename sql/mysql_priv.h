@@ -616,7 +616,7 @@ protected:
 #define BINLOG_DUMP_NON_BLOCK   0x0001
 #define BINLOG_SEMI_SYNC        0x0002
 #define BINLOG_USE_GROUP_ID     0x0004
-#define BINLOG_MASK             0x0005
+#define BINLOG_MASK             0x0007
 
 /* sql_show.cc:show_log_files() */
 #define SHOW_LOG_STATUS_FREE "FREE"
