@@ -1,13 +1,13 @@
 include/master-slave.inc
 [connection master]
-show engines;
-Engine	Support	Comment	Transactions	XA	Savepoints
-GoogleStats	YES	Supports Stats Server tables	NO	NO	NO
-MRG_MYISAM	YES	Collection of identical MyISAM tables	NO	NO	NO
+select * from information_schema.engines order by engine;
+ENGINE	SUPPORT	COMMENT	TRANSACTIONS	XA	SAVEPOINTS
 CSV	YES	CSV storage engine	NO	NO	NO
-MyISAM	DEFAULT	Default engine as of MySQL 3.23 with great performance	NO	NO	NO
+GoogleStats	YES	Supports Stats Server tables	NO	NO	NO
 InnoDB	YES	Supports transactions, row-level locking, and foreign keys	YES	YES	YES
 MEMORY	YES	Hash based, stored in memory, useful for temporary tables	NO	NO	NO
+MRG_MYISAM	YES	Collection of identical MyISAM tables	NO	NO	NO
+MyISAM	DEFAULT	Default engine as of MySQL 3.23 with great performance	NO	NO	NO
 show variables like 'log_bin';
 Variable_name	Value
 log_bin	ON
