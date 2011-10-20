@@ -381,6 +381,15 @@ int opt_sum_query(THD *thd,
             const_result= 0;
             break;
           }
+          // If the index does not support prefix_last scan, do not continue
+          if (is_max && ref.key_length &&
+              (table->file->index_flags(ref.key, 0, true) &
+               HA_NO_READ_PREFIX_LAST))
+          {
+            const_result= 0;
+            break;
+          }
+
           table->file->ha_index_init((uint) ref.key, 1);
 
           error= is_max ? 
@@ -1011,4 +1020,3 @@ static int maxmin_in_range(bool max_fl, Field* field, COND *cond)
   }
   return 0;
 }
-

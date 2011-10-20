@@ -9320,6 +9320,21 @@ get_best_group_min_max(PARAM *param, SEL_TREE *tree)
   if (table->s->keys == 0)        /* There are no indexes to use. */
     DBUG_RETURN(NULL);
 
+  /*
+    If engine condition pushdown is enabled and the pushed condition causes
+    the last range to be completely filtered by the condition, then
+    QUICK_GROUP_MIN_MAX_SELECT::get_next() will enter an infinite loop. Rather
+    than try to fix QUICK_GROUP_MIN_MAX_SELECT to correctly handle the case and
+    risk introducing a worse problem, it's safer to just disable that
+    optimization in that case.
+  */
+  if (thd->variables.engine_condition_pushdown &&
+      table->s->db_type() != NULL &&
+      table->s->db_type()->db_type == DB_TYPE_GOOGLESTATS)
+  {
+    DBUG_RETURN(NULL);
+  }
+
   /* Analyze the query in more detail. */
   List_iterator<Item> select_items_it(join->fields_list);
 
