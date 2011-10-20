@@ -5,7 +5,9 @@
 -- source include/have_innodb.inc
 -- source include/master-slave.inc
 
-show engines;
+# Use instead of SHOW ENGINES so we can get consistent ordering.
+select * from information_schema.engines order by engine;
+
 show variables like 'log_bin';
 show variables like 'googlestats_query_on_update';
 
