@@ -9,6 +9,7 @@ extern uint mysqld_http_port;
 
 extern bool mysqld_http_enable;
 extern uint mysqld_http_port;
+extern my_bool http_trust_clients;
 
 /**
   Class definition for HTTPRequest.  This provides the implementation

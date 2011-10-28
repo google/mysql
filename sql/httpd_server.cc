@@ -31,6 +31,8 @@ ulonglong http_thread_count;
 uint mysqld_http_port= 8080;                   /* HTTP server port */
 /* True if HTTP server is turned on. */
 bool mysqld_http_enable= false;
+/* True if we trust the users to use /qqq and /aaa. */
+my_bool http_trust_clients= false;
 
 my_socket http_sock;
 
@@ -256,12 +258,12 @@ static int httpd_process_request(THD *thd, HTTPRequest *req)
   NET *net= &thd->net;
   int err= 0;
 
-  if (MatchURL(net, "GET /quitquitquit"))
+  if (http_trust_clients && MatchURL(net, "GET /quitquitquit"))
   {
     req->GenerateHeader(200, "Going down... NOW");
     err= req->quitquitquit();
   }
-  else if (MatchURL(net, "GET /abortabortabort"))
+  else if (http_trust_clients && MatchURL(net, "GET /abortabortabort"))
   {
     err= req->abortabortabort();
   }
