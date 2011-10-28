@@ -6231,7 +6231,8 @@ enum options_mysqld
   OPT_MYSQL_REPL_PORT,
   OPT_CHECKSUM_TEMP_FILES,
   OPT_MYSQL_HTTP_PORT,
-  OPT_MYSQL_HTTP_ENABLE
+  OPT_MYSQL_HTTP_ENABLE,
+  OPT_HTTP_TRUST_CLIENTS
 };
 
 
@@ -6451,6 +6452,11 @@ struct my_option my_long_options[] =
   {"http-port", OPT_MYSQL_HTTP_PORT, "Listen port for the HTTP server.",
    &mysqld_http_port, &mysqld_http_port,
    0, GET_INT, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"http-trust-clients", OPT_HTTP_TRUST_CLIENTS,
+   "Enable operations that requires trusted clients (/quitquitquit and "
+   "/abortabortabort).",
+   &http_trust_clients, &http_trust_clients,
+   0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"ignore-builtin-innodb", OPT_IGNORE_BUILTIN_INNODB ,
    "Disable initialization of builtin InnoDB plugin.",
    0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},

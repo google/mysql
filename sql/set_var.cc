@@ -62,6 +62,7 @@
 #include <myisam.h>
 #include <my_dir.h>
 #include "repl_semi_sync.h"
+#include "httpd.h"
 
 #include "events.h"
 #include "sql_repl.h"
@@ -1043,6 +1044,8 @@ static sys_var_readonly         sys_myisam_mmap_size(&vars, "myisam_mmap_size",
                                                      OPT_GLOBAL,
                                                      SHOW_LONGLONG,
                                                      get_myisam_mmap_size);
+static sys_var_bool_ptr sys_var_http_trust_clients(&vars, "http_trust_clients",
+                                                   &http_trust_clients);
 
 
 bool sys_var::check(THD *thd, set_var *var)
