@@ -1,0 +1,37 @@
+# Test the http server:
+#  check the /quitquitquit
+
+# http_trust_clients is initially OFF.
+SHOW VARIABLES LIKE 'http_trust_clients';
+
+# Nothing will happen this time.
+exec wget -q -O /dev/null "0.0.0.0:$HTTP_PORT/quitquitquit";
+exec wget -q -O /dev/null "0.0.0.0:$HTTP_PORT/abortabortabort";
+
+echo Test /quitquitquit;
+
+SET GLOBAL http_trust_clients = ON;
+SHOW VARIABLES LIKE 'http_trust_clients';
+
+exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect;
+exec wget -q -O - "0.0.0.0:$HTTP_PORT/quitquitquit";
+source include/wait_until_disconnected.inc;
+
+enable_reconnect;
+exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect;
+source include/wait_until_connected_again.inc;
+
+echo Test /abortabortabort;
+
+SET GLOBAL http_trust_clients = ON;
+SHOW VARIABLES LIKE 'http_trust_clients';
+
+exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect;
+exec wget -q -O - "0.0.0.0:$HTTP_PORT/abortabortabort" || true;
+source include/wait_until_disconnected.inc;
+
+enable_reconnect;
+exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect;
+source include/wait_until_connected_again.inc;
+
+# http_trust_clients will be OFF because we just restarted
