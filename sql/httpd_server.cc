@@ -28,6 +28,8 @@
 
 ulong httpd_thread_created;
 ulonglong http_thread_count;
+ulong httpd_bind_addr;                        /* HTTP server address */
+char *httpd_bind_addr_str;                    /* HTTP server address string */
 uint httpd_port= 8080;                        /* HTTP server port */
 /* True if HTTP server is turned on. */
 bool httpd= false;

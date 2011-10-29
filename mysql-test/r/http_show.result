@@ -2,9 +2,17 @@ show variables like 'http%';
 Variable_name	Value
 http_trust_clients	OFF
 httpd	ON
+httpd_bind_address	
 httpd_port	HTTPD_PORT1
 show variables like 'http%';
 Variable_name	Value
 http_trust_clients	OFF
 httpd	OFF
+httpd_bind_address	
 httpd_port	HTTPD_PORT2
+show variables like 'http%';
+Variable_name	Value
+http_trust_clients	OFF
+httpd	ON
+httpd_bind_address	127.0.0.1
+httpd_port	HTTPD_PORT3
