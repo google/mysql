@@ -1044,6 +1044,12 @@ static sys_var_readonly         sys_myisam_mmap_size(&vars, "myisam_mmap_size",
                                                      OPT_GLOBAL,
                                                      SHOW_LONGLONG,
                                                      get_myisam_mmap_size);
+static sys_var_const sys_var_httpd(&vars, "httpd",
+                                   OPT_GLOBAL, SHOW_BOOL,
+                                   (uchar*) &httpd);
+static sys_var_const sys_var_httpd_port(&vars, "httpd_port",
+                                        OPT_GLOBAL, SHOW_INT,
+                                        (uchar*) &httpd_port);
 static sys_var_bool_ptr sys_var_http_trust_clients(&vars, "http_trust_clients",
                                                    &http_trust_clients);
 

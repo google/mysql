@@ -1,0 +1,10 @@
+show variables like 'http%';
+Variable_name	Value
+http_trust_clients	OFF
+httpd	ON
+httpd_port	HTTPD_PORT1
+show variables like 'http%';
+Variable_name	Value
+http_trust_clients	OFF
+httpd	OFF
+httpd_port	HTTPD_PORT2

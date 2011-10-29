@@ -1,6 +1,6 @@
 [mysqld.1]
-http-enable
+httpd
 http-trust-clients=OFF
 
 [ENV]
-HTTP_PORT=           @mysqld.1.http_port
+HTTPD_PORT=          @mysqld.1.httpd_port

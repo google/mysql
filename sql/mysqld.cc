@@ -1020,7 +1020,7 @@ static void close_connections(void)
       shutdown_socket(ip_socks[i]);
     }
     shutdown_socket(repl_sock);
-    if (mysqld_http_enable)
+    if (httpd)
       shutdown_socket(http_sock);
   }
 #ifdef __NT__
@@ -1183,7 +1183,7 @@ static void close_server_sock()
   }
   close_server_sock_helper(repl_sock, "TCP/IP replication");
   close_server_sock_helper(unix_sock, "unix/IP");
-  if (mysqld_http_enable && http_sock != INVALID_SOCKET)
+  if (httpd && http_sock != INVALID_SOCKET)
     close_server_sock_helper(http_sock, "TCP/IP HTTP");
 
   VOID(unlink(mysqld_unix_port));
@@ -4834,13 +4834,13 @@ we force server id to 2, but this MySQL server will not act as a slave.");
   my_str_malloc= &my_str_malloc_mysqld;
   my_str_free= &my_str_free_mysqld;
 
-  if (!opt_disable_networking && mysqld_http_enable)
+  if (!opt_disable_networking && httpd)
   {
-    socket_init(&http_sock, mysqld_http_port);
-    if ((int) mysqld_http_port != INVALID_SOCKET)
+    socket_init(&http_sock, httpd_port);
+    if ((int) httpd_port != INVALID_SOCKET)
     {
       sql_print_information("Listen for HTTP status requests on port %u",
-                            mysqld_http_port);
+                            httpd_port);
       create_httpd_thread();
     }
   }
@@ -6230,8 +6230,8 @@ enum options_mysqld
   OPT_RPL_EVENT_BUFFER_SIZE,
   OPT_MYSQL_REPL_PORT,
   OPT_CHECKSUM_TEMP_FILES,
-  OPT_MYSQL_HTTP_PORT,
-  OPT_MYSQL_HTTP_ENABLE,
+  OPT_HTTPD_PORT,
+  OPT_HTTPD,
   OPT_HTTP_TRUST_CLIENTS
 };
 
@@ -6446,12 +6446,10 @@ struct my_option my_long_options[] =
    "Disable with --skip-large-pages.", &opt_large_pages, &opt_large_pages,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
-  {"http-enable", OPT_MYSQL_HTTP_ENABLE, "Enable the HTTP service.",
-   &mysqld_http_enable, &mysqld_http_enable,
-   0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
-  {"http-port", OPT_MYSQL_HTTP_PORT, "Listen port for the HTTP server.",
-   &mysqld_http_port, &mysqld_http_port,
-   0, GET_INT, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"httpd", OPT_HTTPD, "Enable the HTTP service.",
+   &httpd, &httpd, 0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"httpd-port", OPT_HTTPD_PORT, "Listen port for the HTTP server.",
+   &httpd_port, &httpd_port, 0, GET_INT, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"http-trust-clients", OPT_HTTP_TRUST_CLIENTS,
    "Enable operations that requires trusted clients (/quitquitquit and "
    "/abortabortabort).",

@@ -18,13 +18,13 @@ then
   NEEDS_BOOTSTRAP=yes
 fi
 
-if [[ -a ${INSTANCE_DIR}/mysql.http_port ]]
+if [[ -a ${INSTANCE_DIR}/mysql.httpd_port ]]
 then
-  HTTP_PORT=$(cat ${INSTANCE_DIR}/mysql.http_port)
+  HTTPD_PORT=$(cat ${INSTANCE_DIR}/mysql.httpd_port)
 else
   LAST_PORT=$(echo 51000 $(find instance/ -name 'mysql.*port' | xargs cat) | fmt -1 | sort -n | tail -n1)
-  HTTP_PORT=$((${LAST_PORT} + 1))
-  echo ${HTTP_PORT} > ${INSTANCE_DIR}/mysql.http_port
+  HTTPD_PORT=$((${LAST_PORT} + 1))
+  echo ${HTTPD_PORT} > ${INSTANCE_DIR}/mysql.httpd_port
 fi
 
 if [[ -a ${INSTANCE_DIR}/mysql.port ]]
@@ -53,6 +53,8 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --character-sets-dir=${BIN_DIR}/sql/share/charsets \
   --sock=${INSTANCE_DIR}/mysql.sock \
   --port=${PORT} \
+  --httpd \
+  --httpd-port=${HTTPD_PORT} \
   --server_id=${ID} \
   --pid-file=${INSTANCE_DIR}/mysql.pid \
   ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"

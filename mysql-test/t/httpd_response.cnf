@@ -1,9 +1,9 @@
 [mysqld.1]
-http-enable
+httpd
 log-bin=                    master-bin
 
 [mysqld.2]
-http-enable
+httpd
 master-host=                127.0.0.1
 master-port=                @mysqld.1.port
 master-password=            @mysqld.1.#password
@@ -19,8 +19,8 @@ skip-slave-start
 [ENV]
 MASTER_MYPORT=              @mysqld.1.port
 MASTER_MYSOCK=              @mysqld.1.socket
-MASTER_HTTP_PORT=           @mysqld.1.http_port
+MASTER_HTTPD_PORT=          @mysqld.1.httpd_port
 
 SLAVE_MYPORT=               @mysqld.2.port
 SLAVE_MYSOCK=               @mysqld.2.socket
-SLAVE_HTTP_PORT=            @mysqld.2.http_port
+SLAVE_HTTPD_PORT=           @mysqld.2.httpd_port
