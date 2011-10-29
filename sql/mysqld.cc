@@ -1656,6 +1656,38 @@ static void set_ports()
   }
 }
 
+static int get_bind_addr(ulong *bind_addr, char *argument)
+{
+  if ((*bind_addr= (ulong) inet_addr(argument)) == INADDR_NONE)
+  {
+    struct hostent *ent;
+
+    if (argument[0])
+      ent= gethostbyname(argument);
+    else
+    {
+      char myhostname[255];
+
+      if (gethostname(myhostname, sizeof(myhostname)) < 0)
+      {
+        sql_perror("Can't start server: cannot get my own hostname!");
+        return 1;
+      }
+
+      ent= gethostbyname(myhostname);
+    }
+
+    if (!ent)
+    {
+      sql_perror("Can't start server: cannot resolve hostname!");
+      return 1;
+    }
+
+    *bind_addr= (ulong) ((in_addr *) ent->h_addr_list[0])->s_addr;
+  }
+  return 0;
+}
+
 /* Change to run as another user if started with --user */
 
 static struct passwd *check_user(const char *user)
@@ -1843,7 +1875,7 @@ static void read_mysqld_ports(void)
   }
 }
 
-static void socket_init(my_socket *sock, const uint port)
+static void socket_init(my_socket *sock, ulong bind_addr, const uint port)
 {
   struct sockaddr_in IPaddr;
   uint  retry;
@@ -1868,7 +1900,7 @@ static void socket_init(my_socket *sock, const uint port)
     }
     bzero((char*) &IPaddr, sizeof(IPaddr));
     IPaddr.sin_family = AF_INET;
-    IPaddr.sin_addr.s_addr = my_bind_addr;
+    IPaddr.sin_addr.s_addr = bind_addr;
     IPaddr.sin_port = (unsigned short) htons((unsigned short) port);
 
 #ifndef __WIN__
@@ -1934,9 +1966,9 @@ static void network_init(void)
 
   for (int i= 0; (i < MAX_MYSQLD_PORTS) && mysqld_ports[i]; i++)
   {
-    socket_init(&(ip_socks[i]), mysqld_ports[i]);
+    socket_init(&(ip_socks[i]), my_bind_addr, mysqld_ports[i]);
   }
-  socket_init(&repl_sock, mysqld_repl_port);
+  socket_init(&repl_sock, my_bind_addr, mysqld_repl_port);
 
 
 #ifdef __NT__
@@ -4836,7 +4868,7 @@ we force server id to 2, but this MySQL server will not act as a slave.");
 
   if (!opt_disable_networking && httpd)
   {
-    socket_init(&http_sock, httpd_port);
+    socket_init(&http_sock, httpd_bind_addr, httpd_port);
     if ((int) httpd_port != INVALID_SOCKET)
     {
       sql_print_information("Listen for HTTP status requests on port %u",
@@ -6230,6 +6262,7 @@ enum options_mysqld
   OPT_RPL_EVENT_BUFFER_SIZE,
   OPT_MYSQL_REPL_PORT,
   OPT_CHECKSUM_TEMP_FILES,
+  OPT_HTTPD_BIND_ADDRESS,
   OPT_HTTPD_PORT,
   OPT_HTTPD,
   OPT_HTTP_TRUST_CLIENTS
@@ -6446,6 +6479,10 @@ struct my_option my_long_options[] =
    "Disable with --skip-large-pages.", &opt_large_pages, &opt_large_pages,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
+  {"httpd-bind-address", OPT_HTTPD_BIND_ADDRESS,
+   "IP address to bind to for the HTTP server.",
+   &httpd_bind_addr_str, &httpd_bind_addr_str, 0, GET_STR,
+   REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"httpd", OPT_HTTPD, "Enable the HTTP service.",
    &httpd, &httpd, 0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"httpd-port", OPT_HTTPD_PORT, "Listen port for the HTTP server.",
@@ -8532,6 +8569,7 @@ static int mysql_init_variables(void)
   errmesg= 0;
   limit_tmp_disk_space= 0;
   mysqld_unix_port= opt_mysql_tmpdir= my_bind_addr_str= NullS;
+  httpd_bind_addr_str= NullS;
   bzero((uchar*) &mysql_tmpdir_list, sizeof(mysql_tmpdir_list));
   bzero((char *) &global_status_var, sizeof(global_status_var));
   opt_large_pages= 0;
@@ -9092,28 +9130,14 @@ mysqld_get_one_option(int optid,
     my_use_symdir=0;
     break;
   case (int) OPT_BIND_ADDRESS:
-    if ((my_bind_addr= (ulong) inet_addr(argument)) == INADDR_NONE)
-    {
-      struct hostent *ent;
-      if (argument[0])
-	ent=gethostbyname(argument);
-      else
-      {
-	char myhostname[255];
-	if (gethostname(myhostname,sizeof(myhostname)) < 0)
-	{
-	  sql_perror("Can't start server: cannot get my own hostname!");
-          return 1;
-	}
-	ent=gethostbyname(myhostname);
-      }
-      if (!ent)
-      {
-	sql_perror("Can't start server: cannot resolve hostname!");
-        return 1;
-      }
-      my_bind_addr = (ulong) ((in_addr*)ent->h_addr_list[0])->s_addr;
-    }
+    error= get_bind_addr(&my_bind_addr, argument);
+    if (error)
+      return error;
+    break;
+  case (int) OPT_HTTPD_BIND_ADDRESS:
+    error= get_bind_addr(&httpd_bind_addr, argument);
+    if (error)
+      return error;
     break;
   case (int) OPT_PID_FILE:
     strmake(pidfile_name, argument, sizeof(pidfile_name)-1);

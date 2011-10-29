@@ -1047,6 +1047,9 @@ static sys_var_readonly         sys_myisam_mmap_size(&vars, "myisam_mmap_size",
 static sys_var_const sys_var_httpd(&vars, "httpd",
                                    OPT_GLOBAL, SHOW_BOOL,
                                    (uchar*) &httpd);
+static sys_var_const sys_var_httpd_bind_address(&vars, "httpd_bind_address",
+                                                OPT_GLOBAL, SHOW_CHAR_PTR,
+                                                (uchar*) &httpd_bind_addr_str);
 static sys_var_const sys_var_httpd_port(&vars, "httpd_port",
                                         OPT_GLOBAL, SHOW_INT,
                                         (uchar*) &httpd_port);

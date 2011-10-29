@@ -5,6 +5,8 @@
 #include <pthread.h>
 
 extern ulonglong http_thread_count;
+extern ulong httpd_bind_addr;
+extern char *httpd_bind_addr_str;
 extern uint httpd_port;
 
 extern bool httpd;
