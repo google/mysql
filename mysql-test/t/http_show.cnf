@@ -1,0 +1,10 @@
+[mysqld.1]
+httpd
+
+[mysqld.2]
+
+[ENV]
+MYPORT1=     @mysqld.1.port
+HTTPD_PORT1= @mysqld.1.httpd_port
+MYPORT2=     @mysqld.2.port
+HTTPD_PORT2= @mysqld.2.httpd_port

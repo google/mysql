@@ -1991,7 +1991,7 @@ extern uint protocol_version;
 extern char *mysqld_ports_str;
 extern uint dropping_tables;
 extern uint mysqld_repl_port;
-extern uint mysqld_http_port;
+extern uint httpd_port;
 extern uint delay_key_write_options;
 extern ulong max_long_data_size;
 #endif /* MYSQL_SERVER */

@@ -28,9 +28,9 @@
 
 ulong httpd_thread_created;
 ulonglong http_thread_count;
-uint mysqld_http_port= 8080;                   /* HTTP server port */
+uint httpd_port= 8080;                        /* HTTP server port */
 /* True if HTTP server is turned on. */
-bool mysqld_http_enable= false;
+bool httpd= false;
 /* True if we trust the users to use /qqq and /aaa. */
 my_bool http_trust_clients= false;
 

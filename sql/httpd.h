@@ -5,10 +5,10 @@
 #include <pthread.h>
 
 extern ulonglong http_thread_count;
-extern uint mysqld_http_port;
+extern uint httpd_port;
 
-extern bool mysqld_http_enable;
-extern uint mysqld_http_port;
+extern bool httpd;
+extern uint httpd_port;
 extern my_bool http_trust_clients;
 
 /**

@@ -5,8 +5,8 @@
 SHOW VARIABLES LIKE 'http_trust_clients';
 
 # Nothing will happen this time.
-exec wget -q -O /dev/null "0.0.0.0:$HTTP_PORT/quitquitquit";
-exec wget -q -O /dev/null "0.0.0.0:$HTTP_PORT/abortabortabort";
+exec wget -q -O /dev/null "0.0.0.0:$HTTPD_PORT/quitquitquit";
+exec wget -q -O /dev/null "0.0.0.0:$HTTPD_PORT/abortabortabort";
 
 echo Test /quitquitquit;
 
@@ -14,7 +14,7 @@ SET GLOBAL http_trust_clients = ON;
 SHOW VARIABLES LIKE 'http_trust_clients';
 
 exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect;
-exec wget -q -O - "0.0.0.0:$HTTP_PORT/quitquitquit";
+exec wget -q -O - "0.0.0.0:$HTTPD_PORT/quitquitquit";
 source include/wait_until_disconnected.inc;
 
 enable_reconnect;
@@ -27,7 +27,7 @@ SET GLOBAL http_trust_clients = ON;
 SHOW VARIABLES LIKE 'http_trust_clients';
 
 exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect;
-exec wget -q -O - "0.0.0.0:$HTTP_PORT/abortabortabort" || true;
+exec wget -q -O - "0.0.0.0:$HTTPD_PORT/abortabortabort" || true;
 source include/wait_until_disconnected.inc;
 
 enable_reconnect;
