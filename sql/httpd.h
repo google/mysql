@@ -12,6 +12,7 @@ extern uint httpd_port;
 extern bool httpd;
 extern uint httpd_port;
 extern my_bool http_trust_clients;
+extern char *httpd_unix_port;
 
 /**
   Class definition for HTTPRequest.  This provides the implementation

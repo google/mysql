@@ -814,6 +814,7 @@ static my_socket unix_sock;
 static my_socket ip_socks[MAX_MYSQLD_PORTS];
 static my_socket repl_sock;
 extern my_socket http_sock;
+extern my_socket httpd_unix_sock;
 struct rand_struct sql_rand; ///< used by sql_class.cc:THD::THD()
 
 #ifndef EMBEDDED_LIBRARY
@@ -1050,6 +1051,8 @@ static void close_connections(void)
 #ifdef HAVE_SYS_UN_H
   shutdown_socket(unix_sock);
   (void) unlink(mysqld_unix_port);
+  shutdown_socket(httpd_unix_sock);
+  (void) unlink(httpd_unix_port);
 #endif
   end_thr_alarm(0);			 // Abort old alarms.
 
@@ -1185,6 +1188,11 @@ static void close_server_sock()
   close_server_sock_helper(unix_sock, "unix/IP");
   if (httpd && http_sock != INVALID_SOCKET)
     close_server_sock_helper(http_sock, "TCP/IP HTTP");
+  if (http_unix_sock != INVALID_SOCKET)
+  {
+    close_server_sock_helper(http_unix_sock, "unix/IP");
+    VOID(unlink(httpd_unix_port));
+  }
 
   VOID(unlink(mysqld_unix_port));
   DBUG_VOID_RETURN;
@@ -1948,14 +1956,55 @@ static void socket_init(my_socket *sock, ulong bind_addr, const uint port)
   DBUG_VOID_RETURN;
 }
 
-static void network_init(void)
+static void unix_socket_init(my_socket *sock, const char *unix_port)
 {
 #ifdef HAVE_SYS_UN_H
   struct sockaddr_un UNIXaddr;
+  int arg= 1;
+
+  if (unix_port && unix_port[0])
+  {
+    DBUG_PRINT("general", ("UNIX Socket is %s", unix_port));
+
+    if (strlen(unix_port) > (sizeof(UNIXaddr.sun_path) - 1))
+    {
+      sql_print_error("The socket file path is too long (> %u): %s",
+                      (uint) sizeof(UNIXaddr.sun_path) - 1, unix_port);
+      unireg_abort(1);
+    }
+    if ((*sock= socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    {
+      sql_perror("Can't start server : UNIX Socket "); /* purecov: inspected */
+      unireg_abort(1);                        /* purecov: inspected */
+    }
+    bzero((char*) &UNIXaddr, sizeof(UNIXaddr));
+    UNIXaddr.sun_family= AF_UNIX;
+    strmov(UNIXaddr.sun_path, unix_port);
+    (void) unlink(unix_port);
+    (void) setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, (char *) &arg,
+                      sizeof(arg));
+    umask(0);
+    if (bind(*sock, my_reinterpret_cast(struct sockaddr *) (&UNIXaddr),
+             sizeof(UNIXaddr)) < 0)
+    {
+      sql_perror("Can't start server: Bind on unix socket"); /* purecov: tested */
+      sql_print_error("Do you already have another mysqld server running on socket: %s ?",
+                      unix_port);
+      unireg_abort(1);                        /* purecov: tested */
+    }
+    umask(((~my_umask) & 0666));
+#if defined(S_IFSOCK) && defined(SECURE_SOCKETS)
+    (void) chmod(unix_port, S_IFSOCK);         /* Fix solaris 2.6 bug */
 #endif
+    if (listen(*sock, (int) back_log) < 0)
+      sql_print_warning("listen() on Unix socket failed with error %d",
+                        socket_errno);
+  }
+#endif
+}
 
-  int arg=1;
-
+static void network_init(void)
+{
   DBUG_ENTER("network_init");
 
   if (thread_scheduler.init())
@@ -2020,45 +2069,10 @@ static void network_init(void)
 #endif
 
 #if defined(HAVE_SYS_UN_H)
-  /*
-  ** Create the UNIX socket
-  */
-  if (mysqld_unix_port[0] && !opt_bootstrap)
+  if (!opt_bootstrap)
   {
-    DBUG_PRINT("general",("UNIX Socket is %s",mysqld_unix_port));
-
-    if (strlen(mysqld_unix_port) > (sizeof(UNIXaddr.sun_path) - 1))
-    {
-      sql_print_error("The socket file path is too long (> %u): %s",
-                      (uint) sizeof(UNIXaddr.sun_path) - 1, mysqld_unix_port);
-      unireg_abort(1);
-    }
-    if ((unix_sock= socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
-    {
-      sql_perror("Can't start server : UNIX Socket "); /* purecov: inspected */
-      unireg_abort(1);				/* purecov: inspected */
-    }
-    bzero((char*) &UNIXaddr, sizeof(UNIXaddr));
-    UNIXaddr.sun_family = AF_UNIX;
-    strmov(UNIXaddr.sun_path, mysqld_unix_port);
-    (void) unlink(mysqld_unix_port);
-    (void) setsockopt(unix_sock,SOL_SOCKET,SO_REUSEADDR,(char*)&arg,
-		      sizeof(arg));
-    umask(0);
-    if (bind(unix_sock, my_reinterpret_cast(struct sockaddr *) (&UNIXaddr),
-	     sizeof(UNIXaddr)) < 0)
-    {
-      sql_perror("Can't start server : Bind on unix socket"); /* purecov: tested */
-      sql_print_error("Do you already have another mysqld server running on socket: %s ?",mysqld_unix_port);
-      unireg_abort(1);					/* purecov: tested */
-    }
-    umask(((~my_umask) & 0666));
-#if defined(S_IFSOCK) && defined(SECURE_SOCKETS)
-    (void) chmod(mysqld_unix_port,S_IFSOCK);	/* Fix solaris 2.6 bug */
-#endif
-    if (listen(unix_sock,(int) back_log) < 0)
-      sql_print_warning("listen() on Unix socket failed with error %d",
-		      socket_errno);
+    unix_socket_init(&unix_sock, mysqld_unix_port);
+    unix_socket_init(&httpd_unix_sock, httpd_unix_port);
   }
 #endif
   DBUG_PRINT("info",("server started"));
@@ -6492,6 +6506,9 @@ struct my_option my_long_options[] =
    "/abortabortabort).",
    &http_trust_clients, &http_trust_clients,
    0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"httpd-socket", OPT_SOCKET, "Socket file to listen for the HTTP server.",
+   &httpd_unix_port, &httpd_unix_port, 0, GET_STR,
+   REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"ignore-builtin-innodb", OPT_IGNORE_BUILTIN_INNODB ,
    "Disable initialization of builtin InnoDB plugin.",
    0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
@@ -8616,6 +8633,7 @@ static int mysql_init_variables(void)
   }
   repl_sock= INVALID_SOCKET;
   http_sock= INVALID_SOCKET;
+  httpd_unix_sock= INVALID_SOCKET;
   mysql_home_ptr= mysql_home;
   pidfile_name_ptr= pidfile_name;
   log_error_file_ptr= log_error_file;
