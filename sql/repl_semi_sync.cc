@@ -632,6 +632,8 @@ int Repl_semi_sync::report_reply_binlog(THD      *thd,
   bool  can_release_threads= false;
   bool  need_copy_send_pos= true;
 
+  LOG_INFO linfo;
+
   /*
     If semi-sync replication is not enabled, or this thd is
     sending binlog to a slave where we do not need synchronous replication,
@@ -649,6 +651,32 @@ int Repl_semi_sync::report_reply_binlog(THD      *thd,
   /* This is the real check inside the mutex. */
   if (!get_master_enabled())
     goto end;
+
+  /*
+    Sanity check the log and pos from the reply. If it is from the 'future'
+    then the the slave is horked in some way or the packet was corrupted
+    on the network. In either case we should ignore the reply.
+
+    NOTE: get_current_log acquired LOCK_log.
+  */
+  if (mysql_bin_log.get_current_log(&linfo))
+  {
+    sql_print_error("Repl_semi_sync::report_reply_binlog failed to read "
+                    "current binlog position for sanity check.");
+    goto end;
+  }
+
+  if (Active_tranx::compare(log_file_name, log_file_pos,
+                            base_name(linfo.log_file_name), linfo.pos) > 0)
+  {
+    sql_print_error("Bad semi-sync reply received from %s: "
+                    "reply position (%s, %lu), "
+                    "current binlog position (%s, %lu).",
+                    thd->security_ctx->host_or_ip,
+                    log_file_name, (ulong) log_file_pos,
+                    base_name(linfo.log_file_name), (ulong) linfo.pos);
+    goto end;
+  }
 
   if (!is_on())
   {
