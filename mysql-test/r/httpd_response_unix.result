@@ -1,0 +1,62 @@
+include/master-slave.inc
+[connection master]
+Test the main page
+Check the master table headers
+   Id 
+   User 
+   Host 
+   Database 
+   Command 
+   Time 
+   State 
+   Info 
+   File 
+   Position 
+   Group ID / Server ID 
+Check the binary log on the master
+   ./master-bin 
+Check the slave connection on the master
+   Binlog Dump 
+Check the slave table headers
+   Id 
+   User 
+   Host 
+   Database 
+   Command 
+   Time 
+   State 
+   Info 
+   Master Host 
+   User 
+   Connect Retries 
+   Master Log File / Position 
+   Relay Log File / Position 
+   Relay Master Log File / Position 
+   Group ID / Server ID 
+   Slave IO / SQL 
+   Seconds Behind 
+Check the binary and relay logs on the slave
+   master-bin 
+   ./slave-relay-bin 
+   master-bin 
+Check the connection to the master
+   Waiting for master to send event 
+Check for SQL and IO thread
+   system user 
+   system user 
+Test the /var
+status_queries NUMBER
+status_questions NUMBER
+status_uptime NUMBER
+ContentLength: 0
+ContentLength: 0
+ContentLength: 0
+status_uptime NUMBER
+status_uptime NUMBER
+status_uptime NUMBER
+status_queries NUMBER
+status_questions NUMBER
+status_uptime NUMBER
+Test the /health
+OK
+include/rpl_end.inc

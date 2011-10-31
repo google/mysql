@@ -132,6 +132,13 @@ sub fix_socket {
   return "$dir/$group_name.sock";
 }
 
+sub fix_httpd_socket {
+  my ($self, $config, $group_name, $group)= @_;
+  # Put socket file in tmpdir
+  my $dir= $self->{ARGS}->{tmpdir};
+  return "$dir/$group_name.httpd_sock";
+}
+
 sub fix_tmpdir {
   my ($self, $config, $group_name, $group)= @_;
   my $dir= $self->{ARGS}->{tmpdir};
@@ -232,6 +239,7 @@ my @mysqld_rules=
  { 'port' => \&fix_port },
  { 'repl_port' => \&fix_port },
  { 'httpd_port' => \&fix_port },
+ { 'httpd_socket' => \&fix_httpd_socket },
  { 'socket' => \&fix_socket },
  { '#log-error' => \&fix_log_error },
  { 'general_log' => 1 },

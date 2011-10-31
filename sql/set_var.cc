@@ -1026,6 +1026,9 @@ static sys_var_const sys_var_httpd_port(&vars, "httpd_port",
                                         (uchar*) &httpd_port);
 static sys_var_bool_ptr sys_var_http_trust_clients(&vars, "http_trust_clients",
                                                    &http_trust_clients);
+static sys_var_const sys_var_httpd_socket(&vars, "httpd_socket",
+                                          OPT_GLOBAL, SHOW_CHAR_PTR,
+                                          (uchar*) &httpd_unix_port);
 
 
 bool sys_var::check(THD *thd, set_var *var)

@@ -70,6 +70,7 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --port=${PORT} \
   --httpd \
   --httpd-port=${HTTPD_PORT} \
+  --httpd-socket=${INSTANCE_DIR}/http.sock \
   --server_id=${ID} \
   --pid-file=${INSTANCE_DIR}/mysql.pid \
   ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"

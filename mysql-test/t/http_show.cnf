@@ -8,9 +8,12 @@ httpd
 httpd-bind-address=127.0.0.1
 
 [ENV]
-MYPORT1=     @mysqld.1.port
-HTTPD_PORT1= @mysqld.1.httpd_port
-MYPORT2=     @mysqld.2.port
-HTTPD_PORT2= @mysqld.2.httpd_port
-MYPORT3=     @mysqld.3.port
-HTTPD_PORT3= @mysqld.3.httpd_port
+MYPORT1=       @mysqld.1.port
+HTTPD_PORT1=   @mysqld.1.httpd_port
+HTTPD_SOCKET1= @mysqld.1.httpd_socket
+MYPORT2=       @mysqld.2.port
+HTTPD_PORT2=   @mysqld.2.httpd_port
+HTTPD_SOCKET2= @mysqld.2.httpd_socket
+MYPORT3=       @mysqld.3.port
+HTTPD_PORT3=   @mysqld.3.httpd_port
+HTTPD_SOCKET3= @mysqld.3.httpd_socket

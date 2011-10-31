@@ -35,8 +35,10 @@ uint httpd_port= 8080;                        /* HTTP server port */
 bool httpd= false;
 /* True if we trust the users to use /qqq and /aaa. */
 my_bool http_trust_clients= false;
+char *httpd_unix_port;
 
 my_socket http_sock;
+my_socket httpd_unix_sock;
 
 
 /**
@@ -364,7 +366,7 @@ static void httpd_close_connection(THD *thd, uint errcode, bool lock)
 }
 
 
-static my_socket httpd_create_socket(int http_flags)
+static my_socket httpd_create_socket(int http_flags, my_socket sock)
 {
   my_socket new_sock;
   static uint error_count= 0;
@@ -376,7 +378,7 @@ static my_socket httpd_create_socket(int http_flags)
   {
     size_socket length= sizeof(struct sockaddr_in);
 
-    new_sock= accept(http_sock,
+    new_sock= accept(sock,
                      my_reinterpret_cast(struct sockaddr *) (&cAddr),
                      &length);
 
@@ -388,14 +390,14 @@ static my_socket httpd_create_socket(int http_flags)
     {
       // Try without O_NONBLOCK
       if (retry == MAX_ACCEPT_RETRY - 1)
-        fcntl(http_sock, F_SETFL, http_flags);
+        fcntl(sock, F_SETFL, http_flags);
     }
 #endif
   }
 
 #if !defined(NO_FCNTL_NONBLOCK)
   if (!(test_flags & TEST_BLOCKING))
-    fcntl(http_sock, F_SETFL, http_flags);
+    fcntl(sock, F_SETFL, http_flags);
 #endif
   if (new_sock == INVALID_SOCKET)
   {
@@ -566,16 +568,30 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
   my_pthread_getprio(pthread_self());
   fd_set clientFDs;
   int http_flags= 0;
+  int httpd_unix_flags= 0;
+  my_socket sock;
+  int flags;
+
   FD_ZERO(&clientFDs);
   FD_SET(http_sock, &clientFDs);
 #ifdef HAVE_FCNTL
   http_flags= fcntl(http_sock, F_GETFL, 0);
 #endif
+#ifdef HAVE_SYS_UN_H
+  if (httpd_unix_sock != INVALID_SOCKET)
+  {
+    FD_SET(httpd_unix_sock, &clientFDs);
+#ifdef HAVE_FCNTL
+    httpd_unix_flags= fcntl(httpd_unix_sock, F_GETFL, 0);
+#endif
+  }
+#endif /* HAVE_SYS_UN_H */
 
   while (!abort_loop)
   {
     fd_set readFDs= clientFDs;
-    if (select(http_sock + 1, &readFDs, 0, 0, 0) < 0)
+    if (select((http_sock > httpd_unix_sock ? http_sock : httpd_unix_sock) + 1,
+               &readFDs, 0, 0, 0) < 0)
     {
       if (socket_errno != SOCKET_EINTR)
       {
@@ -588,19 +604,33 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
     if (abort_loop)
       break;
 
+#ifdef HAVE_SYS_UN_H
+    if (FD_ISSET(httpd_unix_sock, &readFDs))
+    {
+      sock= httpd_unix_sock;
+      flags= httpd_unix_flags;
+    }
+    else
+#endif
+    if (FD_ISSET(http_sock, &readFDs))
+    {
+      sock= http_sock;
+      flags= http_flags;
+    }
+
     // This is a new connection request.
 #if !defined(NO_FCNTL_NONBLOCK)
     if (!(test_flags & TEST_BLOCKING))
     {
 #if defined(O_NONBLOCK)
-      fcntl(http_sock, F_SETFL, http_flags | O_NONBLOCK);
+      fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 #elif defined(O_NDELAY)
-      fcntl(http_sock, F_SETFL, http_flags | O_NDELAY);
+      fcntl(sock, F_SETFL, flags | O_NDELAY);
 #endif
     }
 #endif /* NO_FCNTL_NONBLOCK */
 
-    my_socket new_socket= httpd_create_socket(http_flags);
+    my_socket new_socket= httpd_create_socket(flags, sock);
 
     if (new_socket == INVALID_SOCKET)
       continue;
