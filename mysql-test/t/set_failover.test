@@ -36,15 +36,15 @@ connection default;
 set failover= 1;
 
 connection user1;
---error 2006,2013
+--error 1317,2006,2013
 select * from mysqltest.t1;
 
 connection rclient;
---error 2006,2013
+--error 1317,2006,2013
 select * from mysqltest.t1;
 
 connection superconn;
---error 2006,2013
+--error 1317,2006,2013
 select * from mysqltest.t1;
 
 connection rslave;
