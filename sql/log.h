@@ -175,7 +175,8 @@ typedef struct st_log_info
 class Log_event;
 class Rows_log_event;
 
-enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN, LOG_AUDIT, LOG_RELAY };
+enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN, LOG_AUDIT, LOG_RELAY,
+                     LOG_SQL };
 enum enum_log_state { LOG_OPENED, LOG_CLOSED, LOG_TO_BE_OPENED };
 
 /*
@@ -265,6 +266,13 @@ public:
 private:
   time_t last_time;
   bool record_same_date;
+};
+
+class MYSQL_SQL_LOG: public MYSQL_LOG
+{
+public:
+  /* Use this to start writing a new log file. */
+  int new_file();
 };
 
 class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG

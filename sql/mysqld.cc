@@ -465,6 +465,7 @@ my_bool opt_audit_log;
 my_bool opt_audit_log_connections;
 my_bool opt_audit_log_remote_connections;
 my_bool opt_audit_log_super;
+my_bool opt_sql_log;
 ulong log_output_options;
 my_bool opt_log_queries_not_using_indexes= 0;
 bool opt_error_log= IF_WIN(1,0);
@@ -764,6 +765,7 @@ char *master_ssl_key, *master_ssl_cert;
 char *master_ssl_ca, *master_ssl_capath, *master_ssl_cipher;
 char *opt_logname, *opt_slow_logname, *opt_audit_logname;
 char *opt_deprecated_engines;
+char *opt_sql_logname;
 
 /* Static variables */
 
@@ -1442,6 +1444,7 @@ void clean_up(bool print_message)
 
   injector::free_instance();
   mysql_bin_log.cleanup();
+  mysql_sql_log.cleanup();
 
 #ifdef HAVE_REPLICATION
   if (use_slave_mask)
@@ -1497,6 +1500,7 @@ void clean_up(bool print_message)
   my_free(slave_load_tmpdir,MYF(MY_ALLOW_ZERO_PTR));
 #endif
   x_free(opt_bin_logname);
+  x_free(opt_sql_logname);
   x_free(opt_relay_logname);
   x_free(opt_secure_file_priv);
   bitmap_free(&temp_pool);
@@ -3420,6 +3424,7 @@ static int init_common_variables(const char *conf_file_name, int argc,
     inited before MY_INIT(). So we do it here.
   */
   mysql_bin_log.init_pthread_objects();
+  mysql_sql_log.init_pthread_objects();
 
   /* TODO: remove this when my_time_t is 64 bit compatible */
   if (!IS_TIME_T_VALID_FOR_TIMESTAMP(server_start_time))
@@ -4379,6 +4384,36 @@ a file name for --log-bin-index option", opt_binlog_index_name);
   if (opt_bin_log && mysql_bin_log.open(opt_bin_logname, LOG_BIN, 0,
                                         WRITE_CACHE, 0, max_binlog_size, 0, TRUE))
     unireg_abort(1);
+
+  if (opt_sql_log)
+  {
+    /*
+      Reports an error and aborts, if the --log-sql's path
+      is a directory.
+    */
+    if (opt_sql_logname &&
+        opt_sql_logname[strlen(opt_sql_logname) - 1] == FN_LIBCHAR)
+    {
+      sql_print_error("Path '%s' is a directory name, please specify "
+                      "a file name for --log-sql option.", opt_sql_logname);
+      unireg_abort(1);
+    }
+
+    char buf[FN_REFLEN];
+    const char *ln;
+    ln= mysql_sql_log.generate_name(opt_sql_logname, "-sql", 1, buf);
+    if (ln == buf)
+    {
+      my_free(opt_sql_logname, MYF(MY_ALLOW_ZERO_PTR));
+      opt_sql_logname= my_strdup(buf, MYF(0));
+    }
+
+    if (mysql_sql_log.open(opt_sql_logname, LOG_SQL, NULL, WRITE_CACHE))
+    {
+      sql_print_error("Failed to initialize SQL log.");
+      unireg_abort(1);
+    }
+  }
 
 #ifdef HAVE_REPLICATION
   if (opt_bin_log && expire_logs_days)
@@ -6300,7 +6335,8 @@ enum options_mysqld
   OPT_HTTPD,
   OPT_HTTPD_TRUST_CLIENTS,
 #endif
-  OPT_MYSQL_PROXY_USER
+  OPT_MYSQL_PROXY_USER,
+  OPT_SQL_LOG
 };
 
 
@@ -7969,6 +8005,9 @@ thread is in the relay logs.",
    32,  /* By default, we trace the network waiting time. */
    0, ~0L, 0, 1, 0},
 #endif  /* HAVE_REPLICATION */
+  {"sql-log", OPT_SQL_LOG, "Enable row-change logging.",
+   &opt_sql_logname, &opt_sql_logname, 0, GET_STR_ALLOC,
+   OPT_ARG, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -8613,6 +8652,8 @@ static int mysql_init_variables(void)
   binlog_cache_use=  binlog_cache_disk_use= 0;
   max_used_connections= slow_launch_threads = 0;
   mysqld_user= mysqld_chroot= opt_init_file= opt_bin_logname = 0;
+  opt_sql_log= 0;
+  opt_sql_logname= 0;
   prepared_stmt_count= 0;
   errmesg= 0;
   limit_tmp_disk_space= 0;
@@ -8965,6 +9006,9 @@ mysqld_get_one_option(int optid,
     break;
   case (int) OPT_DISABLE_BINLOG_UNSAFE_WARNING:
     opt_disable_binlog_unsafe_warning= 1;
+    break;
+  case (int) OPT_SQL_LOG:
+    opt_sql_log= test(argument != disabled_my_option);
     break;
   case (int) OPT_ERROR_LOG_FILE:
     opt_error_log= 1;
