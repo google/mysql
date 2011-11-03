@@ -90,6 +90,7 @@ extern my_bool opt_backup_progress_log;
 extern ulonglong log_output_options;
 extern ulong log_backup_output_options;
 extern my_bool opt_log_queries_not_using_indexes;
+extern my_bool opt_sql_log;
 extern bool opt_disable_networking, opt_skip_show_db;
 extern bool opt_skip_name_resolve;
 extern bool opt_ignore_builtin_innodb;
@@ -171,6 +172,7 @@ extern void init_audit_log_filter(const char *comma_list);
 
 extern char *opt_backup_history_logname, *opt_backup_progress_logname,
             *opt_backup_settings_name;
+extern char *opt_sql_logname;
 extern my_bool opt_allow_delayed_write;
 extern my_bool opt_allow_xa;
 extern my_bool opt_permit_safety_suppression;
@@ -663,6 +665,7 @@ enum options_mysqld
   OPT_WANT_CORE,
   OPT_MYSQL_COMPATIBILITY,
   OPT_MYSQL_TO_BE_IMPLEMENTED,
+  OPT_SQL_LOG,
   OPT_which_is_always_the_last
 };
 #endif

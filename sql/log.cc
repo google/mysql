@@ -67,6 +67,8 @@ LOGGER logger;
 
 MYSQL_BIN_LOG mysql_bin_log(&sync_binlog_period);
 
+MYSQL_SQL_LOG mysql_sql_log;
+
 /*
   Set true if logging is to be enabled for all tables, whereby all
   checks against individual tables are disabled.
@@ -2936,7 +2938,7 @@ void MYSQL_LOG::cleanup()
 int MYSQL_LOG::generate_new_name(char *new_name, const char *log_name)
 {
   fn_format(new_name, log_name, mysql_data_home, "", 4);
-  if (log_type == LOG_BIN || log_type == LOG_AUDIT)
+  if (log_type == LOG_BIN || log_type == LOG_AUDIT || log_type == LOG_SQL)
   {
     if (!fn_ext(log_name)[0])
     {
@@ -3284,6 +3286,34 @@ bool MYSQL_QUERY_LOG::write(THD *thd, time_t current_time,
   DBUG_RETURN(error);
 }
 
+int MYSQL_SQL_LOG::new_file()
+{
+  char *save_name;
+  int result= 0;
+
+  if (is_open())
+  {
+    mysql_mutex_lock(&LOCK_log);
+
+    save_name= name;
+    name= 0;                                  /* Don't free name. */
+
+    close(LOG_CLOSE_TO_BE_OPENED);
+
+    /*
+      Note that at this point, log_state != LOG_CLOSED
+      (important for is_open()).
+    */
+
+    if (open(save_name, log_type, NULL, io_cache_type))
+      result= 1;
+    my_free(save_name);
+
+    mysql_mutex_unlock(&LOCK_log);
+  }
+
+  return result;
+}
 
 /**
   @todo

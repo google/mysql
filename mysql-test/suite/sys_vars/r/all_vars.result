@@ -21,6 +21,8 @@ repl_port
 reserved_super_connections
 rpl_allow_implicit_commit
 rpl_crash_on_binlog_io_error
+sql_log
+sql_log_file
 super_to_set_timestamp
 update_connection_privs
 drop table t1;

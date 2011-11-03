@@ -118,6 +118,7 @@ bool reload_acl_and_cache(THD *thd, unsigned long long options,
     options|= REFRESH_AUDIT_LOG;
     options|= REFRESH_ENGINE_LOG;
     options|= REFRESH_ERROR_LOG;
+    options|= REFRESH_SQL_LOG;
   }
 
   if (options & REFRESH_ERROR_LOG)
@@ -142,6 +143,10 @@ bool reload_acl_and_cache(THD *thd, unsigned long long options,
 
   if (options & REFRESH_ENGINE_LOG)
     if (ha_flush_logs(NULL))
+      result= 1;
+
+  if (options & REFRESH_SQL_LOG)
+    if (mysql_sql_log.new_file())
       result= 1;
 
   if (options & REFRESH_BINARY_LOG)

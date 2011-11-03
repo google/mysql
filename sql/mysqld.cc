@@ -385,6 +385,7 @@ my_bool opt_audit_log_connections;
 my_bool opt_audit_log_remote_connections;
 char *opt_audit_log_filter;
 char *opt_audit_log_tables;
+my_bool opt_sql_log;
 ulonglong log_output_options;
 my_bool opt_userstat_running;
 my_bool opt_log_queries_not_using_indexes= 0;
@@ -782,6 +783,7 @@ char *relay_log_info_file, *report_user, *report_password, *report_host;
 char *opt_relay_logname = 0, *opt_relaylog_index_name=0;
 char *opt_logname, *opt_slow_logname, *opt_bin_logname, *opt_audit_logname;
 char *opt_deprecated_engines;
+char *opt_sql_logname;
 my_bool opt_require_super_for_mysql_schema_ddl = 0;
 
 /* Static variables */
@@ -1162,7 +1164,7 @@ PSI_file_key key_file_binlog, key_file_binlog_index, key_file_casetest,
   key_file_loadfile, key_file_log_event_data, key_file_log_event_info,
   key_file_master_info, key_file_misc, key_file_partition,
   key_file_pid, key_file_relay_log_info, key_file_send_file, key_file_tclog,
-  key_file_trg, key_file_trn, key_file_init;
+  key_file_trg, key_file_trn, key_file_init, key_file_sqllog;
 PSI_file_key key_file_query_log, key_file_slow_log;
 PSI_file_key key_file_relaylog, key_file_relaylog_index;
 PSI_file_key key_file_binlog_state;
@@ -2101,6 +2103,7 @@ void clean_up(bool print_message)
 
   injector::free_instance();
   mysql_bin_log.cleanup();
+  mysql_sql_log.cleanup();
 
   my_tz_free();
   my_dboptions_cache_free();
@@ -4130,6 +4133,7 @@ static int init_common_variables_part1()
                              key_file_binlog,
                              key_file_binlog_index,
                              key_BINLOG_COND_queue_busy);
+  mysql_sql_log.set_psi_key(key_file_sqllog);
 #endif
 
   /*
@@ -4139,6 +4143,7 @@ static int init_common_variables_part1()
     inited before MY_INIT(). So we do it here.
   */
   mysql_bin_log.init_pthread_objects();
+  mysql_sql_log.init_pthread_objects();
 
   /* TODO: remove this when my_time_t is 64 bit compatible */
   if (!IS_TIME_T_VALID_FOR_TIMESTAMP(server_start_time))
@@ -5139,6 +5144,36 @@ a file name for --log-bin-index option", opt_binlog_index_name);
   if (opt_bin_log && mysql_bin_log.open(opt_bin_logname, LOG_BIN, 0,
                                         WRITE_CACHE, max_binlog_size, 0, TRUE))
     unireg_abort(1);
+
+  if (opt_sql_log)
+  {
+    /*
+      Reports an error and aborts, if the --log-sql's path
+      is a directory.
+    */
+    if (opt_sql_logname &&
+        opt_sql_logname[strlen(opt_sql_logname) - 1] == FN_LIBCHAR)
+    {
+      sql_print_error("Path '%s' is a directory name, please specify "
+                      "a file name for --log-sql option.", opt_sql_logname);
+      unireg_abort(1);
+    }
+
+    char buf[FN_REFLEN];
+    const char *ln;
+    ln= mysql_sql_log.generate_name(opt_sql_logname, "-sql", 1, buf);
+    if (ln == buf)
+    {
+      my_free(opt_sql_logname);
+      opt_sql_logname= my_strdup(buf, MYF(0));
+    }
+
+    if (mysql_sql_log.open(opt_sql_logname, LOG_SQL, NULL, WRITE_CACHE))
+    {
+      sql_print_error("Failed to initialize SQL log.");
+      unireg_abort(1);
+    }
+  }
 
 #ifdef HAVE_REPLICATION
   if (opt_bin_log && expire_logs_days)
@@ -7602,6 +7637,9 @@ struct my_option my_long_options[]=
   {"table_cache", 0, "Deprecated; use --table-open-cache instead.",
    &tc_size, &tc_size, 0, GET_ULONG,
    REQUIRED_ARG, TABLE_OPEN_CACHE_DEFAULT, 1, 512*1024L, 0, 1, 0},
+  {"sql-log", OPT_SQL_LOG, "Enable row-change logging.",
+   &opt_sql_logname, &opt_sql_logname, 0, GET_STR_ALLOC,
+   OPT_ARG, 0, 0, 0, 0, 0, 0},
 
   /* The following options exist in 5.6 but not in 10.0 */
   MYSQL_TO_BE_IMPLEMENTED_OPTION("default-tmp-storage-engine"),
@@ -8662,6 +8700,8 @@ static int mysql_init_variables(void)
   binlog_cache_use=  binlog_cache_disk_use= 0;
   max_used_connections= slow_launch_threads = 0;
   mysqld_user= mysqld_chroot= opt_init_file= opt_bin_logname = 0;
+  opt_sql_log= 0;
+  opt_sql_logname= 0;
   prepared_stmt_count= 0;
   limit_tmp_disk_space= 0;
   mysqld_unix_port= opt_mysql_tmpdir= my_bind_addr_str= NullS;
@@ -9131,6 +9171,9 @@ mysqld_get_one_option(int optid,
     */
     if (argument == NULL) /* no argument */
       log_error_file_ptr= const_cast<char*>("");
+    break;
+  case OPT_SQL_LOG:
+    opt_sql_log= MY_TEST(argument != disabled_my_option);
     break;
   case OPT_IGNORE_DB_DIRECTORY:
     if (*argument == 0)
@@ -9898,6 +9941,7 @@ static PSI_file_info all_server_files[]=
 #ifdef HAVE_MMAP
   { &key_file_map, "map", 0},
 #endif /* HAVE_MMAP */
+  { &key_file_sqllog, "sqllog", 0},
   { &key_file_binlog, "binlog", 0},
   { &key_file_binlog_index, "binlog_index", 0},
   { &key_file_relaylog, "relaylog", 0},

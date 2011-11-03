@@ -290,7 +290,7 @@ typedef struct st_log_info
 class Log_event;
 class Rows_log_event;
 
-enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN, LOG_AUDIT };
+enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN, LOG_AUDIT, LOG_SQL };
 enum enum_log_state { LOG_OPENED, LOG_CLOSED, LOG_TO_BE_OPENED };
 
 /*
@@ -389,6 +389,38 @@ public:
 private:
   time_t last_time;
   bool record_same_date;
+};
+
+class MYSQL_SQL_LOG: public MYSQL_LOG
+{
+ private:
+#ifdef HAVE_PSI_INTERFACE
+  /** The instrumentation key to use for opening the log file. */
+  PSI_file_key m_key_file_log;
+#endif
+
+public:
+  /* Use this to start writing a new log file. */
+  int new_file();
+
+  bool open(const char *log_name,
+            enum_log_type log_type,
+            const char *new_name,
+            enum cache_type io_cache_type_arg)
+  {
+    return MYSQL_LOG::open(
+#ifdef HAVE_PSI_INTERFACE
+                           m_key_file_log,
+#endif
+                           log_name, log_type, new_name, io_cache_type_arg);
+  }
+
+#ifdef HAVE_PSI_INTERFACE
+  void set_psi_key(PSI_file_key key_file_log)
+  {
+    m_key_file_log= key_file_log;
+  }
+#endif
 };
 
 /*
@@ -1082,6 +1114,7 @@ int create_full_gtid_index(const char *file_name,
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;
+extern MYSQL_SQL_LOG mysql_sql_log;
 
 
 /**

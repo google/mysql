@@ -2672,6 +2672,16 @@ static Sys_var_charptr Sys_socket(
        READ_ONLY GLOBAL_VAR(mysqld_unix_port), CMD_LINE(REQUIRED_ARG),
        IN_FS_CHARSET, DEFAULT(0));
 
+static Sys_var_mybool Sys_sql_log(
+       "sql_log", "Enable row-change logging.",
+       READ_ONLY GLOBAL_VAR(opt_sql_log), NO_CMD_LINE,
+       DEFAULT(FALSE));
+
+static Sys_var_charptr Sys_sql_log_file(
+       "sql_log_file", "Row-change logging file",
+       READ_ONLY GLOBAL_VAR(opt_sql_logname), NO_CMD_LINE,
+       IN_FS_CHARSET, DEFAULT(0));
+
 #ifndef EMBEDDED_LIBRARY
 
 static bool sniper_set_activity(sys_var *self, THD *thd, enum_var_type type)

@@ -194,6 +194,7 @@ enum enum_server_command
 #define REFRESH_FAST            (1ULL << 31) /* Intern flag */
 
 #define REFRESH_AUDIT_LOG       (1ULL << 32) /* Flush the audit log */
+#define REFRESH_SQL_LOG         (1ULL << 33) /* Flush the sql log */
 
 #define CLIENT_LONG_PASSWORD	1	/* new more secure passwords */
 #define CLIENT_FOUND_ROWS	2	/* Found instead of affected rows */
