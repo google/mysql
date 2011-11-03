@@ -629,6 +629,14 @@ static sys_var_const    sys_socket(&vars, "socket",
                                    OPT_GLOBAL, SHOW_CHAR_PTR,
                                    (uchar*) &mysqld_unix_port);
 
+static sys_var_const    sys_sql_log(&vars, "sql_log",
+                                    OPT_GLOBAL, SHOW_MY_BOOL,
+                                    (uchar*) &opt_sql_log);
+
+static sys_var_const    sys_sql_logname(&vars, "sql_logname",
+                                        OPT_GLOBAL, SHOW_CHAR_PTR,
+                                        (uchar*) &opt_sql_logname);
+
 static sys_var_bool_ptr sys_super_to_set_timestamp(&vars,
                                                    "super_to_set_timestamp",
                                                    &opt_super_to_set_timestamp);

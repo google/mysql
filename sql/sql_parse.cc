@@ -7273,6 +7273,10 @@ bool reload_acl_and_cache(THD *thd, ulong options, TABLE_LIST *tables,
       *write_to_binlog= -1;
 #endif
 
+    /* flush the sql log. */
+    if (mysql_sql_log.new_file())
+      result= 1;
+
     /* flush slow and general logs */
     logger.flush_logs(thd);
 

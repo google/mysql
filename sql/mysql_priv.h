@@ -2011,6 +2011,7 @@ extern bool opt_large_files, server_id_supplied;
 extern bool opt_update_log, opt_bin_log, opt_error_log;
 extern my_bool opt_log, opt_slow_log, opt_audit_log,
   opt_audit_log_connections, opt_audit_log_super;
+extern my_bool opt_sql_log;
 extern ulong log_output_options;
 extern my_bool opt_log_queries_not_using_indexes;
 extern bool opt_disable_networking, opt_skip_show_db;
@@ -2044,6 +2045,7 @@ extern uint opt_large_page_size;
 #endif /* MYSQL_SERVER || INNODB_COMPATIBILITY_HOOKS */
 #ifdef MYSQL_SERVER
 extern char *opt_logname, *opt_slow_logname, *opt_audit_logname;
+extern char *opt_sql_logname;
 extern const char *log_output_str;
 
 extern my_bool opt_allow_delayed_write;
@@ -2058,6 +2060,7 @@ extern my_bool rpl_allow_implicit_commit;
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;
+extern MYSQL_SQL_LOG mysql_sql_log;
 extern TABLE_LIST general_log, slow_log;
 extern FILE *bootstrap_file;
 extern int bootstrap_error;
