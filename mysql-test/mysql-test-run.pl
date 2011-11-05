@@ -2199,6 +2199,14 @@ sub environment_setup {
 				 "$path_client_bindir/perror");
   $ENV{'MY_PERROR'}= native_path($exe_perror);
 
+  # ----------------------------------------------------
+  # httpd_test
+  # ----------------------------------------------------
+  my $httpd_test= mtr_exe_exists(vs_config_dirs('tests', 'httpd_test.pl'),
+                                 "$basedir/tests/httpd_test.pl");
+  $ENV{'HTTPD_TEST'}= native_path($httpd_test);
+
+
   # Create an environment variable to make it possible
   # to detect that valgrind is being used from test cases
   $ENV{'VALGRIND_TEST'}= $opt_valgrind;
