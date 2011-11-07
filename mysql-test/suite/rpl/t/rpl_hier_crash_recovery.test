@@ -29,6 +29,7 @@ set session debug="d,crash_commit_after_prepare";
 --error 2013
 insert into t1 values (1);
 
+--source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -49,6 +50,7 @@ set session debug="d,crash_commit_after_log";
 insert into t1 values (2);
 --inc $expected_id
 
+--source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -69,6 +71,7 @@ set session debug="d,crash_commit_before_unlog";
 insert into t1 values (3);
 --inc $expected_id
 
+--source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -97,6 +100,7 @@ insert into t1 values (7);
 --error 2013
 commit;
 
+--source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -146,6 +150,7 @@ insert into t1 values (8);
 --inc $expected_id
 
 connection master;
+--source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
