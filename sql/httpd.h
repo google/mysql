@@ -108,7 +108,7 @@ private:
 public:
 
   HTTPRequest(THD *thd)
-    : thd_(thd), resp_body_(NULL), resp_header_(NULL)
+    : thd_(thd), resp_body_(), resp_header_()
   {
     net= &thd_->net;
 

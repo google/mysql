@@ -497,9 +497,17 @@ pthread_handler_t httpd_handle_connection(void *arg)
   sigemptyset(&set);                          /* Get mask in use */
   pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 
-  my_socket new_socket= (long) arg;
-  THD *thd= httpd_create_thd(new_socket);
+  /*
+    Without the additional casting to long for new_socket the
+    compilations terminates with:
 
+        error: cast from 'void*' to 'my_socket {aka int}'
+        loses precision [-fpermissive]
+
+    This casting it safe because we only compile for 64-bit.
+  */
+  my_socket new_socket= (my_socket) (long) arg;
+  THD *thd= httpd_create_thd(new_socket);
 
   if (!thd || httpd_setup_thd(thd))
   {
@@ -636,8 +644,17 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
       continue;
 
     pthread_t thr;
+    /*
+      Without the additional casting to long for new_socket the
+      compilations terminates with:
+
+          error: cast to pointer from integer of different
+          size [-Werror=int-to-pointer-cast]
+
+      This casting it safe because we only compile for 64-bit.
+    */
     if (pthread_create(&thr, &connection_attrib, httpd_handle_connection,
-                       (void *)new_socket))
+                       (void *) (long) new_socket))
       sql_print_warning("Cannot create HTTP connection thread");
   }
   DBUG_RETURN(0);
