@@ -1200,5 +1200,22 @@ public:
   String *val_str(String *);
 };
 
+
+class Item_func_ieee754_to_string :public Item_str_func
+{
+  String tmp_str;
+public:
+  Item_func_ieee754_to_string(Item *a): Item_str_func(a) {}
+  String *val_str(String *);
+  void fix_length_and_dec()
+  {
+    /* 7 chars overhead + 17 digits of precision. */
+    max_length= 24;
+    collation.set(&my_charset_latin1);
+  }
+  const char *func_name() const { return "ieee754_to_string"; }
+  static int convert_real_to_string(double value, String *str);
+};
+
 #endif /* ITEM_STRFUNC_INCLUDED */
 
