@@ -2758,6 +2758,9 @@ innobase_rollback(
 		|| !thd_test_options(thd, OPTION_NOT_AUTOCOMMIT | OPTION_BEGIN)) {
 
 		error = trx_rollback_for_mysql(trx);
+		if (trx->active_trans == 2) {
+			pthread_mutex_unlock(&prepare_commit_mutex);
+		}
 		trx->active_trans = 0;
 	} else {
 		error = trx_rollback_last_sql_stat_for_mysql(trx);

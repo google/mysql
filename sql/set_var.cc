@@ -633,9 +633,37 @@ static sys_var_const    sys_sql_log(&vars, "sql_log",
                                     OPT_GLOBAL, SHOW_MY_BOOL,
                                     (uchar*) &opt_sql_log);
 
-static sys_var_const    sys_sql_logname(&vars, "sql_logname",
-                                        OPT_GLOBAL, SHOW_CHAR_PTR,
-                                        (uchar*) &opt_sql_logname);
+static sys_var_const    sys_sql_log_as_master(&vars, "sql_log_as_master",
+                                              OPT_GLOBAL, SHOW_MY_BOOL,
+                                              (uchar*) &opt_sql_log_as_master);
+
+static sys_var_const    sys_sql_log_cache_size(
+  &vars, "sql_log_cache_size", OPT_GLOBAL, SHOW_LONG,
+  (uchar*) &sql_log_cache_size);
+
+static sys_var_const    sys_sql_log_cache_size_max(
+  &vars, "sql_log_cache_size_max", OPT_GLOBAL, SHOW_LONG,
+  (uchar*) &sql_log_cache_size_max);
+
+static sys_var_const    sys_sql_database(&vars, "sql_log_database",
+                                         OPT_GLOBAL, SHOW_CHAR_PTR,
+                                         (uchar*) &opt_sql_log_database);
+
+static sys_var_const    sys_sql_log_ddl(&vars, "sql_log_ddl",
+                                        OPT_GLOBAL, SHOW_MY_BOOL,
+                                        (uchar*) &opt_sql_log_ddl);
+
+static sys_var_const    sys_sql_log_ddl_base64_encode_stmts(
+  &vars, "sql_log_ddl_base64_encode_stmts", OPT_GLOBAL, SHOW_MY_BOOL,
+  (uchar*) &opt_sql_log_ddl_base64_encode_stmts);
+
+static sys_var_const    sys_sql_log_err_aborts_txn(
+  &vars, "sql_log_err_aborts_txn", OPT_GLOBAL, SHOW_MY_BOOL,
+  (uchar*) &opt_sql_log_err_aborts_txn);
+
+static sys_var_const    sys_sql_log_file(&vars, "sql_log_file",
+                                         OPT_GLOBAL, SHOW_CHAR_PTR,
+                                         (uchar*) &opt_sql_logname);
 
 static sys_var_bool_ptr sys_super_to_set_timestamp(&vars,
                                                    "super_to_set_timestamp",

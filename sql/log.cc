@@ -100,6 +100,8 @@ static int binlog_commit(handlerton *hton, THD *thd, bool all);
 static int binlog_rollback(handlerton *hton, THD *thd, bool all);
 static int binlog_prepare(handlerton *hton, THD *thd, bool all);
 
+enum_sqllog_stmt_type sql_command2sqllog_type(enum_sql_command sql_command);
+
 /* Queries with the correct log position in the event */
 struct QueryLogEvent
 {
@@ -2677,6 +2679,599 @@ int MYSQL_SQL_LOG::new_file()
   }
 
   return result;
+}
+
+/**
+  Checks if a field in a record is SQL NULL.
+
+  This function is copied from ha_federated.cc. This method uses the
+  record format information in table to track the null bit in record.
+
+  @param  table   MySQL table object
+  @param  field   MySQL field object
+  @param  record  contains record
+
+  @return Operation status
+    @retval 1     if NULL
+    @retval 0     otherwise
+*/
+
+static inline uint field_in_record_is_null(TABLE *table,
+                                           Field *field,
+                                           const uchar *record)
+{
+  int null_offset;
+  DBUG_ENTER("field_in_record_is_null");
+
+  if (!field->null_ptr)
+    DBUG_RETURN(0);
+
+  null_offset= (uint) (field->null_ptr - table->record[0]);
+
+  if (record[null_offset] & field->null_bit)
+    DBUG_RETURN(1);
+
+  DBUG_RETURN(0);
+}
+
+enum_sqllog_stmt_type sql_command2sqllog_type(enum_sql_command sql_command)
+{
+  switch (sql_command)
+  {
+  case SQLCOM_TRUNCATE:       return SQLLOG_STMT_TRUNCATE_TABLE;
+  case SQLCOM_CREATE_TABLE:   return SQLLOG_STMT_CREATE_TABLE;
+  case SQLCOM_ALTER_TABLE:    return SQLLOG_STMT_ALTER_TABLE;
+  case SQLCOM_RENAME_TABLE:   return SQLLOG_STMT_RENAME_TABLE;
+  case SQLCOM_DROP_TABLE:     return SQLLOG_STMT_DROP_TABLE;
+  case SQLCOM_CREATE_INDEX:   return SQLLOG_STMT_CREATE_INDEX;
+  case SQLCOM_DROP_INDEX:     return SQLLOG_STMT_DROP_INDEX;
+  case SQLCOM_CREATE_DB:      return SQLLOG_STMT_CREATE_DB;
+  case SQLCOM_ALTER_DB:       return SQLLOG_STMT_ALTER_DB;
+  case SQLCOM_DROP_DB:        return SQLLOG_STMT_DROP_DB;
+  default:                    return SQLLOG_STMT_IGNORE;
+  }
+}
+
+/**
+  Returns if sql log should be logged.
+
+  @return Operation status
+    @retval true   sql log should be logged
+    @retval false  sql log should not be logged
+*/
+
+bool MYSQL_SQL_LOG::should_log(THD *thd)
+{
+  if (opt_sql_log_as_master)
+    /* We are logging as a master, we log only non-replication workload. */
+    return opt_sql_log && !thd->slave_thread;
+  else
+    /* We are logging as a slave, we log only replication workload on slave. */
+    return opt_sql_log && thd->slave_thread;
+}
+
+/**
+  Log a string to the sql log file
+
+  @param  thd        THD of the query
+  @param  text       string to write to the sql_log.  It is not required that
+                     it is the entire line for the sql_log.
+  @param  length     number of bytes of 'text' to write.
+  @param  line_done  if true, the line for the sql_log is done, and '\n'
+                     will be appended.  Otherwise, no '\n' will be written.
+
+  @return Operation status
+    @retval false    ok
+    @retval true     error occurred
+*/
+
+bool MYSQL_SQL_LOG::sql_log_write(THD *thd, const uchar *text, int length,
+                                  bool line_done)
+{
+  bool error= false;
+  int tmp_errno= 0;
+  int err= 0;
+
+  if (!is_open())
+    return 0;
+
+  err= my_b_write(&log_file, text, length);
+  /* Only write the '\n' at the end of the line. */
+  if (err == 0 && line_done)
+    err= my_b_write(&log_file, "\n", 1);
+
+  if (err != 0 || (line_done && flush_io_cache(&log_file)))
+    tmp_errno= errno;
+  if (tmp_errno)
+  {
+    /* Send a logging failure message to the general error log.  */
+    sql_print_error("Sql log TXN failure: %s", text);
+    error= true;
+    /*
+      write_error is set zero upon file open and never reset to zero.  If we
+      have errored then this guard ensures we only write the message once.
+    */
+    if (!write_error)
+    {
+      write_error= 1;
+      sql_print_error(ER(ER_ERROR_ON_WRITE), name, tmp_errno);
+    }
+  }
+
+  /*
+    Rotate the log if it exceeds max_binlog_size.  Only check if the line is
+    done.
+  */
+  if (line_done && my_b_tell(&log_file) >= max_binlog_size)
+    new_file();
+
+  return error;
+}
+
+bool MYSQL_SQL_LOG::log_ddl(THD* thd)
+{
+  bool error= 0;
+  if (opt_sql_log_ddl && should_log(thd))
+  {
+    if (thd->lex)
+    {
+      LEX *lex= thd->lex;
+      enum_sqllog_stmt_type sqllog_type=
+        sql_command2sqllog_type(lex->sql_command);
+
+      /*
+        NOTE: The CREATE TABLE statement is a special case because all the
+        information about the newly created table is lost when the bin log
+        was written. We handle this special case in sql_parse.cc.
+      */
+      if (sqllog_type != SQLLOG_STMT_IGNORE &&
+          sqllog_type != SQLLOG_STMT_CREATE_TABLE)
+      {
+        DBUG_EXECUTE_IF("sleep_in_sqllog_log_ddl", sleep(3););
+
+        /* The first SELECT_LEX contains the target table of DDL commands. */
+        SELECT_LEX *select_lex= &lex->select_lex;
+        /* First table of first SELECT_LEX */
+        TABLE_LIST *first_table= (TABLE_LIST *) select_lex->table_list.first;
+        /*
+          !IMPORTANT: The statement types the current sql log is interested
+          in have the first table as its main table. Please verify this when
+          adding new sqllog DDL statement types.
+        */
+        if (first_table != 0)
+        {
+          if (!opt_sql_log_database ||
+              strstr(first_table->db, opt_sql_log_database))
+            error= thd->sqllog_log(sqllog_type, first_table->db,
+                                   first_table->table_name, thd->query(),
+                                   thd->query_length());
+          else
+            /* Ignore the non-target database, return OK. */
+            return 0;
+        }
+        else
+        {
+          /*
+            No table is in the statement. The statement is create db, alter
+            db or drop db statement. We will log all of these statements with
+            database as "N/A", as the modified database probably is different
+            from the default database stored in "thd->db".
+          */
+          if (thd->db)
+            error= thd->sqllog_log(sqllog_type, "N/A", "N/A", thd->query(),
+                                   thd->query_length());
+        }
+        /*
+          Since mysql does not support DDL transaction right now, we can
+          safely log the DDL statement no matter it is in a transaction or
+          not.
+        */
+        if (!error)
+          error= thd->sqllog_commit();
+      }
+    }
+  }
+  return (unlikely(error)) ? HA_ERR_SQL_LOG_TXN : 0;
+}
+
+static bool sqllog_convert_field(Field *field, String &scratch,
+                                 String &result, const uchar *offset= NULL)
+{
+  bool error= false;
+  /*
+    This is scratch space for holding field data that will be appended
+    to the result string.  Ensure it is cleared here.  We prefer that the
+    calling function define the scratch-space, to reduce frequent
+    memory allocations as this function can be called often.
+  */
+  scratch.length(0);
+
+  /* Save the old read_set to restore it later. */
+  my_bitmap_map *old_map= tmp_use_all_columns(field->table,
+                                              field->table->read_set);
+
+  /*
+    Where there is an supplied offset (for UPDATE statements), we need
+    to adjust the internal field 'ptr' to point to the old data, in order
+    to find out the old column values that we are replacing.
+  */
+  uchar *old_ptr;
+  if (offset)
+  {
+    old_ptr= field->ptr;
+    field->ptr= const_cast<uchar *>(offset);
+  }
+
+  if (field->type() == MYSQL_TYPE_BIT)
+  {
+    /* Handle the BIT type. */
+
+    /*
+      Converts a bit field, internally represented as a longlong, into
+      a string of binary digits in the format: b'<digits>'.
+    */
+    ulonglong bits= (ulonglong) field->val_int();
+    if (bits)
+    {
+      char temp[(sizeof(longlong) * 8) + 4];
+      int i= sizeof(temp) - 1;
+
+      temp[i--]= '\0';
+      temp[i--]= '\'';
+      while (bits)
+      {
+        temp[i--]= (bits & 1) ? '1' : '0';
+        bits>>= 1;
+      }
+      temp[i--]= '\'';
+      temp[i]= 'b';
+
+      error|= result.append(temp + i);
+    }
+    else
+      error|= result.append("b'0'");
+  }
+  else if (field->result_type() == REAL_RESULT)
+  {
+    /* Handle floats and doubles. */
+    double value= field->val_real();
+    int num_chars=
+      Item_func_ieee754_to_string::convert_real_to_string(value, &scratch);
+    if (num_chars < 1 || num_chars >= 30)
+    {
+      sql_print_error("sqllog_convert_field: convert_real_to_string failed.");
+      error= true;
+    }
+    else
+      scratch.print(&result);
+  }
+  else
+  {
+    /* Handle all other data types. */
+    field->val_str(&scratch);
+
+    /*
+      all string data columns including blobs are in base64 form.
+      e.g., name = b64'Z29vZ2xlIGN1cA=='
+    */
+    if (field->str_needs_quotes())
+    {
+      error|= result.append("b64'");
+      error|= scratch.print64(&result);
+      error|= result.append('\'');
+    }
+    else
+      scratch.print(&result);
+  }
+
+  /* Change the field back to pointing at the new data. */
+  if (offset)
+    field->ptr= old_ptr;
+
+  /* Restore the previous state of the read_set. */
+  tmp_restore_column_map(field->table->read_set, old_map);
+
+  return error;
+}
+
+/**
+  Returns the shortened data type string.
+
+  The data types are listed in the enum enum_field_types defined in
+  include/mysql_com.h. The "MYSQL_TYPE_" prefix will be stripped from the type
+  string. For example, the fuction will ouptput "DECIMAL" for mysql internal
+  type MYSQL_TYPE_DECIMAL.
+
+  This function looks very much like the function field_type_name() defined in
+  sql/sql_class.cc. That function is a local function and not currently used.
+  We can make it accessible by changing it to a global function or a virtual
+  member function for the Field class. However the purpose of the function is
+  slightly different form this function (we need shortened type name here) and
+  the code change involved will make the future merge difficult. So the
+  decision here is to add a new local function as this one.
+*/
+
+static char const *short_field_type_name(enum_field_types type)
+{
+  switch (type) {
+  case MYSQL_TYPE_DECIMAL:
+    return "DECIMAL";
+  case MYSQL_TYPE_TINY:
+    return "TINY";
+  case MYSQL_TYPE_SHORT:
+    return "SHORT";
+  case MYSQL_TYPE_LONG:
+    return "LONG";
+  case MYSQL_TYPE_FLOAT:
+    return "FLOAT";
+  case MYSQL_TYPE_DOUBLE:
+    return "DOUBLE";
+  case MYSQL_TYPE_NULL:
+    return "NULL";
+  case MYSQL_TYPE_TIMESTAMP:
+    return "TIMESTAMP";
+  case MYSQL_TYPE_LONGLONG:
+    return "LONGLONG";
+  case MYSQL_TYPE_INT24:
+    return "INT24";
+  case MYSQL_TYPE_DATE:
+  case MYSQL_TYPE_NEWDATE:
+    return "DATE";
+  case MYSQL_TYPE_TIME:
+    return "TIME";
+  case MYSQL_TYPE_DATETIME:
+    return "DATETIME";
+  case MYSQL_TYPE_YEAR:
+    return "YEAR";
+  case MYSQL_TYPE_BIT:
+    return "BIT";
+  case MYSQL_TYPE_NEWDECIMAL:
+    return "NEWDECIMAL";
+  case MYSQL_TYPE_ENUM:
+    return "ENUM";
+  case MYSQL_TYPE_SET:
+    return "SET";
+  case MYSQL_TYPE_TINY_BLOB:
+  case MYSQL_TYPE_MEDIUM_BLOB:
+  case MYSQL_TYPE_LONG_BLOB:
+  case MYSQL_TYPE_BLOB:
+    return "BLOB";
+  case MYSQL_TYPE_VARCHAR:
+  case MYSQL_TYPE_VAR_STRING:
+  case MYSQL_TYPE_STRING:
+    return "STRING";
+  case MYSQL_TYPE_GEOMETRY:
+    return "GEOMETRY";
+  }
+  return "UNKNOWN";
+}
+
+/**
+  Appends the data type string to the result string.
+
+  An empty space will be added to both the beginning and the end of the type
+  string, e.g., the string " DECIMAL " will be added to the result string for a
+  MySQL_TYPE_DECIMAL field.
+*/
+
+static bool sqllog_add_field_type(Field *field, String &result)
+{
+  bool error= false;
+  error|= result.append(" ");
+  error|= result.append(short_field_type_name(field->real_type()));
+  error|= result.append(" ");
+  return error;
+}
+
+/**
+  Create an SQL representation of an INSERT statement.
+
+  @param  thd     current thread
+  @param  table   table for insert
+  @param  buf     insert fields
+  @param  insert  string containing resultant statement
+
+  @return Operation status
+    @retval false    ok
+    @retval true     error occurred
+*/
+
+bool sqllog_write_row(THD *thd, TABLE *table, const uchar *buf, String *insert)
+{
+  DBUG_ENTER("sqllog_write_row");
+  DBUG_ASSERT(table->s->tmp_table == NO_TMP_TABLE);
+
+  bool error= false;
+
+  String scratch(STRING_BUFFER_USUAL_SIZE);
+
+  insert->length(0);
+
+  /*
+    Loop through the field pointer array, add any fields to both the values
+    list and the fields list that match the current query id.
+  */
+  bool commas= false;
+  Field **ptr, *field;
+  for (ptr= table->field; (field= *ptr) && !error; ptr++)
+  {
+    commas= true;
+
+    /* Append the field name. */
+    error|= insert->append(field->field_name);
+    /* Append the field type. */
+    error|= sqllog_add_field_type(field, *insert);
+
+    if (field->is_null())
+      insert->append("NULL");
+    else
+      error|= sqllog_convert_field(field, scratch, *insert);
+
+    error|= insert->append(" AND ");
+  }
+
+  if (commas)
+  {
+    /* Chop off trailing ' AND '. */
+    for (uint i= 0; i < sizeof("AND "); i++)
+      insert->chop();
+  }
+
+  (*insert)[insert->length()]= '\0';
+
+  DBUG_RETURN(error);
+}
+
+/**
+  Create an SQL representation of an UPDATE statement.
+
+  @param  thd       current thread
+  @param  table     table for update
+  @param  old_data  old field data to be replaced
+  @param  new_data  new field data to be inserted
+  @param  update    string containing resultant statement
+
+  @return Operation status
+    @retval false    ok
+    @retval true     error occurred
+*/
+
+bool sqllog_update_row(THD *thd, TABLE *table, const uchar *old_data,
+                       const uchar *new_data, String *update)
+{
+  DBUG_ENTER("sqllog_update_row");
+  DBUG_ASSERT(table->s->tmp_table == NO_TMP_TABLE);
+
+  bool error= false;
+
+  String where(STRING_BUFFER_USUAL_SIZE);
+  String scratch(STRING_BUFFER_USUAL_SIZE);
+
+  update->length(0);
+  where.length(0);
+
+  /*
+    In this loop, we want to match column names to values being inserted
+    (while building INSERT statement).
+
+    Iterate through table->field (new data) and share->old_field (old_data)
+    using the same index to create an SQL UPDATE statement. New data is
+    used to create SET field=value and old data is used to create WHERE
+    field=oldvalue.
+  */
+
+  Field **ptr, *field;
+  for (ptr= table->field; (field= *ptr) && !error; ptr++)
+  {
+    /*
+      Within the bitmap, the write bits will be set for any field (column)
+      that is being updated with new data.
+    */
+    if (bitmap_is_set(table->write_set, field->field_index))
+    {
+      /* Append the field name. */
+      error|= update->append(field->field_name);
+      /* Append the field type. */
+      error|= sqllog_add_field_type(field, *update);
+
+      if (field->is_null())
+        error|= update->append("NULL");
+      else
+        /* otherwise = */
+        error|= sqllog_convert_field(field, scratch, *update);
+      error|= update->append(" AND ");
+    }
+
+    /* Record every field. */
+    error|= where.append(field->field_name);
+    /* Append the field type. */
+    error|= sqllog_add_field_type(field, where);
+
+    if (field_in_record_is_null(table, field, old_data))
+      error|= where.append("NULL");
+    else
+      error|= sqllog_convert_field(field, scratch, where,
+                                   old_data + field->offset(table->record[0]));
+    error|= where.append(" AND ");
+  }
+
+  if (update->length())
+    /* Chop off trailing 'AND ' */
+    for (uint i= 0; i < sizeof("AND "); i++)
+      update->chop();
+
+  if (where.length())
+  {
+    /* Chop off trailing 'AND '. */
+    for (uint i= 0; i < sizeof("AND "); i++)
+      where.chop();
+
+    error|= update->append(" WHERE ");
+    error|= update->append(where);
+  }
+
+  (*update)[update->length()]= '\0';
+
+  DBUG_PRINT("info", ("Update sql: %s", update->c_ptr_quick()));
+  DBUG_RETURN(error);
+}
+
+/**
+  Create an SQL representation of a DELETE statement.
+
+  @param  thd    current thread
+  @param  table  table for insert
+  @param  buf    fields data
+  @param  obj    string containing resultant statement
+
+  @return Operation status
+    @retval false    ok
+    @retval true     error occurred
+*/
+
+bool sqllog_delete_row(THD *thd, TABLE *table, const uchar *buf, String *obj)
+{
+  DBUG_ENTER("sqllog_delete_row");
+  DBUG_ASSERT(table->s->tmp_table == NO_TMP_TABLE);
+
+  bool error= false;
+  String scratch(STRING_BUFFER_USUAL_SIZE);
+
+  obj->length(0);
+  error|= obj->append("WHERE ");
+
+  Field **ptr, *field;
+  bool any_fields= false;
+  for (ptr= table->field; (field= *ptr) && !error; ptr++)
+  {
+    any_fields= true;
+    error|= obj->append(field->field_name);
+    /* Append the field type. */
+    error|= sqllog_add_field_type(field, *obj);
+
+    if (field_in_record_is_null(table, field, buf))
+      error|= obj->append("NULL");
+    else
+      error|= sqllog_convert_field(field, scratch, *obj,
+                                   buf + field->offset(table->record[0]));
+
+    /* If another field exists, add 'AND'. */
+    error|= obj->append(" AND ");
+  }
+
+  /* Chop off trailing ' AND '. */
+  if (any_fields)
+    for (uint i= 0; i < sizeof("AND "); i++)
+      obj->chop();
+
+  (*obj)[obj->length()]= '\0';
+
+  /* Remove the WHERE string, if there are no user specified fields. */
+  if (!any_fields)
+    obj->length(0);
+
+  DBUG_PRINT("info", ("Delete sql: %s", obj->c_ptr_quick()));
+  DBUG_RETURN(error);
 }
 
 /**
@@ -5375,7 +5970,9 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
         goto err;
       
     }
-    error=0;
+
+    /* Add sqllog entry for DDL statement */
+    error= mysql_sql_log.log_ddl(thd);
 
 err:
     if (error)
