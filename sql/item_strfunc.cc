@@ -37,6 +37,7 @@
 #include "my_aes.h"
 #include <zlib.h>
 C_MODE_START
+#include <math.h>
 #include "../mysys/my_static.h"			// For soundex_map
 C_MODE_END
 
@@ -3642,4 +3643,91 @@ String *Item_func_uuid::val_str(String *str)
   tohex(s+14, time_hi_and_version, 4);
   strmov(s+18, clock_seq_and_node_str);
   return str;
+}
+
+int Item_func_ieee754_to_string::convert_real_to_string(double value,
+                                                        String *str)
+{
+  /*
+    Use 17 digits of precision so that the conversion from
+    double -> decimal -> double is lossless.
+  */
+  char buf[30];
+  if (isnan(value))
+  {
+    str->copy("nan", strlen("nan"), &my_charset_latin1);
+    return strlen("nan");
+  }
+  else if (isinf(value))
+  {
+    if (value < 0)
+    {
+      str->copy("-inf", strlen("-inf"), &my_charset_latin1);
+      return strlen("-inf");
+    }
+    else
+    {
+      str->copy("inf", strlen("inf"), &my_charset_latin1);
+      return strlen("inf");
+    }
+  }
+  else
+  {
+    int num_chars= sprintf(buf, "%-.17g", value);
+    DBUG_ASSERT(num_chars < 30);
+    if (num_chars < 1 || num_chars >= 30)
+      return 0;
+    str->copy(buf, num_chars, &my_charset_latin1);
+    return num_chars;
+  }
+}
+
+String* Item_func_ieee754_to_string::val_str(String *str)
+{
+  null_value= 0;
+  str->set_charset(&my_charset_latin1);
+
+  if (args[0]->result_type() == REAL_RESULT)
+  {
+    double res= args[0]->val_real();
+    if (args[0]->null_value)
+    {
+      /* Null argument, return NULL. */
+      null_value= 1;
+      return (String *) 0;
+    }
+    else
+    {
+      int num_chars= convert_real_to_string(res, str);
+      if (num_chars < 1 || num_chars >= 30)
+      {
+        sql_print_error("IEEE754_to_string failed");
+        null_value= 1;
+        return (String *) 0;
+      }
+    }
+    return str;
+  }
+  else
+  {
+    String *res= args[0]->val_str(str);
+    if (!res)
+    {
+      /* Null argument, return NULL. */
+      null_value= 1;
+      return (String *) 0;
+    }
+    else
+    {
+      /* Return a string with <= 24 characters to respect max_length. */
+      res->set_charset(&my_charset_latin1);
+      if (res->length() > 24)
+      {
+        char buf[24];
+        memcpy(buf, res->c_ptr(), 24);
+        res->copy(buf, 24, &my_charset_latin1);
+      }
+      return res;
+    }
+  }
 }

@@ -1095,6 +1095,19 @@ protected:
 };
 
 
+class Create_func_ieee754_to_string : public Create_func_arg1
+{
+public:
+  virtual Item *create(THD *thd, Item *arg1);
+
+  static Create_func_ieee754_to_string s_singleton;
+
+protected:
+  Create_func_ieee754_to_string() {}
+  virtual ~Create_func_ieee754_to_string() {}
+};
+
+
 class Create_func_ifnull : public Create_func_arg2
 {
 public:
@@ -3573,6 +3586,15 @@ Create_func_hex::create(THD *thd, Item *arg1)
 }
 
 
+Create_func_ieee754_to_string Create_func_ieee754_to_string::s_singleton;
+
+Item*
+Create_func_ieee754_to_string::create(THD *thd, Item *arg1)
+{
+  return new (thd->mem_root) Item_func_ieee754_to_string(arg1);
+}
+
+
 Create_func_ifnull Create_func_ifnull::s_singleton;
 
 Item*
@@ -4831,6 +4853,7 @@ static Native_func_registry func_array[] =
   { { C_STRING_WITH_LEN("GLENGTH") }, GEOM_BUILDER(Create_func_glength)},
   { { C_STRING_WITH_LEN("GREATEST") }, BUILDER(Create_func_greatest)},
   { { C_STRING_WITH_LEN("HEX") }, BUILDER(Create_func_hex)},
+  { { C_STRING_WITH_LEN("IEEE754_TO_STRING") }, BUILDER(Create_func_ieee754_to_string)},
   { { C_STRING_WITH_LEN("IFNULL") }, BUILDER(Create_func_ifnull)},
   { { C_STRING_WITH_LEN("INET_ATON") }, BUILDER(Create_func_inet_aton)},
   { { C_STRING_WITH_LEN("INET_NTOA") }, BUILDER(Create_func_inet_ntoa)},
