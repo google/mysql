@@ -1,0 +1,150 @@
+#
+# Basic log file test
+#
+--source include/master-slave.inc
+--source include/have_innodb.inc
+
+--echo # Flush status to get stable output of show status
+FLUSH STATUS;
+
+--echo # Reset sql-log to not get results from previous tests
+connection slave;
+let $MYSQLD_DATADIR= `select @@datadir;`;
+--exec cat /dev/null > $MYSQLD_DATADIR/mysqld-sql.000001
+STOP SLAVE;
+RESET SLAVE;
+RESET MASTER;
+connection master;
+RESET MASTER;
+connection slave;
+START SLAVE;
+
+connection master;
+
+#
+# Check that log tables work and we can do basic selects. This also
+# tests truncate, which works in a special mode with the log tables
+#
+
+use test;
+
+# Test transactions
+create table trans_test1 (col1 int, col2 varchar(32)) engine=InnoDB;
+
+# This should produce no logging output
+begin;
+insert into trans_test1 values(1, "rollback");
+insert into trans_test1 values(2, "rollback");
+rollback;
+
+# This should log two lines
+begin;
+insert into trans_test1 values(1, "commit");
+insert into trans_test1 values(2, "commit");
+commit;
+
+# This should log nothing
+begin;
+update trans_test1 set col2="foo" where col1 > 0;
+rollback;
+
+# This should log two UPDATE lines
+begin;
+update trans_test1 set col2="foo" where col1 > 0;
+commit;
+
+# This should log nothing
+begin;
+delete from trans_test1;
+rollback;
+
+# This should log one line
+begin;
+delete from trans_test1 where col1=1;
+commit;
+
+# Now do tests with autocommit
+
+# These should log one line
+insert into trans_test1 values(3, "autocommit");
+insert into trans_test1 values(1, "autocommit");
+update trans_test1 set col2="commit" where col1=3;
+delete from trans_test1 where col1=3;
+
+# This should log nothing
+delete from trans_test1 where col1=3;
+
+# Now do more tests with multiple statements per commit
+
+# This should log nothing
+begin;
+update trans_test1 set col2="commit2" where col1=1;
+update trans_test1 set col2="commit2" where col1=2;
+rollback;
+
+# This should two lines
+begin;
+update trans_test1 set col2="commit2" where col1=1;
+update trans_test1 set col2="commit2" where col1=2;
+commit;
+
+# This should log nothing
+begin;
+delete from trans_test1 where col1=1;
+delete from trans_test1 where col1=2;
+rollback;
+
+# This should log 2 lines
+begin;
+delete from trans_test1 where col1=1;
+delete from trans_test1 where col1=2;
+commit;
+
+# Test large transactions which will spill to disk.
+create table large_table (column_1_name int, column_2_name int, string_column_name  varchar(200), primary key (column_1_name)) engine=InnoDB;
+
+# this transaction should spill to disk.
+begin;
+insert into large_table values (0, 0, "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
+insert into large_table select column_1_name + 1, column_2_name, string_column_name from large_table;
+insert into large_table select column_1_name + 2, column_2_name, string_column_name from large_table;
+insert into large_table select column_1_name + 4, column_2_name, string_column_name from large_table;
+insert into large_table select column_1_name + 8, column_2_name, string_column_name from large_table;
+insert into large_table select column_1_name + 16, column_2_name, string_column_name from large_table;
+insert into large_table select column_1_name + 32, column_2_name, string_column_name from large_table;
+insert into large_table select column_1_name + 64, column_2_name, string_column_name from large_table;
+insert into large_table select column_1_name + 128, column_2_name, string_column_name from large_table;
+commit;
+
+# this transaction should spill to disk.
+begin;
+update large_table set column_2_name = column_1_name;
+commit;
+
+save_master_pos;
+connection slave;
+sync_with_master;
+show create table trans_test1;
+connection master;
+
+drop table trans_test1;
+drop table large_table;
+
+save_master_pos;
+connection slave;
+sync_with_master;
+show variables like 'sql_log_cache_size';
+# print out the number of times the sql_log spilled to disk.
+show status like 'Sqllog_cache_disk_use';
+connection master;
+--echo # Show contents of the binlog on master
+--let $keep_gtid_events= 1
+--source include/show_binlog_events.inc
+
+--echo # Show the log content (timestamp is removed)
+connection slave;
+FLUSH LOGS;
+let $MYSQLD_DATADIR= `select @@datadir;`;
+--exec cat $MYSQLD_DATADIR/mysqld-sql.000001 | cut -d' ' -f8-
+
+--source include/rpl_end.inc

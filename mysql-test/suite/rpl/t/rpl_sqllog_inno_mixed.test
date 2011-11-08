@@ -1,0 +1,6 @@
+#
+# Basic log file test
+#
+--source include/have_binlog_format_mixed.inc
+--source include/have_innodb.inc
+--source extra/rpl_tests/rpl_sqllog_inno.test

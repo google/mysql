@@ -2677,6 +2677,50 @@ static Sys_var_mybool Sys_sql_log(
        READ_ONLY GLOBAL_VAR(opt_sql_log), NO_CMD_LINE,
        DEFAULT(FALSE));
 
+static Sys_var_ulong Sys_sql_log_cache_size(
+       "sql_log_cache_size",
+       "The size of the cache to hold the row change events for the sql_log "
+       "during a transaction. If you often use big, multi-statement "
+       "transactions you can increase this to get more performance.",
+       READ_ONLY GLOBAL_VAR(sql_log_cache_size), CMD_LINE(REQUIRED_ARG),
+       VALID_RANGE(IO_SIZE, ~0L), DEFAULT(512*1024L), BLOCK_SIZE(IO_SIZE));
+
+static Sys_var_ulong Sys_sql_log_cache_size_max(
+       "sql_log_cache_size_max",
+       "Can be used to restrict the total size used to cache a sql_log "
+       "transaction",
+       READ_ONLY GLOBAL_VAR(sql_log_cache_size_max), CMD_LINE(REQUIRED_ARG),
+       VALID_RANGE(IO_SIZE, ~0UL), DEFAULT(~0UL / IO_SIZE * IO_SIZE),
+       BLOCK_SIZE(IO_SIZE));
+
+static Sys_var_charptr Sys_sql_log_database(
+       "sql_log_database",
+       "Changes made to all databases that contain this value as a substring "
+       "will be logged when set. Otherwise log for all databases.",
+       READ_ONLY GLOBAL_VAR(opt_sql_log_database), CMD_LINE(OPT_ARG),
+       IN_SYSTEM_CHARSET, DEFAULT(0));
+
+static Sys_var_mybool Sys_sql_log_ddl(
+       "sql_log_ddl",
+       "Log DDL statements when true. Must set --log-bin and --sql-log "
+       "to use this.",
+       READ_ONLY GLOBAL_VAR(opt_sql_log_ddl), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
+static Sys_var_mybool Sys_sql_log_ddl_base64_encode_stmts(
+       "sql_log_ddl_base64_encode_stmts",
+       "Encode DDL statements using base64 encoding when true.  Must set "
+       "--log-bin, --sql-log and --sql-log-ddl options to use this.",
+       READ_ONLY GLOBAL_VAR(opt_sql_log_ddl_base64_encode_stmts),
+       CMD_LINE(OPT_ARG), DEFAULT(TRUE));
+
+static Sys_var_mybool Sys_sql_log_err_aborts_txn(
+       "sql_log_err_aborts_txn",
+       "Abort a transaction if there is an error when writing it to the SQL "
+       "log when this is true. Otherwise ignore errors.",
+       READ_ONLY GLOBAL_VAR(opt_sql_log_err_aborts_txn), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 static Sys_var_charptr Sys_sql_log_file(
        "sql_log_file", "Row-change logging file",
        READ_ONLY GLOBAL_VAR(opt_sql_logname), NO_CMD_LINE,

@@ -40,6 +40,7 @@
                                               // acl_getroot_no_password
 #include "sql_base.h"                         // close_temporary_tables
 #include "sql_handler.h"                      // mysql_ha_cleanup
+#include "rpl_mi.h"
 #include "rpl_rli.h"
 #include "rpl_filter.h"
 #include "rpl_record.h"
@@ -65,6 +66,7 @@
 #include "sql_callback.h"
 #include "lock.h"
 #include "sql_connect.h"
+#include "sql_repl.h"
 
 /*
   The following is used to initialise Table_ident with a internal
@@ -889,6 +891,8 @@ THD::THD()
    bootstrap(0),
    derived_tables_processing(FALSE),
    spcont(NULL),
+   sqllog_cache(NULL),
+   current_event_seq(0),
    m_parser_state(NULL),
 #if defined(ENABLED_DEBUG_SYNC)
    debug_sync_control(0),
@@ -1552,6 +1556,9 @@ void THD::cleanup(void)
   debug_sync_end_thread(this);
 #endif /* defined(ENABLED_DEBUG_SYNC) */
 
+#ifdef HAVE_REPLICATION
+  sqllog_cleanup();
+#endif
   delete_dynamic(&user_var_events);
   my_hash_free(&user_vars);
   sp_cache_clear(&sp_proc_cache);
@@ -6439,4 +6446,443 @@ bool Discrete_intervals_list::append(Discrete_interval *new_interval)
   DBUG_RETURN(0);
 }
 
+
+#ifdef HAVE_REPLICATION
+
+/**
+  SQL log related functions.
+*/
+
+int THD::sqllog_init()
+{
+  DBUG_ASSERT(sqllog_cache == NULL && current_event_seq == 0);
+  sqllog_cache= (IO_CACHE *) my_malloc(sizeof(IO_CACHE), MYF(MY_ZEROFILL));
+  if (!sqllog_cache || open_cached_file(sqllog_cache, mysql_tmpdir,
+                                        LOG_PREFIX,
+                                        sql_log_cache_size, MYF(MY_WME)))
+  {
+    sql_print_error("Fatal error: OOM while initializing SQL log.");
+    return HA_ERR_OUT_OF_MEM;
+  }
+  sqllog_cache->end_of_file= sql_log_cache_size_max;
+  return 0;
+}
+
+/**
+  Cleanup any memory/files associated with an open transaction.
+  Function should be called on cleanup of the thread-connection.
+*/
+
+void THD::sqllog_cleanup()
+{
+  if (sqllog_cache != NULL)
+  {
+    sqllog_rollback();
+    close_cached_file(sqllog_cache);
+    my_free((uchar *) sqllog_cache);
+    sqllog_cache = NULL;
+  }
+}
+
+
+static const char *sqllog_op2str(enum enum_sqllog_stmt_type sql_op)
+{
+  switch (sql_op)
+  {
+    case SQLLOG_STMT_INSERT:            return "INSERT";
+    case SQLLOG_STMT_DELETE:            return "DELETE";
+    case SQLLOG_STMT_UPDATE:            return "UPDATE";
+    case SQLLOG_STMT_DELETE_TABLE:      return "DELETE_TABLE";
+    case SQLLOG_STMT_TRUNCATE_TABLE:    return "TRUNCATE_TABLE";
+    case SQLLOG_STMT_CREATE_TABLE:      return "CREATE_TABLE";
+    case SQLLOG_STMT_ALTER_TABLE:       return "ALTER_TABLE";
+    case SQLLOG_STMT_RENAME_TABLE:      return "RENAME_TABLE";
+    case SQLLOG_STMT_DROP_TABLE:        return "DROP_TABLE";
+    case SQLLOG_STMT_CREATE_INDEX:      return "CREATE_INDEX";
+    case SQLLOG_STMT_DROP_INDEX:        return "DROP_INDEX";
+    case SQLLOG_STMT_CREATE_DB:         return "CREATE_DB";
+    case SQLLOG_STMT_ALTER_DB:          return "ALTER_DB";
+    case SQLLOG_STMT_DROP_DB:           return "DROP_DB";
+    default:                            return "UNKNOWN";
+  }
+}
+
+/**
+  This function fills the master id, master binlog name, and binlog offset.
+  If the thread is replication thread, it stores the master's information.
+  Otherwise, the strings will be set to testing values.
+*/
+
+static void sqllog_get_master_info(THD *thd, char *master_hostname,
+                                   char *master_log_name,
+                                   char *master_log_offset)
+{
+  // This should be called only from SQL thread, when sql_log is enabled.
+  DBUG_ASSERT(opt_sql_log && thd->slave_thread);
+
+  /*
+    Do not lock active_mi->rli.data_lock here.  The fields being accessed are
+    only written by the replication SQL thread (thd->slave_thread), or the
+    CHANGE MASTER TO command, which cannot run while the slave is running.  It
+    should be safe to read these values without holding the lock.
+  */
+  strcpy(master_hostname, active_mi->host);
+  strcpy(master_log_name, active_mi->rli.group_master_log_name);
+  sprintf(master_log_offset, "%llu",
+          (unsigned long long) active_mi->rli.group_master_log_pos);
+}
+
+/*
+  The size of the header of a sql_log entry in the transaction log.  This is an
+  internal header used only for transferring entries from the cache to the
+  output sql_log.  The header is not user visible.
+*/
+#define SQL_LOG_ENTRY_HEADER 8
+
+/**
+  Add a SQL log entry to the transaction cache.
+  Return 0 on success, non-zero upon error.
+*/
+
+int THD::sqllog_log(enum enum_sqllog_stmt_type sql_op,
+                    const char *db, const char *table,
+                    const char *query, uint query_length)
+{
+  const char *converted_query= NULL;
+  DBUG_EXECUTE_IF("sqllog_log_out_of_memory", return HA_ERR_OUT_OF_MEM;);
+
+  /* Initialize the sql_log cache, if it doesn't already exist. */
+  if (sqllog_cache == NULL)
+  {
+    int error;
+    if ((error= sqllog_init()))
+      return error;
+  }
+
+  String base64_query;
+  converted_query= query;
+  if (query != NULL && opt_sql_log_ddl_base64_encode_stmts &&
+      sql_op != SQLLOG_STMT_INSERT && sql_op != SQLLOG_STMT_UPDATE &&
+      sql_op != SQLLOG_STMT_DELETE)
+  {
+    /* Log sql log query. Encode the ddl query string in base64. */
+    String original_query;
+    original_query.append(query);
+    if (base64_query.append("b64'") ||
+        original_query.print64(&base64_query) ||
+        base64_query.append('\''))
+      return HA_ERR_OUT_OF_MEM;
+    converted_query= base64_query.c_ptr_safe();
+  }
+
+  char master_hostname[HOSTNAME_LENGTH + 1];
+  char master_log_name[FN_REFLEN];
+  /* Master log offset is defined as ulonglong with maximum 20 digits. */
+  char master_log_offset[21];
+  sqllog_get_master_info(this, master_hostname, master_log_name,
+                         master_log_offset);
+
+  /*
+    At this time, most of the columns of the sql log can be determined.
+    However, they are not contiguous in the sql_log.  An incomplete sql_log line
+    will be printed into the sqllog_cache (the sql_log transaction cache).  The
+    missing columns are in the MIDDLE of the line, so a header will be written
+    before each line to identify where the rest of the line should be inserted.
+
+    The header will be 2 ints:
+    1. 4-byte length of entire line, including the header.
+    2. 4-byte length of the first half of the line, where the disconnect is.
+  */
+  uchar header[SQL_LOG_ENTRY_HEADER];
+
+  /*
+    first half is: hostname (HOSTNAME_LENGTH + 1)
+                   space (1),
+                   logname (FN_REFLEN),
+                   space (1),
+                   offset (21),
+                   NULL (1)
+  */
+  char first_half[HOSTNAME_LENGTH + 1 + 1 + FN_REFLEN + 1 + 21 + 1];
+  sprintf(first_half, "%s %s %s", master_hostname, master_log_name,
+          master_log_offset);
+  uint32 first_half_len= strlen(first_half);
+
+  /* Increment before writing the value, since event numbers start from 1. */
+  current_event_seq++;
+
+  /*
+    second half is: event seq (21),
+                    space (1),
+                    op (21),
+                    space (1),
+                    db (NAME_LEN),
+                    dot (1),
+                    table (NAME_LEN),
+                    NULL (1)
+  */
+  char second_half[21 + 1 + 21 + 1 + NAME_LEN + 1 + NAME_LEN + 1];
+  sprintf(second_half, "%u %s %s.%s",
+          current_event_seq, sqllog_op2str(sql_op), db, table);
+  uint32 second_half_len= strlen(second_half);
+
+  uint32 total_length= SQL_LOG_ENTRY_HEADER + first_half_len + second_half_len;
+  if (converted_query != NULL)
+    /* a space and the query. */
+    total_length+= 1 + strlen(converted_query);
+
+  int4store(header, total_length);
+  int4store(header + 4, first_half_len);
+  if (my_b_write(sqllog_cache, header, SQL_LOG_ENTRY_HEADER))
+  {
+    sql_print_error("Couldn't write header to sql_log cache (error %d)",
+                    errno);
+    return HA_ERR_SQL_LOG_TXN;
+  }
+  if (my_b_write(sqllog_cache, first_half, first_half_len))
+  {
+    sql_print_error("Couldn't write first_half to sql_log cache (error %d)",
+                    errno);
+    return HA_ERR_SQL_LOG_TXN;
+  }
+  if (my_b_write(sqllog_cache, second_half, second_half_len))
+  {
+    sql_print_error("Couldn't write second_half to sql_log cache (error %d)",
+                    errno);
+    return HA_ERR_SQL_LOG_TXN;
+  }
+  if (converted_query != NULL && (my_b_printf(sqllog_cache, " %s",
+                                              converted_query) == (uint) -1))
+  {
+    sql_print_error("Couldn't write query to sql_log cache (error %d)",
+                    errno);
+    return HA_ERR_SQL_LOG_TXN;
+  }
+  return 0;
+}
+
+/**
+  Delete all entries held within the SQL log transaction list.
+*/
+
+void THD::sqllog_rollback()
+{
+  if (sqllog_cache != NULL)
+  {
+    reinit_io_cache(sqllog_cache, WRITE_CACHE, (my_off_t) 0, 0, 1);
+    sqllog_cache->end_of_file= sql_log_cache_size_max;
+    current_event_seq= 0;
+  }
+}
+
+/**
+  Write all entries held within the SQL log transaction cache to the sql_log
+  file, then delete all existing entries in the cache.
+*/
+
+int THD::sqllog_commit()
+{
+  DBUG_ASSERT((sqllog_cache != NULL) || (current_event_seq == 0));
+  bool error= false;
+  if (opt_sql_log && current_event_seq > 0 && sqllog_cache != NULL)
+  {
+    /* Get the current time. */
+    struct tm t;
+    time_t current_time= time(0);
+    gmtime_r(&current_time, &t);
+
+    /* Get the transaction commit time at the primary. */
+    struct tm pri_t;
+    gmtime_r(&this->start_time, &pri_t);
+
+    if (reinit_io_cache(sqllog_cache, READ_CACHE, 0, 0, 0))
+      return HA_ERR_SQL_LOG_TXN;
+
+    String group_id_to_write;
+    if (slave_thread)
+    {
+      group_id_to_write.length(0);
+      rpl_append_gtid_state(&group_id_to_write, true);
+    }
+    else
+    {
+      group_id_to_write.append("0-0-0");
+    }
+    /*
+      middle columns: space (1),
+                      primary timestamp (20),
+                      space (1),
+                      slave timestamp (20),
+                      space (1),
+                      global group id (21),
+                      space (1),
+                      total number of events (21),
+                      space (1),
+                      NULL (1)
+    */
+    const int middle_columns_max= 1 + 20 + 1 + 20 + 1 + 21 + 1 + 21 + 1 + 1;
+    int middle_columns_length;
+    uchar middle_columns[middle_columns_max];
+    middle_columns_length= snprintf((char *) middle_columns, middle_columns_max,
+                                    " %04d-%02d-%02d %02d:%02d:%02d "
+                                    "%04d-%02d-%02d %02d:%02d:%02d %s %u ",
+                                    pri_t.tm_year + 1900, pri_t.tm_mon + 1,
+                                    pri_t.tm_mday, pri_t.tm_hour, pri_t.tm_min,
+                                    pri_t.tm_sec, t.tm_year + 1900,
+                                    t.tm_mon + 1, t.tm_mday, t.tm_hour,
+                                    t.tm_min, t.tm_sec,
+                                    group_id_to_write.c_ptr_safe(),
+                                    current_event_seq);
+
+    uchar header[SQL_LOG_ENTRY_HEADER];
+    int copied_header_bytes= 0;
+    int copied_first_half= 0;
+    int first_half_length= 0;
+    int copied_second_half= 0;
+    int second_half_length= 0;
+    /* The number of bytes left to read in the in-memory cache. */
+    uint unread_length= my_b_bytes_in_cache(sqllog_cache);
+
+    /*
+      This loops over the entire transaction cache and processes each line.  The
+      cache may have spilled to disk, so the loop repeatedly copies (my_b_fill)
+      in data from the file into the in-memory cache.  The cache-disk split may
+      happen at any time in the data, so all the reading/copying takes care of
+      incomplete data reads from memory.
+
+      Each line has a [header] [first_half] [second_half].  first_half and
+      second_half are described in sqllog_log() above.  In the final output, the
+      middle columns have to be written between first_half and second_half.
+
+      The copying happens in stages:
+      1. copy the entire header.
+      2. copy/write the entire first half.
+      3. write the middle columns.
+      4. copy/write the entire second half.
+    */
+    do
+    {
+      while (!error && unread_length > 0)
+      {
+        if (copied_header_bytes < SQL_LOG_ENTRY_HEADER)
+        {
+          /* Entire header has not be copied.  Continue copying the header. */
+          uint bytes_to_copy= SQL_LOG_ENTRY_HEADER - copied_header_bytes;
+          if (bytes_to_copy > unread_length)
+            bytes_to_copy= unread_length;
+
+          memcpy(header + copied_header_bytes, sqllog_cache->read_pos,
+                 bytes_to_copy);
+          copied_header_bytes+= bytes_to_copy;
+          sqllog_cache->read_pos+= bytes_to_copy;
+          unread_length-= bytes_to_copy;
+
+          if (copied_header_bytes == SQL_LOG_ENTRY_HEADER)
+          {
+            /* Full header has been copied.  Calculate data lengths. */
+            int total_length= uint4korr(header);
+            first_half_length= uint4korr(header + 4);
+            second_half_length= total_length - SQL_LOG_ENTRY_HEADER -
+              first_half_length;
+          }
+        }
+        else if (copied_first_half < first_half_length)
+        {
+          /*
+            Entire first half has not been copied.  Continue copying the
+            first half.
+          */
+          uint bytes_to_copy= first_half_length - copied_first_half;
+          if (bytes_to_copy > unread_length)
+            bytes_to_copy= unread_length;
+
+          if (unlikely(mysql_sql_log.sql_log_write(this,
+                                                   sqllog_cache->read_pos,
+                                                   bytes_to_copy, false)))
+          {
+            error= true;
+            break;
+          }
+          copied_first_half+= bytes_to_copy;
+          sqllog_cache->read_pos+= bytes_to_copy;
+          unread_length-= bytes_to_copy;
+
+          if (copied_first_half == first_half_length)
+          {
+            /*
+              All of the first half has been copied.  Write the middle columns.
+            */
+            if (unlikely(mysql_sql_log.sql_log_write(this, middle_columns,
+                                                     middle_columns_length,
+                                                     false)))
+            {
+              error= true;
+              break;
+            }
+          }
+        }
+        else if (copied_second_half < second_half_length)
+        {
+          /*
+            Entire second half has not been copied.  Continue copying the
+            second half.
+          */
+          bool line_done= false;
+          uint bytes_to_copy= second_half_length - copied_second_half;
+          if (bytes_to_copy > unread_length)
+            bytes_to_copy= unread_length;
+          else
+            line_done= true;
+
+          if (unlikely(mysql_sql_log.sql_log_write(this,
+                                                   sqllog_cache->read_pos,
+                                                   bytes_to_copy, line_done)))
+          {
+            error= true;
+            break;
+          }
+          copied_second_half+= bytes_to_copy;
+          sqllog_cache->read_pos+= bytes_to_copy;
+          unread_length-= bytes_to_copy;
+
+          if (copied_second_half == second_half_length)
+          {
+            /*
+              All of the second half has been copied, so the entire line is
+              done.  Reset the state and repeat.
+            */
+            copied_header_bytes= 0;
+            copied_first_half= 0;
+            first_half_length= 0;
+            copied_second_half= 0;
+            second_half_length= 0;
+
+            DBUG_EXECUTE_IF("sqllog_commit_fail_after_first_event",
+                            error = true;);
+          }
+        }
+        else
+        {
+          /* This should never happen. */
+          sql_print_error("The sql_log transaction cache is corrupt.");
+          error= true;
+        }
+      }
+
+      /* Finish reading buffer. */
+      DBUG_ASSERT(error || sqllog_cache->read_pos == sqllog_cache->read_end);
+      sqllog_cache->read_pos= sqllog_cache->read_end;
+    } while (!error && (unread_length= my_b_fill(sqllog_cache)));
+
+    if (sqllog_cache->disk_writes != 0)
+    {
+      statistic_increment(sql_log_cache_disk_use, &LOCK_status);
+      sqllog_cache->disk_writes= 0;
+    }
+    sqllog_rollback();
+  }
+  return (unlikely(error)) ? HA_ERR_SQL_LOG_TXN : 0;
+}
+
+#endif /* HAVE_REPLICATION */
 #endif /* !defined(MYSQL_CLIENT) */

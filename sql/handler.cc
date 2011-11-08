@@ -360,6 +360,7 @@ int ha_init_errors(void)
   SETMSG(HA_ERR_TABLE_IN_FK_CHECK,	ER_DEFAULT(ER_TABLE_IN_FK_CHECK));
   SETMSG(HA_ERR_DISK_FULL,              ER_DEFAULT(ER_DISK_FULL));
   SETMSG(HA_ERR_FTS_TOO_MANY_WORDS_IN_PHRASE,  "Too many words in a FTS phrase or proximity search");
+  SETMSG(HA_ERR_SQL_LOG_TXN,            ER_DEFAULT(ER_SQL_LOG_TXN));
 
   /* Register the error messages for use with my_error(). */
   return my_error_register(get_handler_errmsgs, HA_ERR_FIRST, HA_ERR_LAST);
@@ -1538,6 +1539,33 @@ commit_one_phase_2(THD *thd, bool all, THD_TRANS *trans, bool is_real_trans)
     DEBUG_SYNC(thd, "commit_one_phase_2");
   if (ha_info)
   {
+#ifdef HAVE_REPLICATION
+    if (is_real_trans)
+    {
+      /*
+        All storage engines are prepared now. We do optimistic sql log logging
+        now. That is, we log prior to committing the storage engines and assume
+        nothing will go wrong with the commit. This is acceptable because we
+        plan to deploy sql log on slave machines only and thus, if we are
+        logging here it means that the master has already successfully
+        committed the transaction and it is now part of our durable record
+        regardless of whether a single slave machine hits an error during
+        the commit.
+
+        The is_real_trans is 'true' on the following conditions:
+        a) a single statement i.e. one not in a BEGIN ... COMMIT block.
+        b) COMMIT statement is executed, as part of a BEGIN ... COMMIT block.
+
+        is_real_trans will be set 'false' for any statement that appears within
+        the BEGIN ... COMMIT block.
+      */
+      if ((error= thd->sqllog_commit()))
+      {
+        my_error(ER_ERROR_DURING_COMMIT, MYF(0), error);
+        DBUG_RETURN(error);
+      }
+    }
+#endif
     for (; ha_info; ha_info= ha_info_next)
     {
       int err;
@@ -1649,6 +1677,16 @@ int ha_rollback_trans(THD *thd, bool all)
   /* Always cleanup. Even if nht==0. There may be savepoints. */
   if (is_real_trans)
     thd->transaction.cleanup();
+
+#ifdef HAVE_REPLICATION
+  /*
+    Remove any statements associated with this transaction that we
+    were intending to log.  We don't need to worry about errors,
+    just delete any statements we previously stored.
+  */
+  thd->sqllog_rollback();
+#endif
+
   if (all)
     thd->transaction_rollback_request= FALSE;
 
@@ -2541,6 +2579,9 @@ int handler::ha_open(TABLE *table_arg, const char *name, int mode,
   }
   reset_statistics();
   internal_tmp_table= MY_TEST(test_if_locked & HA_OPEN_INTERNAL_TABLE);
+#ifdef HAVE_REPLICATION
+  log_deleted_rows= true;
+#endif
   DBUG_RETURN(error);
 }
 
@@ -5982,6 +6023,10 @@ int handler::ha_write_row(uchar *buf)
   if (unlikely(error))
     DBUG_RETURN(error);
   rows_changed++;
+#ifdef HAVE_REPLICATION
+  if (unlikely(error= log_write_row(table, buf)))
+    DBUG_RETURN(error);
+#endif
   if (unlikely(error= binlog_log_row(table, 0, buf, log_func)))
     DBUG_RETURN(error); /* purecov: inspected */
 
@@ -6015,6 +6060,10 @@ int handler::ha_update_row(const uchar *old_data, uchar *new_data)
   if (unlikely(error))
     return error;
   rows_changed++;
+#ifdef HAVE_REPLICATION
+  if (unlikely(error= log_update_row(table, old_data, new_data)))
+    return error;
+#endif
   if (unlikely(error= binlog_log_row(table, old_data, new_data, log_func)))
     return error;
   return 0;
@@ -6042,12 +6091,172 @@ int handler::ha_delete_row(const uchar *buf)
   if (unlikely(error))
     return error;
   rows_changed++;
+#ifdef HAVE_REPLICATION
+  if (unlikely(error= log_delete_row(table, buf)))
+    return error;
+#endif
   if (unlikely(error= binlog_log_row(table, buf, 0, log_func)))
     return error;
   return 0;
 }
 
+#ifdef HAVE_REPLICATION
+/*
+  Check if a row operation (insert/update/delete) should be written into
+  sql_log.
+*/
+static bool should_sqllog_row_op(THD *thd, TABLE *table)
+{
+  // We log only statements for non-temp tables.
+  if (!mysql_sql_log.should_log(thd) || !thd->lex ||
+      !thd->lex->sql_command || table->s->tmp_table != NO_TMP_TABLE)
+    return false;
+  // Check that this is not the rpl_slave_pos table.
+  if (!strcmp(table->s->db.str, "mysql") &&
+      !strcmp(table->s->table_name.str, rpl_gtid_slave_state_table_name.str))
+    return false;
+  // Check that we need to do sql-logging for this database.
+  if (opt_sql_log_database && !strstr(table->s->db.str, opt_sql_log_database))
+    return false;
+  return true;
+}
 
+/**
+  The function to log an insertion operation made to the underlying storage
+  engine. This function is called each time a row is inserted.
+*/
+
+int handler::log_write_row(TABLE *table, const uchar *buf)
+{
+  THD *const thd= table->in_use;
+
+  /*
+    We will log a write row entry when the user execute the "INSERT",
+    "CREATE TABLE ... SELECT FROM ..." or "REPLACE" commands. The "REPLACE"
+    will be logged as "INSERT" operations if there is no unique key conflict; it
+    will be logged as "DELETE" operations and then "INSERT" operations if there
+    are unique key conflicts.
+  */
+  if (should_sqllog_row_op(thd, table))
+  {
+    /* Build a SQL INSERT statement in 'query' and log it. */
+    String query(STRING_BUFFER_USUAL_SIZE);
+
+    if (!sqllog_write_row(thd, table, buf, &query))
+    {
+      if (!table->file->has_transactions() && opt_sql_log)
+      {
+        sql_print_error("Non-transactional table is in use while "
+                        "sql_log is on. This configuration is not supported.");
+        return HA_ERR_SQL_LOG_TXN;
+      }
+      /*
+        If the user has requested it, then any logging errors here will
+        abort the transaction.  In not all circumstances is this behaviour
+        desirable, so the user can set a system variable to control this.
+
+        For non-transactional tables (MyISAM), an error will be logged
+        but the data will still be inserted into the table.
+      */
+      if (thd->sqllog_log(SQLLOG_STMT_INSERT, table->s->db.str,
+                          table->s->table_name.str, query.ptr(),
+                          query.length()) &&
+          opt_sql_log_err_aborts_txn)
+        return HA_ERR_SQL_LOG_TXN;
+    }
+    else if (opt_sql_log_err_aborts_txn)
+    {
+      return HA_ERR_SQL_LOG_TXN;
+    }
+  }
+  return 0;
+}
+
+/**
+  The function to log an update operation made to the underlying storage engine.
+  This function is called each time a row is updated.
+*/
+
+int handler::log_update_row(TABLE *table, const uchar *old_data,
+                            const uchar *new_data)
+{
+  THD *const thd= table->in_use;
+
+  /*
+    We will log a write row entry when the user execute the "UPDATE" commands.
+  */
+  if (should_sqllog_row_op(thd, table))
+  {
+    /* Build a SQL UPDATE statement in 'query' and log it somewhere. */
+    String query(STRING_BUFFER_USUAL_SIZE);
+
+    if (!sqllog_update_row(thd, table, old_data, new_data, &query))
+    {
+      if (!table->file->has_transactions() && opt_sql_log)
+      {
+        sql_print_error("Non-transactional table is in use while "
+                        "sql_log is on. This configuration is not supported.");
+        return HA_ERR_SQL_LOG_TXN;
+      }
+      if (thd->sqllog_log(SQLLOG_STMT_UPDATE, table->s->db.str,
+                          table->s->table_name.str, query.ptr(),
+                          query.length()) &&
+          opt_sql_log_err_aborts_txn)
+        return HA_ERR_SQL_LOG_TXN;
+    }
+    else if (opt_sql_log_err_aborts_txn)
+    {
+      return HA_ERR_SQL_LOG_TXN;
+    }
+  }
+  return 0;
+}
+
+/**
+  The function to log a deletion operation made to the underlying storage
+  engine. This function is called each time a row is deleted.
+*/
+
+int handler::log_delete_row(TABLE *table, const uchar *buf)
+{
+  if (!log_deleted_rows)
+    return 0;
+
+  THD *const thd= table->in_use;
+
+  /*
+    We will log a write row entry when the user execute the "DELETE", or
+    "REPLACE" commands. The "REPLACE" will be logged as "DELETE" operations
+    and then "INSERT" operations if there are unique key conflicts.
+  */
+  if (should_sqllog_row_op(thd, table))
+  {
+    /* Build a SQL DELETE statement in 'query' and log it. */
+    String query(STRING_BUFFER_USUAL_SIZE);
+
+    if (!sqllog_delete_row(thd, table, buf, &query))
+    {
+      if (!table->file->has_transactions() && opt_sql_log)
+      {
+        sql_print_error("Non-transactional table is in use while "
+                        "sql_log is on. This configuration is not supported.");
+        return HA_ERR_SQL_LOG_TXN;
+      }
+      if (thd->sqllog_log(SQLLOG_STMT_DELETE, table->s->db.str,
+                          table->s->table_name.str, query.ptr(),
+                          query.length()) &&
+          opt_sql_log_err_aborts_txn)
+       return HA_ERR_SQL_LOG_TXN;
+    }
+    else if (opt_sql_log_err_aborts_txn)
+    {
+      return HA_ERR_SQL_LOG_TXN;
+    }
+  }
+  return 0;
+}
+
+#endif  /* HAVE_REPLICATION */
 
 /** @brief
   use_hidden_primary_key() is called in case of an update/delete when

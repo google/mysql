@@ -1,0 +1,995 @@
+include/master-slave.inc
+[connection master]
+# reset sql-log and GTIDs to not get results from previous tests
+STOP SLAVE;
+RESET SLAVE;
+RESET MASTER;
+RESET MASTER;
+START SLAVE;
+create table log_test (col1 int, col2 int) engine=innodb;
+insert into log_test values (1, 2);
+insert into log_test values (3, 4);
+drop table log_test;
+create table log_test1 (col1 int, col2 varchar(32)) engine=innodb;
+create table log_test2 (col1 int, col2 varchar(32), col3 text) engine=innodb;
+create table log_test3 (col1 int, col2 varchar(32)) engine=innodb;
+create table log_test4 (col1 int, col2 varchar(32), col3 int) engine=innodb;
+insert into log_test1 values (1, "test1");
+insert into log_test1(col2, col1) values ("test2", 2);
+insert into log_test1 values (3, "arg with 'single quote' blah");
+insert into log_test1 values (4, "arg with \"double quote\" blah");
+insert into log_test1 values (5, NULL);
+replace into log_test1 values (1, "replace tests");
+replace into log_test1 values (6, "replace test");
+insert into log_test1 values (7, "Multi-row insert"), (8, "Multi-row insert");
+insert into log_test3 select * from log_test1;
+update log_test1 set col2="changed1" where col1=1;
+update log_test1 set col1=2 where col1=1;
+update log_test1 set col2="foo" where col1=2;
+update log_test1 set col2="FOO" where col1=2;
+insert into log_test4 values (1, NULL, NULL);
+insert into log_test4 values (2, NULL, NULL);
+insert into log_test4 values (3, "three", 3);
+update log_test4 set col2="one" where col1=1;
+update log_test4 set col2=NULL where col1=1;
+update log_test4 set col2="" where col1=2;
+update log_test4 set col2=NULL where col1=2;
+update log_test4 set col2="new three" where col1=3;
+update log_test4 set col2=NULL where col1=3;
+update log_test4 set col3=1 where col1=1;
+update log_test4 set col3=NULL where col1=1;
+delete from log_test1 where col1=3;
+delete from log_test1 where col1=4;
+delete from log_test1;
+insert into log_test2 values (2, "foo", NULL);
+insert into log_test2 values (1, NULL, "bar");
+delete from log_test2 where col1=2 and col2="foo" and col3 is NULL;
+delete from log_test2 where col1=1 and col2 is NULL and col3="bar";
+insert into log_test1 values (1, 'test');
+insert into log_test1 values (2, 'test');
+insert into log_test1 values (3, 'test');
+truncate table log_test1;
+drop table log_test1;
+drop table log_test2;
+drop table log_test3;
+drop table log_test4;
+create table log_numeric1 (col1 tinyint, col2 smallint, col3 mediumint, col4 int, col5 bigint) engine=innodb;
+insert into log_numeric1 values(0, 0, 0, 0, 0);
+insert into log_numeric1 values(-100, -100, -100, -100, -100);
+insert into log_numeric1 values(100, 100, 100, 100, 100);
+insert into log_numeric1 values(-128, -32768, -8388608, -2147483648, -9223372036854775808);
+insert into log_numeric1 values(127, 32767, 8388607, 2147483647, 9223372036854775807);
+delete from log_numeric1 where col2=-100;
+update log_numeric1 set col3=47 where col3=-8388608;
+update log_numeric1 set col4=29 where col4=2147483647;
+update log_numeric1 set col5=9223372036854775800 where col5=9223372036854775807;
+create table log_numeric2 (col1 tinyint unsigned, col2 smallint unsigned, col3 mediumint unsigned, col4 int unsigned, col5 bigint unsigned) engine=innodb;
+insert into log_numeric2 values(0, 0, 0, 0, 0);
+insert into log_numeric2 values(255, 65535, 16777215, 4294967295, 18446744073709551615);
+update log_numeric2 set col5=18446744073709551600 where col5=18446744073709551615;
+delete from log_numeric2 where col5=18446744073709551600;
+create table log_bit (col1 bit(1), col2 bit(17)) engine=innodb;
+insert into log_bit values (b'0', b'0');
+insert into log_bit values (b'1', b'1');
+insert into log_bit values (b'0', b'10101010');
+insert into log_bit values (b'0', b'00000000');
+insert into log_bit values (b'0', b'1111111111111111');
+update log_bit set col1=b'1', col2=b'11001100' where col1=b'0' and col2=b'10101010';
+delete from log_bit where col1=b'0';
+delete from log_bit where col1=b'1' and col2=b'11001100';
+create table log_bit2 (col1 bit(64)) engine=innodb;
+insert into log_bit2 values (b'1000100010001000100010001000100010001000100010001000100010001000');
+create table log_fp1 (col1 float, col2 double) engine=innodb;
+insert into log_fp1 values(0.0, 0.0);
+insert into log_fp1 values(-0.0, -0.0);
+insert into log_fp1 values(-0.0000001, -0.000001);
+insert into log_fp1 values(-1e-200, -1e-200);
+insert into log_fp1 values(1e-200, 1e-200);
+insert into log_fp1 values(-1.0, -1.0);
+insert into log_fp1 values("nan", "nan");
+Warnings:
+Warning	1265	Data truncated for column 'col1' at row 1
+Warning	1265	Data truncated for column 'col2' at row 1
+insert into log_fp1 values("inf", "inf");
+Warnings:
+Warning	1265	Data truncated for column 'col1' at row 1
+Warning	1265	Data truncated for column 'col2' at row 1
+insert into log_fp1 values(COS(0.4), COS(0.4));
+update log_fp1 set col1=SIN(0.4) where col1=COS(0.4);
+delete from log_fp1 where col1=SIN(0.4);
+delete from log_fp1 where col1=-1e-200;
+update log_fp1 set col2=1e37 where col2=1e-200;
+update log_fp1 set col2=3.14159 where col2=-0.000001;
+delete from log_fp1 where col1=-0.0000001;
+create table log_dt1 (col1 datetime, col2 date, col4 time, col5 year) engine=innodb;
+insert into log_dt1 values('0000-00-00 00:00:00', '0000-00-00', '00:00:00', '0000');
+insert into log_dt1 values('2008-12-01 13:56:04', '2008-12-01', '13:56:04', '2008');
+update log_dt1 set col1='2004-04-03 12:00:00' where col1='0000-00-00 00:00:00';
+update log_dt1 set col2='2004-04-03' where col2='0000-00-00';
+update log_dt1 set col4='12:00:00' where col4='00:00:00';
+update log_dt1 set col5='2004' where col5='0000';
+delete from log_dt1 where col5='2004';
+create table log_str1 (col1 char(4), col2 varchar(4)) engine=innodb;
+insert into log_str1 values('', '');
+insert into log_str1 values('foo', 'bar');
+insert into log_str1 values(' foo', ' bar');
+insert into log_str1 values('a\0\0', 'b\0\0');
+delete from log_str1 where col1='foo';
+update log_str1 set col1='foo' where col1=' foo' and col2=' bar';
+create table log_str2 (col1 binary(16), col2 varbinary(16)) engine=innodb;
+insert into log_str2 values('a', 'b');
+insert into log_str2 values('a\0\0', 'b\0\0');
+insert into log_str2 values('\0\1a', '\0\1b');
+delete from log_str2 where col1='a\0\0';
+update log_str2 set col1='x\0\0\1\1' where col2='\0\1b';
+create table log_str3 (col1 blob, col2 text) engine=innodb;
+insert into log_str3 values('a', 'b');
+insert into log_str3 values('a\0\0', 'b\0\0');
+insert into log_str3 values('\0\1a', '\0\1b');
+delete from log_str3 where col1='a\0\0';
+update log_str3 set col1='x\0\0\1\1' where col2='\0\1b';
+insert into log_str3 values('\0', NULL);
+insert into log_str3 values('\0t', NULL);
+insert into log_str3 values('\0te', NULL);
+insert into log_str3 values('\0tes', NULL);
+insert into log_str3 values('\0test', NULL);
+insert into log_str3 values('\0test1', NULL);
+insert into log_str3 values('\0test12', NULL);
+insert into log_str3 values('\0test123', NULL);
+insert into log_str3 values('\0test1234', NULL);
+insert into log_str3 values('\0abcdefghijklmnopqrstuvwxyz=01234567890', NULL);
+create table log_enum1 (col1 ENUM('one', 'two', 'three')) engine=innodb;
+insert into log_enum1 values('one');
+insert into log_enum1 values('two');
+insert into log_enum1 values('three');
+insert into log_enum1 values(1);
+insert into log_enum1 values(NULL);
+delete from log_enum1 where col1=1;
+delete from log_enum1 where col1='two';
+update log_enum1 set col1='two' where col1=3;
+update log_enum1 set col1=1 where col1='two';
+create table log_set1 (col1 SET('a', 'b', 'c', 'd')) engine=innodb;
+insert into log_set1 values('a');
+insert into log_set1 values('a,b');
+insert into log_set1 values('c,d');
+insert into log_set1 values('a,b,c');
+insert into log_set1 values('a,b,c,d');
+delete from log_set1 where col1='c,d';
+update log_set1 set col1='a,b' where col1='a,b,c';
+drop table log_bit;
+drop table log_bit2;
+drop table log_dt1;
+drop table log_enum1;
+drop table log_fp1;
+drop table log_numeric1;
+drop table log_numeric2;
+drop table log_set1;
+drop table log_str1;
+drop table log_str2;
+drop table log_str3;
+create database mysqltest;
+create table mysqltest.item (name char(20) default '' not null, price int(5) default '0' not null, floatprice float, comment char(20), mybits bit(8), nullstring char(10), enumcol enum('true', 'false'), setcol set('red', 'yellow', 'blue'), tinycol tinyint, bigintcol bigint(20), float8col float8, varcharcol varchar(20), varbinarycol varbinary(20), yearcol year, datecol date, timecol time, datetimecol datetime, tinyblobcol tinyblob, mediumblobcol mediumblob, primary  key (name)) engine=innodb;
+insert into mysqltest.item values('google cup', 10, 5.0, '\'\n', b'1001', null, 'true', 'red,yellow', 13, 1234567890, 12.34, 'varchar column', 'varbinary column', 2008, '2008-11-15', '09:10:11', '2008-11-15 09:10:11', 'Tiny blob column', 'Medium blob col');
+insert into mysqltest.item values('google hat', 5, 5.0, '\'\n', b'1001', null, 'true', 'red,yellow', 13, 1234567890, 12.34, 'varchar column', 'varbinary column', 2008, '2008-11-15', '09:10:11', '2008-11-15 09:10:11', 'Tiny blob column', 'Medium blob col');
+create table mysqltest.myitem engine=innodb select * from mysqltest.item;
+update mysqltest.item, mysqltest.myitem set mysqltest.myitem.price=12, mysqltest.item.price=13 where mysqltest.item.name='google cup' and mysqltest.myitem.name='google hat';
+delete mysqltest.item, mysqltest.myitem from mysqltest.item inner join mysqltest.myitem on mysqltest.item.name=mysqltest.myitem.name;
+create index price_index on mysqltest.item(price);
+alter table mysqltest.item drop column mediumblobcol;
+drop index price_index on mysqltest.item;
+truncate table mysqltest.item;
+drop table mysqltest.item;
+drop database mysqltest;
+# Show contents of the binlog on master
+include/show_binlog_events.inc
+Log_name	Pos	Event_type	Server_id	End_log_pos	Info
+master-bin.000001	#	Gtid	#	#	GTID 0-1-1
+master-bin.000001	#	Query	#	#	use `test`; create table log_test (col1 int, col2 int) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-2
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-3
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-4
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_test` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-5
+master-bin.000001	#	Query	#	#	use `test`; create table log_test1 (col1 int, col2 varchar(32)) engine=innodb
+master-bin.000001	#	Gtid	#	#	GTID 0-1-6
+master-bin.000001	#	Query	#	#	use `test`; create table log_test2 (col1 int, col2 varchar(32), col3 text) engine=innodb
+master-bin.000001	#	Gtid	#	#	GTID 0-1-7
+master-bin.000001	#	Query	#	#	use `test`; create table log_test3 (col1 int, col2 varchar(32)) engine=innodb
+master-bin.000001	#	Gtid	#	#	GTID 0-1-8
+master-bin.000001	#	Query	#	#	use `test`; create table log_test4 (col1 int, col2 varchar(32), col3 int) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-9
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-10
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-11
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-12
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-13
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-14
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-15
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-16
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-17
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-18
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-19
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-20
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-21
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-22
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-23
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-24
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-25
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-26
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-27
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-28
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-29
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-30
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-31
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-32
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test4)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-33
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-34
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-35
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-36
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-37
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-38
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test2)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-39
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test2)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-40
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-41
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-42
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_test1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-43
+master-bin.000001	#	Query	#	#	use `test`; truncate table log_test1
+master-bin.000001	#	Gtid	#	#	GTID 0-1-44
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_test1` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-45
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_test2` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-46
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_test3` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-47
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_test4` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-48
+master-bin.000001	#	Query	#	#	use `test`; create table log_numeric1 (col1 tinyint, col2 smallint, col3 mediumint, col4 int, col5 bigint) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-49
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-50
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-51
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-52
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-53
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-54
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-55
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-56
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-57
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-58
+master-bin.000001	#	Query	#	#	use `test`; create table log_numeric2 (col1 tinyint unsigned, col2 smallint unsigned, col3 mediumint unsigned, col4 int unsigned, col5 bigint unsigned) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-59
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-60
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-61
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric2)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-62
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_numeric2)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-63
+master-bin.000001	#	Query	#	#	use `test`; create table log_bit (col1 bit(1), col2 bit(17)) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-64
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-65
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-66
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-67
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-68
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-69
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-70
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-71
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-72
+master-bin.000001	#	Query	#	#	use `test`; create table log_bit2 (col1 bit(64)) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-73
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_bit2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-74
+master-bin.000001	#	Query	#	#	use `test`; create table log_fp1 (col1 float, col2 double) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-75
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-76
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-77
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-78
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-79
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-80
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-81
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-82
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-83
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-84
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-85
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_fp1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-86
+master-bin.000001	#	Query	#	#	use `test`; create table log_dt1 (col1 datetime, col2 date, col4 time, col5 year) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-87
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_dt1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-88
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_dt1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-89
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_dt1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-90
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_dt1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-91
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_dt1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-92
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_dt1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-93
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_dt1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-94
+master-bin.000001	#	Query	#	#	use `test`; create table log_str1 (col1 char(4), col2 varchar(4)) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-95
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-96
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-97
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-98
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-99
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-100
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-101
+master-bin.000001	#	Query	#	#	use `test`; create table log_str2 (col1 binary(16), col2 varbinary(16)) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-102
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-103
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-104
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str2)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-105
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str2)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-106
+master-bin.000001	#	Query	#	#	use `test`; create table log_str3 (col1 blob, col2 text) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-107
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-108
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-109
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-110
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-111
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-112
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-113
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-114
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-115
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-116
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-117
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-118
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-119
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-120
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-121
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_str3)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-122
+master-bin.000001	#	Query	#	#	use `test`; create table log_enum1 (col1 ENUM('one', 'two', 'three')) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-123
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-124
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-125
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-126
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-127
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-128
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-129
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-130
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-131
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_enum1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-132
+master-bin.000001	#	Query	#	#	use `test`; create table log_set1 (col1 SET('a', 'b', 'c', 'd')) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-133
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_set1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-134
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_set1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-135
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_set1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-136
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_set1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-137
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_set1)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-138
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_set1)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-139
+master-bin.000001	#	Table_map	#	#	table_id: # (test.log_set1)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-140
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_bit` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-141
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_bit2` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-142
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_dt1` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-143
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_enum1` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-144
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_fp1` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-145
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_numeric1` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-146
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_numeric2` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-147
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_set1` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-148
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_str1` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-149
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_str2` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-150
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `log_str3` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-151
+master-bin.000001	#	Query	#	#	create database mysqltest
+master-bin.000001	#	Gtid	#	#	GTID 0-1-152
+master-bin.000001	#	Query	#	#	use `test`; create table mysqltest.item (name char(20) default '' not null, price int(5) default '0' not null, floatprice float, comment char(20), mybits bit(8), nullstring char(10), enumcol enum('true', 'false'), setcol set('red', 'yellow', 'blue'), tinycol tinyint, bigintcol bigint(20), float8col float8, varcharcol varchar(20), varbinarycol varbinary(20), yearcol year, datecol date, timecol time, datetimecol datetime, tinyblobcol tinyblob, mediumblobcol mediumblob, primary  key (name)) engine=innodb
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-153
+master-bin.000001	#	Table_map	#	#	table_id: # (mysqltest.item)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-154
+master-bin.000001	#	Table_map	#	#	table_id: # (mysqltest.item)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-155
+master-bin.000001	#	Query	#	#	use `test`; CREATE TABLE `mysqltest`.`myitem` (
+  `name` char(20) NOT NULL DEFAULT '',
+  `price` int(5) NOT NULL DEFAULT '0',
+  `floatprice` float DEFAULT NULL,
+  `comment` char(20) DEFAULT NULL,
+  `mybits` bit(8) DEFAULT NULL,
+  `nullstring` char(10) DEFAULT NULL,
+  `enumcol` enum('true','false') DEFAULT NULL,
+  `setcol` set('red','yellow','blue') DEFAULT NULL,
+  `tinycol` tinyint(4) DEFAULT NULL,
+  `bigintcol` bigint(20) DEFAULT NULL,
+  `float8col` double DEFAULT NULL,
+  `varcharcol` varchar(20) DEFAULT NULL,
+  `varbinarycol` varbinary(20) DEFAULT NULL,
+  `yearcol` year(4) DEFAULT NULL,
+  `datecol` date DEFAULT NULL,
+  `timecol` time DEFAULT NULL,
+  `datetimecol` datetime DEFAULT NULL,
+  `tinyblobcol` tinyblob,
+  `mediumblobcol` mediumblob
+) ENGINE=InnoDB
+master-bin.000001	#	Table_map	#	#	table_id: # (mysqltest.myitem)
+master-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-156
+master-bin.000001	#	Table_map	#	#	table_id: # (mysqltest.item)
+master-bin.000001	#	Table_map	#	#	table_id: # (mysqltest.myitem)
+master-bin.000001	#	Update_rows_v1	#	#	table_id: #
+master-bin.000001	#	Update_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	BEGIN GTID 0-1-157
+master-bin.000001	#	Table_map	#	#	table_id: # (mysqltest.item)
+master-bin.000001	#	Table_map	#	#	table_id: # (mysqltest.myitem)
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: #
+master-bin.000001	#	Delete_rows_v1	#	#	table_id: # flags: STMT_END_F
+master-bin.000001	#	Xid	#	#	COMMIT /* XID */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-158
+master-bin.000001	#	Query	#	#	use `test`; create index price_index on mysqltest.item(price)
+master-bin.000001	#	Gtid	#	#	GTID 0-1-159
+master-bin.000001	#	Query	#	#	use `test`; alter table mysqltest.item drop column mediumblobcol
+master-bin.000001	#	Gtid	#	#	GTID 0-1-160
+master-bin.000001	#	Query	#	#	use `test`; drop index price_index on mysqltest.item
+master-bin.000001	#	Gtid	#	#	GTID 0-1-161
+master-bin.000001	#	Query	#	#	use `test`; truncate table mysqltest.item
+master-bin.000001	#	Gtid	#	#	GTID 0-1-162
+master-bin.000001	#	Query	#	#	use `test`; DROP TABLE `mysqltest`.`item` /* generated by server */
+master-bin.000001	#	Gtid	#	#	GTID 0-1-163
+master-bin.000001	#	Query	#	#	drop database mysqltest
+# Show the log content (timestamp is removed)
+0-1-1 1 1 CREATE_TABLE test.log_test create table log_test (col1 int, col2 int) engine=innodb
+0-1-2 1 1 INSERT test.log_test col1 LONG 1 AND col2 LONG 2
+0-1-3 1 1 INSERT test.log_test col1 LONG 3 AND col2 LONG 4
+0-1-4 1 1 DROP_TABLE test.log_test DROP TABLE `log_test` /* generated by server */
+0-1-5 1 1 CREATE_TABLE test.log_test1 create table log_test1 (col1 int, col2 varchar(32)) engine=innodb
+0-1-6 1 1 CREATE_TABLE test.log_test2 create table log_test2 (col1 int, col2 varchar(32), col3 text) engine=innodb
+0-1-7 1 1 CREATE_TABLE test.log_test3 create table log_test3 (col1 int, col2 varchar(32)) engine=innodb
+0-1-8 1 1 CREATE_TABLE test.log_test4 create table log_test4 (col1 int, col2 varchar(32), col3 int) engine=innodb
+0-1-9 1 1 INSERT test.log_test1 col1 LONG 1 AND col2 STRING b64'dGVzdDE='
+0-1-10 1 1 INSERT test.log_test1 col1 LONG 2 AND col2 STRING b64'dGVzdDI='
+0-1-11 1 1 INSERT test.log_test1 col1 LONG 3 AND col2 STRING b64'YXJnIHdpdGggJ3NpbmdsZSBxdW90ZScgYmxhaA=='
+0-1-12 1 1 INSERT test.log_test1 col1 LONG 4 AND col2 STRING b64'YXJnIHdpdGggImRvdWJsZSBxdW90ZSIgYmxhaA=='
+0-1-13 1 1 INSERT test.log_test1 col1 LONG 5 AND col2 STRING NULL
+0-1-14 1 1 INSERT test.log_test1 col1 LONG 1 AND col2 STRING b64'cmVwbGFjZSB0ZXN0cw=='
+0-1-15 1 1 INSERT test.log_test1 col1 LONG 6 AND col2 STRING b64'cmVwbGFjZSB0ZXN0'
+0-1-16 2 1 INSERT test.log_test1 col1 LONG 7 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
+0-1-16 2 2 INSERT test.log_test1 col1 LONG 8 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
+0-1-17 9 1 INSERT test.log_test3 col1 LONG 1 AND col2 STRING b64'dGVzdDE='
+0-1-17 9 2 INSERT test.log_test3 col1 LONG 2 AND col2 STRING b64'dGVzdDI='
+0-1-17 9 3 INSERT test.log_test3 col1 LONG 3 AND col2 STRING b64'YXJnIHdpdGggJ3NpbmdsZSBxdW90ZScgYmxhaA=='
+0-1-17 9 4 INSERT test.log_test3 col1 LONG 4 AND col2 STRING b64'YXJnIHdpdGggImRvdWJsZSBxdW90ZSIgYmxhaA=='
+0-1-17 9 5 INSERT test.log_test3 col1 LONG 5 AND col2 STRING NULL
+0-1-17 9 6 INSERT test.log_test3 col1 LONG 1 AND col2 STRING b64'cmVwbGFjZSB0ZXN0cw=='
+0-1-17 9 7 INSERT test.log_test3 col1 LONG 6 AND col2 STRING b64'cmVwbGFjZSB0ZXN0'
+0-1-17 9 8 INSERT test.log_test3 col1 LONG 7 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
+0-1-17 9 9 INSERT test.log_test3 col1 LONG 8 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
+0-1-18 2 1 UPDATE test.log_test1 col2 STRING b64'Y2hhbmdlZDE=' WHERE col1 LONG 1 AND col2 STRING b64'dGVzdDE='
+0-1-18 2 2 UPDATE test.log_test1 col2 STRING b64'Y2hhbmdlZDE=' WHERE col1 LONG 1 AND col2 STRING b64'cmVwbGFjZSB0ZXN0cw=='
+0-1-19 2 1 UPDATE test.log_test1 col1 LONG 2 WHERE col1 LONG 1 AND col2 STRING b64'Y2hhbmdlZDE='
+0-1-19 2 2 UPDATE test.log_test1 col1 LONG 2 WHERE col1 LONG 1 AND col2 STRING b64'Y2hhbmdlZDE='
+0-1-20 3 1 UPDATE test.log_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 2 AND col2 STRING b64'Y2hhbmdlZDE='
+0-1-20 3 2 UPDATE test.log_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 2 AND col2 STRING b64'dGVzdDI='
+0-1-20 3 3 UPDATE test.log_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 2 AND col2 STRING b64'Y2hhbmdlZDE='
+0-1-21 3 1 UPDATE test.log_test1 col2 STRING b64'Rk9P' WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
+0-1-21 3 2 UPDATE test.log_test1 col2 STRING b64'Rk9P' WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
+0-1-21 3 3 UPDATE test.log_test1 col2 STRING b64'Rk9P' WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
+0-1-22 1 1 INSERT test.log_test4 col1 LONG 1 AND col2 STRING NULL AND col3 LONG NULL
+0-1-23 1 1 INSERT test.log_test4 col1 LONG 2 AND col2 STRING NULL AND col3 LONG NULL
+0-1-24 1 1 INSERT test.log_test4 col1 LONG 3 AND col2 STRING b64'dGhyZWU=' AND col3 LONG 3
+0-1-25 1 1 UPDATE test.log_test4 col2 STRING b64'b25l' WHERE col1 LONG 1 AND col2 STRING NULL AND col3 LONG NULL
+0-1-26 1 1 UPDATE test.log_test4 col2 STRING NULL WHERE col1 LONG 1 AND col2 STRING b64'b25l' AND col3 LONG NULL
+0-1-27 1 1 UPDATE test.log_test4 col2 STRING b64'' WHERE col1 LONG 2 AND col2 STRING NULL AND col3 LONG NULL
+0-1-28 1 1 UPDATE test.log_test4 col2 STRING NULL WHERE col1 LONG 2 AND col2 STRING b64'' AND col3 LONG NULL
+0-1-29 1 1 UPDATE test.log_test4 col2 STRING b64'bmV3IHRocmVl' WHERE col1 LONG 3 AND col2 STRING b64'dGhyZWU=' AND col3 LONG 3
+0-1-30 1 1 UPDATE test.log_test4 col2 STRING NULL WHERE col1 LONG 3 AND col2 STRING b64'bmV3IHRocmVl' AND col3 LONG 3
+0-1-31 1 1 UPDATE test.log_test4 col3 LONG 1 WHERE col1 LONG 1 AND col2 STRING NULL AND col3 LONG NULL
+0-1-32 1 1 UPDATE test.log_test4 col3 LONG NULL WHERE col1 LONG 1 AND col2 STRING NULL AND col3 LONG 1
+0-1-33 1 1 DELETE test.log_test1 WHERE col1 LONG 3 AND col2 STRING b64'YXJnIHdpdGggJ3NpbmdsZSBxdW90ZScgYmxhaA=='
+0-1-34 1 1 DELETE test.log_test1 WHERE col1 LONG 4 AND col2 STRING b64'YXJnIHdpdGggImRvdWJsZSBxdW90ZSIgYmxhaA=='
+0-1-35 7 1 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Rk9P'
+0-1-35 7 2 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Rk9P'
+0-1-35 7 3 DELETE test.log_test1 WHERE col1 LONG 5 AND col2 STRING NULL
+0-1-35 7 4 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Rk9P'
+0-1-35 7 5 DELETE test.log_test1 WHERE col1 LONG 6 AND col2 STRING b64'cmVwbGFjZSB0ZXN0'
+0-1-35 7 6 DELETE test.log_test1 WHERE col1 LONG 7 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
+0-1-35 7 7 DELETE test.log_test1 WHERE col1 LONG 8 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
+0-1-36 1 1 INSERT test.log_test2 col1 LONG 2 AND col2 STRING b64'Zm9v' AND col3 BLOB NULL
+0-1-37 1 1 INSERT test.log_test2 col1 LONG 1 AND col2 STRING NULL AND col3 BLOB b64'YmFy'
+0-1-38 1 1 DELETE test.log_test2 WHERE col1 LONG 2 AND col2 STRING b64'Zm9v' AND col3 BLOB NULL
+0-1-39 1 1 DELETE test.log_test2 WHERE col1 LONG 1 AND col2 STRING NULL AND col3 BLOB b64'YmFy'
+0-1-40 1 1 INSERT test.log_test1 col1 LONG 1 AND col2 STRING b64'dGVzdA=='
+0-1-41 1 1 INSERT test.log_test1 col1 LONG 2 AND col2 STRING b64'dGVzdA=='
+0-1-42 1 1 INSERT test.log_test1 col1 LONG 3 AND col2 STRING b64'dGVzdA=='
+0-1-43 1 1 TRUNCATE_TABLE test.log_test1 truncate table log_test1
+0-1-44 1 1 DROP_TABLE test.log_test1 DROP TABLE `log_test1` /* generated by server */
+0-1-45 1 1 DROP_TABLE test.log_test2 DROP TABLE `log_test2` /* generated by server */
+0-1-46 1 1 DROP_TABLE test.log_test3 DROP TABLE `log_test3` /* generated by server */
+0-1-47 1 1 DROP_TABLE test.log_test4 DROP TABLE `log_test4` /* generated by server */
+0-1-48 1 1 CREATE_TABLE test.log_numeric1 create table log_numeric1 (col1 tinyint, col2 smallint, col3 mediumint, col4 int, col5 bigint) engine=innodb
+0-1-49 1 1 INSERT test.log_numeric1 col1 TINY 0 AND col2 SHORT 0 AND col3 INT24 0 AND col4 LONG 0 AND col5 LONGLONG 0
+0-1-50 1 1 INSERT test.log_numeric1 col1 TINY -100 AND col2 SHORT -100 AND col3 INT24 -100 AND col4 LONG -100 AND col5 LONGLONG -100
+0-1-51 1 1 INSERT test.log_numeric1 col1 TINY 100 AND col2 SHORT 100 AND col3 INT24 100 AND col4 LONG 100 AND col5 LONGLONG 100
+0-1-52 1 1 INSERT test.log_numeric1 col1 TINY -128 AND col2 SHORT -32768 AND col3 INT24 -8388608 AND col4 LONG -2147483648 AND col5 LONGLONG -9223372036854775808
+0-1-53 1 1 INSERT test.log_numeric1 col1 TINY 127 AND col2 SHORT 32767 AND col3 INT24 8388607 AND col4 LONG 2147483647 AND col5 LONGLONG 9223372036854775807
+0-1-54 1 1 DELETE test.log_numeric1 WHERE col1 TINY -100 AND col2 SHORT -100 AND col3 INT24 -100 AND col4 LONG -100 AND col5 LONGLONG -100
+0-1-55 1 1 UPDATE test.log_numeric1 col3 INT24 47 WHERE col1 TINY -128 AND col2 SHORT -32768 AND col3 INT24 -8388608 AND col4 LONG -2147483648 AND col5 LONGLONG -9223372036854775808
+0-1-56 1 1 UPDATE test.log_numeric1 col4 LONG 29 WHERE col1 TINY 127 AND col2 SHORT 32767 AND col3 INT24 8388607 AND col4 LONG 2147483647 AND col5 LONGLONG 9223372036854775807
+0-1-57 1 1 UPDATE test.log_numeric1 col5 LONGLONG 9223372036854775800 WHERE col1 TINY 127 AND col2 SHORT 32767 AND col3 INT24 8388607 AND col4 LONG 29 AND col5 LONGLONG 9223372036854775807
+0-1-58 1 1 CREATE_TABLE test.log_numeric2 create table log_numeric2 (col1 tinyint unsigned, col2 smallint unsigned, col3 mediumint unsigned, col4 int unsigned, col5 bigint unsigned) engine=innodb
+0-1-59 1 1 INSERT test.log_numeric2 col1 TINY 0 AND col2 SHORT 0 AND col3 INT24 0 AND col4 LONG 0 AND col5 LONGLONG 0
+0-1-60 1 1 INSERT test.log_numeric2 col1 TINY 255 AND col2 SHORT 65535 AND col3 INT24 16777215 AND col4 LONG 4294967295 AND col5 LONGLONG 18446744073709551615
+0-1-61 1 1 UPDATE test.log_numeric2 col5 LONGLONG 18446744073709551600 WHERE col1 TINY 255 AND col2 SHORT 65535 AND col3 INT24 16777215 AND col4 LONG 4294967295 AND col5 LONGLONG 18446744073709551615
+0-1-62 1 1 DELETE test.log_numeric2 WHERE col1 TINY 255 AND col2 SHORT 65535 AND col3 INT24 16777215 AND col4 LONG 4294967295 AND col5 LONGLONG 18446744073709551600
+0-1-63 1 1 CREATE_TABLE test.log_bit create table log_bit (col1 bit(1), col2 bit(17)) engine=innodb
+0-1-64 1 1 INSERT test.log_bit col1 BIT b'0' AND col2 BIT b'0'
+0-1-65 1 1 INSERT test.log_bit col1 BIT b'1' AND col2 BIT b'1'
+0-1-66 1 1 INSERT test.log_bit col1 BIT b'0' AND col2 BIT b'10101010'
+0-1-67 1 1 INSERT test.log_bit col1 BIT b'0' AND col2 BIT b'0'
+0-1-68 1 1 INSERT test.log_bit col1 BIT b'0' AND col2 BIT b'1111111111111111'
+0-1-69 1 1 UPDATE test.log_bit col1 BIT b'1' AND col2 BIT b'11001100' WHERE col1 BIT b'0' AND col2 BIT b'10101010'
+0-1-70 3 1 DELETE test.log_bit WHERE col1 BIT b'0' AND col2 BIT b'0'
+0-1-70 3 2 DELETE test.log_bit WHERE col1 BIT b'0' AND col2 BIT b'0'
+0-1-70 3 3 DELETE test.log_bit WHERE col1 BIT b'0' AND col2 BIT b'1111111111111111'
+0-1-71 1 1 DELETE test.log_bit WHERE col1 BIT b'1' AND col2 BIT b'11001100'
+0-1-72 1 1 CREATE_TABLE test.log_bit2 create table log_bit2 (col1 bit(64)) engine=innodb
+0-1-73 1 1 INSERT test.log_bit2 col1 BIT b'1000100010001000100010001000100010001000100010001000100010001000'
+0-1-74 1 1 CREATE_TABLE test.log_fp1 create table log_fp1 (col1 float, col2 double) engine=innodb
+0-1-75 1 1 INSERT test.log_fp1 col1 FLOAT 0 AND col2 DOUBLE 0
+0-1-76 1 1 INSERT test.log_fp1 col1 FLOAT 0 AND col2 DOUBLE 0
+0-1-77 1 1 INSERT test.log_fp1 col1 FLOAT -1.0000000116860974e-07 AND col2 DOUBLE -9.9999999999999995e-07
+0-1-78 1 1 INSERT test.log_fp1 col1 FLOAT -0 AND col2 DOUBLE -9.9999999999999998e-201
+0-1-79 1 1 INSERT test.log_fp1 col1 FLOAT 0 AND col2 DOUBLE 9.9999999999999998e-201
+0-1-80 1 1 INSERT test.log_fp1 col1 FLOAT -1 AND col2 DOUBLE -1
+0-1-81 1 1 INSERT test.log_fp1 col1 FLOAT 0 AND col2 DOUBLE 0
+0-1-82 1 1 INSERT test.log_fp1 col1 FLOAT 0 AND col2 DOUBLE 0
+0-1-83 1 1 INSERT test.log_fp1 col1 FLOAT 0.92106097936630249 AND col2 DOUBLE 0.9210609940028851
+0-1-84 1 1 UPDATE test.log_fp1 col2 DOUBLE 9.9999999999999995e+36 WHERE col1 FLOAT 0 AND col2 DOUBLE 9.9999999999999998e-201
+0-1-85 1 1 UPDATE test.log_fp1 col2 DOUBLE 3.1415899999999999 WHERE col1 FLOAT -1.0000000116860974e-07 AND col2 DOUBLE -9.9999999999999995e-07
+0-1-86 1 1 CREATE_TABLE test.log_dt1 create table log_dt1 (col1 datetime, col2 date, col4 time, col5 year) engine=innodb
+0-1-87 1 1 INSERT test.log_dt1 col1 DATETIME b64'MDAwMC0wMC0wMCAwMDowMDowMA==' AND col2 DATE b64'MDAwMC0wMC0wMA==' AND col4 TIME b64'MDA6MDA6MDA=' AND col5 YEAR 0000
+0-1-88 1 1 INSERT test.log_dt1 col1 DATETIME b64'MjAwOC0xMi0wMSAxMzo1NjowNA==' AND col2 DATE b64'MjAwOC0xMi0wMQ==' AND col4 TIME b64'MTM6NTY6MDQ=' AND col5 YEAR 2008
+0-1-89 1 1 UPDATE test.log_dt1 col1 DATETIME b64'MjAwNC0wNC0wMyAxMjowMDowMA==' WHERE col1 DATETIME b64'MDAwMC0wMC0wMCAwMDowMDowMA==' AND col2 DATE b64'MDAwMC0wMC0wMA==' AND col4 TIME b64'MDA6MDA6MDA=' AND col5 YEAR 0000
+0-1-90 1 1 UPDATE test.log_dt1 col2 DATE b64'MjAwNC0wNC0wMw==' WHERE col1 DATETIME b64'MjAwNC0wNC0wMyAxMjowMDowMA==' AND col2 DATE b64'MDAwMC0wMC0wMA==' AND col4 TIME b64'MDA6MDA6MDA=' AND col5 YEAR 0000
+0-1-91 1 1 UPDATE test.log_dt1 col4 TIME b64'MTI6MDA6MDA=' WHERE col1 DATETIME b64'MjAwNC0wNC0wMyAxMjowMDowMA==' AND col2 DATE b64'MjAwNC0wNC0wMw==' AND col4 TIME b64'MDA6MDA6MDA=' AND col5 YEAR 0000
+0-1-92 1 1 UPDATE test.log_dt1 col5 YEAR 2004 WHERE col1 DATETIME b64'MjAwNC0wNC0wMyAxMjowMDowMA==' AND col2 DATE b64'MjAwNC0wNC0wMw==' AND col4 TIME b64'MTI6MDA6MDA=' AND col5 YEAR 0000
+0-1-93 1 1 DELETE test.log_dt1 WHERE col1 DATETIME b64'MjAwNC0wNC0wMyAxMjowMDowMA==' AND col2 DATE b64'MjAwNC0wNC0wMw==' AND col4 TIME b64'MTI6MDA6MDA=' AND col5 YEAR 2004
+0-1-94 1 1 CREATE_TABLE test.log_str1 create table log_str1 (col1 char(4), col2 varchar(4)) engine=innodb
+0-1-95 1 1 INSERT test.log_str1 col1 STRING b64'' AND col2 STRING b64''
+0-1-96 1 1 INSERT test.log_str1 col1 STRING b64'Zm9v' AND col2 STRING b64'YmFy'
+0-1-97 1 1 INSERT test.log_str1 col1 STRING b64'IGZvbw==' AND col2 STRING b64'IGJhcg=='
+0-1-98 1 1 INSERT test.log_str1 col1 STRING b64'YQAA' AND col2 STRING b64'YgAA'
+0-1-99 1 1 DELETE test.log_str1 WHERE col1 STRING b64'Zm9v' AND col2 STRING b64'YmFy'
+0-1-100 1 1 UPDATE test.log_str1 col1 STRING b64'Zm9v' WHERE col1 STRING b64'IGZvbw==' AND col2 STRING b64'IGJhcg=='
+0-1-101 1 1 CREATE_TABLE test.log_str2 create table log_str2 (col1 binary(16), col2 varbinary(16)) engine=innodb
+0-1-102 1 1 INSERT test.log_str2 col1 STRING b64'YQAAAAAAAAAAAAAAAAAAAA==' AND col2 STRING b64'Yg=='
+0-1-103 1 1 INSERT test.log_str2 col1 STRING b64'YQAAAAAAAAAAAAAAAAAAAA==' AND col2 STRING b64'YgAA'
+0-1-104 1 1 INSERT test.log_str2 col1 STRING b64'ADFhAAAAAAAAAAAAAAAAAA==' AND col2 STRING b64'ADFi'
+0-1-105 1 1 UPDATE test.log_str2 col1 STRING b64'eAAAMTEAAAAAAAAAAAAAAA==' WHERE col1 STRING b64'ADFhAAAAAAAAAAAAAAAAAA==' AND col2 STRING b64'ADFi'
+0-1-106 1 1 CREATE_TABLE test.log_str3 create table log_str3 (col1 blob, col2 text) engine=innodb
+0-1-107 1 1 INSERT test.log_str3 col1 BLOB b64'YQ==' AND col2 BLOB b64'Yg=='
+0-1-108 1 1 INSERT test.log_str3 col1 BLOB b64'YQAA' AND col2 BLOB b64'YgAA'
+0-1-109 1 1 INSERT test.log_str3 col1 BLOB b64'ADFh' AND col2 BLOB b64'ADFi'
+0-1-110 1 1 DELETE test.log_str3 WHERE col1 BLOB b64'YQAA' AND col2 BLOB b64'YgAA'
+0-1-111 1 1 UPDATE test.log_str3 col1 BLOB b64'eAAAMTE=' WHERE col1 BLOB b64'ADFh' AND col2 BLOB b64'ADFi'
+0-1-112 1 1 INSERT test.log_str3 col1 BLOB b64'AA==' AND col2 BLOB NULL
+0-1-113 1 1 INSERT test.log_str3 col1 BLOB b64'AHQ=' AND col2 BLOB NULL
+0-1-114 1 1 INSERT test.log_str3 col1 BLOB b64'AHRl' AND col2 BLOB NULL
+0-1-115 1 1 INSERT test.log_str3 col1 BLOB b64'AHRlcw==' AND col2 BLOB NULL
+0-1-116 1 1 INSERT test.log_str3 col1 BLOB b64'AHRlc3Q=' AND col2 BLOB NULL
+0-1-117 1 1 INSERT test.log_str3 col1 BLOB b64'AHRlc3Qx' AND col2 BLOB NULL
+0-1-118 1 1 INSERT test.log_str3 col1 BLOB b64'AHRlc3QxMg==' AND col2 BLOB NULL
+0-1-119 1 1 INSERT test.log_str3 col1 BLOB b64'AHRlc3QxMjM=' AND col2 BLOB NULL
+0-1-120 1 1 INSERT test.log_str3 col1 BLOB b64'AHRlc3QxMjM0' AND col2 BLOB NULL
+0-1-121 1 1 INSERT test.log_str3 col1 BLOB b64'AGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6PTAxMjM0NTY3ODkw' AND col2 BLOB NULL
+0-1-122 1 1 CREATE_TABLE test.log_enum1 create table log_enum1 (col1 ENUM('one', 'two', 'three')) engine=innodb
+0-1-123 1 1 INSERT test.log_enum1 col1 ENUM b64'b25l'
+0-1-124 1 1 INSERT test.log_enum1 col1 ENUM b64'dHdv'
+0-1-125 1 1 INSERT test.log_enum1 col1 ENUM b64'dGhyZWU='
+0-1-126 1 1 INSERT test.log_enum1 col1 ENUM b64'b25l'
+0-1-127 1 1 INSERT test.log_enum1 col1 ENUM NULL
+0-1-128 2 1 DELETE test.log_enum1 WHERE col1 ENUM b64'b25l'
+0-1-128 2 2 DELETE test.log_enum1 WHERE col1 ENUM b64'b25l'
+0-1-129 1 1 DELETE test.log_enum1 WHERE col1 ENUM b64'dHdv'
+0-1-130 1 1 UPDATE test.log_enum1 col1 ENUM b64'dHdv' WHERE col1 ENUM b64'dGhyZWU='
+0-1-131 1 1 UPDATE test.log_enum1 col1 ENUM b64'b25l' WHERE col1 ENUM b64'dHdv'
+0-1-132 1 1 CREATE_TABLE test.log_set1 create table log_set1 (col1 SET('a', 'b', 'c', 'd')) engine=innodb
+0-1-133 1 1 INSERT test.log_set1 col1 SET b64'YQ=='
+0-1-134 1 1 INSERT test.log_set1 col1 SET b64'YSxi'
+0-1-135 1 1 INSERT test.log_set1 col1 SET b64'Yyxk'
+0-1-136 1 1 INSERT test.log_set1 col1 SET b64'YSxiLGM='
+0-1-137 1 1 INSERT test.log_set1 col1 SET b64'YSxiLGMsZA=='
+0-1-138 1 1 DELETE test.log_set1 WHERE col1 SET b64'Yyxk'
+0-1-139 1 1 UPDATE test.log_set1 col1 SET b64'YSxi' WHERE col1 SET b64'YSxiLGM='
+0-1-140 1 1 DROP_TABLE test.log_bit DROP TABLE `log_bit` /* generated by server */
+0-1-141 1 1 DROP_TABLE test.log_bit2 DROP TABLE `log_bit2` /* generated by server */
+0-1-142 1 1 DROP_TABLE test.log_dt1 DROP TABLE `log_dt1` /* generated by server */
+0-1-143 1 1 DROP_TABLE test.log_enum1 DROP TABLE `log_enum1` /* generated by server */
+0-1-144 1 1 DROP_TABLE test.log_fp1 DROP TABLE `log_fp1` /* generated by server */
+0-1-145 1 1 DROP_TABLE test.log_numeric1 DROP TABLE `log_numeric1` /* generated by server */
+0-1-146 1 1 DROP_TABLE test.log_numeric2 DROP TABLE `log_numeric2` /* generated by server */
+0-1-147 1 1 DROP_TABLE test.log_set1 DROP TABLE `log_set1` /* generated by server */
+0-1-148 1 1 DROP_TABLE test.log_str1 DROP TABLE `log_str1` /* generated by server */
+0-1-149 1 1 DROP_TABLE test.log_str2 DROP TABLE `log_str2` /* generated by server */
+0-1-150 1 1 DROP_TABLE test.log_str3 DROP TABLE `log_str3` /* generated by server */
+0-1-151 1 1 CREATE_DB N/A.N/A create database mysqltest
+0-1-152 1 1 CREATE_TABLE mysqltest.item create table mysqltest.item (name char(20) default '' not null, price int(5) default '0' not null, floatprice float, comment char(20), mybits bit(8), nullstring char(10), enumcol enum('true', 'false'), setcol set('red', 'yellow', 'blue'), tinycol tinyint, bigintcol bigint(20), float8col float8, varcharcol varchar(20), varbinarycol varbinary(20), yearcol year, datecol date, timecol time, datetimecol datetime, tinyblobcol tinyblob, mediumblobcol mediumblob, primary  key (name)) engine=innodb
+0-1-153 1 1 INSERT mysqltest.item name STRING b64'Z29vZ2xlIGN1cA==' AND price LONG 10 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-154 1 1 INSERT mysqltest.item name STRING b64'Z29vZ2xlIGhhdA==' AND price LONG 5 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-154 1 1 CREATE_TABLE mysqltest.myitem CREATE TABLE `mysqltest`.`myitem` (
+'',
+'0',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+0-1-155 2 1 INSERT mysqltest.myitem name STRING b64'Z29vZ2xlIGN1cA==' AND price LONG 10 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-155 2 2 INSERT mysqltest.myitem name STRING b64'Z29vZ2xlIGhhdA==' AND price LONG 5 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-156 2 1 UPDATE mysqltest.item price LONG 13 WHERE name STRING b64'Z29vZ2xlIGN1cA==' AND price LONG 10 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-156 2 2 UPDATE mysqltest.myitem price LONG 12 WHERE name STRING b64'Z29vZ2xlIGhhdA==' AND price LONG 5 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-157 4 1 DELETE mysqltest.item WHERE name STRING b64'Z29vZ2xlIGN1cA==' AND price LONG 13 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-157 4 2 DELETE mysqltest.item WHERE name STRING b64'Z29vZ2xlIGhhdA==' AND price LONG 5 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-157 4 3 DELETE mysqltest.myitem WHERE name STRING b64'Z29vZ2xlIGN1cA==' AND price LONG 10 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-157 4 4 DELETE mysqltest.myitem WHERE name STRING b64'Z29vZ2xlIGhhdA==' AND price LONG 12 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
+0-1-158 1 1 CREATE_INDEX mysqltest.item create index price_index on mysqltest.item(price)
+0-1-159 1 1 ALTER_TABLE mysqltest.item alter table mysqltest.item drop column mediumblobcol
+0-1-160 1 1 DROP_INDEX mysqltest.item drop index price_index on mysqltest.item
+0-1-161 1 1 TRUNCATE_TABLE mysqltest.item truncate table mysqltest.item
+0-1-162 1 1 DROP_TABLE mysqltest.item DROP TABLE `mysqltest`.`item` /* generated by server */
+0-1-163 1 1 DROP_DB N/A.N/A drop database mysqltest
+include/rpl_end.inc

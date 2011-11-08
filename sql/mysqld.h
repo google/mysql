@@ -279,6 +279,11 @@ extern ulong log_warnings;
 extern my_bool opt_update_connection_privs;
 extern char *opt_deprecated_engines;
 extern my_bool opt_require_super_for_mysql_schema_ddl;
+extern my_bool opt_sql_log_err_aborts_txn;
+extern my_bool opt_sql_log_ddl, opt_sql_log_ddl_base64_encode_stmts;
+extern char *opt_sql_log_database;
+extern ulong sql_log_cache_disk_use;
+extern ulong sql_log_cache_size, sql_log_cache_size_max;
 
 extern char *restricted_schemas_str;
 extern char *restricted_variables_str;

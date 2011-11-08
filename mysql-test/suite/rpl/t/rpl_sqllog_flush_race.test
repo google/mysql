@@ -1,0 +1,22 @@
+--source include/have_debug.inc
+--source include/master-slave.inc
+
+connection master;
+create table t1 (a int, b char(32)) engine=innodb;
+
+sync_slave_with_master;
+send flush logs;
+
+connection master;
+sleep 1;
+insert into t1 values (1, 'This is a test.');
+save_master_pos;
+
+connection slave;
+reap;
+sync_with_master;
+
+connection master;
+drop table t1;
+
+--source include/rpl_end.inc

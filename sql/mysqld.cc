@@ -386,6 +386,12 @@ my_bool opt_audit_log_remote_connections;
 char *opt_audit_log_filter;
 char *opt_audit_log_tables;
 my_bool opt_sql_log;
+my_bool opt_sql_log_err_aborts_txn;
+my_bool opt_sql_log_ddl;
+my_bool opt_sql_log_ddl_base64_encode_stmts;
+char *opt_sql_log_database;
+ulong sql_log_cache_disk_use= 0;
+ulong sql_log_cache_size= 0, sql_log_cache_size_max= 0;
 ulonglong log_output_options;
 my_bool opt_userstat_running;
 my_bool opt_log_queries_not_using_indexes= 0;
@@ -5148,10 +5154,22 @@ a file name for --log-bin-index option", opt_binlog_index_name);
   if (opt_sql_log)
   {
     /*
+      Check the sql log options, issue errors and abort if needed. The
+      --log-bin has to be enabled for --sql-log; the --sql-log has to be
+      enabled for --sql-log-ddl.
+    */
+    if (!opt_bin_log)
+    {
+      sql_print_error("--sql-log is enabled but --log-bin is not. Please "
+                      "add --log-bin to the server startup options.");
+      unireg_abort(1);
+    }
+
+    /*
       Reports an error and aborts, if the --log-sql's path
       is a directory.
     */
-    if (opt_sql_logname &&
+    if (opt_sql_logname && strlen(opt_sql_logname) &&
         opt_sql_logname[strlen(opt_sql_logname) - 1] == FN_LIBCHAR)
     {
       sql_print_error("Path '%s' is a directory name, please specify "
@@ -5161,11 +5179,11 @@ a file name for --log-bin-index option", opt_binlog_index_name);
 
     char buf[FN_REFLEN];
     const char *ln;
-    ln= mysql_sql_log.generate_name(opt_sql_logname, "-sql", 1, buf);
+    ln= mysql_sql_log.generate_name(opt_sql_logname, "-sql",
+                                    false /* strip_ext */, buf);
     if (ln == buf)
     {
-      my_free(opt_sql_logname);
-      opt_sql_logname= my_strdup(buf, MYF(0));
+      opt_sql_logname= my_once_strdup(buf, MYF(0));
     }
 
     if (mysql_sql_log.open(opt_sql_logname, LOG_SQL, NULL, WRITE_CACHE))
@@ -5174,6 +5192,13 @@ a file name for --log-bin-index option", opt_binlog_index_name);
       unireg_abort(1);
     }
   }
+  else if (opt_sql_log_ddl)
+  {
+    sql_print_error("--sql-log-ddl is enabled but --sql-log is not. Please "
+                    "add --sql-log to the server startup options.");
+    unireg_abort(1);
+  }
+
 
 #ifdef HAVE_REPLICATION
   if (opt_bin_log && expire_logs_days)
@@ -7638,7 +7663,7 @@ struct my_option my_long_options[]=
    &tc_size, &tc_size, 0, GET_ULONG,
    REQUIRED_ARG, TABLE_OPEN_CACHE_DEFAULT, 1, 512*1024L, 0, 1, 0},
   {"sql-log", OPT_SQL_LOG, "Enable row-change logging.",
-   &opt_sql_logname, &opt_sql_logname, 0, GET_STR_ALLOC,
+   &opt_sql_logname, &opt_sql_logname, 0, GET_STR,
    OPT_ARG, 0, 0, 0, 0, 0, 0},
 
   /* The following options exist in 5.6 but not in 10.0 */
@@ -8456,6 +8481,7 @@ SHOW_VAR status_vars[]= {
   {"Sort_range",	       (char*) offsetof(STATUS_VAR, filesort_range_count_), SHOW_LONG_STATUS},
   {"Sort_rows",		       (char*) offsetof(STATUS_VAR, filesort_rows_), SHOW_LONG_STATUS},
   {"Sort_scan",		       (char*) offsetof(STATUS_VAR, filesort_scan_count_), SHOW_LONG_STATUS},
+  {"Sqllog_cache_disk_use",    (char*) &sql_log_cache_disk_use, SHOW_LONG},
 #ifdef HAVE_OPENSSL
 #ifndef EMBEDDED_LIBRARY
   {"Ssl_accept_renegotiates",  (char*) &show_ssl_ctx_sess_accept_renegotiate, SHOW_SIMPLE_FUNC},
@@ -8702,6 +8728,10 @@ static int mysql_init_variables(void)
   mysqld_user= mysqld_chroot= opt_init_file= opt_bin_logname = 0;
   opt_sql_log= 0;
   opt_sql_logname= 0;
+  opt_sql_log_database= 0;
+  opt_sql_log_err_aborts_txn= 0;
+  opt_sql_log_ddl= 0;
+  sql_log_cache_disk_use= 0;
   prepared_stmt_count= 0;
   limit_tmp_disk_space= 0;
   mysqld_unix_port= opt_mysql_tmpdir= my_bind_addr_str= NullS;
@@ -8721,6 +8751,7 @@ static int mysql_init_variables(void)
   key_map_full.set_all();
 
   opt_deprecated_engines= (char*)"";
+  opt_sql_log_ddl_base64_encode_stmts= 1;
 
   /* Character sets */
   system_charset_info= &my_charset_utf8_general_ci;

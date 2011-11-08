@@ -2520,6 +2520,14 @@ public:
   /* One bigger than needed to avoid to test if key == MAX_KEY */
   ulonglong index_rows_read[MAX_KEY+1];
 
+  /*
+    If true, deleted rows will be logged in the sql log.  If false, they will be
+    ignored.  This is used for delete from table without conditions which acts
+    like a truncate.  However, InnoDB treats them differently but we only want
+    to log a single statement for the truncate.
+   */
+  bool log_deleted_rows;
+
   Item *pushed_idx_cond;
   uint pushed_idx_cond_keyno;  /* The index which the above condition is for */
 
@@ -2573,7 +2581,7 @@ public:
     ft_handler(0), inited(NONE),
     implicit_emptied(0),
     pushed_cond(0), next_insert_id(0), insert_id_for_cur_row(0),
-    pushed_idx_cond(NULL),
+    log_deleted_rows(true), pushed_idx_cond(NULL),
     pushed_idx_cond_keyno(MAX_KEY),
     auto_inc_intervals_count(0),
     m_psi(NULL), m_lock_type(F_UNLCK), ha_share(NULL)
@@ -2753,6 +2761,7 @@ public:
   {
     rows_read= rows_changed= rows_tmp_read= 0;
     bzero(index_rows_read, sizeof(index_rows_read));
+    log_deleted_rows= true;
   }
   virtual void change_table_ptr(TABLE *table_arg, TABLE_SHARE *share)
   {
@@ -3720,6 +3729,10 @@ public:
   
   TABLE* get_table() { return table; }
   TABLE_SHARE* get_table_share() { return table_share; }
+
+  void set_log_deleted_rows(bool log_rows)
+  { log_deleted_rows= log_rows; }
+
 protected:
   /* deprecated, don't use in new engines */
   inline void ha_statistic_increment(ulong SSV::*offset) const { }
@@ -3950,6 +3963,13 @@ public:
     return false;
   }
   int get_lock_type() const { return m_lock_type; }
+
+  /* Functions to support SQL logging. */
+  int log_write_row(TABLE *table, const uchar *buf);
+  int log_update_row(TABLE *table, const uchar *old_data,
+                     const uchar *new_data);
+  int log_delete_row(TABLE *table, const uchar *buf);
+
 public:
   /* XXX to be removed, see ha_partition::partition_ht() */
   virtual handlerton *partition_ht() const

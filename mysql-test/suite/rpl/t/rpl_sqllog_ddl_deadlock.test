@@ -1,0 +1,14 @@
+--source include/have_debug.inc
+--source include/master-slave.inc
+--source include/have_innodb.inc
+
+connection master;
+create table t1 (a int, b char(32)) engine=innodb;
+drop table t1;
+save_master_pos;
+
+sleep 1;
+connection slave;
+sync_with_master;
+
+--source include/rpl_end.inc

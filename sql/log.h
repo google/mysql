@@ -391,6 +391,28 @@ private:
   bool record_same_date;
 };
 
+/*
+  We only care about a certain group of statements in sql log. We include
+  statements that changes table, index and databases. We do not include
+  statements that change views, stored procedures or triggers.
+
+  Please note that TRUNCATE TABLE statement is treated as a DDL in MySQL. Sql
+  log will not generate SQLLOG_STMT_DELETE log entries corresponding to the
+  deletion of table rows.
+
+  To add more statement types, please refer to the enum enum_sql_command in
+  sql/sql_lex.h.
+*/
+enum enum_sqllog_stmt_type
+{
+  SQLLOG_STMT_INSERT, SQLLOG_STMT_UPDATE, SQLLOG_STMT_DELETE,
+  SQLLOG_STMT_DELETE_TABLE, SQLLOG_STMT_TRUNCATE_TABLE,
+  SQLLOG_STMT_CREATE_TABLE, SQLLOG_STMT_ALTER_TABLE, SQLLOG_STMT_DROP_TABLE,
+  SQLLOG_STMT_RENAME_TABLE, SQLLOG_STMT_CREATE_INDEX, SQLLOG_STMT_DROP_INDEX,
+  SQLLOG_STMT_CREATE_DB, SQLLOG_STMT_ALTER_DB, SQLLOG_STMT_DROP_DB,
+  SQLLOG_STMT_IGNORE
+};
+
 class MYSQL_SQL_LOG: public MYSQL_LOG
 {
  private:
@@ -402,6 +424,10 @@ class MYSQL_SQL_LOG: public MYSQL_LOG
 public:
   /* Use this to start writing a new log file. */
   int new_file();
+
+  static bool should_log(THD *thd);
+  bool sql_log_write(THD *thd, const uchar *text, int length, bool line_done);
+  bool log_ddl(THD* thd);
 
   bool open(const char *log_name,
             enum_log_type log_type,
@@ -1111,6 +1137,11 @@ int create_full_gtid_index(const char *file_name,
                            IO_CACHE *binlog_cache,
                            Format_description_log_event *fdle,
                            const char **errormsg);
+
+bool sqllog_write_row(THD *thd, TABLE *table, const uchar *buf, String *insert);
+bool sqllog_update_row(THD *thd, TABLE *table, const uchar *old_data,
+                       const uchar *new_data, String *update);
+bool sqllog_delete_row(THD *thd, TABLE *table, const uchar *buf, String *obj);
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;

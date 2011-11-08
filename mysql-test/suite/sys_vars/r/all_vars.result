@@ -22,6 +22,12 @@ reserved_super_connections
 rpl_allow_implicit_commit
 rpl_crash_on_binlog_io_error
 sql_log
+sql_log_cache_size
+sql_log_cache_size_max
+sql_log_database
+sql_log_ddl
+sql_log_ddl_base64_encode_stmts
+sql_log_err_aborts_txn
 sql_log_file
 super_to_set_timestamp
 update_connection_privs
