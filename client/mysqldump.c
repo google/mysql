@@ -103,7 +103,7 @@ static my_bool  verbose= 0, opt_no_create_info= 0, opt_no_data= 0,
                 opt_replace_into= 0,
                 opt_dump_triggers= 0, opt_routines=0, opt_tz_utc=1,
                 opt_events= 0,
-                opt_alltspcs=0, opt_notspcs= 0;
+                opt_alltspcs=0, opt_notspcs= 0, opt_lossless_fp= 0;
 static my_bool insert_pat_inited= 0, debug_info_flag= 0, debug_check_flag= 0;
 static ulong opt_max_allowed_packet, opt_net_buffer_length;
 static MYSQL mysql_connection,*mysql=0;
@@ -344,6 +344,10 @@ static struct my_option my_long_options[] =
   {"log-error", OPT_ERROR_LOG_FILE, "Append warnings and errors to given file.",
    &log_error_file, &log_error_file, 0, GET_STR,
    REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"lossless-fp", 'L',
+   "Convert double and float to decimal with extra precision so the "
+   "reinserted values will be equal to the original values.",
+   &opt_lossless_fp, &opt_lossless_fp, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"master-data", OPT_MASTER_DATA,
    "This causes the binary log position and filename to be appended to the "
    "output. If equal to 1, will print it as a CHANGE MASTER command; if equal"
@@ -1659,6 +1663,102 @@ static char *quote_for_like(const char *name, char *buff)
   return buff;
 }
 
+
+/*
+  get_select_expr - returns the select list in select_buf. Columns with type
+  double and float are wrapped with the function call IEEE754_TO_STRING.
+  Other columns are not wrapped with the function call. This is only needed
+  when --lossless-fp has been set.
+  RETURN
+    0 on success
+*/
+
+static uint get_select_expr(char *table, char *select_buf)
+{
+  char query_buf[1024];
+  const char *func= "IEEE754_TO_STRING";
+  /* Include space for '(' and ')'. */
+  const int func_len= sizeof(func) + 2;
+  char quoted_table_name[NAME_LEN * 2 + 3];
+  char *quoted_table_ptr;
+
+  quoted_table_ptr= quote_name(table, quoted_table_name, 1);
+
+  /* Use this to determine the datatypes and names of the fetched columns. */
+  sprintf(query_buf, "SELECT * from %s limit 0", quoted_table_ptr);
+
+  if (verbose)
+    fprintf(stderr, "-- Building select list from %s\n", query_buf);
+
+  if (!mysql_query(mysql, query_buf))
+  {
+    MYSQL_RES *query_result= mysql_store_result(mysql);
+    int field_ix;
+    int num_fields;
+    int select_len= 0;
+    int select_ix= 0;
+
+    if (!query_result)
+    {
+      fprintf(stderr, "-- Cannot get column types for table %s, "
+              "mysql_store_result returns NULL: %s", table, mysql_error(mysql));
+      mysql_free_result(query_result);
+      return 1;
+    }
+    if (mysql_errno(mysql))
+    {
+      fprintf(stderr, "-- Cannot get column types for table %s, "
+              "error in mysql_store_result: %s", table, mysql_error(mysql));
+      mysql_free_result(query_result);
+      return 1;
+    }
+    num_fields= mysql_num_fields(query_result);
+    if (num_fields <= 0)
+    {
+      fprintf(stderr, "-- Cannot get column types for table %s, "
+              "no fields fetched", table);
+      mysql_free_result(query_result);
+      return 1;
+    }
+
+    /* Determine the size of the select list. */
+    for (field_ix= 0; field_ix < num_fields; ++field_ix)
+    {
+      MYSQL_FIELD *field= mysql_fetch_field_direct(query_result, field_ix);
+      char quoted_name[NAME_LEN * 2 + 3];
+      char *name= quote_name(field->name, quoted_name, 0);
+      select_len+= strlen(name) + 2;
+      if (field->type == FIELD_TYPE_FLOAT || field->type == FIELD_TYPE_DOUBLE)
+        select_len+= func_len;
+    }
+
+    /* Generate the select list. */
+    for (field_ix= 0; field_ix < num_fields; ++field_ix)
+    {
+      MYSQL_FIELD *field= mysql_fetch_field_direct(query_result, field_ix);
+      char quoted_name[NAME_LEN * 2 + 3];
+      char *name= quote_name(field->name, quoted_name, 0);
+      if (field->type == FIELD_TYPE_FLOAT || field->type == FIELD_TYPE_DOUBLE)
+        select_ix+= sprintf(select_buf + select_ix, "%s(%s)", func, name);
+      else
+        select_ix+= sprintf(select_buf + select_ix, "%s", name);
+      if (field_ix < (num_fields - 1))
+        select_ix+= sprintf(select_buf + select_ix, ", ");
+    }
+
+    mysql_free_result(query_result);
+
+    if (verbose)
+      fprintf(stderr, "The select list for %s is %s", table, select_buf);
+    return 0;
+  }
+  else
+  {
+    fprintf(stderr, "Metadata query for %s failed: %s",
+            table, mysql_error(mysql));
+    return 1;
+  }
+}
 
 /*
   Quote and print a string.
@@ -3091,6 +3191,7 @@ static void dump_table(char *table, char *db)
   MYSQL_RES     *res;
   MYSQL_FIELD   *field;
   MYSQL_ROW     row;
+  char          select_expr[QUERY_LENGTH];
   DBUG_ENTER("dump_table");
 
   /*
@@ -3149,6 +3250,9 @@ static void dump_table(char *table, char *db)
   result_table= quote_name(table,table_buff, 1);
   opt_quoted_table= quote_name(table, table_buff2, 0);
 
+  if (opt_lossless_fp && get_select_expr(table, select_expr))
+    exit(EX_MYSQLERR);
+
   verbose_msg("-- Sending SELECT query...\n");
 
   init_dynamic_string_checked(&query_string, "", 1024, 1024);
@@ -3173,7 +3277,12 @@ static void dump_table(char *table, char *db)
 
     /* now build the query string */
 
-    dynstr_append_checked(&query_string, "SELECT /*!40001 SQL_NO_CACHE */ * INTO OUTFILE '");
+    dynstr_append_checked(&query_string, "SELECT /*!40001 SQL_NO_CACHE */ ");
+    if (!opt_lossless_fp)
+      dynstr_append_checked(&query_string, "*");
+    else
+      dynstr_append_checked(&query_string, select_expr);
+    dynstr_append_checked(&query_string, " INTO OUTFILE '");
     dynstr_append_checked(&query_string, filename);
     dynstr_append_checked(&query_string, "'");
 
@@ -3223,7 +3332,12 @@ static void dump_table(char *table, char *db)
       check_io(md_result_file);
     }
     
-    dynstr_append_checked(&query_string, "SELECT /*!40001 SQL_NO_CACHE */ * FROM ");
+    dynstr_append_checked(&query_string, "SELECT /*!40001 SQL_NO_CACHE */ ");
+    if (!opt_lossless_fp)
+      dynstr_append_checked(&query_string, "*");
+    else
+      dynstr_append_checked(&query_string, select_expr);
+    dynstr_append_checked(&query_string, " FROM ");
     dynstr_append_checked(&query_string, result_table);
 
     if (where)
