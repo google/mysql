@@ -3051,10 +3051,32 @@ mysql_execute_command(THD *thd)
                                        select_tables)))
         {
           /*
+            The table creation is optimistically logged before the
+            handle_select() function so that the "CREATE TABLE ... SELECT FROM
+            ..." statement will result in "CREATE TABLE" log entry first, then
+            the "INSERTION" log entries.
+          */
+          if (opt_sql_log_ddl && mysql_sql_log.should_log(thd) &&
+              (!opt_sql_log_database ||
+               strstr(create_table->db, opt_sql_log_database)))
+          {
+            /* Log the sql log query. */
+            if (!(res= thd->sqllog_log(SQLLOG_STMT_CREATE_TABLE,
+                                       create_table->db,
+                                       create_table->table_name, thd->query(),
+                                       thd->query_length())))
+              res= thd->sqllog_commit();
+          }
+          /*
             CREATE from SELECT give its SELECT_LEX for SELECT,
             and item_list belong to SELECT
+
+            We plan to deploy sql log on slave machine only. If there is a
+            failure in sqllog functions, the "CREATE TABLE ... SELECT FROM ..."
+            will fail and the replication will stop. This poses no problem for
+            our proposed deployment.
           */
-          res= handle_select(thd, lex, result, 0);
+          res|= handle_select(thd, lex, result, 0);
           delete result;
         }
       }
@@ -3078,7 +3100,22 @@ mysql_execute_command(THD *thd)
                                 &alter_info, 0, 0);
       }
       if (!res)
-	my_ok(thd);
+      {
+        if (opt_sql_log_ddl && mysql_sql_log.should_log(thd) &&
+            (!opt_sql_log_database ||
+             strstr(create_table->db, opt_sql_log_database)))
+        {
+          /* Log the sql log query. */
+          if (!(res= thd->sqllog_log(SQLLOG_STMT_CREATE_TABLE,
+                                     create_table->db,
+                                     create_table->table_name, thd->query(),
+                                     thd->query_length())))
+            res|= thd->sqllog_commit();
+        }
+
+        if (!res)
+          my_ok(thd);
+      }
     }
 
     /* put tables back for PS rexecuting */

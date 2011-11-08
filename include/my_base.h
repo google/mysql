@@ -449,6 +449,10 @@ enum ha_base_keytype {
 /* The error codes from 178 to 180 is not used, because we need to
 maintain forward compatibility with higher versions. */
 
+/* Failed to log an SQL statement during TXN.
+ * TODO(seanrees): renumber this for compatability, see above comment. */
+#define HA_ERR_SQL_LOG_TXN        178
+
 #define HA_ERR_TABLE_IN_FK_CHECK  181	 /* Table being used in foreign key check */
 #define HA_ERR_LAST               181    /* Copy of last error nr */
 

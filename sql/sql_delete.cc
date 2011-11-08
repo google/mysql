@@ -47,6 +47,8 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
   bool		transactional_table, safe_update, const_cond;
   bool          const_cond_result;
   ha_rows	deleted= 0;
+  bool          called_delete_all_rows= false;
+  bool          tried_delete_all_rows= false;
   bool          triggers_applicable;
   uint usable_index= MAX_KEY;
   SELECT_LEX   *select_lex= &thd->lex->select_lex;
@@ -138,6 +140,7 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
        (!thd->current_stmt_binlog_row_based &&
         !(table->triggers && table->triggers->has_delete_triggers()))))
   {
+    tried_delete_all_rows= true;
     /* Update the table->file->stats.records number */
     table->file->info(HA_STATUS_VARIABLE | HA_STATUS_NO_LOCK);
     ha_rows const maybe_deleted= table->file->stats.records;
@@ -150,6 +153,7 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
       */
       query_type= THD::STMT_QUERY_TYPE;
       error= -1;				// ok
+      called_delete_all_rows= true;
       deleted= maybe_deleted;
       save_binlog_row_based= thd->current_stmt_binlog_row_based;
       goto cleanup;
@@ -300,6 +304,19 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
 
   table->mark_columns_needed_for_delete();
 
+  table->file->set_log_deleted_rows(true);
+  if (tried_delete_all_rows && table->file->has_transactions())
+  {
+    /*
+      Tried to call delete_all_rows() but the handler did not support it.
+      Temporarily disable logging each row individually.  Later, one DDL
+      DELETE_TABLE statement will be logged.  Non-transactional tables will
+      still log every deleted row (if the handler did not support
+      delete_all_rows()).
+    */
+    table->file->set_log_deleted_rows(false);
+  }
+
   save_binlog_row_based= thd->current_stmt_binlog_row_based;
   if (thd->lex->sql_command == SQLCOM_TRUNCATE &&
       thd->current_stmt_binlog_row_based)
@@ -355,6 +372,10 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
     else
       table->file->unlock_row();  // Row failed selection, release lock on it
   }
+
+  /* Enable logging each delete row again. */
+  table->file->set_log_deleted_rows(true);
+
   killed_status= thd->killed;
   if (killed_status != THD::NOT_KILLED || thd->is_error())
     error= 1;					// Aborted
@@ -403,6 +424,24 @@ cleanup:
   /* See similar binlogging code in sql_update.cc, for comments */
   if ((error < 0) || thd->transaction.stmt.modified_non_trans_table)
   {
+    if ((called_delete_all_rows ||
+         (tried_delete_all_rows && transactional_table)) &&
+        mysql_sql_log.should_log(thd) &&
+        (!opt_sql_log_database ||
+         strstr(table->s->db.str, opt_sql_log_database)) &&
+        thd->lex && thd->lex->sql_command &&
+        thd->lex->sql_command == SQLCOM_DELETE)
+    {
+      if (thd->sqllog_log(SQLLOG_STMT_DELETE_TABLE, table->s->db.str,
+                          table->s->table_name.str, thd->query(),
+                          thd->query_length()) &&
+          opt_sql_log_err_aborts_txn)
+        error= 1;
+
+      if (!transactional_table && thd->sqllog_commit())
+        error= 1;
+    }
+
     if (mysql_bin_log.is_open() &&
         !(thd->lex->sql_command == SQLCOM_TRUNCATE &&
           thd->current_stmt_binlog_row_based &&

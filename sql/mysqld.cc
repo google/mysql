@@ -466,6 +466,13 @@ my_bool opt_audit_log_connections;
 my_bool opt_audit_log_remote_connections;
 my_bool opt_audit_log_super;
 my_bool opt_sql_log;
+my_bool opt_sql_log_err_aborts_txn;
+my_bool opt_sql_log_ddl;
+my_bool opt_sql_log_as_master;
+my_bool opt_sql_log_ddl_base64_encode_stmts;
+char *opt_sql_log_database;
+ulong sql_log_cache_disk_use= 0;
+ulong sql_log_cache_size= 0, sql_log_cache_size_max= 0;
 ulong log_output_options;
 my_bool opt_log_queries_not_using_indexes= 0;
 bool opt_error_log= IF_WIN(1,0);
@@ -4388,6 +4395,18 @@ a file name for --log-bin-index option", opt_binlog_index_name);
   if (opt_sql_log)
   {
     /*
+      Check the sql log options, issue errors and abort if needed. The
+      --log-bin has to be enabled for --sql-log; the --sql-log has to be
+      enabled for --sql-log-ddl.
+    */
+    if (!opt_bin_log)
+    {
+      sql_print_error("--sql-log is enabled but --log-bin is not. Please "
+                      "add --log-bin to the server startup options.");
+      unireg_abort(1);
+    }
+
+    /*
       Reports an error and aborts, if the --log-sql's path
       is a directory.
     */
@@ -4414,6 +4433,13 @@ a file name for --log-bin-index option", opt_binlog_index_name);
       unireg_abort(1);
     }
   }
+  else if (opt_sql_log_ddl)
+  {
+    sql_print_error("--sql-log-ddl is enabled but --sql-log is not. Please "
+                    "add --sql-log to the server startup options.");
+    unireg_abort(1);
+  }
+
 
 #ifdef HAVE_REPLICATION
   if (opt_bin_log && expire_logs_days)
@@ -6336,7 +6362,14 @@ enum options_mysqld
   OPT_HTTPD_TRUST_CLIENTS,
 #endif
   OPT_MYSQL_PROXY_USER,
-  OPT_SQL_LOG
+  OPT_SQL_LOG,
+  OPT_SQL_LOG_AS_MASTER,
+  OPT_SQL_LOG_DATABASE,
+  OPT_SQL_LOG_DDL,
+  OPT_SQL_LOG_DDL_BASE64_ENCODE_STMTS,
+  OPT_SQL_LOG_ERR_ABORTS_TXN,
+  OPT_SQL_LOG_CACHE_SIZE,
+  OPT_SQL_LOG_CACHE_SIZE_MAX
 };
 
 
@@ -8008,6 +8041,42 @@ thread is in the relay logs.",
   {"sql-log", OPT_SQL_LOG, "Enable row-change logging.",
    &opt_sql_logname, &opt_sql_logname, 0, GET_STR_ALLOC,
    OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"sql-log-as-master", OPT_SQL_LOG_AS_MASTER,
+   "Log all transactions when true. Otherwise, only log transactions from the "
+   "replication SQL thread.",
+   &opt_sql_log_as_master, &opt_sql_log_as_master, 0,
+   GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"sql-log-ddl", OPT_SQL_LOG_DDL,
+   "Log DDL statements when true. Must set --log-bin and --sql-log "
+   "to use this.",
+   &opt_sql_log_ddl, &opt_sql_log_ddl, 0, GET_BOOL,
+   NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"sql-log-ddl-base64-encode-stmts", OPT_SQL_LOG_DDL_BASE64_ENCODE_STMTS,
+   "Encode DDL statements using base64 encoding when true.  Must set "
+   "--log-bin, --sql-log and --sql-log-ddl options to use this.",
+   &opt_sql_log_ddl_base64_encode_stmts,
+   &opt_sql_log_ddl_base64_encode_stmts, 0, GET_BOOL,
+   NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"sql-log-database", OPT_SQL_LOG_DATABASE,
+   "Changes made to all databases that contain this value as a substring "
+   "will be logged when set. Otherwise log for all databases.",
+   &opt_sql_log_database, &opt_sql_log_database, 0, GET_STR, OPT_ARG,
+   0, 0, 0, 0, 0, 0},
+  {"sql-log-err-aborts-txn", OPT_SQL_LOG_ERR_ABORTS_TXN,
+   "Abort a transaction if there is an error when writing it to the SQL log "
+   "when this is true. Otherwise ignore errors.",
+   &opt_sql_log_err_aborts_txn, &opt_sql_log_err_aborts_txn,
+   0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"sql_log_cache_size", OPT_SQL_LOG_CACHE_SIZE,
+   "The size of the cache to hold the row change events for the sql_log during "
+   "a transaction. If you often use big, multi-statement transactions you can "
+   "increase this to get more performance.",
+   &sql_log_cache_size, &sql_log_cache_size, 0, GET_ULONG,
+   REQUIRED_ARG, 512*1024L, IO_SIZE, ~0L, 0, IO_SIZE, 0},
+  {"sql_log_cache_size_max", OPT_SQL_LOG_CACHE_SIZE_MAX,
+   "Can be used to restrict the total size used to cache a sql_log transaction",
+   &sql_log_cache_size_max, &sql_log_cache_size_max, 0,
+   GET_ULONG, REQUIRED_ARG, ~0L, IO_SIZE, ~0L, 0, IO_SIZE, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -8487,6 +8556,7 @@ SHOW_VAR status_vars[]= {
   {"Sort_range",	       (char*) offsetof(STATUS_VAR, filesort_range_count), SHOW_LONG_STATUS},
   {"Sort_rows",		       (char*) offsetof(STATUS_VAR, filesort_rows), SHOW_LONG_STATUS},
   {"Sort_scan",		       (char*) offsetof(STATUS_VAR, filesort_scan_count), SHOW_LONG_STATUS},
+  {"Sqllog_cache_disk_use",    (char*) &sql_log_cache_disk_use, SHOW_LONG},
 #ifdef HAVE_OPENSSL
   {"Ssl_accept_renegotiates",  (char*) &show_ssl_ctx_sess_accept_renegotiate, SHOW_FUNC},
   {"Ssl_accepts",              (char*) &show_ssl_ctx_sess_accept, SHOW_FUNC},
@@ -8654,6 +8724,11 @@ static int mysql_init_variables(void)
   mysqld_user= mysqld_chroot= opt_init_file= opt_bin_logname = 0;
   opt_sql_log= 0;
   opt_sql_logname= 0;
+  opt_sql_log_as_master= 0;
+  opt_sql_log_database= 0;
+  opt_sql_log_err_aborts_txn= 0;
+  opt_sql_log_ddl= 0;
+  sql_log_cache_disk_use= 0;
   prepared_stmt_count= 0;
   errmesg= 0;
   limit_tmp_disk_space= 0;
@@ -8689,6 +8764,7 @@ static int mysql_init_variables(void)
   opt_date_time_formats[0]= opt_date_time_formats[1]= opt_date_time_formats[2]= 0;
 
   /* Things with default values that are not zero */
+  opt_sql_log_ddl_base64_encode_stmts= 1;
   delay_key_write_options= (uint) DELAY_KEY_WRITE_ON;
   slave_exec_mode_options= find_bit_type_or_exit(slave_exec_mode_str,
                                                  &slave_exec_mode_typelib,

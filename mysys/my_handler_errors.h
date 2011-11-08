@@ -79,9 +79,10 @@ static const char *handler_error_messages[]=
   "File to short; Expected more data in file",
   "Read page with wrong checksum",
   "Too many active concurrent transactions",
-  "",
+  /* TODO(seanrees): move this down beyond HA_ERR_TABLE_IN_FK_CHECK for compat. */
+  "SQL transaction logging failed",
+  /* "", */
   "",
   "",
   "Table is being used in foreign key check" /* HA_ERR_TABLE_IN_FK_CHECK */
 };
-

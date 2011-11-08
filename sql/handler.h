@@ -1157,6 +1157,14 @@ public:
   ulonglong rows_read;
   ulonglong rows_changed;
 
+  /*
+    If true, deleted rows will be logged in the sql log.  If false, they will be
+    ignored.  This is used for delete from table without conditions which acts
+    like a truncate.  However, InnoDB treats them differently but we only want
+    to log a single statement for the truncate.
+   */
+  bool log_deleted_rows;
+
   handler(handlerton *ht_arg, TABLE_SHARE *share_arg)
     :table_share(share_arg), table(0),
     estimation_rows_to_insert(0), ht(ht_arg),
@@ -1166,7 +1174,7 @@ public:
     locked(FALSE), implicit_emptied(0),
     pushed_cond(0), next_insert_id(0), insert_id_for_cur_row(0),
     auto_inc_intervals_count(0), rows_read(0), rows_changed(0),
-    cached_table_stats(NULL), version_table_stats(0)
+    log_deleted_rows(true), cached_table_stats(NULL), version_table_stats(0)
     {}
   virtual ~handler(void)
   {
@@ -1294,6 +1302,7 @@ public:
     rows_read= rows_changed= 0;
     cached_table_stats= NULL;
     version_table_stats= 0;
+    log_deleted_rows= true;
   }
   virtual double scan_time()
   { return ulonglong2double(stats.data_file_length) / IO_SIZE + 2; }
@@ -1774,6 +1783,9 @@ public:
     return 0;
   }
 
+  void set_log_deleted_rows(bool log_rows)
+  { log_deleted_rows= log_rows; }
+
 protected:
   /* Service methods for use by storage engines. */
   void ha_statistic_increment(ulong SSV::*offset) const;
@@ -1957,6 +1969,12 @@ private:
   { return HA_ERR_WRONG_COMMAND; }
   virtual int rename_partitions(const char *path)
   { return HA_ERR_WRONG_COMMAND; }
+
+  /* Functions to support SQL logging. */
+  int log_write_row(TABLE *table, const uchar *buf);
+  int log_update_row(TABLE *table, const uchar *old_data,
+                     const uchar *new_data);
+  int log_delete_row(TABLE *table, const uchar *buf);
 
   /*
     cached_table_stats is valid when not NULL and

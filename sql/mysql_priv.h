@@ -2059,6 +2059,11 @@ extern char *opt_logname, *opt_slow_logname, *opt_audit_logname;
 extern char *opt_sql_logname;
 extern const char *log_output_str;
 extern char *opt_deprecated_engines;
+extern my_bool opt_sql_log_as_master, opt_sql_log_err_aborts_txn;
+extern my_bool opt_sql_log_ddl, opt_sql_log_ddl_base64_encode_stmts;
+extern char *opt_sql_log_database;
+extern ulong sql_log_cache_disk_use;
+extern ulong sql_log_cache_size, sql_log_cache_size_max;
 
 extern my_bool opt_update_connection_privs;
 extern my_bool opt_allow_delayed_write;

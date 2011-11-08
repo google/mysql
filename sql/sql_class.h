@@ -1480,6 +1480,18 @@ public:
   int binlog_flush_pending_rows_event(bool stmt_end);
   int binlog_remove_pending_rows_event(bool clear_maps);
 
+  /*
+    Functions to handle the sql log.
+  */
+  int sqllog_init();
+  void sqllog_cleanup();
+  int sqllog_log(enum enum_sqllog_stmt_type sql_op,
+                 const char *db, const char *table,
+                 const char *query, uint query_length);
+  void sqllog_rollback();
+  int sqllog_commit();
+
+
 private:
   /*
     Number of outstanding table maps, i.e., table maps in the
@@ -1940,6 +1952,11 @@ public:
   */
   USER_STATS* thd_user_stats;
   int thd_user_stats_version;
+
+  /* Transaction cache for the sql log. This will spill to disk if necessary. */
+  IO_CACHE *sqllog_cache;
+  /* The current event number for the sql log entries. */
+  uint current_event_seq;
 
   /* Used by the sys_var class to store temporary values */
   union
