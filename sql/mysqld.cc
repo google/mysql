@@ -1021,8 +1021,11 @@ static void close_connections(void)
 #ifdef HAVE_SYS_UN_H
   shutdown_socket(unix_sock);
   (void) unlink(mysqld_unix_port);
-  shutdown_socket(httpd_unix_sock);
-  (void) unlink(httpd_unix_port);
+  if (httpd_unix_sock != INVALID_SOCKET)
+  {
+    shutdown_socket(httpd_unix_sock);
+    (void) unlink(httpd_unix_port);
+  }
 #endif
   end_thr_alarm(0);			 // Abort old alarms.
 
