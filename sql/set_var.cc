@@ -1053,8 +1053,9 @@ static sys_var_const sys_var_httpd_bind_address(&vars, "httpd_bind_address",
 static sys_var_const sys_var_httpd_port(&vars, "httpd_port",
                                         OPT_GLOBAL, SHOW_INT,
                                         (uchar*) &httpd_port);
-static sys_var_bool_ptr sys_var_http_trust_clients(&vars, "http_trust_clients",
-                                                   &http_trust_clients);
+static sys_var_bool_ptr sys_var_httpd_trust_clients(&vars,
+                                                    "httpd_trust_clients",
+                                                    &httpd_trust_clients);
 static sys_var_const sys_var_httpd_socket(&vars, "httpd_socket",
                                           OPT_GLOBAL, SHOW_CHAR_PTR,
                                           (uchar*) &httpd_unix_port);

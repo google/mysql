@@ -1,0 +1,13 @@
+SHOW VARIABLES LIKE 'httpd_trust_clients';
+Variable_name	Value
+httpd_trust_clients	OFF
+Test /quitquitquit
+SET GLOBAL httpd_trust_clients = ON;
+SHOW VARIABLES LIKE 'httpd_trust_clients';
+Variable_name	Value
+httpd_trust_clients	ON
+Test /abortabortabort
+SET GLOBAL httpd_trust_clients = ON;
+SHOW VARIABLES LIKE 'httpd_trust_clients';
+Variable_name	Value
+httpd_trust_clients	ON

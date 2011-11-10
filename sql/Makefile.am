@@ -125,7 +125,7 @@ mysqld_SOURCES =	sql_lex.cc sql_handler.cc sql_partition.cc \
 			sql_builtin.cc sql_tablespace.cc partition_info.cc \
 			sql_servers.cc event_parse_data.cc hash_64.cc \
 			repl_hier_cache.cc repl_semi_sync.cc \
-			sql_stats.cc httpd_request.cc httpd_server.cc
+			sql_stats.cc httpd_request.cc httpd.cc
 
 nodist_mysqld_SOURCES =	mini_client_errors.c pack.c client.c my_time.c my_user.c 
 
