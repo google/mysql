@@ -787,7 +787,7 @@ char **orig_argv;
 static my_socket unix_sock;
 static my_socket ip_socks[MAX_MYSQLD_PORTS];
 static my_socket repl_sock;
-extern my_socket http_sock;
+extern my_socket httpd_sock;
 extern my_socket httpd_unix_sock;
 struct rand_struct sql_rand; ///< used by sql_class.cc:THD::THD()
 
@@ -992,7 +992,7 @@ static void close_connections(void)
     }
     shutdown_socket(repl_sock);
     if (httpd)
-      shutdown_socket(http_sock);
+      shutdown_socket(httpd_sock);
   }
 #ifdef __NT__
   if (hPipe != INVALID_HANDLE_VALUE && opt_enable_named_pipe)
@@ -1159,11 +1159,11 @@ static void close_server_sock()
   }
   close_server_sock_helper(repl_sock, "TCP/IP replication");
   close_server_sock_helper(unix_sock, "unix/IP");
-  if (httpd && http_sock != INVALID_SOCKET)
-    close_server_sock_helper(http_sock, "TCP/IP HTTP");
-  if (http_unix_sock != INVALID_SOCKET)
+  if (httpd && httpd_sock != INVALID_SOCKET)
+    close_server_sock_helper(httpd_sock, "TCP/IP HTTP");
+  if (httpd_unix_sock != INVALID_SOCKET)
   {
-    close_server_sock_helper(http_unix_sock, "unix/IP");
+    close_server_sock_helper(httpd_unix_sock, "unix/IP");
     VOID(unlink(httpd_unix_port));
   }
 
@@ -4669,7 +4669,7 @@ we force server id to 2, but this MySQL server will not act as a slave.");
 
   if (!opt_disable_networking && httpd)
   {
-    socket_init(&http_sock, httpd_bind_addr, httpd_port);
+    socket_init(&httpd_sock, httpd_bind_addr, httpd_port);
     if ((int) httpd_port != INVALID_SOCKET)
     {
       sql_print_information("Listen for HTTP status requests on port %u",
@@ -6057,7 +6057,7 @@ enum options_mysqld
   OPT_HTTPD_BIND_ADDRESS,
   OPT_HTTPD_PORT,
   OPT_HTTPD,
-  OPT_HTTP_TRUST_CLIENTS
+  OPT_HTTPD_TRUST_CLIENTS
 };
 
 
@@ -6276,10 +6276,10 @@ struct my_option my_long_options[] =
    &httpd, &httpd, 0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"httpd-port", OPT_HTTPD_PORT, "Listen port for the HTTP server.",
    &httpd_port, &httpd_port, 0, GET_INT, OPT_ARG, 0, 0, 0, 0, 0, 0},
-  {"http-trust-clients", OPT_HTTP_TRUST_CLIENTS,
+  {"httpd-trust-clients", OPT_HTTPD_TRUST_CLIENTS,
    "Enable operations that requires trusted clients (/quitquitquit and "
    "/abortabortabort).",
-   &http_trust_clients, &http_trust_clients,
+   &httpd_trust_clients, &httpd_trust_clients,
    0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"httpd-socket", OPT_SOCKET, "Socket file to listen for the HTTP server.",
    &httpd_unix_port, &httpd_unix_port, 0, GET_STR,
@@ -8358,7 +8358,7 @@ static int mysql_init_variables(void)
     ip_socks[i]= INVALID_SOCKET;
   }
   repl_sock= INVALID_SOCKET;
-  http_sock= INVALID_SOCKET;
+  httpd_sock= INVALID_SOCKET;
   httpd_unix_sock= INVALID_SOCKET;
   mysql_home_ptr= mysql_home;
   pidfile_name_ptr= pidfile_name;

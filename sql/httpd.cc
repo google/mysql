@@ -27,17 +27,17 @@
 #include "httpd.h"
 
 ulong httpd_thread_created;
-ulonglong http_thread_count;
+ulonglong httpd_thread_count;
 ulong httpd_bind_addr;                        /* HTTP server address */
 char *httpd_bind_addr_str;                    /* HTTP server address string */
 uint httpd_port= 8080;                        /* HTTP server port */
 /* True if HTTP server is turned on. */
 bool httpd= false;
 /* True if we trust the users to use /qqq and /aaa. */
-my_bool http_trust_clients= false;
+my_bool httpd_trust_clients= false;
 char *httpd_unix_port;
 
-my_socket http_sock;
+my_socket httpd_sock;
 my_socket httpd_unix_sock;
 
 
@@ -231,7 +231,7 @@ static void httpd_end_thread(THD *thd)
 {
   thd->cleanup();
   pthread_mutex_lock(&LOCK_thread_count);
-  http_thread_count--;
+  httpd_thread_count--;
   pthread_mutex_unlock(&LOCK_thread_count);
   delete thd;
 
@@ -253,7 +253,7 @@ static bool MatchURL(const NET *net, const char *url)
 }
 
 /**
-   Process the NET buffer populated by http_read_request and action
+   Process the NET buffer populated by httpd_read_request and action
    the GET request accordingly.  'req' is filled with the response
    body and header suitable for sending back to the client.
 */
@@ -262,12 +262,12 @@ static int httpd_process_request(THD *thd, HTTPRequest *req)
   NET *net= &thd->net;
   int err= 0;
 
-  if (http_trust_clients && MatchURL(net, "GET /quitquitquit"))
+  if (httpd_trust_clients && MatchURL(net, "GET /quitquitquit"))
   {
     req->GenerateHeader(200, "Going down... NOW");
     err= req->quitquitquit();
   }
-  else if (http_trust_clients && MatchURL(net, "GET /abortabortabort"))
+  else if (httpd_trust_clients && MatchURL(net, "GET /abortabortabort"))
   {
     err= req->abortabortabort();
   }
@@ -366,7 +366,7 @@ static void httpd_close_connection(THD *thd, uint errcode, bool lock)
 }
 
 
-static my_socket httpd_create_socket(int http_flags, my_socket sock)
+static my_socket httpd_create_socket(int httpd_flags, my_socket sock)
 {
   my_socket new_sock;
   static uint error_count= 0;
@@ -390,14 +390,14 @@ static my_socket httpd_create_socket(int http_flags, my_socket sock)
     {
       // Try without O_NONBLOCK
       if (retry == MAX_ACCEPT_RETRY - 1)
-        fcntl(sock, F_SETFL, http_flags);
+        fcntl(sock, F_SETFL, httpd_flags);
     }
 #endif
   }
 
 #if !defined(NO_FCNTL_NONBLOCK)
   if (!(test_flags & TEST_BLOCKING))
-    fcntl(sock, F_SETFL, http_flags);
+    fcntl(sock, F_SETFL, httpd_flags);
 #endif
   if (new_sock == INVALID_SOCKET)
   {
@@ -460,7 +460,7 @@ static int httpd_setup_thd(THD *thd)
   net->return_errno= 1;
 
   // Don't allow too many connections.
-  if (thread_count + http_thread_count > max_connections)
+  if (thread_count + httpd_thread_count > max_connections)
   {
     DBUG_PRINT("error", ("Too many connections"));
     DBUG_RETURN(1);
@@ -475,7 +475,7 @@ static int httpd_setup_thd(THD *thd)
   thd->thread_id= thread_id++;
   thd->real_id= pthread_self();
 
-  http_thread_count++;
+  httpd_thread_count++;
   httpd_thread_created++;
   threads.append(thd);
   pthread_mutex_unlock(&LOCK_thread_count);
@@ -575,15 +575,15 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
   DBUG_ENTER("handle_httpd_connections");
   my_pthread_getprio(pthread_self());
   fd_set clientFDs;
-  int http_flags= 0;
+  int httpd_flags= 0;
   int httpd_unix_flags= 0;
   my_socket sock;
   int flags;
 
   FD_ZERO(&clientFDs);
-  FD_SET(http_sock, &clientFDs);
+  FD_SET(httpd_sock, &clientFDs);
 #ifdef HAVE_FCNTL
-  http_flags= fcntl(http_sock, F_GETFL, 0);
+  httpd_flags= fcntl(httpd_sock, F_GETFL, 0);
 #endif
 #ifdef HAVE_SYS_UN_H
   if (httpd_unix_sock != INVALID_SOCKET)
@@ -598,8 +598,7 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
   while (!abort_loop)
   {
     fd_set readFDs= clientFDs;
-    if (select((http_sock > httpd_unix_sock ? http_sock : httpd_unix_sock) + 1,
-               &readFDs, 0, 0, 0) < 0)
+    if (select(max(httpd_sock, httpd_unix_sock) + 1, &readFDs, 0, 0, 0) < 0)
     {
       if (socket_errno != SOCKET_EINTR)
       {
@@ -620,10 +619,10 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
     }
     else
 #endif
-    if (FD_ISSET(http_sock, &readFDs))
+    if (FD_ISSET(httpd_sock, &readFDs))
     {
-      sock= http_sock;
-      flags= http_flags;
+      sock= httpd_sock;
+      flags= httpd_flags;
     }
 
     // This is a new connection request.

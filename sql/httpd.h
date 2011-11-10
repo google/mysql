@@ -4,14 +4,14 @@
 #define HTTPD_INCLUDED
 #include <pthread.h>
 
-extern ulonglong http_thread_count;
+extern ulonglong httpd_thread_count;
 extern ulong httpd_bind_addr;
 extern char *httpd_bind_addr_str;
 extern uint httpd_port;
 
 extern bool httpd;
 extern uint httpd_port;
-extern my_bool http_trust_clients;
+extern my_bool httpd_trust_clients;
 extern char *httpd_unix_port;
 
 /**
