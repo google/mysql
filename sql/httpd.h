@@ -93,6 +93,7 @@ private:
   int status_TableStats();
   int status_IndexStats();
   int status_UserStatistics();
+  int status_TableStatistics();
 
   void insertVar(uchar *base, uchar *end);
 
