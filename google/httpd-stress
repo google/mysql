@@ -12,7 +12,7 @@ then
 fi
 
 PID=$(cat ${NAME}/mysql.pid)
-HTTP_PORT=$(cat ${NAME}/mysql.http_port)
+HTTP_PORT=$(cat ${NAME}/mysql.httpd_port)
 
 i=0
 max=100000
