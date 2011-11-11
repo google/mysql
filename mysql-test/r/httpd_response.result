@@ -14,6 +14,27 @@ Check the master table headers
    File 
    Position 
    Group ID / Server ID 
+   User 
+   Total Cxn 
+   Concurrent Cxn 
+   Connected Time 
+   Busy Time 
+   CPU Time 
+   Bytes RX 
+   Bytes TX 
+   Binlog Bytes Written 
+   Rows Fetched 
+   Rows Updated 
+   Table Rows Read 
+   Select Ops 
+   Update Ops 
+   Other Ops 
+   Commit TXN 
+   Rollback TXN 
+   Denied Cxn 
+   Lost Cxn 
+   Access Denied 
+   Empty Queries 
 Check the binary log on the master
    ./master-bin 
 Check the slave connection on the master
@@ -36,6 +57,27 @@ Check the slave table headers
    Group ID / Server ID 
    Slave IO / SQL 
    Seconds Behind 
+   User 
+   Total Cxn 
+   Concurrent Cxn 
+   Connected Time 
+   Busy Time 
+   CPU Time 
+   Bytes RX 
+   Bytes TX 
+   Binlog Bytes Written 
+   Rows Fetched 
+   Rows Updated 
+   Table Rows Read 
+   Select Ops 
+   Update Ops 
+   Other Ops 
+   Commit TXN 
+   Rollback TXN 
+   Denied Cxn 
+   Lost Cxn 
+   Access Denied 
+   Empty Queries 
 Check the binary and relay logs on the slave
    master-bin 
    ./slave-relay-bin 
@@ -71,6 +113,27 @@ Check the master table headers
    File 
    Position 
    Group ID / Server ID 
+   User 
+   Total Cxn 
+   Concurrent Cxn 
+   Connected Time 
+   Busy Time 
+   CPU Time 
+   Bytes RX 
+   Bytes TX 
+   Binlog Bytes Written 
+   Rows Fetched 
+   Rows Updated 
+   Table Rows Read 
+   Select Ops 
+   Update Ops 
+   Other Ops 
+   Commit TXN 
+   Rollback TXN 
+   Denied Cxn 
+   Lost Cxn 
+   Access Denied 
+   Empty Queries 
 Check the binary log on the master
    ./master-bin 
 Check the slave connection on the master
@@ -93,6 +156,27 @@ Check the slave table headers
    Group ID / Server ID 
    Slave IO / SQL 
    Seconds Behind 
+   User 
+   Total Cxn 
+   Concurrent Cxn 
+   Connected Time 
+   Busy Time 
+   CPU Time 
+   Bytes RX 
+   Bytes TX 
+   Binlog Bytes Written 
+   Rows Fetched 
+   Rows Updated 
+   Table Rows Read 
+   Select Ops 
+   Update Ops 
+   Other Ops 
+   Commit TXN 
+   Rollback TXN 
+   Denied Cxn 
+   Lost Cxn 
+   Access Denied 
+   Empty Queries 
 Check the binary and relay logs on the slave
    master-bin 
    ./slave-relay-bin 
