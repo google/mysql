@@ -1,8 +1,8 @@
 // Copyright (c) 2008 Google Inc. All Rights Reserved.
 
 /*
-  A lightweight HTTP server for serving application
-  health through /health, /var, /status etc.
+  A lightweight HTTP server for serving application health through
+  /health, /var, /status etc.
 
   Don't try to think of this as a web-server, as there is more code
   here to deal with reading/writing to sockets than checking a GET
@@ -46,6 +46,7 @@ my_socket httpd_unix_sock;
    The function will switch to blocking mode, if non-blocking reads fails
    or any reason.
 */
+
 static bool httpd_net_read(NET *net)
 {
   thr_alarm_t alarmed;
@@ -120,7 +121,7 @@ static bool httpd_net_read(NET *net)
 
       if (vio_errno(net->vio) == SOCKET_EINTR)
         continue;
-      net->error= 2;                          /* Close socket */
+      net->error= 2;                          /* Close socket. */
 
       net->last_errno= (vio_was_interrupted(net->vio)
                         ? ER_NET_READ_INTERRUPTED
@@ -136,7 +137,7 @@ static bool httpd_net_read(NET *net)
     buff+= read_len;
     length-= read_len;
 
-    // HTTP requests are terminated by two CRLFs
+    /* HTTP requests are terminated by two CRLFs. */
     if (buff - net->buff >= 4)
     {
       if (strncmp((char *) buff - 4, "\r\n\r\n", 4) == 0)
@@ -147,7 +148,7 @@ end:
   if (thr_alarm_in_use(&alarmed))
   {
     thr_end_alarm(&alarmed);
-    // Set the socket back to it's original mode.
+    /* Set the socket back to it's original mode. */
     my_bool old_mode;
     vio_blocking(net->vio, net_blocking, &old_mode);
   }
@@ -166,7 +167,7 @@ static bool httpd_net_write(NET *net, const char *buffer, ulong len)
   {
     if (net->write_pos != net->buff)
     {
-      // Fill up already used packet and write it.
+      /* Fill up already used packet and write it. */
       memcpy((char*) net->write_pos, buffer, left_length);
       if (net_real_write(net, (uchar *) net->buff,
                          (ulong) (net->write_pos - net->buff) + left_length))
@@ -177,22 +178,25 @@ static bool httpd_net_write(NET *net, const char *buffer, ulong len)
     }
     if (len > net->max_packet)
       return net_real_write(net, (uchar *) buffer, len) ? true : false;
-    // Send out rest of the blocks as full sized blocks.
+    /* Send out rest of the blocks as full sized blocks. */
   }
   memcpy((char*) net->write_pos, buffer, len);
   net->write_pos += len;
   return false;
 }
 
+
 static bool httpd_net_write(NET *net, const char *buffer)
 {
   return httpd_net_write(net, buffer, strlen(buffer));
 }
 
+
 /**
    Listen for one HTTP GET request.  Once the GET line has been found,
    return.  The NET buffer will contain the buffer data.
 */
+
 static void httpd_read_request(THD *thd)
 {
   DBUG_ENTER("HTTPServer::readRequest");
@@ -227,6 +231,7 @@ static void httpd_read_request(THD *thd)
   DBUG_VOID_RETURN;
 }
 
+
 static void httpd_end_thread(THD *thd)
 {
   thd->cleanup();
@@ -235,84 +240,87 @@ static void httpd_end_thread(THD *thd)
   pthread_mutex_unlock(&LOCK_thread_count);
   delete thd;
 
-  /* It's safe to broadcast outside a lock (COND... is not deleted here) */
+  /* It's safe to broadcast outside a lock (COND... is not deleted here). */
   pthread_cond_broadcast(&COND_thread_count);
 #ifdef ONE_THREAD
-  if (!(test_flags & TEST_NO_THREADS))        // For debugging under Linux
+  if (!(test_flags & TEST_NO_THREADS))        /* For debugging under Linux. */
 #endif
-
   {
     my_thread_end();
     pthread_exit(0);
   }
 }
 
-static bool MatchURL(const NET *net, const char *url)
+
+static bool match_url(const NET *net, const char *url)
 {
   return strncmp((const char *) net->buff, url, strlen(url)) == 0;
 }
+
 
 /**
    Process the NET buffer populated by httpd_read_request and action
    the GET request accordingly.  'req' is filled with the response
    body and header suitable for sending back to the client.
 */
-static int httpd_process_request(THD *thd, HTTPRequest *req)
+
+static int httpd_process_request(THD *thd, Http_request *req)
 {
   NET *net= &thd->net;
   int err= 0;
 
-  if (httpd_trust_clients && MatchURL(net, "GET /quitquitquit"))
+  if (httpd_trust_clients && match_url(net, "GET /quitquitquit"))
   {
-    req->GenerateHeader(200, "Going down... NOW");
-    err= req->quitquitquit();
+    req->generate_header(200, "Going down... NOW");
+    req->quitquitquit();
   }
-  else if (httpd_trust_clients && MatchURL(net, "GET /abortabortabort"))
+  else if (httpd_trust_clients && match_url(net, "GET /abortabortabort"))
   {
-    err= req->abortabortabort();
+    req->abortabortabort();
   }
-  else if (MatchURL(net, "GET /var"))
+  else if (match_url(net, "GET /var"))
   {
-    req->parseURLParams();
+    req->parse_url_params();
     err= req->var();
     if (!err)
-      req->GenerateHeader(200, false);
+      req->generate_header(200, false);
   }
-  else if (MatchURL(net, "GET /health"))
+  else if (match_url(net, "GET /health"))
   {
-    err= req->health();
-    if (!err)
-      req->GenerateHeader(200, true);
+    req->health();
+    req->generate_header(200, true);
   }
-  else if (MatchURL(net, "GET /status") || MatchURL(net, "GET /"))
+  else if (match_url(net, "GET /status") || match_url(net, "GET /"))
   {
-    err= req->status();
-    if (!err)
-      req->GenerateHeader(200, true);
+    req->status();
+    req->generate_header(200, true);
   }
   else
   {
-    req->GenerateHeader(404, false);
-    req->GenerateError("Unknown URL");
+    req->generate_header(404, false);
+    req->generate_error("Unknown URL");
     return 0;
   }
   return err;
 }
 
+
 /**
    Publish the previously generated HTTP respose, sending the data
    back to the client.
 */
-static void httpd_send_response(THD *thd, HTTPRequest *req)
+
+static void httpd_send_response(THD *thd, Http_request *req)
 {
   NET *net= &thd->net;
-  httpd_net_write(net, req->ResponseHeader(), req->ResponseHeaderLength());
-  httpd_net_write(net, req->ResponseBody(), req->ResponseBodyLength());
+  httpd_net_write(net, req->response_header(), req->response_header_length());
+  httpd_net_write(net, req->response_body(), req->response_body_length());
   net_flush(net);
 }
 
+
 /**
-   Send a error string to client
+   Send a error string to client.
 
    Design note:
 
@@ -323,6 +331,7 @@ static void httpd_send_response(THD *thd, HTTPRequest *req)
    critical that every error that can be intercepted is issued in one
    place only, my_message_sql.
 */
+
 static void httpd_send_error(THD *thd, const char *err)
 {
   NET *net= &thd->net;
@@ -334,12 +343,12 @@ static void httpd_send_error(THD *thd, const char *err)
   httpd_net_write(net, "HTTP Server failure:\r\n");
   httpd_net_write(net, err, strlen(err));
   net_flush(net);
-  thd->is_fatal_error= 0;                     // Error message is given
+  thd->is_fatal_error= 0;                     /* Error message is given. */
 }
 
 
 /**
-   Close a HTTP connection
+   Close a HTTP connection.
 
    @param  thd        thread handle
    @param  errcode    error code to print to console
@@ -347,6 +356,7 @@ static void httpd_send_error(THD *thd, const char *err)
 
    For the connection that is doing shutdown, this is called twice.
 */
+
 static void httpd_close_connection(THD *thd, uint errcode, bool lock)
 {
   if (lock)
@@ -359,7 +369,7 @@ static void httpd_close_connection(THD *thd, uint errcode, bool lock)
     {
       httpd_send_error(thd, ER(errcode));
     }
-    vio_close(vio);                           // vio is freed in delete thd
+    vio_close(vio);                           /* vio is freed in delete thd. */
   }
   if (lock)
     pthread_mutex_unlock(&LOCK_thread_count);
@@ -388,7 +398,7 @@ static my_socket httpd_create_socket(int httpd_flags, my_socket sock)
 #if !defined(NO_FCNTL_NONBLOCK)
     if (!(test_flags & TEST_BLOCKING))
     {
-      // Try without O_NONBLOCK
+      /* Try without O_NONBLOCK. */
       if (retry == MAX_ACCEPT_RETRY - 1)
         fcntl(sock, F_SETFL, httpd_flags);
     }
@@ -402,10 +412,10 @@ static my_socket httpd_create_socket(int httpd_flags, my_socket sock)
   if (new_sock == INVALID_SOCKET)
   {
     if ((error_count++ & 255) == 0)
-      // This can happen often
+      /* This can happen often. */
       sql_perror("Error in accept");
     if (socket_errno == SOCKET_ENFILE || socket_errno == SOCKET_EMFILE)
-      // Give other threads some time
+      /* Give other threads some time. */
       sleep(1);
 
     return INVALID_SOCKET;
@@ -424,11 +434,12 @@ static my_socket httpd_create_socket(int httpd_flags, my_socket sock)
   return new_sock;
 }
 
+
 static THD *httpd_create_thd(my_socket new_sock)
 {
   if (!my_thread_init())
   {
-    // Don't allow too many connections
+    /* Don't allow too many connections. */
     THD *thd= new THD;
     if (!thd)
     {
@@ -450,16 +461,20 @@ static THD *httpd_create_thd(my_socket new_sock)
 
 
 /**
-   Initializes the THD object for a thread
-   @return 0 on success, 1 on error
+   Initializes the THD object for a thread.
+
+   @return
+     @retval  0   success
+     @retval  1   error
 */
+
 static int httpd_setup_thd(THD *thd)
 {
   NET *net= &thd->net;
   DBUG_ENTER("httpd_setup_thd");
   net->return_errno= 1;
 
-  // Don't allow too many connections.
+  /* Don't allow too many connections. */
   if (thread_count + httpd_thread_count > max_connections)
   {
     DBUG_PRINT("error", ("Too many connections"));
@@ -482,18 +497,18 @@ static int httpd_setup_thd(THD *thd)
 }
 
 
-
 /**
    Thread start function.  This will setup the thread stack,
    read from the socket, process the request and return a result
    to the client.
 */
+
 pthread_handler_t httpd_handle_connection(void *arg)
 {
   pthread_detach_this_thread();
 
   sigset_t set;
-  sigemptyset(&set);                          /* Get mask in use */
+  sigemptyset(&set);                          /* Get mask in use. */
   pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 
   /*
@@ -526,13 +541,13 @@ pthread_handler_t httpd_handle_connection(void *arg)
     return 0;
   }
 
-  HTTPRequest req(thd);
+  Http_request req(thd);
 
   do
   {
     NET *net= &thd->net;
 
-    /* Use "connect_timeout" value during connection phase */
+    /* Use "connect_timeout" value during connection phase. */
     my_net_set_read_timeout(net, connect_timeout);
     my_net_set_write_timeout(net, connect_timeout);
 
@@ -540,7 +555,7 @@ pthread_handler_t httpd_handle_connection(void *arg)
     thd->command= COM_SLEEP;
     thd->set_time();
 
-    /* Connect completed, set read/write timeouts back to tdefault */
+    /* Connect completed, set read/write timeouts back to tdefault. */
     my_net_set_read_timeout(net, thd->variables.net_read_timeout);
     my_net_set_write_timeout(net, thd->variables.net_write_timeout);
 
@@ -552,7 +567,7 @@ pthread_handler_t httpd_handle_connection(void *arg)
 
     /* This call to end_thread should never return.  */
     httpd_end_thread(thd);
-    /* If end_thread returns, we are either running with --one-thread */
+    /* If end_thread returns, we are either running with --one-thread. */
     thd= current_thd;
     thd->thread_stack= (char*) &thd;
   } while (true);
@@ -569,6 +584,7 @@ pthread_handler_t httpd_handle_connection(void *arg)
    to be able to get status information that indicates the server is actually
    alive early on, rather than waiting 10-30 minutes for a result.
 */
+
 pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
 {
   DBUG_ENTER("handle_httpd_connections");
@@ -624,7 +640,7 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
       flags= httpd_flags;
     }
 
-    // This is a new connection request.
+    /* This is a new connection request. */
 #if !defined(NO_FCNTL_NONBLOCK)
     if (!(test_flags & TEST_BLOCKING))
     {
@@ -653,15 +669,16 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
     */
     if (pthread_create(&thr, &connection_attrib, httpd_handle_connection,
                        (void *) (long) new_socket))
-      sql_print_warning("Cannot create HTTP connection thread");
+      sql_print_warning("Cannot create HTTP connection thread.");
   }
   DBUG_RETURN(0);
 }
+
 
 void create_httpd_thread()
 {
   pthread_t thr;
   if (pthread_create(&thr, &connection_attrib,
                      handle_httpd_connections, 0))
-    sql_print_warning("Cannot create the HTTP server thread");
+    sql_print_warning("Cannot create the HTTP server thread.");
 }
