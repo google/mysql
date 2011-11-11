@@ -177,6 +177,11 @@ bool HTTPRequest::WriteTableColumn(unsigned long value)
   return WriteBodyFmt("  <td>%lu</td>\r\n", value);
 }
 
+bool HTTPRequest::WriteTableColumn(double value)
+{
+  return WriteBodyFmt("  <td>%.3f</td>\r\n", value);
+}
+
 bool HTTPRequest::WriteTableColumn(const char *value)
 {
   bool err= false;
@@ -722,6 +727,83 @@ int HTTPRequest::status_SlaveStatus()
   return 0;
 }
 
+
+/**
+   Prints the contents of the INFORMATION_SCHEMA.USER_STATISTICS table
+   to the http response.
+
+   @return Operation Status
+     @retval  0   OK
+*/
+
+int HTTPRequest::status_UserStatistics()
+{
+  pthread_mutex_lock(&LOCK_global_user_stats);
+
+  if (global_user_stats.records > 0)
+  {
+    const char *headings[]=
+    {
+      "User",
+      "Total Cxn",
+      "Concurrent Cxn",
+      "Connected Time",
+      "Busy Time",
+      "CPU Time",
+      "Bytes RX",
+      "Bytes TX",
+      "Binlog Bytes Written",
+      "Rows Fetched",
+      "Rows Updated",
+      "Table Rows Read",
+      "Select Ops",
+      "Update Ops",
+      "Other Ops",
+      "Commit TXN",
+      "Rollback TXN",
+      "Denied Cxn",
+      "Lost Cxn",
+      "Access Denied",
+      "Empty Queries",
+      NULL
+    };
+
+    WriteTableHeader("User Statistics", headings);
+    for (unsigned int i= 0; i < global_user_stats.records; ++i)
+    {
+      USER_STATS *u= (USER_STATS *) hash_element(&global_user_stats, i);
+
+      WriteTableRowStart();
+      WriteTableColumn(u->user);
+      WriteTableColumn((unsigned long) u->total_connections);
+      WriteTableColumn((unsigned long) u->concurrent_connections);
+      WriteTableColumn(u->connected_time);
+      WriteTableColumn(u->busy_time);
+      WriteTableColumn(u->cpu_time);
+      WriteTableColumn(u->bytes_received);
+      WriteTableColumn(u->bytes_sent);
+      WriteTableColumn(u->binlog_bytes_written);
+      WriteTableColumn(u->rows_fetched);
+      WriteTableColumn(u->rows_updated);
+      WriteTableColumn(u->rows_read);
+      WriteTableColumn(u->select_commands);
+      WriteTableColumn(u->update_commands);
+      WriteTableColumn(u->other_commands);
+      WriteTableColumn(u->commit_trans);
+      WriteTableColumn(u->rollback_trans);
+      WriteTableColumn(u->denied_connections);
+      WriteTableColumn(u->lost_connections);
+      WriteTableColumn(u->access_denied_errors);
+      WriteTableColumn(u->empty_queries);
+      WriteTableRowEnd();
+    }
+    WriteTableEnd();
+  }
+
+  pthread_mutex_unlock(&LOCK_global_user_stats);
+  return 0;
+}
+
 /**
    Generate a response body for a /status URL.
 
@@ -767,7 +849,7 @@ int HTTPRequest::status(void)
     status_ProcessListing(current_time);
     status_MasterStatus();
     status_SlaveStatus();
-    // TODO: status_UserStats();
+    status_UserStatistics();
     // TODO: status_TableStats();
   }
   else
