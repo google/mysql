@@ -35,6 +35,10 @@ Check the master table headers
    Lost Cxn 
    Access Denied 
    Empty Queries 
+   Table 
+   Rows Read 
+   Rows Changed 
+   Rows Changed * Indexes 
 Check the binary log on the master
    ./master-bin 
 Check the slave connection on the master
@@ -78,6 +82,10 @@ Check the slave table headers
    Lost Cxn 
    Access Denied 
    Empty Queries 
+   Table 
+   Rows Read 
+   Rows Changed 
+   Rows Changed * Indexes 
 Check the binary and relay logs on the slave
    master-bin 
    ./slave-relay-bin 
@@ -134,6 +142,10 @@ Check the master table headers
    Lost Cxn 
    Access Denied 
    Empty Queries 
+   Table 
+   Rows Read 
+   Rows Changed 
+   Rows Changed * Indexes 
 Check the binary log on the master
    ./master-bin 
 Check the slave connection on the master
@@ -177,6 +189,10 @@ Check the slave table headers
    Lost Cxn 
    Access Denied 
    Empty Queries 
+   Table 
+   Rows Read 
+   Rows Changed 
+   Rows Changed * Indexes 
 Check the binary and relay logs on the slave
    master-bin 
    ./slave-relay-bin 

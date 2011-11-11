@@ -805,6 +805,48 @@ int HTTPRequest::status_UserStatistics()
 }
 
 /**
+   Prints the contents of the INFORMATION_SCHEMA.TABLE_STATISTICS table
+   to the http response.
+
+   @return Operation Status
+     @retval  0   OK
+*/
+
+int HTTPRequest::status_TableStatistics()
+{
+  pthread_mutex_lock(&LOCK_global_table_stats);
+
+  if (global_table_stats.records > 0)
+  {
+    const char *headings[]=
+    {
+      "Table",
+      "Rows Read",
+      "Rows Changed",
+      "Rows Changed * Indexes",
+      NULL
+    };
+
+    WriteTableHeader("Table Statistics", headings);
+    for (unsigned int i= 0; i < global_table_stats.records; ++i)
+    {
+      TABLE_STATS *t= (TABLE_STATS *) hash_element(&global_table_stats, i);
+
+      WriteTableRowStart();
+      WriteTableColumn(t->table);
+      WriteTableColumn(t->rows_read);
+      WriteTableColumn(t->rows_changed);
+      WriteTableColumn(t->rows_changed_x_indexes);
+      WriteTableRowEnd();
+    }
+    WriteTableEnd();
+  }
+
+  pthread_mutex_unlock(&LOCK_global_table_stats);
+  return 0;
+}
+
+/**
    Generate a response body for a /status URL.
 
    @return Operation Status
@@ -850,7 +892,7 @@ int HTTPRequest::status(void)
     status_MasterStatus();
     status_SlaveStatus();
     status_UserStatistics();
-    // TODO: status_TableStats();
+    status_TableStatistics();
   }
   else
   {
