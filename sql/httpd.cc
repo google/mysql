@@ -477,7 +477,6 @@ static int httpd_setup_thd(THD *thd)
 
   httpd_thread_count++;
   httpd_thread_created++;
-  threads.append(thd);
   pthread_mutex_unlock(&LOCK_thread_count);
   DBUG_RETURN(0);
 }
