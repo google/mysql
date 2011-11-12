@@ -86,6 +86,7 @@ private:
   int var_index_statistics();
   int var_master_status();
   int var_print_var(const char *fmt, ...);
+  bool var_need_print_var(const char *var);
 
   /**
     These are the /status helper functions for generating HTML tables.
