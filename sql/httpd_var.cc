@@ -24,6 +24,35 @@
 #define MAX_PREFIX_LENGTH 80                  /* Somewhat arbitrary. */
 #define MAX_VAR_NAME_LENGTH 160
 
+enum enum_user_statistics_array
+{
+  USER_STATS_TOTAL_CONNECTIONS= 0,
+  USER_STATS_CONCURRENT_CONNECTIONS,
+  USER_STATS_CONNECTED_TIME,
+  USER_STATS_BUSY_TIME,
+  USER_STATS_CPU_TIME,
+  USER_STATS_BYTES_RECEIVED,
+  USER_STATS_BYTES_SENT,
+  USER_STATS_BINLOG_BYTES_WRITTEN,
+  USER_STATS_ROWS_FETCHED,
+  USER_STATS_ROWS_UPDATED,
+  USER_STATS_TABLE_ROWS_READ,
+  USER_STATS_SELECT_COMMANDS,
+  USER_STATS_UPDATE_COMMANDS,
+  USER_STATS_OTHER_COMMANDS,
+  USER_STATS_COMMIT_TRANSACTIONS,
+  USER_STATS_ROLLBACK_TRANSACTIONS,
+  USER_STATS_DENIED_CONNECTIONS,
+  USER_STATS_LOST_CONNECTIONS,
+  USER_STATS_ACCESS_DENIED,
+  USER_STATS_EMPTY_QUERIES,
+  USER_STATS_NUM_PROCS_BY_USER,
+  USER_STATS_ACTIVE_PROCS_BY_USER,
+  USER_STATS_IDLE_PROCS_BY_USER,
+  USER_STATS_TOTAL_ACTIVE_PROC_TIME,
+  USER_STATS_END
+};
+
 /**
    Insert the string spanned from *base to *end into 'var_head'.
 
@@ -201,6 +230,149 @@ int Http_request::var_gen_vars(const char *prefix, SHOW_VAR *vars)
 
 
 /**
+  Output the contents of the INFORMATION_SCHEMA.USER_STATISTICS table.
+
+  @return  Operation Status
+    @retval  0                    OK
+    @retval  ER_OUT_OF_RESOURCES
+*/
+
+int Http_request::var_user_statistics()
+{
+  pthread_mutex_lock(&LOCK_global_user_stats);
+  int num_records= global_user_stats.records;
+
+  if (num_records == 0)
+  {
+    /*
+      No user statistics information.  This can happen when we've started
+      mysqld and queried /var prior to any client connection.
+    */
+    pthread_mutex_unlock(&LOCK_global_user_stats);
+    return 0;
+  }
+
+  /*
+    Use a memory pool for allocations here, to avoid a potentially large
+    stack allocation here.  There's no need to free this array.
+  */
+  char **user=
+      (char **) alloc_root(&req_mem_root, num_records * sizeof(char *));
+  ulonglong **stats= (ulonglong **) alloc_array(num_records, USER_STATS_END);
+
+  if (user == NULL || stats == NULL)
+  {
+    pthread_mutex_unlock(&LOCK_global_user_stats);
+    return ER_OUT_OF_RESOURCES;
+  }
+
+  /*
+    We have to build the statistics into an array because the output
+    is diametrically opposite to the input structure.
+  */
+  for (int i= 0; i < num_records; i++)
+  {
+    USER_STATS *us= (USER_STATS *) hash_element(&global_user_stats, i);
+    stats[USER_STATS_TOTAL_CONNECTIONS][i]= us->total_connections;
+    stats[USER_STATS_CONCURRENT_CONNECTIONS][i]= us->concurrent_connections;
+    stats[USER_STATS_CONNECTED_TIME][i]= us->connected_time;
+    stats[USER_STATS_BUSY_TIME][i]= (ulonglong)us->busy_time;
+    stats[USER_STATS_CPU_TIME][i]= (ulonglong)us->cpu_time;
+    stats[USER_STATS_BYTES_RECEIVED][i]= us->bytes_received;
+    stats[USER_STATS_BYTES_SENT][i]= us->bytes_sent;
+    stats[USER_STATS_BINLOG_BYTES_WRITTEN][i]= us->binlog_bytes_written;
+    stats[USER_STATS_ROWS_FETCHED][i]= us->rows_fetched;
+    stats[USER_STATS_ROWS_UPDATED][i]= us->rows_updated;
+    stats[USER_STATS_TABLE_ROWS_READ][i]= us->rows_read;
+    stats[USER_STATS_SELECT_COMMANDS][i]= us->select_commands;
+    stats[USER_STATS_UPDATE_COMMANDS][i]= us->update_commands;
+    stats[USER_STATS_OTHER_COMMANDS][i]= us->other_commands;
+    stats[USER_STATS_COMMIT_TRANSACTIONS][i]= us->commit_trans;
+    stats[USER_STATS_ROLLBACK_TRANSACTIONS][i]= us->rollback_trans;
+    stats[USER_STATS_DENIED_CONNECTIONS][i]= us->denied_connections;
+    stats[USER_STATS_LOST_CONNECTIONS][i]= us->lost_connections;
+    stats[USER_STATS_ACCESS_DENIED][i]= us->access_denied_errors;
+    stats[USER_STATS_EMPTY_QUERIES][i]= us->empty_queries;
+    stats[USER_STATS_NUM_PROCS_BY_USER][i]= 0;
+    stats[USER_STATS_ACTIVE_PROCS_BY_USER][i]= 0;
+    stats[USER_STATS_IDLE_PROCS_BY_USER][i]= 0;
+    stats[USER_STATS_TOTAL_ACTIVE_PROC_TIME][i]= 0;
+    user[i]= strdup_root(&req_mem_root, us->user);
+  }
+
+  pthread_mutex_unlock(&LOCK_global_user_stats);
+
+  /* Walk the process list build the user/process counts. */
+  pthread_mutex_lock(&LOCK_thread_count);
+
+  I_List_iterator<THD> it(threads);
+  THD *tmp;
+  time_t now= time(0);
+
+  while ((tmp= it++))
+  {
+    for (int i= 0; i < num_records; i++)
+    {
+      if (tmp->security_ctx->user
+          && strcmp(user[i], tmp->security_ctx->user) == 0)
+      {
+        stats[USER_STATS_NUM_PROCS_BY_USER][i]+= 1;
+        if (tmp->locked || tmp->net.reading_or_writing)
+          stats[USER_STATS_ACTIVE_PROCS_BY_USER][i]+= 1;
+        else
+          stats[USER_STATS_IDLE_PROCS_BY_USER][i]+= 1;
+        stats[USER_STATS_TOTAL_ACTIVE_PROC_TIME][i]+= now - tmp->start_time;
+      }
+    }
+  }
+  pthread_mutex_unlock(&LOCK_thread_count);
+
+  const char *header[]=
+  {
+    "connections_by_user",
+    "concurrent_connections_by_user",
+    "connected_time_by_user",
+    "busy_time_by_user",
+    "cpu_time_by_user",
+    "bytes_received_by_user",
+    "bytes_sent_by_user",
+    "binlog_bytes_written_by_user",
+    "rows_fetched_by_user",
+    "rows_updated_by_user",
+    "rows_read_by_user",
+    "select_commands_by_user",
+    "update_commands_by_user",
+    "other_commands_by_user",
+    "commit_trans_by_user",
+    "rollback_trans_by_user",
+    "denied_connections_by_user",
+    "lost_connections_by_user",
+    "access_denied_errors_by_user",
+    "empty_queries_by_user",
+    "num_procs_by_user",
+    "idle_procs_by_user",
+    "active_procs_by_user",
+    "total_active_proc_time_by_user"
+  };
+
+  assert(sizeof(header) / sizeof(char *) == USER_STATS_END);
+
+  bool error= false;
+  for (int i= 0; i < USER_STATS_END && !error; i++)
+    if (var_need_print_var(header[i]))
+    {
+      error|= write_body(header[i]);
+      error|= write_body(" \"map:user");
+      for (int j= 0; j < num_records && !error; j++)
+        error|= write_body_fmt(" %s:%llu", user[j], stats[i][j]);
+      error|= write_body(STRING_WITH_LEN("\"\r\n"));
+    }
+
+  return (error) ? ER_OUT_OF_RESOURCES : 0;
+}
+
+
+/**
   Output the contents of SHOW STATUS to the HTTP response.
 
   Handles locking of the status variables that is necessary
@@ -358,6 +530,32 @@ int Http_request::var_process_list()
 
 
 /**
+   Determines if the current filtering is selecting a given variable.
+
+   @param [in]  var  variable to check
+   @return
+     @retval  true   var needs to be printed
+     @retval  false  var doesn't need to be printed
+*/
+
+bool Http_request::var_need_print_var(const char *var)
+{
+  LIST *node;
+
+  if (var_head)
+  {
+    for(node= var_head; node != NULL; node= node->next)
+    {
+      if (!strcmp((char *) node->data, var))
+        return true;
+    }
+  }
+
+  return var_head ? false : true;
+}
+
+
+/**
    Prints out the given variable, filtering it if the url query asks
    for specific variables and the current one is not one of them.
 
@@ -370,27 +568,12 @@ int Http_request::var_print_var(const char *fmt, ...)
 {
   va_list ap;
   bool error;
-  bool write= var_head ? false : true;
-  LIST *node;
 
-  if (var_head)
-  {
-    /* First argument is the key (a string). */
-    va_start(ap, fmt);
-    char* key= va_arg(ap, char*);
-    va_end(ap);
+  va_start(ap, fmt);
+  char* key= va_arg(ap, char*);
+  va_end(ap);
 
-    for(node= var_head; node != NULL; node= node->next)
-    {
-      if (!strcmp((char *) node->data, key))
-      {
-        write= true;
-        break;
-      }
-    }
-  }
-
-  if (write)
+  if (var_need_print_var(key))
   {
     va_start(ap, fmt);
     error= write_body_fmt_va_list(fmt, ap);
@@ -427,8 +610,8 @@ int Http_request::var(void)
   int err= var_show_status();
 
   //TODO: var_show_innodb_status();
-  //TODO: var_user_statistics();
-  //TODO: var_table_statistics();
+  var_user_statistics();
+  //var_table_statistics();
 
   if (!err)
     err= var_master_status();
