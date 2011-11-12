@@ -53,6 +53,13 @@ enum enum_user_statistics_array
   USER_STATS_END
 };
 
+enum enum_table_statistics_array
+{
+  TABLE_STATS_ROWS_READ= 0,
+  TABLE_STATS_ROWS_CHANGED,
+  TABLE_STATS_END
+};
+
 /**
    Insert the string spanned from *base to *end into 'var_head'.
 
@@ -373,6 +380,72 @@ int Http_request::var_user_statistics()
 
 
 /**
+  Output the contents of the INFORMATION_SCHEMA.TABLE_STATISTICS table.
+
+  @return  Operation Status
+    @retval  0      OK
+    @retval  ER_OUT_OF_RESOURCES
+*/
+
+int Http_request::var_table_statistics()
+{
+  pthread_mutex_lock(&LOCK_global_table_stats);
+  int num_records= global_table_stats.records;
+
+  if (num_records == 0)
+  {
+    /*
+      This shouldn't happen, but just in case, guard against there
+      being no tables on the server.
+    */
+    pthread_mutex_unlock(&LOCK_global_table_stats);
+    return 0;
+  }
+
+  char **table=
+      (char **) alloc_root(&req_mem_root, num_records * sizeof(char *));
+  ulonglong **rows= (ulonglong **) alloc_array(num_records, TABLE_STATS_END);
+
+  if (table == NULL || rows == NULL)
+  {
+    pthread_mutex_unlock(&LOCK_global_table_stats);
+    return ER_OUT_OF_RESOURCES;
+  }
+
+  for (int i= 0; i < num_records; i++)
+  {
+    TABLE_STATS *t= (TABLE_STATS *) hash_element(&global_table_stats, i);
+    table[i]= strdup_root(&req_mem_root, t->table);
+    rows[TABLE_STATS_ROWS_READ][i]= t->rows_read;
+    rows[TABLE_STATS_ROWS_CHANGED][i]= t->rows_changed;
+  }
+
+  pthread_mutex_unlock(&LOCK_global_table_stats);
+
+  const char *header[]=
+  {
+    "rows_read_by_table",
+    "rows_changed_by_table"
+  };
+
+  assert(sizeof(header) / sizeof(char *) == TABLE_STATS_END);
+
+  bool error= false;
+  for (int i= 0; i < TABLE_STATS_END && !error; i++)
+    if (var_need_print_var(header[i]))
+    {
+      error|= write_body(header[i]);
+      error|= write_body(" \"map:db.table");
+      for (int j= 0; j < num_records && !error; j++)
+        error|= write_body_fmt(" %s:%llu", table[j], rows[i][j]);
+      error|= write_body(STRING_WITH_LEN("\"\r\n"));
+    }
+
+  return (error) ? ER_OUT_OF_RESOURCES : 0;
+}
+
+
+/**
   Output the contents of SHOW STATUS to the HTTP response.
 
   Handles locking of the status variables that is necessary
@@ -611,7 +684,7 @@ int Http_request::var(void)
 
   //TODO: var_show_innodb_status();
   var_user_statistics();
-  //var_table_statistics();
+  var_table_statistics();
 
   if (!err)
     err= var_master_status();
