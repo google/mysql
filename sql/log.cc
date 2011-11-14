@@ -1704,6 +1704,7 @@ binlog_end_trans(THD *thd, binlog_trx_data *trx_data,
   }
 
   DBUG_ASSERT(thd->binlog_get_pending_rows_event() == NULL);
+  DBUG_EXECUTE_IF("crash_binlog_end_trans_after", DBUG_SUICIDE(););
   DBUG_RETURN(error);
 }
 
