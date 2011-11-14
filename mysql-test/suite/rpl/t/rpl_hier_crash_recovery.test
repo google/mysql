@@ -29,7 +29,6 @@ set session debug="d,crash_commit_after_prepare";
 --error 2013
 insert into t1 values (1);
 
---source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -50,7 +49,6 @@ set session debug="d,crash_commit_after_log";
 insert into t1 values (2);
 --inc $expected_id
 
---source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -71,7 +69,6 @@ set session debug="d,crash_commit_before_unlog";
 insert into t1 values (3);
 --inc $expected_id
 
---source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -100,7 +97,6 @@ insert into t1 values (7);
 --error 2013
 commit;
 
---source include/wait_until_disconnected.inc
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -120,6 +116,9 @@ eval purge binary logs to '$purge_to';
 #   1) The group_id.
 #   2) The server_id corresponding to the recovered group_id.
 #   3) Slave SQL thread continues from correct group_id.
+#
+# To correctly verify these things we swap the roles of the
+# master and slave.
 #
 connection slave;
 change master to master_host='';
@@ -142,7 +141,7 @@ let $current_server_id= query_get_value(show binlog info for $expected_id, Serve
 eval select 1 - $current_server_id as zero;
 --enable_query_log
 
-set global debug="d,crash_commit_after_log";
+set global debug="d,crash_binlog_end_trans_after";
 --exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 
 connection slave;
@@ -151,6 +150,15 @@ insert into t1 values (8);
 
 connection master;
 --source include/wait_until_disconnected.inc
+
+# Prevent replication from hiding bad crash recovery.
+connection slave;
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.2.expect
+--shutdown_server 10
+--source include/wait_until_disconnected.inc
+
+# Now allow the mysqld.1 to restart.
+connection master;
 --exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
@@ -170,6 +178,17 @@ eval select 2 - $current_server_id as zero;
 # Verify connect_using_group_id turned itself on as part of crash recovery.
 --let $status_items= Connect_Using_Group_ID
 --source include/show_slave_status.inc
+
+# Now allow the mysqld.2 to restart.
+connection slave;
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.2.expect
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+connection master;
+--disable_warnings
+start slave io_thread;
+--enable_warnings
 
 connection slave;
 insert into t1 values (9);
@@ -196,6 +215,10 @@ sync_with_master;
 # Cleanup
 #
 connection server_1;
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+
+connection server_2;
 --enable_reconnect
 --source include/wait_until_connected_again.inc
 

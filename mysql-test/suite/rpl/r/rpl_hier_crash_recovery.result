@@ -37,13 +37,14 @@ include/start_slave.inc
 Connect_Using_Group_ID = 'No'
 zero
 0
-set global debug="d,crash_commit_after_log";
+set global debug="d,crash_binlog_end_trans_after";
 insert into t1 values (8);
 zero
 0
 zero
 0
-Connect_Using_Group_ID = 'No'
+Connect_Using_Group_ID = 'Yes'
+start slave io_thread;
 insert into t1 values (9);
 insert into t1 values (10);
 include/stop_slave.inc
