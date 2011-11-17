@@ -148,18 +148,14 @@ connection slave;
 insert into t1 values (8);
 --inc $expected_id
 
+# mysqld.1 should crash when the SQL thread tries to commit the insert
+# of 8.
 connection master;
 --source include/wait_until_disconnected.inc
 
-# Prevent replication from hiding bad crash recovery.
-connection slave;
---exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.2.expect
---shutdown_server 10
---source include/wait_until_disconnected.inc
-
-# Now allow the mysqld.1 to restart.
-connection master;
---exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+# Restart mysqld.1 but don't start the slave in order to keep replication
+# from hiding incorrect crash recovery.
+--exec echo "restart: --skip-slave-start" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 --enable_reconnect
 --source include/wait_until_connected_again.inc
 
@@ -179,16 +175,10 @@ eval select 2 - $current_server_id as zero;
 --let $status_items= Connect_Using_Group_ID
 --source include/show_slave_status.inc
 
-# Now allow the mysqld.2 to restart.
-connection slave;
---exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.2.expect
---enable_reconnect
---source include/wait_until_connected_again.inc
-
 connection master;
---disable_warnings
-start slave io_thread;
---enable_warnings
+--let $status_items= Slave_IO_Running, Slave_SQL_Running
+--source include/show_slave_status.inc
+--source include/start_slave.inc
 
 connection slave;
 insert into t1 values (9);
@@ -215,10 +205,6 @@ sync_with_master;
 # Cleanup
 #
 connection server_1;
---enable_reconnect
---source include/wait_until_connected_again.inc
-
-connection server_2;
 --enable_reconnect
 --source include/wait_until_connected_again.inc
 
