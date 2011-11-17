@@ -44,7 +44,9 @@ zero
 zero
 0
 Connect_Using_Group_ID = 'Yes'
-start slave io_thread;
+Slave_IO_Running = 'No'
+Slave_SQL_Running = 'No'
+include/start_slave.inc
 insert into t1 values (9);
 insert into t1 values (10);
 include/stop_slave.inc
