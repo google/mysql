@@ -1,0 +1,1 @@
+--debug=d,sleep_in_sqllog_log_ddl --sql-log --sql-log-ddl

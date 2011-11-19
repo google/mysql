@@ -1,0 +1,5 @@
+include/master-slave.inc
+[connection master]
+create table t1 (a int, b char(32)) engine=innodb;
+drop table t1;
+include/rpl_end.inc
