@@ -1,0 +1,17 @@
+create database foobar;
+create table f (i int);
+insert into f values (1);
+delete from f where i=1;
+use foobar;
+create table f (i int);
+insert into f values (1);
+delete from f where i=1;
+use test;
+drop table f;
+drop database foobar;
+1 1 CREATE_DB N/A.N/A create database foobar
+1 1 CREATE_TABLE test.f create table f (i int)
+1 1 INSERT test.f i LONG 1
+1 1 DELETE test.f WHERE i LONG 1
+1 1 DROP_TABLE test.f drop table f
+1 1 DROP_DB N/A.N/A drop database foobar

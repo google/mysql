@@ -1,0 +1,55 @@
+#
+# Basic log file test
+#
+
+--source include/have_innodb.inc
+
+#
+# Check that log tables work and we can do basic selects. This also
+# tests truncate, which works in a special mode with the log tables
+#
+
+# Test transactions
+create table trans_test1 (col1 int, col2 varchar(32)) engine=InnoDB;
+
+# This should produce no logging output
+begin;
+insert into trans_test1 values(1, "rollback");
+insert into trans_test1 values(2, "rollback");
+rollback;
+
+# This should log two lines
+begin;
+insert into trans_test1 values(1, "commit");
+insert into trans_test1 values(2, "commit");
+commit;
+
+# This should log two UPDATE lines
+begin;
+update trans_test1 set col2="foo" where col1 > 0;
+commit;
+
+begin;
+delete from trans_test1;
+rollback;
+
+# This should be converted to a single DDL statement, and not multiple
+# row changes.
+begin;
+delete from trans_test1;
+commit;
+
+# This should log two lines
+begin;
+insert into trans_test1 values(3, "commit2");
+insert into trans_test1 values(4, "commit2");
+commit;
+
+# This is DDL.
+truncate trans_test1;
+
+drop table trans_test1;
+
+# Show the log content (timestamp is removed)
+let $MYSQLD_DATADIR= `select @@datadir;`;
+--exec tail --lines=10 $MYSQLD_DATADIR/mysqld-sql.000001 | cut -d' ' -f9-

@@ -1,0 +1,24 @@
+# this test needs multithreaded mysqltest
+-- source include/not_embedded.inc
+#
+# Test the sql log can ignore the filtered database.
+
+create database foobar;
+
+create table f (i int);
+insert into f values (1);
+delete from f where i=1;
+
+use foobar;
+create table f (i int);
+insert into f values (1);
+delete from f where i=1;
+
+use test;
+drop table f;
+
+drop database foobar;
+
+# Show the log content (timestamp is removed)
+let $MYSQLD_DATADIR= `select @@datadir;`;
+--exec tail --lines=8 $MYSQLD_DATADIR/mysqld-sql.000001 | cut -d' ' -f9-

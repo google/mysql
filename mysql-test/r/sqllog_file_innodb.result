@@ -1,0 +1,34 @@
+create table trans_test1 (col1 int, col2 varchar(32)) engine=InnoDB;
+begin;
+insert into trans_test1 values(1, "rollback");
+insert into trans_test1 values(2, "rollback");
+rollback;
+begin;
+insert into trans_test1 values(1, "commit");
+insert into trans_test1 values(2, "commit");
+commit;
+begin;
+update trans_test1 set col2="foo" where col1 > 0;
+commit;
+begin;
+delete from trans_test1;
+rollback;
+begin;
+delete from trans_test1;
+commit;
+begin;
+insert into trans_test1 values(3, "commit2");
+insert into trans_test1 values(4, "commit2");
+commit;
+truncate trans_test1;
+drop table trans_test1;
+1 1 CREATE_TABLE test.trans_test1 create table trans_test1 (col1 int, col2 varchar(32)) engine=InnoDB
+2 1 INSERT test.trans_test1 col1 LONG 1 AND col2 STRING b64'Y29tbWl0'
+2 2 INSERT test.trans_test1 col1 LONG 2 AND col2 STRING b64'Y29tbWl0'
+2 1 UPDATE test.trans_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 1 AND col2 STRING b64'Y29tbWl0'
+2 2 UPDATE test.trans_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 2 AND col2 STRING b64'Y29tbWl0'
+1 1 DELETE_TABLE test.trans_test1 delete from trans_test1
+2 1 INSERT test.trans_test1 col1 LONG 3 AND col2 STRING b64'Y29tbWl0Mg=='
+2 2 INSERT test.trans_test1 col1 LONG 4 AND col2 STRING b64'Y29tbWl0Mg=='
+1 1 TRUNCATE_TABLE test.trans_test1 truncate trans_test1
+1 1 DROP_TABLE test.trans_test1 drop table trans_test1
