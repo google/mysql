@@ -13,18 +13,56 @@ fi
 
 PID=$(cat ${NAME}/mysql.pid)
 HTTP_PORT=$(cat ${NAME}/mysql.httpd_port)
+NUM_TABLES=200
+NUM_USERS=200
+DURATION=600
 
+if [[ "$2" == "long" ]]
+then
+  NUM_TABLES=2000
+  NUM_USERS=2000
+fi
+
+echo "DROP DATABASE IF EXISTS test; CREATE DATABASE test;" |  \
+build/client/mysql -u root -S ${NAME}/mysql.sock
+
+echo Create ${NUM_TABLES} tables...
+(for i in $(seq ${NUM_TABLES})
+do
+  echo "
+CREATE TABLE test${i} (i INT);
+INSERT INTO test${i} VALUES (1), (2), (3);"
+done) | build/client/mysql -u root -S ${NAME}/mysql.sock test
+
+echo Query ${NUM_TABLES} tables using ${NUM_USERS} users...
+for i in $(seq ${NUM_USERS})
+do
+  (for j in $(seq ${NUM_TABLES})
+  do
+    echo "SELECT * FROM test${j};"
+  done) | \
+  build/client/mysql -u user${i} -S ${NAME}/mysql.sock test > \
+  /dev/null
+done
+
+echo Clean up...
+echo "DROP DATABASE test;" | \
+build/client/mysql -u root -S ${NAME}/mysql.sock
+
+echo Start the HTTP test...
 i=0
-max=100000
 every=1000
-while [[ ${i} -ne ${max} ]]
+end=$(expr $(date +%s) + ${DURATION})
+while [[ $(date +%s) -lt ${end} ]]
 do
   wget 0.0.0.0:${HTTP_PORT}/var -O /dev/null -o /dev/null
 
-  if [[ $(( ${i} % ${every})) -eq 0 ]]
+  if [[ ${i} -eq ${every} ]]
   then
-    printf "%6d/%6d queries " $i ${max}
+    diff=$(expr ${end} - $(date +%s))
+    printf "%6d queries    %3d seconds left    " $i $diff
     egrep 'VmSize|VmRSS' "/proc/${PID}/status" | xargs
+    i=0
   fi
-  i=$(( ${i} + 1))
+  i=$(( ${i} + 1 ))
 done
