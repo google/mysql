@@ -380,6 +380,7 @@ public:
     return FALSE;
   }
   void print(String *print);
+  bool print64(String *print);
 
   /* Swap two string objects. Efficient way to exchange data without memcpy. */
   void swap(String &s);
