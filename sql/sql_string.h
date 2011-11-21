@@ -499,6 +499,7 @@ public:
     return FALSE;
   }
   void print(String *print);
+  bool print64(String *print);
 
   bool append_for_single_quote(const char *st, uint len);
   bool append_for_single_quote(const String *s)

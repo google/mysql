@@ -1079,6 +1079,56 @@ void String::print(String *str)
   str->append_for_single_quote(Ptr, str_length);
 }
 
+/**
+  Print a base64 encoded version of the string.
+
+  @return Operation status
+    @retval false  success
+    @retval true   error
+*/
+
+bool String::print64(String *str)
+{
+  const char base64_table[]= "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
+
+  const char *st= (const char *) Ptr;
+  const char *end= st + str_length;
+
+  while (st < end)
+  {
+    unsigned int c;
+    char block[4];
+
+    c= *st++ << 8;
+    if (st < end)
+      c|= ((*st) & 0xff);
+    st++;
+    c<<= 8;
+
+    if (st < end)
+      c|= ((*st) & 0xff);
+    st++;
+
+    block[0]= base64_table[(c >> 18) & 63];
+    block[1]= base64_table[(c >> 12) & 63];
+    if (st > end + 1)
+      block[2]= '=';
+    else
+      block[2]= base64_table[(c >> 6) & 63];
+
+    if (st > end)
+      block[3]= '=';
+    else
+      block[3]= base64_table[(c >> 0) & 63];
+
+    if (str->append(block, 4))
+      return true;
+  }
+  return false;
+}
+
 /*
   Exchange state of this object and argument.
 
