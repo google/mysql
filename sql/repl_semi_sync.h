@@ -2,19 +2,19 @@
   Copyright 2007 Google Inc. All Rights Reserved.
   Author: wei@google.com (Wei Li)
 
-  Repl_semi_sync class is reponsible for semi synchronous replication.  The
+  Repl_semi_sync class is responsible for semi synchronous replication. The
   general idea of semi-sync replication is the master database needs to make
   sure that the slave database receives its replication events before telling
-  the client that a transaction has been committed.  The difference between
+  the client that a transaction has been committed. The difference between
   semi-sync and full-sync is that full-sync replication requires that the
   slave database finish replicated transaction before replying the master.
 
   The current semi-sync implementation defines a transaction wait timeout.
   In this way, the master would not wait for the slave indefinitely;
   instead after a configurable timeout, the master will continue the current
-  transaction.  At the same time, semi-sync will be disabled so that no
-  transactions will wait after this.  Later, semi-sync can be enabled again
-  when the slave catches up in replication.  The timeout design is to prevent
+  transaction. At the same time, semi-sync will be disabled so that no
+  transactions will wait after this. Later, semi-sync can be enabled again
+  when the slave catches up in replication. The timeout design is to prevent
   the master from halting for update, in case of the slave machine issues or
   network issues.
 */
@@ -99,8 +99,8 @@ class Repl_semi_sync {
 private:
 
   /**
-    This class manages memory for active transaction list.  We record each
-    active transaction with a Tranx_node.  Because each session can
+    This class manages memory for active transaction list. We record each
+    active transaction with a Tranx_node. Because each session can
     only have only one open transaction, the total active
     transaction nodes can not exceed the maximum sessions.
     Currently in MySQL, sessions are the same as connections.
@@ -232,7 +232,7 @@ private:
   /**
     Mutex that protects the following state variables and the active
     transaction list.
-    Under no cirumstances can we acquire mysql_bin_log.LOCK_log if we are
+    Under no circumstances can we acquire mysql_bin_log.LOCK_log if we are
     already holding LOCK_binlog because it can cause deadlocks.
   */
   pthread_mutex_t LOCK_binlog;
@@ -268,8 +268,8 @@ private:
     This is set to true when we know the 'largest' transaction commit
     position in the binlog file.
     We always maintain the position no matter whether semi-sync is switched
-    on or off.  When a transaction wait timeout occurs, semi-sync
-    will switch off.  Binlog-dump thread can use the following
+    on or off. When a transaction wait timeout occurs, semi-sync
+    will switch off. Binlog-dump thread can use the following
     three variables to detect when slaves catch up on replication
     so that semi-sync can switch on again.
   */
@@ -311,7 +311,7 @@ private:
   ulonglong       total_net_wait_time;        /**< total network wait time */
 
   /**
-    The number of maximum active transactions.  This should be the same as
+    The number of maximum active transactions. This should be the same as
     maximum connections because MySQL does not do connection sharing now.
   */
   int             max_transactions;
@@ -344,20 +344,20 @@ private:
     Switch semi-sync off because of timeout in transaction
     waiting. Indicate that semi-sync replication is OFF now.
 
-    What should we do when it is disabled?  The problem is that we want
+    What should we do when it is disabled? The problem is that we want
     the semi-sync replication enabled again when the slave catches up
-    later.  But, it is not that easy to detect that the slave has caught
-    up.  This is caused by the fact that MySQL's replication protocol is
+    later. But, it is not that easy to detect that the slave has caught
+    up. This is caused by the fact that MySQL's replication protocol is
     asynchronous, meaning that if the master does not use the semi-sync
     protocol, the slave would not send anything to the master.
     Still, if the master is sending (N+1)-th event, we assume that it is
     an indicator that the slave has received N-th event and earlier ones.
 
     If semi-sync is disabled, all transactions still update the wait
-    position with the last position in binlog.  But no transactions will
+    position with the last position in binlog. But no transactions will
     wait for confirmations and the active transaction list would not be
-    maintained.  In binlog dump thread, update_sync_header() checks whether
-    the current sending event catches up with last wait position.  If it
+    maintained. In binlog dump thread, update_sync_header() checks whether
+    the current sending event catches up with last wait position. If it
     does match, semi-sync will be switched on again.
   */
 
@@ -460,7 +460,7 @@ public:
     whether binlog-dump thread gets the reply for the events of
     the transaction. Remember that this is not a direct wait,
     instead, it waits to see whether the binlog-dump thread has
-    reached the point.  If the wait times out, semi-sync status
+    reached the point. If the wait times out, semi-sync status
     will be switched off and all other transaction would not wait
     either.
 
@@ -494,7 +494,7 @@ public:
 
   /**
     Update the sync bit in the packet header to indicate to the slave whether
-    the master will wait for the reply of the event.  If semi-sync is switched
+    the master will wait for the reply of the event. If semi-sync is switched
     off and we detect that the slave is catching up, we switch semi-sync on.
 
     @param       packet         the packet containing the replication event

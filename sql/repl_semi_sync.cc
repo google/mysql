@@ -8,10 +8,10 @@
    . Repl_semi_sync: the code flow for semi-sync replication
 
   By default in semi-sync replication, a transaction waits for 50ms to see
-  whether the slave has got the transaction.  50ms is based on the assumption
+  whether the slave has got the transaction. 50ms is based on the assumption
   that roundtrip time in one data center is less than 1ms and machine
   configurations should make the master database and the semi-sync slave
-  database colocate in one data center.  Otherwise, "rpl_semi_sync_timeout"
+  database colocate in one data center. Otherwise, "rpl_semi_sync_timeout"
   should be used to adjust timeout value.
 */
 
@@ -231,7 +231,7 @@ int Repl_semi_sync::Active_tranx::insert_tranx_node(const char *log_file_name,
     if (cmp > 0)
     {
       /*
-        Compare with the tail first.  If the transaction happens later in
+        Compare with the tail first. If the transaction happens later in
         binlog, then make it the new tail.
       */
       trx_rear->next= ins_node;
@@ -499,6 +499,7 @@ int Repl_semi_sync::disable_master()
 
   if (get_master_enabled())
   {
+    bool reply_file_name_was_inited= reply_file_name_inited;
     /*
       Switch off the semi-sync first so that waiting transaction will be
       waken up.
@@ -515,6 +516,11 @@ int Repl_semi_sync::disable_master()
 
     set_master_enabled(false);
     sql_print_information("Semi-sync replication disabled on the master.");
+    if (reply_file_name_was_inited)
+      sql_print_information("Semi-sync up to file %s, position %lu",
+                            reply_file_name, (ulong)reply_file_pos);
+    else
+      sql_print_information("Master did not receive any semi-sync ACKs.");
   }
 
   unlock();
@@ -654,7 +660,7 @@ int Repl_semi_sync::report_reply_binlog(THD      *thd,
 
   /*
     Sanity check the log and pos from the reply. If it is from the 'future'
-    then the the slave is horked in some way or the packet was corrupted
+    then the slave is horked in some way or the packet was corrupted
     on the network. In either case we should ignore the reply.
 
     NOTE: get_current_log acquired LOCK_log.
@@ -688,7 +694,7 @@ int Repl_semi_sync::report_reply_binlog(THD      *thd,
     The position should increase monotonically, if there is only one
     thread sending the binlog to the slave.
     In reality, to improve the transaction availability, we allow multiple
-    sync replication slaves.  So, if any one of them get the transaction,
+    sync replication slaves. So, if any one of them get the transaction,
     the transaction session in the primary can move forward.
   */
   if (reply_file_name_inited)
@@ -702,7 +708,7 @@ int Repl_semi_sync::report_reply_binlog(THD      *thd,
       We work on the assumption that there are multiple semi-sync slaves,
       and at least one of them should be up to date.
       If all semi-sync slaves are behind, at least initially, the primary
-      can find the situation after the waiting timeout.  After that, some
+      can find the situation after the waiting timeout. After that, some
       slaves should catch up quickly.
     */
     if (cmp < 0)
@@ -768,6 +774,7 @@ int Repl_semi_sync::commit_trx(THD *thd)
   function_enter(who);
   const char *trx_wait_binlog_name= thd->repl_wait_binlog_name;
   my_off_t trx_wait_binlog_pos= thd->repl_wait_binlog_pos;
+  int error= 0;
 
   if (get_master_enabled() &&
       trx_wait_binlog_name && strlen(trx_wait_binlog_name) > 0)
@@ -886,39 +893,48 @@ int Repl_semi_sync::commit_trx(THD *thd)
           If the condition was signaled because the THD is being killed,
           treat it as a timeout. Note that there's a small chance that this
           isn't correct. The condition could have been signaled because a
-          slave received the transaction, a context switch occured which marked
+          slave received the transaction, a context switch occurred which marked
           this THD as killed, context switch back to here and thd->killed gets
           checked and we incorrectly mark it as a timeout. Not a big deal
-          though because either way the client is going to get the lost
-          connection error.
+          though because either way the client is going to get an error.
         */
         if (wait_result != 0 || thd->killed)
         {
+          char msg[256];
+          my_snprintf(msg, sizeof(msg),
+                      "%s while waiting for replication semi-sync ack.",
+                      (thd->killed ? "Killed" : "Timeout"));
+          sql_print_information(msg);
+
+          if (thd->killed)
+          {
+            /* Return error to client. */
+            error= 1;
+            my_printf_error(ER_ERROR_DURING_COMMIT, msg, MYF(0));
+          }
+
           if (trace_level & trace_general)
           {
-            /* This is a real wait timeout. */
-            sql_print_information("Replication semi-sync not sent binlog to "
-                                  "slave within the timeout %lu ms - OFF.",
+            sql_print_information("Replication semi-sync did not send binlog to"
+                                  " slave within the timeout %lu ms - OFF.",
                                   wait_timeout);
             sql_print_information("  Semi-sync up to file %s, position %lu",
                                   reply_file_name, (ulong)reply_file_pos);
             sql_print_information("  Transaction needs file %s, position %lu",
                                   trx_wait_binlog_name,
                                   (ulong)trx_wait_binlog_pos);
-            if (thd->killed)
-              sql_print_information("  THD was killed while waiting.");
           }
 
-          /* for stat purposes, killed THDs are lumped in with timeouts. */
+          /* For stat purposes, killed THDs are lumped in with timeouts. */
           total_wait_timeouts++;
 
-          /* switch semi-sync off */
+          /* Switch semi-sync off. */
           if (!rpl_semi_sync_always_on)
             switch_off();
           else
           {
             if (trace_level & trace_general)
-              sql_print_information("Semi-sync always on enabled1: skipping "
+              sql_print_information("Semi-sync always-on enabled (1): skipping "
                                     "switch_off.");
             break;
           }
@@ -930,13 +946,16 @@ int Repl_semi_sync::commit_trx(THD *thd)
           wait_time= get_wait_time(&start_tv);
           if (wait_time < 0)
           {
-            if (trace_level & trace_general)
-            {
-              /* This is a time/gettimeofday function call error. */
-              sql_print_error("Replication semi-sync gettimeofday fail1 at "
-                              "wait position (%s, %d)",
-                              trx_wait_binlog_name, (uint)trx_wait_binlog_pos);
-            }
+            char msg[256];
+            my_snprintf(msg, sizeof(msg),
+                        "Replication semi-sync gettimeofday fail (1) at "
+                        "wait position (%s, %d)",
+                        trx_wait_binlog_name, (uint)trx_wait_binlog_pos);
+            sql_print_information(msg);
+
+            /* Return error to client. */
+            error= 1;
+            my_printf_error(ER_ERROR_DURING_COMMIT, msg, MYF(0));
             timefunc_fails++;
           }
           else
@@ -948,22 +967,25 @@ int Repl_semi_sync::commit_trx(THD *thd)
       }
       else
       {
-        if (trace_level & trace_general)
-        {
-          /* This is a gettimeofday function call error. */
-          sql_print_error("Replication semi-sync gettimeofday fail2 at "
-                          "wait position (%s, %d)",
-                          trx_wait_binlog_name, (uint)trx_wait_binlog_pos);
-        }
+        char msg[256];
+        my_snprintf(msg, sizeof(msg),
+                    "Replication semi-sync gettimeofday fail (2) at "
+                    "wait position (%s, %d)",
+                    trx_wait_binlog_name, (uint)trx_wait_binlog_pos);
+        sql_print_information(msg);
+
+        /* Return error to client. */
+        error= 1;
+        my_printf_error(ER_ERROR_DURING_COMMIT, msg, MYF(0));
         timefunc_fails++;
 
-        /* switch semi-sync off */
+        /* Switch semi-sync off. */
         if (!rpl_semi_sync_always_on)
           switch_off();
         else
         {
           if (trace_level & trace_general)
-            sql_print_information("Semi-sync always on enabled2: skipping "
+            sql_print_information("Semi-sync always-on enabled (2): skipping "
                                   "switch_off.");
           break;
         }
@@ -986,7 +1008,7 @@ end:
     thd->repl_wait_binlog_pos= 0;
   }
 
-  return function_exit(who, 0);
+  return function_exit(who, error);
 }
 
 
@@ -1072,7 +1094,7 @@ void Repl_semi_sync::reserve_sync_header(String *packet, THD *thd,
   else
   {
     /*
-      Set the magic number and the sync status.  By default, no sync
+      Set the magic number and the sync status. By default, no sync
       is required.
     */
     packet->append(sync_header, sizeof(sync_header));
@@ -1180,7 +1202,7 @@ int Repl_semi_sync::update_sync_header(String         *packet,
                        which binlog_dump thread never requests replies
 
       Also, it is advantageous that we update commit_file_* inside function
-      write_tranx_in_binlog().  Because commit_file_* indicates the last
+      write_tranx_in_binlog(). Because commit_file_* indicates the last
       transaction in binlog and the current event must be equal or behind
       the last transaction, a reply to the current event from the slave
       can clear all older transactions' syncness.
@@ -1251,9 +1273,9 @@ int Repl_semi_sync::read_slave_reply(THD *thd, NET *net,
     sql_print_information("%s: Wait for replica's reply", who);
 
   /*
-    Wait for the network here.  Though binlog dump thread can indefinitely wait
-    here, transactions would not wait indefintely.
-    Transactions wait on binlog replies detected by binlog dump threads.  If
+    Wait for the network here. Though binlog dump thread can indefinitely wait
+    here, transactions would not wait indefinitely.
+    Transactions wait on binlog replies detected by binlog dump threads. If
     binlog dump threads wait too long, transactions will timeout and continue.
   */
   packet_len= my_net_read(net);
@@ -1334,7 +1356,7 @@ int Repl_semi_sync::write_tranx_in_binlog(const char *log_file_name,
     Update the 'largest' transaction commit position seen so far even
     though semi-sync is switched off.
     It is much better that we update commit_file_* here, instead of
-    inside commit_trx().  This is mostly because update_sync_header()
+    inside commit_trx(). This is mostly because update_sync_header()
     will watch for commit_file_* to decide whether to switch semi-sync
     on. The detailed reason is explained in function update_sync_header().
   */
