@@ -1201,9 +1201,16 @@ int ha_commit_trans(THD *thd, bool all)
     DBUG_EXECUTE_IF("crash_commit_after", DBUG_SUICIDE(););
 
     /* Trigger semi-sync wait if it is enabled and needed. */
-    if (all ||
-        (!(thd->options & (OPTION_NOT_AUTOCOMMIT | OPTION_BEGIN))))
-      error= semi_sync_replicator.commit_trx(thd);
+    if (!error &&
+        (all ||
+         (!(thd->options & (OPTION_NOT_AUTOCOMMIT | OPTION_BEGIN)))))
+    {
+      if (semi_sync_replicator.commit_trx(thd))
+      {
+        error= 2;
+        goto end;
+      }
+    }
 end:
     if (rw_trans)
       start_waiting_global_read_lock(thd);

@@ -348,6 +348,9 @@ Rpl_semi_sync_yes_tx	302
 show status like 'Rpl_semi_sync_clients';
 Variable_name	Value
 Rpl_semi_sync_clients	1
+show status like 'Rpl_semi_sync_timeouts';
+Variable_name	Value
+Rpl_semi_sync_timeouts	0
 begin;
 insert into t1 values (500);
 delete from t1 where n < 500;
@@ -362,6 +365,12 @@ Rpl_semi_sync_no_tx	2
 show status like 'Rpl_semi_sync_yes_tx';
 Variable_name	Value
 Rpl_semi_sync_yes_tx	302
+show status like 'Rpl_semi_sync_clients';
+Variable_name	Value
+Rpl_semi_sync_clients	0
+show status like 'Rpl_semi_sync_timeouts';
+Variable_name	Value
+Rpl_semi_sync_timeouts	1
 show status like 'Rpl_semi_sync_slave_status';
 Variable_name	Value
 Rpl_semi_sync_slave_status	0
@@ -464,6 +473,7 @@ Id	User	Host	db	Command	Time	State	Info
 #	root	#	test	Sleep	#		NULL
 #	root	#	test	Query	#	NULL	show processlist
 #	root	#	test	Sleep	#		NULL
+ERROR HY000: Killed while waiting for replication semi-sync ack.
 show status like 'Rpl_semi_sync_status';
 Variable_name	Value
 Rpl_semi_sync_status	1
