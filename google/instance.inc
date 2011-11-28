@@ -54,6 +54,7 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --googlestats=ON \
   --googlestats_servers_table=LocalStatsServers \
   --googlestats_version_table=CommittedStatsVersions \
+  --restrict_bka_to_googlestats=0 \
   --sock=${INSTANCE_DIR}/mysql.sock \
   --port=${PORT} \
   --httpd \
