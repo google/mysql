@@ -1150,6 +1150,13 @@ sub command_line_setup {
     }
   }
 
+  # Allow batched key access for all table types
+  push(@opt_extra_mysqld_opt, "--restrict_bka_to_googlestats=0");
+
+  # Do not allow BKA for default MRR impl. Behavior of original
+  # mysql6.0 code.
+  push(@opt_extra_mysqld_opt, "--allow_default_mrr_bka=0");
+
   foreach my $arg ( @ARGV )
   {
     if ( $arg =~ /^--skip-/ )

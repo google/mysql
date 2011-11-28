@@ -1,0 +1,14 @@
+#
+# in lists tests with the new multi-range read interface
+#
+
+set use_mrr_for_quick_range=ON;
+show variables like '%use_mrr_for_quick_range%';
+
+
+--source t/in_list.test
+
+
+set use_mrr_for_quick_range=DEFAULT;
+show variables like '%use_mrr_for_quick_range%';
+

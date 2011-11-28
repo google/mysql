@@ -1,0 +1,1179 @@
+--disable_warnings
+DROP TABLE IF EXISTS t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11;
+DROP DATABASE IF EXISTS world;
+--enable_warnings
+
+set names utf8;
+
+CREATE DATABASE world;
+
+use world;
+
+--source include/world_schema1.inc
+
+--disable_query_log
+--disable_result_log
+--disable_warnings
+--source include/world.inc
+--enable_warnings
+--enable_result_log
+--enable_query_log
+
+SELECT COUNT(*) FROM Country;
+SELECT COUNT(*) FROM City;
+SELECT COUNT(*) FROM CountryLanguage;
+
+show variables like 'join_buffer_size';
+
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+set join_cache_level=2;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+set join_cache_level=default;
+
+set join_buffer_size=256;
+show variables like 'join_buffer_size';
+
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+set join_cache_level=2;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+set join_cache_level=default;
+set join_buffer_size=default;
+
+show variables like 'join_buffer_size';
+show variables like 'join_cache_level';
+
+DROP DATABASE world; 
+
+
+CREATE DATABASE world;
+
+use world;
+
+--source include/world_schema.inc
+
+--disable_query_log
+--disable_result_log
+--disable_warnings
+--source include/world.inc
+--enable_warnings
+--enable_result_log
+--enable_query_log
+
+show variables like 'join_buffer_size';
+set join_cache_level=5;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+EXPLAIN
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+set join_cache_level=6;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+EXPLAIN
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+set join_cache_level=7;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+EXPLAIN
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+set join_cache_level=8;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+EXPLAIN
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+SELECT Country.Name, IF(ISNULL(CountryLanguage.Country), NULL, CountryLanguage.Percentage)
+  FROM Country LEFT JOIN CountryLanguage ON
+       (CountryLanguage.Country=Country.Code AND Language='English')
+  WHERE 
+       Country.Population > 10000000;
+
+set join_buffer_size=256;
+show variables like 'join_buffer_size';
+
+set join_cache_level=5;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+set join_cache_level=6;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+set join_cache_level=7;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+set join_cache_level=8;
+show variables like 'join_cache_level';
+
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+EXPLAIN
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+SELECT City.Name, Country.Name, CountryLanguage.Language
+  FROM City,Country,CountryLanguage
+  WHERE City.Country=Country.Code AND
+        CountryLanguage.Country=Country.Code AND
+        City.Name LIKE 'L%' AND Country.Population > 3000000 AND
+        CountryLanguage.Percentage > 50;
+
+EXPLAIN
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+SELECT Name FROM City
+  WHERE City.Country IN (SELECT Code FROM Country WHERE Country.Name LIKE 'L%') AND
+        City.Population > 100000;
+
+set join_cache_level=default;
+set join_buffer_size=default;
+
+show variables like 'join_buffer_size';
+show variables like 'join_cache_level';
+
+set join_cache_level=1;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND City.Population > 3000000;
+
+set join_cache_level=8;
+set join_buffer_size=256;
+
+--replace_column 9 #
+EXPLAIN
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND City.Population > 3000000;
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND City.Population > 3000000;
+
+set join_buffer_size=default;
+
+set join_cache_level=6;
+
+ALTER TABLE Country MODIFY Name varchar(52) NOT NULL default '';
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+ALTER TABLE Country MODIFY Name varchar(300) NOT NULL default '';
+
+SELECT City.Name, Country.Name FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+ALTER TABLE Country ADD COLUMN PopulationBar text;
+UPDATE Country 
+  SET PopulationBar=REPEAT('x', CAST(Population/100000 AS unsigned int));
+
+SELECT City.Name, Country.Name, Country.PopulationBar FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+set join_buffer_size=256;
+
+SELECT City.Name, Country.Name, Country.PopulationBar FROM City,Country
+  WHERE City.Country=Country.Code AND 
+        Country.Name LIKE 'L%' AND City.Population > 100000;
+
+set join_cache_level=default;
+set join_buffer_size=default;
+
+DROP DATABASE world;
+
+use test;
+
+#
+# Bug #35685: assertion abort when initializing a BKA cache
+#
+
+CREATE TABLE t1(
+  affiliatetometaid int  NOT NULL default '0',
+  uniquekey int NOT NULL default '0',
+  metaid int  NOT NULL default '0',
+  affiliateid int  NOT NULL default '0',
+  xml text,
+  isactive char(1) NOT NULL default 'Y',
+  PRIMARY KEY  (affiliatetometaid)
+);
+CREATE UNIQUE INDEX t1_uniquekey ON t1(uniquekey);
+CREATE INDEX t1_affiliateid ON t1(affiliateid);
+CREATE INDEX t1_metaid on t1 (metaid);
+INSERT INTO t1 VALUES
+  (1616, 1571693233, 1391, 2, NULL, 'Y'), (1943, 1993216749, 1726, 2, NULL, 'Y');
+
+CREATE TABLE t2(
+  metaid int  NOT NULL default '0',
+  name varchar(80) NOT NULL default '',
+  dateadded timestamp NOT NULL ,
+  xml text,
+  status int default NULL,
+  origin int default NULL,
+  gid int NOT NULL default '1',
+  formattypeid int  default NULL,
+  PRIMARY KEY  (metaid)
+);
+CREATE INDEX t2_status ON t2(status);
+CREATE INDEX t2_gid ON t2(gid);
+CREATE INDEX t2_formattypeid ON t2(formattypeid);
+INSERT INTO t2 VALUES
+ (1391, "I Just Died", "2003-10-02 10:07:37", "", 1, NULL, 3, NULL),
+ (1726, "Me, Myself & I", "2003-12-05 11:24:36", " ", 1, NULL, 3, NULL);
+
+CREATE TABLE t3(
+  mediaid int  NOT NULL ,
+  metaid int  NOT NULL default '0',
+  formatid int  NOT NULL default '0',
+  status int default NULL,
+  path varchar(100) NOT NULL default '',
+  datemodified timestamp NOT NULL ,
+  resourcetype int  NOT NULL default '1',
+  parameters text,
+  signature int  default NULL,
+  quality int  NOT NULL default '255',
+  PRIMARY KEY  (mediaid)
+);
+CREATE INDEX t3_metaid ON t3(metaid);
+CREATE INDEX t3_formatid ON t3(formatid);
+CREATE INDEX t3_status ON t3(status);
+CREATE INDEX t3_metaidformatid ON t3(metaid,formatid);
+CREATE INDEX t3_signature ON t3(signature);
+CREATE INDEX t3_quality ON t3(quality);
+INSERT INTO t3 VALUES
+  (6, 4, 8, 0, "010101_anastacia_spmidi.mid", "2004-03-16 13:40:00", 1, NULL, NULL, 255),
+  (3343, 3, 8, 1, "010102_4VN4bsPwnxRQUJW5Zp1RhG2IL9vvl_8.mid", "2004-03-16 13:40:00", 1, NULL, NULL, 255);
+
+CREATE TABLE t4(
+  formatid int  NOT NULL ,
+  name varchar(60) NOT NULL default '',
+  formatclassid int  NOT NULL default '0',
+  mime varchar(60) default NULL,
+  extension varchar(10) default NULL,
+  priority int NOT NULL default '0',
+  canaddtocapability char(1) NOT NULL default 'Y',
+  PRIMARY KEY  (formatid)
+);
+CREATE INDEX t4_formatclassid ON t4(formatclassid);
+CREATE INDEX t4_formats_idx ON t4(canaddtocapability);
+INSERT INTO t4 VALUES
+  (19, "XHTML", 11, "text/html", "xhtml", 10, 'Y'),
+  (54, "AMR (wide band)", 13, "audio/amr-wb", "awb", 0, 'Y');
+
+CREATE TABLE t5(
+  formatclassid int  NOT NULL ,
+  name varchar(60) NOT NULL default '',
+  priority int NOT NULL default '0',
+  formattypeid int  NOT NULL default '0',
+  PRIMARY KEY  (formatclassid)
+);
+CREATE INDEX t5_formattypeid on t5(formattypeid);
+INSERT INTO t5 VALUES
+  (11, "Info", 0, 4), (13, "Digital Audio", 0, 2);
+
+CREATE TABLE t6(
+  formattypeid int  NOT NULL ,
+  name varchar(60) NOT NULL default '',
+  priority int default NULL,
+  PRIMARY KEY  (formattypeid)
+);
+INSERT INTO t6 VALUES
+ (2, "Ringtones", 0);
+
+CREATE TABLE t7(
+  metaid int  NOT NULL default '0',
+  artistid int  NOT NULL default '0',
+  PRIMARY KEY  (metaid,artistid)
+);
+INSERT INTO t7 VALUES
+  (4, 5), (3, 4);
+
+CREATE TABLE t8(
+  artistid int  NOT NULL ,
+  name varchar(80) NOT NULL default '',
+  PRIMARY KEY  (artistid)
+);
+INSERT INTO t8 VALUES
+  (5, "Anastacia"), (4, "John Mayer");
+
+CREATE TABLE t9(
+  subgenreid int  NOT NULL default '0',
+  metaid int  NOT NULL default '0',
+  PRIMARY KEY  (subgenreid,metaid)
+) ;
+CREATE INDEX t9_subgenreid ON t9(subgenreid);
+CREATE INDEX t9_metaid ON t9(metaid);
+INSERT INTO t9 VALUES 
+  (138, 4), (31, 3);
+
+CREATE TABLE t10(
+  subgenreid int  NOT NULL ,
+  genreid int  NOT NULL default '0',
+  name varchar(80) NOT NULL default '',
+  PRIMARY KEY  (subgenreid)
+) ;
+CREATE INDEX t10_genreid ON t10(genreid);
+INSERT INTO t10 VALUES 
+  (138, 19, ''), (31, 3, '');
+
+CREATE TABLE t11(
+  genreid int  NOT NULL default '0',
+  name char(80) NOT NULL default '',
+  priority int NOT NULL default '0',
+  masterclip char(1) default NULL,
+  PRIMARY KEY  (genreid)
+) ;
+CREATE INDEX t11_masterclip ON t11( masterclip);
+INSERT INTO t11 VALUES
+  (19, "Pop & Dance", 95, 'Y'), (3, "Rock & Alternative", 100, 'Y');
+
+set join_cache_level=6;
+
+EXPLAIN
+SELECT t1.uniquekey, t1.xml AS affiliateXml,
+       t8.name AS artistName, t8.artistid, 
+       t11.name AS genreName, t11.genreid, t11.priority AS genrePriority,
+       t10.subgenreid, t10.name AS subgenreName,
+       t2.name AS metaName, t2.metaid, t2.xml AS metaXml,
+       t4.priority + t5.priority + t6.priority AS overallPriority,
+       t3.path AS path, t3.mediaid, 
+       t4.formatid, t4.name AS formatName, 
+       t5.formatclassid, t5.name AS formatclassName, 
+       t6.formattypeid, t6.name AS formattypeName 
+FROM t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11
+WHERE t7.metaid = t2.metaid AND t7.artistid = t8.artistid AND
+      t9.metaid = t2.metaid AND t9.subgenreid = t10.subgenreid AND 
+      t10.genreid = t11.genreid AND  t3.metaid = t2.metaid AND
+      t3.formatid = t4.formatid AND t4.formatclassid = t5.formatclassid AND
+      t4.canaddtocapability =  'Y' AND t5.formattypeid = t6.formattypeid AND
+      t6.formattypeid IN (2) AND (t3.formatid IN (31, 8, 76)) AND
+      t1.metaid = t2.metaid AND t1.affiliateid = '2';
+
+SELECT t1.uniquekey, t1.xml AS affiliateXml,
+       t8.name AS artistName, t8.artistid, 
+       t11.name AS genreName, t11.genreid, t11.priority AS genrePriority,
+       t10.subgenreid, t10.name AS subgenreName,
+       t2.name AS metaName, t2.metaid, t2.xml AS metaXml,
+       t4.priority + t5.priority + t6.priority AS overallPriority,
+       t3.path AS path, t3.mediaid, 
+       t4.formatid, t4.name AS formatName, 
+       t5.formatclassid, t5.name AS formatclassName, 
+       t6.formattypeid, t6.name AS formattypeName 
+FROM t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11
+WHERE t7.metaid = t2.metaid AND t7.artistid = t8.artistid AND
+      t9.metaid = t2.metaid AND t9.subgenreid = t10.subgenreid AND 
+      t10.genreid = t11.genreid AND  t3.metaid = t2.metaid AND
+      t3.formatid = t4.formatid AND t4.formatclassid = t5.formatclassid AND
+      t4.canaddtocapability =  'Y' AND t5.formattypeid = t6.formattypeid AND
+      t6.formattypeid IN (2) AND (t3.formatid IN (31, 8, 76)) AND
+      t1.metaid = t2.metaid AND t1.affiliateid = '2';
+
+DROP TABLE t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11;
+
+#
+# Bug #37131: 3-way join query with BKA used with a small buffer and
+#             only for the third table
+#
+
+CREATE TABLE t1 (a1 int, filler1 char(64) default ' ' );
+CREATE TABLE t2 (
+  a2 int, b2 int, filler2 char(64) default ' ', 
+  PRIMARY KEY idx(a2,b2,filler2)
+) ;
+CREATE TABLE t3 (b3 int, c3 int, INDEX idx(b3));
+
+INSERT INTO t1(a1) VALUES 
+ (4), (7), (1), (9), (8), (5), (3), (6), (2);
+INSERT INTO t2(a2,b2) VALUES
+ (1,30), (3,40), (2,61), (6,73), (8,92), (9,27), (4,18), (5,84), (7,56),
+ (4,14), (6,76), (8,98), (7,55), (1,39), (2,68), (3,45), (9,21), (5,81),
+ (5,88), (2,65), (6,74), (9,23), (1,37), (3,44), (4,17), (8,99), (7,51),
+ (9,28), (7,52), (1,33), (4,13), (5,87), (3,43), (8,91), (2,62), (6,79),
+ (3,49), (8,93), (7,34), (5,82), (6,78), (2,63), (1,32), (9,22), (4,11);
+INSERT INTO t3 VALUES
+ (30,302), (92,923), (18,187), (45,459), (30,309), 
+ (39,393), (68,685), (45,458), (21,210), (81,817),
+ (40,405), (61,618), (73,738), (92,929), (27,275),
+ (18,188), (84,846), (56,564), (14,144), (76,763), 
+ (98,982), (55,551), (17,174), (99,998), (51,513),
+ (28,282), (52,527), (33,336), (13,138), (87,878), 
+ (43,431), (91,916), (62,624), (79,797), (49,494),
+ (93,933), (34,347), (82,829), (78,780), (63,634), 
+ (32,329), (22,228), (11,114), (74,749), (23,236);
+
+set join_cache_level=1;
+
+EXPLAIN
+SELECT a1<>a2, a1, a2, b2, b3, c3,
+       SUBSTR(filler1,1,1) AS s1, SUBSTR(filler2,1,1) AS s2
+FROM t1,t2,t3 WHERE a1=a2 AND b2=b3 AND MOD(c3,10)>7; 
+
+SELECT a1<>a2, a1, a2, b2, b3, c3,
+       SUBSTR(filler1,1,1) AS s1, SUBSTR(filler2,1,1) AS s2
+FROM t1,t2,t3 WHERE a1=a2 AND b2=b3 AND MOD(c3,10)>7;
+ 
+set join_cache_level=5;
+set join_buffer_size=512;
+
+EXPLAIN
+SELECT a1<>a2, a1, a2, b2, b3, c3,
+       SUBSTR(filler1,1,1) AS s1, SUBSTR(filler2,1,1) AS s2
+FROM t1,t2,t3 WHERE a1=a2 AND b2=b3 AND MOD(c3,10)>7; 
+
+SELECT a1<>a2, a1, a2, b2, b3, c3,
+       SUBSTR(filler1,1,1) AS s1, SUBSTR(filler2,1,1) AS s2
+FROM t1,t2,t3 WHERE a1=a2 AND b2=b3 AND MOD(c3,10)>7;
+ 
+DROP TABLE t1,t2,t3;
+
+#
+# Bug #37690: crash with a tiny buffer when using BKA_JOIN_CACHE_UNIQUE
+#
+
+CREATE TABLE t1 (a int, b int, INDEX idx(b));
+CREATE TABLE t2 (a int, b int, INDEX idx(a)); 
+INSERT INTO t1 VALUES (5,30), (3,20), (7,40), (2,10), (8,30), (1,10), (4,20);     
+INSERT INTO t2 VALUES (7,10), (1,20), (2,20), (8,20), (8,10), (1,20);
+INSERT INTO t2 VALUES (1,10), (4,20), (3,20), (7,20), (7,10), (1,20); 
+    
+set join_buffer_size=32; 
+set join_cache_level=8;  
+ 
+EXPLAIN SELECT * FROM t1,t2 WHERE t1.a=t2.a AND t1.b >= 30; 
+--sorted_result  
+SELECT * FROM t1,t2 WHERE t1.a=t2.a AND t1.b >= 30;  
+
+DROP TABLE t1,t2;
+ 
+--echo #
+--echo # Bug #40134: outer join with not exists optimization and join buffer
+--echo #
+
+set join_cache_level=default;
+set join_buffer_size=default;
+
+CREATE TABLE t1 (a int NOT NULL);
+INSERT INTO t1 VALUES (2), (4), (3), (5), (1);
+CREATE TABLE t2 (a int NOT NULL, b int NOT NULL, INDEX i_a(a));
+INSERT INTO t2 VALUES (4,10), (2,10), (2,30), (2,20), (4,20);
+
+EXPLAIN
+SELECT * FROM t1 LEFT JOIN t2 ON t1.a=t2.a WHERE t2.b IS NULL;
+SELECT * FROM t1 LEFT JOIN t2 ON t1.a=t2.a WHERE t2.b IS NULL;
+
+SET join_cache_level=6;
+EXPLAIN
+SELECT * FROM t1 LEFT JOIN t2 ON t1.a=t2.a WHERE t2.b IS NULL;
+SELECT * FROM t1 LEFT JOIN t2 ON t1.a=t2.a WHERE t2.b IS NULL;
+
+DROP TABLE t1, t2;
+
+set join_cache_level=default;
+set join_buffer_size=default;
+
+--echo #
+--echo # BUG#40136: Group by is ignored when join buffer is used for an outer join
+--echo #
+create table t1(a int PRIMARY KEY, b int);
+insert into t1 values
+  (5, 10), (2, 70), (7, 80), (6, 20), (1, 50), (9, 40), (8, 30), (3, 60);
+create table t2 (p int, a int, INDEX i_a(a));
+insert into t2 values
+  (103, 7), (109, 3), (102, 3), (108, 1), (106, 3),
+  (107, 7), (105, 1), (101, 3), (100, 7), (110, 1);
+set @save_join_cache_level=@@join_cache_level;
+set join_cache_level=6;
+--echo The following must not show "using join cache":
+explain
+select t1.a, count(t2.p) as count
+  from t1 left join t2 on t1.a=t2.a and t2.p % 2 = 1 group by t1.a;
+select t1.a, count(t2.p) as count
+  from t1 left join t2 on t1.a=t2.a and t2.p % 2 = 1 group by t1.a;
+set join_cache_level=@save_join_cache_level;
+drop table t1, t2;
+
+--echo #
+--echo # BUG#40268: Nested outer join with not null-rejecting where condition
+--echo #            over an inner table which is not the last in the nest
+--echo #
+
+CREATE TABLE t2 (a int, b int, c int);
+CREATE TABLE t3 (a int, b int, c int);
+CREATE TABLE t4 (a int, b int, c int);
+
+INSERT INTO t2 VALUES (3,3,0), (4,2,0), (5,3,0);
+INSERT INTO t3 VALUES (1,2,0), (2,2,0);
+INSERT INTO t4 VALUES (3,2,0), (4,2,0);
+
+set join_cache_level=6;
+
+SELECT t2.a,t2.b,t3.a,t3.b,t4.a,t4.b
+  FROM t2 LEFT JOIN (t3, t4) ON t2.b=t4.b
+     WHERE t3.a+2<t2.a OR t3.c IS NULL;
+
+set join_cache_level=default;
+DROP TABLE t2, t3, t4;
+
+--echo #
+--echo # Bug #40192: outer join with where clause when using BNL 
+--echo #
+
+create table t1 (a int, b int);
+insert into t1 values (2, 20), (3, 30), (1, 10);
+create table t2 (a int, c int);
+insert into t2 values (1, 101), (3, 102), (1, 100);
+
+set join_cache_level=6;
+
+select * from t1 left join t2 on t1.a=t2.a;
+explain select * from t1 left join t2 on t1.a=t2.a where t2.c=102 or t2.c is null;
+select * from t1 left join t2 on t1.a=t2.a where t2.c=102 or t2.c is null;
+
+set join_cache_level=default;
+drop table t1, t2;
+
+--echo #
+--echo # Bug #40317: outer join with with constant on expression equal to FALSE
+--echo #
+
+create table t1 (a int);
+insert into t1 values (30), (40), (20);
+create table t2 (b int);
+insert into t2 values (200), (100);
+
+set join_cache_level=6;
+
+select * from t1 left join t2 on (1=0);
+explain select * from t1 left join t2 on (1=0) where a=40;
+select * from t1 left join t2 on (1=0) where a=40;
+
+set join_cache_level=1;
+explain select * from t1 left join t2 on (1=0);
+
+set join_cache_level=default;
+drop table t1, t2;
+
+--echo #
+--echo # Bug #41204: small buffer with big rec_per_key for ref access
+--echo #
+
+CREATE TABLE t1 (a int);
+
+INSERT INTO t1 VALUES (0);
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1(a) SELECT a FROM t1;
+INSERT INTO t1 VALUES (20000), (10000);
+
+CREATE TABLE t2 (pk int AUTO_INCREMENT PRIMARY KEY, b int, c int, INDEX idx(b));
+INSERT INTO t2(b,c) VALUES (10000, 3), (20000, 7), (20000, 1), (10000, 9), (20000, 5);
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+INSERT INTO t2(b,c) SELECT b,c FROM t2;
+
+--disable_result_log
+ANALYZE TABLE t1,t2;
+--enable_result_log
+
+set join_cache_level=6;
+set join_buffer_size=1024;
+
+EXPLAIN SELECT AVG(c) FROM t1,t2 WHERE t1.a=t2.b;
+SELECT AVG(c) FROM t1,t2 WHERE t1.a=t2.b;
+
+set join_buffer_size=default;
+set join_cache_level=default;
+
+DROP TABLE t1, t2;
+
+--echo #
+--echo # Bug #41894: big join buffer of level 7 used to join records
+--echo #              with null values in place of varchar strings
+--echo #
+
+CREATE TABLE t1 (a int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                 b varchar(127) DEFAULT NULL);
+
+INSERT INTO t1(a) VALUES (1);
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+INSERT INTO t1(b) SELECT b FROM t1;
+
+CREATE TABLE t2 (a int NOT NULL PRIMARY KEY, b varchar(127) DEFAULT NULL);
+INSERT INTO t2 SELECT * FROM t1;
+
+CREATE TABLE t3 (a int NOT NULL PRIMARY KEY, b varchar(127) DEFAULT NULL);
+INSERT INTO t3 SELECT * FROM t1;
+
+set join_cache_level=7;
+set join_buffer_size=1024*1024;
+
+EXPLAIN
+SELECT COUNT(*) FROM t1,t2,t3
+  WHERE t1.a=t2.a AND t2.a=t3.a AND
+        t1.b IS NULL AND t2.b IS NULL AND t3.b IS NULL;
+
+SELECT COUNT(*) FROM t1,t2,t3
+  WHERE t1.a=t2.a AND t2.a=t3.a AND
+        t1.b IS NULL AND t2.b IS NULL AND t3.b IS NULL;
+
+set join_buffer_size=default;
+set join_cache_level=default;
+
+DROP TABLE t1,t2,t3;
+
+--echo #
+--echo # Bug #42020: join buffer is used  for outer join with fields of 
+--echo #             several outer tables in join buffer
+--echo #
+
+CREATE TABLE t1 (
+  a bigint NOT NULL,
+  PRIMARY KEY (a) 
+);
+INSERT INTO t1 VALUES
+  (2), (1);
+
+CREATE TABLE t2 (
+  a bigint NOT NULL,
+  b bigint NOT NULL,
+  PRIMARY KEY (a,b)
+);
+INSERT INTO t2 VALUES
+  (2,30), (2,40), (2,50), (2,60), (2,70), (2,80),
+  (1,10), (1, 20), (1,30), (1,40), (1,50);
+
+CREATE TABLE t3 (
+  pk bigint NOT NULL AUTO_INCREMENT,
+  a bigint NOT NULL,
+  b bigint NOT NULL,
+  val bigint DEFAULT '0',
+  PRIMARY KEY (pk),
+  KEY idx (a,b)
+);
+INSERT INTO t3(a,b) VALUES
+  (2,30), (2,40), (2,50), (2,60), (2,70), (2,80),
+  (4,30), (4,40), (4,50), (4,60), (4,70), (4,80),
+  (5,30), (5,40), (5,50), (5,60), (5,70), (5,80),
+  (7,30), (7,40), (7,50), (7,60), (7,70), (7,80);
+
+SELECT t1.a, t2.a, t3.a, t2.b, t3.b, t3.val 
+  FROM (t1,t2) LEFT JOIN t3 ON (t1.a=t3.a AND t2.b=t3.b) 
+    WHERE t1.a=t2.a; 
+
+set join_cache_level=6;
+set join_buffer_size=256;
+
+EXPLAIN
+SELECT t1.a, t2.a, t3.a, t2.b, t3.b, t3.val 
+  FROM (t1,t2) LEFT JOIN t3 ON (t1.a=t3.a AND t2.b=t3.b) 
+    WHERE t1.a=t2.a; 
+
+SELECT t1.a, t2.a, t3.a, t2.b, t3.b, t3.val 
+  FROM (t1,t2) LEFT JOIN t3 ON (t1.a=t3.a AND t2.b=t3.b) 
+    WHERE t1.a=t2.a;
+
+DROP INDEX idx ON t3;
+set join_cache_level=4;
+
+EXPLAIN
+SELECT t1.a, t2.a, t3.a, t2.b, t3.b, t3.val 
+  FROM (t1,t2) LEFT JOIN t3 ON (t1.a=t3.a AND t2.b=t3.b) 
+    WHERE t1.a=t2.a; 
+
+SELECT t1.a, t2.a, t3.a, t2.b, t3.b, t3.val 
+  FROM (t1,t2) LEFT JOIN t3 ON (t1.a=t3.a AND t2.b=t3.b) 
+    WHERE t1.a=t2.a; 
+
+set join_buffer_size=default;
+set join_cache_level=default;
+
+DROP TABLE t1,t2,t3;
+
+
+--echo #
+--echo # Bug #42955: join with GROUP BY/ORDER BY and when BKA is enabled 
+--echo #             
+
+create table t1 (d int, id1 int, index idx1 (d, id1));
+insert into t1 values
+  (3, 20), (2, 40), (3, 10), (1, 10), (3, 20), (1, 40), (2, 30), (3, 30);
+
+create table t2 (id1 int, id2 int, index idx2 (id1));
+insert into t2 values 
+  (20, 100), (30, 400), (20, 400), (30, 200), (10, 300), (10, 200), (40, 100),
+  (40, 200), (30, 300), (10, 400), (20, 200), (20, 300);   
+
+set join_cache_level=6;
+
+explain
+select t1.id1, sum(t2.id2) from t1 join t2 on t1.id1=t2.id1 
+  where t1.d=3 group by t1.id1;
+
+select t1.id1, sum(t2.id2) from t1 join t2 on t1.id1=t2.id1 
+  where t1.d=3 group by t1.id1;
+
+explain
+select t1.id1  from t1 join t2 on t1.id1=t2.id1 
+ where t1.d=3 and t2.id2 > 200 order by t1.id1;
+
+select t1.id1  from t1 join t2 on t1.id1=t2.id1 
+ where t1.d=3 and t2.id2 > 200 order by t1.id1;
+
+set join_cache_level=default;
+
+drop table t1,t2;
+
+--echo #
+--echo # Bug #44019: star-like multi-join query executed join_cache_level=6 
+--echo #             
+
+create table t1 (a int, b int, c int, d int);
+create table t2 (b int, e varchar(16), index idx(b));
+create table t3 (d int, f varchar(16), index idx(d));
+create table t4 (c int, g varchar(16), index idx(c));
+
+insert into t1 values
+  (5, 50, 500, 5000), (3, 30, 300, 3000), (9, 90, 900, 9000),
+  (2, 20, 200, 2000), (4, 40, 400, 4000), (8, 80, 800, 800),
+  (7, 70, 700, 7000);
+insert into t2 values
+  (30, 'bbb'), (10, 'b'), (70, 'bbbbbbb'), (60, 'bbbbbb'),
+  (31, 'bbb'), (11, 'b'), (71, 'bbbbbbb'), (61, 'bbbbbb'),
+  (32, 'bbb'), (12, 'b'), (72, 'bbbbbbb'), (62, 'bbbbbb');
+insert into t3 values
+  (4000, 'dddd'), (3000, 'ddd'), (1000, 'd'), (8000, 'dddddddd'),
+  (4001, 'dddd'), (3001, 'ddd'), (1001, 'd'), (8001, 'dddddddd'),
+  (4002, 'dddd'), (3002, 'ddd'), (1002, 'd'), (8002, 'dddddddd');
+insert into t4 values
+  (200, 'cc'), (600, 'cccccc'), (300, 'ccc'), (500, 'ccccc'),
+  (201, 'cc'), (601, 'cccccc'), (301, 'ccc'), (501, 'ccccc'),
+  (202, 'cc'), (602, 'cccccc'), (302, 'ccc'), (502, 'ccccc');
+
+--disable_result_log
+--disable_warnings
+analyze table t2,t3,t4;
+--enable_warnings
+--enable_result_log
+
+set join_cache_level=1;
+explain 
+select t1.a, t1.b, t1.c, t1.d, t2.e, t3.f, t4.g from t1,t2,t3,t4
+  where t2.b=t1.b and t3.d=t1.d and t4.c=t1.c;
+
+select t1.a, t1.b, t1.c, t1.d, t2.e, t3.f, t4.g from t1,t2,t3,t4
+  where t2.b=t1.b and t3.d=t1.d and t4.c=t1.c;
+
+set join_cache_level=6;
+explain 
+select t1.a, t1.b, t1.c, t1.d, t2.e, t3.f, t4.g from t1,t2,t3,t4
+  where t2.b=t1.b and t3.d=t1.d and t4.c=t1.c;
+
+select t1.a, t1.b, t1.c, t1.d, t2.e, t3.f, t4.g from t1,t2,t3,t4
+  where t2.b=t1.b and t3.d=t1.d and t4.c=t1.c;
+
+set join_cache_level=default;
+
+drop table t1,t2,t3,t4;

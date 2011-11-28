@@ -78,6 +78,7 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --googlestats=ON \
   --googlestats_servers_table=LocalStatsServers \
   --googlestats_version_table=CommittedStatsVersions \
+  --restrict_bka_to_googlestats=0 \
   ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
 
 if [[ -n "${GDB}" ]]

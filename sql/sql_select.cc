@@ -6921,16 +6921,20 @@ bool check_join_cache_usage(JOIN_TAB *tab,
     tab->table->file->multi_range_read_info(tab->ref.key, 10, 20,
                                             &bufsz, &flags, &cost);
     if ((allow_default_mrr_bka || !(flags & HA_MRR_USE_DEFAULT_IMPL)) &&
-        (!(flags & HA_MRR_NO_ASSOCIATION) || cache_level > 6) &&
-        ((options & SELECT_DESCRIBE) ||
-         (tab->cache ||
-          (cache_level <= 6 &&
-           (tab->cache= new JOIN_CACHE_BKA(join, tab, flags, prev_cache))) ||
-          (cache_level > 6 &&
-           (tab->cache= new JOIN_CACHE_BKA_UNIQUE(join, tab, flags, prev_cache))
-           &&
-           !tab->cache->init()))))
-      return TRUE;
+        (!(flags & HA_MRR_NO_ASSOCIATION) || cache_level > 6))
+    {
+      if ((options & SELECT_DESCRIBE) || tab->cache)
+        return TRUE;
+
+      if (cache_level <= 6)
+        tab->cache = new JOIN_CACHE_BKA(join, tab, flags, prev_cache);
+      else
+        tab->cache = new JOIN_CACHE_BKA_UNIQUE(join, tab, flags, prev_cache);
+
+      if (!tab->cache->init())
+        return TRUE;
+    }
+
     goto no_join_cache;
   default : ;
   }
