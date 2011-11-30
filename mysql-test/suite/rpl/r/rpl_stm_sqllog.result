@@ -1,3 +1,5 @@
+include/master-slave.inc
+[connection master]
 create table log_test (col1 int, col2 int);
 insert into log_test values (1, 2);
 insert into log_test values (3, 4);
@@ -145,7 +147,6 @@ drop table log_set1;
 drop table log_str1;
 drop table log_str2;
 drop table log_str3;
-drop database if exists mysqltest;
 create database mysqltest;
 create table mysqltest.item (name char(20) default '' not null, price int(5) default '0' not null, floatprice float, comment char(20), mybits bit(8), nullstring char(10), enumcol enum('true', 'false'), setcol set('red', 'yellow', 'blue'), tinycol tinyint, bigintcol bigint(20), float8col float8, varcharcol varchar(20), varbinarycol varbinary(20), yearcol year, datecol date, timecol time, datetimecol datetime, tinyblobcol tinyblob, mediumblobcol mediumblob, primary  key (name));
 insert into mysqltest.item values('google cup', 10, 5.0, '\'\n', b'1001', null, 'true', 'red,yellow', 13, 1234567890, 12.34, 'varchar column', 'varbinary column', 2008, '2008-11-15', '09:10:11', '2008-11-15 09:10:11', 'Tiny blob column', 'Medium blob col');
@@ -158,31 +159,6 @@ alter table mysqltest.item drop column mediumblobcol;
 drop index price_index on mysqltest.item;
 truncate table mysqltest.item;
 drop table mysqltest.item;
-create temporary table temp(price int(5));
-insert into temp values(5);
-delete from temp;
-truncate table temp;
-drop table temp;
-create table log_replace (a int, b int, c int, primary key (a));
-replace into log_replace values (1, 1, 1), (2, 2, 2), (3, 3, 3);
-replace into log_replace values (1, 1111, 1111), (5, 5, 5), (3, 3333, 3333);
-replace into log_replace select 2, 2222, 2222;
-drop table log_replace;
-create table log_replace (a int, b int, c int, primary key (a), unique key idx2(b));
-replace into log_replace values (1, 1, 1), (2, 2, 2), (3, 3, 3);
-replace into log_replace values (1, 1111, 1111), (5, 5, 5), (3, 3333, 3333);
-replace into log_replace select 2, 2222, 2222;
-drop table log_replace;
-create table log_insert (a int, b int, c int, primary key (a));
-insert into log_insert values (1, 1, 1), (2, 2, 2), (3, 3, 3);
-insert into log_insert values (1, 1111, 1111), (5, 5, 5), (3, 3333, 3333) on duplicate key update b = 9999999;
-insert into log_insert select 2, 2, 2 on duplicate key update b = 9999999;
-drop table log_insert;
-create table log_defaults (a bigint default 222, b datetime default NULL, c float default 22.22, primary key (a));
-insert into log_defaults values ();
-replace into log_defaults values (1, "2009-05-11 01:01:01", 1);
-replace into log_defaults(a, c) values (222, 1);
-drop table log_defaults;
 drop database mysqltest;
 1 1 CREATE_TABLE test.log_test create table log_test (col1 int, col2 int)
 1 1 INSERT test.log_test col1 LONG 1 AND col2 LONG 2
@@ -336,7 +312,6 @@ drop database mysqltest;
 1 1 DROP_TABLE test.log_str1 drop table log_str1
 1 1 DROP_TABLE test.log_str2 drop table log_str2
 1 1 DROP_TABLE test.log_str3 drop table log_str3
-1 1 DROP_DB N/A.N/A drop database if exists mysqltest
 1 1 CREATE_DB N/A.N/A create database mysqltest
 1 1 CREATE_TABLE mysqltest.item create table mysqltest.item (name char(20) default '' not null, price int(5) default '0' not null, floatprice float, comment char(20), mybits bit(8), nullstring char(10), enumcol enum('true', 'false'), setcol set('red', 'yellow', 'blue'), tinycol tinyint, bigintcol bigint(20), float8col float8, varcharcol varchar(20), varbinarycol varbinary(20), yearcol year, datecol date, timecol time, datetimecol datetime, tinyblobcol tinyblob, mediumblobcol mediumblob, primary  key (name))
 1 1 INSERT mysqltest.item name STRING b64'Z29vZ2xlIGN1cA==' AND price LONG 10 AND floatprice FLOAT 5 AND comment STRING b64'Jwo=' AND mybits BIT b'1001' AND nullstring STRING NULL AND enumcol ENUM b64'dHJ1ZQ==' AND setcol SET b64'cmVkLHllbGxvdw==' AND tinycol TINY 13 AND bigintcol LONGLONG 1234567890 AND float8col DOUBLE 12.34 AND varcharcol STRING b64'dmFyY2hhciBjb2x1bW4=' AND varbinarycol STRING b64'dmFyYmluYXJ5IGNvbHVtbg==' AND yearcol YEAR 2008 AND datecol DATE b64'MjAwOC0xMS0xNQ==' AND timecol TIME b64'MDk6MTA6MTE=' AND datetimecol DATETIME b64'MjAwOC0xMS0xNSAwOToxMDoxMQ==' AND tinyblobcol BLOB b64'VGlueSBibG9iIGNvbHVtbg==' AND mediumblobcol BLOB b64'TWVkaXVtIGJsb2IgY29s'
@@ -355,43 +330,5 @@ drop database mysqltest;
 1 1 DROP_INDEX mysqltest.item drop index price_index on mysqltest.item
 1 1 TRUNCATE_TABLE mysqltest.item truncate table mysqltest.item
 1 1 DROP_TABLE mysqltest.item drop table mysqltest.item
-1 1 CREATE_TABLE test.temp create temporary table temp(price int(5))
-1 1 DELETE_TABLE test.temp delete from temp
-1 1 TRUNCATE_TABLE test.temp truncate table temp
-1 1 DROP_TABLE test.temp drop table temp
-1 1 CREATE_TABLE test.log_replace create table log_replace (a int, b int, c int, primary key (a))
-1 1 INSERT test.log_replace a LONG 1 AND b LONG 1 AND c LONG 1
-1 1 INSERT test.log_replace a LONG 2 AND b LONG 2 AND c LONG 2
-1 1 INSERT test.log_replace a LONG 3 AND b LONG 3 AND c LONG 3
-1 1 UPDATE test.log_replace b LONG 1111 AND c LONG 1111 WHERE a LONG 1 AND b LONG 1 AND c LONG 1
-1 1 INSERT test.log_replace a LONG 5 AND b LONG 5 AND c LONG 5
-1 1 UPDATE test.log_replace b LONG 3333 AND c LONG 3333 WHERE a LONG 3 AND b LONG 3 AND c LONG 3
-1 1 UPDATE test.log_replace b LONG 2222 AND c LONG 2222 WHERE a LONG 2 AND b LONG 2 AND c LONG 2
-1 1 DROP_TABLE test.log_replace drop table log_replace
-1 1 CREATE_TABLE test.log_replace create table log_replace (a int, b int, c int, primary key (a), unique key idx2(b))
-1 1 INSERT test.log_replace a LONG 1 AND b LONG 1 AND c LONG 1
-1 1 INSERT test.log_replace a LONG 2 AND b LONG 2 AND c LONG 2
-1 1 INSERT test.log_replace a LONG 3 AND b LONG 3 AND c LONG 3
-1 1 DELETE test.log_replace WHERE a LONG 1 AND b LONG 1 AND c LONG 1
-1 1 INSERT test.log_replace a LONG 1 AND b LONG 1111 AND c LONG 1111
-1 1 INSERT test.log_replace a LONG 5 AND b LONG 5 AND c LONG 5
-1 1 DELETE test.log_replace WHERE a LONG 3 AND b LONG 3 AND c LONG 3
-1 1 INSERT test.log_replace a LONG 3 AND b LONG 3333 AND c LONG 3333
-1 1 DELETE test.log_replace WHERE a LONG 2 AND b LONG 2 AND c LONG 2
-1 1 INSERT test.log_replace a LONG 2 AND b LONG 2222 AND c LONG 2222
-1 1 DROP_TABLE test.log_replace drop table log_replace
-1 1 CREATE_TABLE test.log_insert create table log_insert (a int, b int, c int, primary key (a))
-1 1 INSERT test.log_insert a LONG 1 AND b LONG 1 AND c LONG 1
-1 1 INSERT test.log_insert a LONG 2 AND b LONG 2 AND c LONG 2
-1 1 INSERT test.log_insert a LONG 3 AND b LONG 3 AND c LONG 3
-1 1 UPDATE test.log_insert b LONG 9999999 WHERE a LONG 1 AND b LONG 1 AND c LONG 1
-1 1 INSERT test.log_insert a LONG 5 AND b LONG 5 AND c LONG 5
-1 1 UPDATE test.log_insert b LONG 9999999 WHERE a LONG 3 AND b LONG 3 AND c LONG 3
-1 1 UPDATE test.log_insert b LONG 9999999 WHERE a LONG 2 AND b LONG 2 AND c LONG 2
-1 1 DROP_TABLE test.log_insert drop table log_insert
-1 1 CREATE_TABLE test.log_defaults create table log_defaults (a bigint default 222, b datetime default NULL, c float default 22.22, primary key (a))
-1 1 INSERT test.log_defaults a LONGLONG 222 AND b DATETIME NULL AND c FLOAT 22.219999313354492
-1 1 INSERT test.log_defaults a LONGLONG 1 AND b DATETIME b64'MjAwOS0wNS0xMSAwMTowMTowMQ==' AND c FLOAT 1
-1 1 UPDATE test.log_defaults c FLOAT 1 WHERE a LONGLONG 222 AND b DATETIME NULL AND c FLOAT 22.219999313354492
-1 1 DROP_TABLE test.log_defaults drop table log_defaults
 1 1 DROP_DB N/A.N/A drop database mysqltest
+include/rpl_end.inc
