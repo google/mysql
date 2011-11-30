@@ -1,0 +1,1 @@
+--log-slave-updates --sql-log --sql-log-ddl --skip-sql-log-ddl-base64-encode-stmts

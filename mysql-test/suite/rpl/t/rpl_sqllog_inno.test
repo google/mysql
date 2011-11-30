@@ -4,7 +4,6 @@
 
 --source include/master-slave.inc
 --source include/have_innodb.inc
---source include/have_binlog_format_statement.inc
 
 #
 # Check that log tables work and we can do basic selects. This also
@@ -126,6 +125,6 @@ connection master;
 # Show the log content (timestamp is removed)
 connection slave;
 let $MYSQLD_DATADIR= `select @@datadir;`;
---exec cut -d' ' -f9- $MYSQLD_DATADIR/mysqld-sql.000001
+--exec sed s/'127.0.0.1 master-bin.[0-9]\{6\} [0-9]* [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\} [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\} [0-9]* '// $MYSQLD_DATADIR/mysqld-sql.000001
 
 --source include/rpl_end.inc

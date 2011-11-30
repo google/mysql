@@ -4898,12 +4898,7 @@ int handler::log_write_row(TABLE *table, const uchar *buf)
   if (mysql_sql_log.should_log(thd) && thd->lex &&
       thd->lex->sql_command && table->s->tmp_table == NO_TMP_TABLE &&
       (!opt_sql_log_database ||
-       strstr(table->s->db.str, opt_sql_log_database)) &&
-      (thd->lex->sql_command == SQLCOM_INSERT ||
-       thd->lex->sql_command == SQLCOM_INSERT_SELECT ||
-       thd->lex->sql_command == SQLCOM_REPLACE ||
-       thd->lex->sql_command == SQLCOM_REPLACE_SELECT ||
-       thd->lex->sql_command == SQLCOM_CREATE_TABLE))
+       strstr(table->s->db.str, opt_sql_log_database)))
   {
     /* Build a SQL INSERT statement in 'query' and log it. */
     String query(STRING_BUFFER_USUAL_SIZE);
@@ -4960,13 +4955,7 @@ int handler::log_update_row(TABLE *table, const uchar *old_data,
   if (mysql_sql_log.should_log(thd) && thd->lex &&
       thd->lex->sql_command && table->s->tmp_table == NO_TMP_TABLE &&
       (!opt_sql_log_database ||
-       strstr(table->s->db.str, opt_sql_log_database)) &&
-      (thd->lex->sql_command == SQLCOM_UPDATE ||
-       thd->lex->sql_command == SQLCOM_UPDATE_MULTI ||
-       thd->lex->sql_command == SQLCOM_REPLACE ||
-       thd->lex->sql_command == SQLCOM_REPLACE_SELECT ||
-       thd->lex->sql_command == SQLCOM_INSERT ||
-       thd->lex->sql_command == SQLCOM_INSERT_SELECT))
+       strstr(table->s->db.str, opt_sql_log_database)))
   {
     /* Build a SQL UPDATE statement in 'query' and log it somewhere. */
     String query(STRING_BUFFER_USUAL_SIZE);
@@ -5014,11 +5003,7 @@ int handler::log_delete_row(TABLE *table, const uchar *buf)
   if (mysql_sql_log.should_log(thd) && thd->lex &&
       thd->lex->sql_command && table->s->tmp_table == NO_TMP_TABLE &&
       (!opt_sql_log_database ||
-       strstr(table->s->db.str, opt_sql_log_database)) &&
-      (thd->lex->sql_command == SQLCOM_DELETE ||
-       thd->lex->sql_command == SQLCOM_DELETE_MULTI ||
-       thd->lex->sql_command == SQLCOM_REPLACE ||
-       thd->lex->sql_command == SQLCOM_REPLACE_SELECT))
+       strstr(table->s->db.str, opt_sql_log_database)))
   {
     /* Build a SQL DELETE statement in 'query' and log it. */
     String query(STRING_BUFFER_USUAL_SIZE);

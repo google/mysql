@@ -1,0 +1,5 @@
+#
+# Basic log file test on slave
+
+--source include/have_binlog_format_mixed.inc
+--source extra/rpl_tests/rpl_sqllog.test

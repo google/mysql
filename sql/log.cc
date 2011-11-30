@@ -3171,8 +3171,13 @@ bool sqllog_update_row(THD *thd, TABLE *table, const uchar *old_data,
     /*
       Within the bitmap, the write bits will be set for any field (column)
       that is being updated with new data.
+
+      With RBR all bits are set so also check that the new field value is
+      different from the old field value.
     */
-    if (bitmap_is_set(table->write_set, field->field_index))
+    if (bitmap_is_set(table->write_set, field->field_index) &&
+        field->cmp(new_data + field->offset(table->record[0]),
+                   old_data + field->offset(table->record[0])))
     {
       /* Append the field name. */
       error|= update->append(field->field_name);
