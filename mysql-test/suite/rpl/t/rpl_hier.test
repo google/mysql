@@ -506,6 +506,46 @@ connection server_2;
 sync_with_master;
 
 #
+# Test no_load_data_infile_if_repl option which makes LOAD DATA INFILE LOCAL
+# fail if it would cause an event to go to the bin log. There are also
+# tests for this option in the loaddatalocal and rpl_loaddatalocal tests.
+#
+connection server_1;
+let $MYSQLD_DATADIR= `select @@datadir`;
+set global no_local_infile_if_repl= 1;
+
+create table t8(a int);
+let $1=25;
+while ($1)
+{
+ eval insert into t8 values($1);
+ dec $1;
+}
+--replace_result $MYSQLD_DATADIR MYSQLD_DATADIR
+eval select * into outfile '$MYSQLD_DATADIR/rpl_hier.select_outfile' from t8;
+truncate table t8;
+
+# Should fail on the master because it would write to the bin log
+--replace_result $MYSQLD_DATADIR MYSQLD_DATADIR
+--error ER_OPTION_PREVENTS_STATEMENT
+eval load data local infile '$MYSQLD_DATADIR/rpl_hier.select_outfile' into table t8;
+select * from t8;
+
+save_master_pos;
+connection server_2;
+sync_with_master;
+
+# Should succeed on the slave because the filtering that we do with
+# rpl-hierarchical means that it won't write to the bin log
+--replace_result $MYSQLD_DATADIR MYSQLD_DATADIR
+eval load data local infile '$MYSQLD_DATADIR/rpl_hier.select_outfile' into table t8;
+select * from t8;
+
+connection server_1;
+set global no_local_infile_if_repl= 0;
+--remove_file $MYSQLD_DATADIR/rpl_hier.select_outfile
+
+#
 # There is some conversion between ulonglong and longlong so test out that
 # functionality by using a value with the high bit set.
 #
@@ -614,6 +654,6 @@ connection server_2;
 --source include/start_slave.inc
 
 connection server_1;
-drop table t1, t3, t4, t5, t6;
+drop table t1, t3, t4, t5, t6, t8;
 eval set global rpl_hierarchical_cache_frequency=$cache_frequency;
 --source include/rpl_end.inc

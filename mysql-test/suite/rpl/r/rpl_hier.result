@@ -217,6 +217,68 @@ create temporary table t8 (f int);
 insert into t8 select * from t6;
 drop temporary table t7;
 drop temporary table t8;
+set global no_local_infile_if_repl= 1;
+create table t8(a int);
+insert into t8 values(25);
+insert into t8 values(24);
+insert into t8 values(23);
+insert into t8 values(22);
+insert into t8 values(21);
+insert into t8 values(20);
+insert into t8 values(19);
+insert into t8 values(18);
+insert into t8 values(17);
+insert into t8 values(16);
+insert into t8 values(15);
+insert into t8 values(14);
+insert into t8 values(13);
+insert into t8 values(12);
+insert into t8 values(11);
+insert into t8 values(10);
+insert into t8 values(9);
+insert into t8 values(8);
+insert into t8 values(7);
+insert into t8 values(6);
+insert into t8 values(5);
+insert into t8 values(4);
+insert into t8 values(3);
+insert into t8 values(2);
+insert into t8 values(1);
+select * into outfile 'MYSQLD_DATADIR/rpl_hier.select_outfile' from t8;
+truncate table t8;
+load data local infile 'MYSQLD_DATADIR/rpl_hier.select_outfile' into table t8;
+ERROR HY000: The MySQL server is running with the no-local-infile-if-repl option so it cannot execute this statement
+select * from t8;
+a
+load data local infile 'MYSQLD_DATADIR/rpl_hier.select_outfile' into table t8;
+select * from t8;
+a
+25
+24
+23
+22
+21
+20
+19
+18
+17
+16
+15
+14
+13
+12
+11
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+set global no_local_infile_if_repl= 0;
 include/stop_slave.inc
 set binlog_group_id=9223372036854775807, master_server_id=1;
 show master status;
@@ -280,6 +342,6 @@ change master to master_log_file='master-bin.000001';
 Connect_Using_Group_ID = 'No'
 change master to master_user='root', connect_using_group_id;
 include/start_slave.inc
-drop table t1, t3, t4, t5, t6;
+drop table t1, t3, t4, t5, t6, t8;
 set global rpl_hierarchical_cache_frequency=1;
 include/rpl_end.inc

@@ -1,0 +1,1 @@
+--skip-log-bin --no-local-infile-if-repl

@@ -533,6 +533,10 @@ static sys_var_thd_ulong	sys_net_retry_count(&vars, "net_retry_count",
 					    &SV::net_retry_count,
 					    0, fix_net_retry_count);
 static sys_var_thd_bool	sys_new_mode(&vars, "new", &SV::new_mode);
+static sys_var_bool_ptr
+  sys_no_local_infile_if_repl(&vars,
+                              "no_local_infile_if_repl",
+                              &opt_no_local_infile_if_repl);
 static sys_var_bool_ptr_readonly sys_old_mode(&vars, "old",
                                        &global_system_variables.old_mode);
 /* these two cannot be static */

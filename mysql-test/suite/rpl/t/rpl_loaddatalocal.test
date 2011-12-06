@@ -155,6 +155,33 @@ eval LOAD DATA LOCAL INFILE '$MYSQLD_DATADIR/bug43746.sql' INTO TABLE t1;
 --echo [slave]
 sync_slave_with_master;
 
+#
+# Test no_load_data_infile_if_repl option which makes LOAD DATA INFILE LOCAL
+# fail if it would cause an event to go to the bin log. There are also
+# tests for this option in the loaddatalocal and rpl_hierarchical tests.
+#
+--echo [master]
+connection master;
+set global no_local_infile_if_repl= 1;
+drop table t1;
+create table t1(a int);
+insert into t1 values (1), (2), (2), (3);
+
+--replace_result $MYSQLD_DATADIR MYSQLD_DATADIR
+eval select * into outfile '$MYSQLD_DATADIR/rpl_loaddatalocal.select_outfile' from t1;
+truncate table t1;
+--replace_result $MYSQLD_DATADIR MYSQLD_DATADIR
+--error ER_OPTION_PREVENTS_STATEMENT
+eval load data local infile '$MYSQLD_DATADIR/rpl_loaddatalocal.select_outfile' into table t1;
+--remove_file $MYSQLD_DATADIR/rpl_loaddatalocal.select_outfile
+
+select * from t1;
+set global no_local_infile_if_repl= 0;
+
+--echo [slave]
+sync_slave_with_master;
+select * from t1;
+
 # cleanup
 
 --remove_file $MYSQLD_DATADIR/bug43746.sql
