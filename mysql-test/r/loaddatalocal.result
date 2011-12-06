@@ -1,0 +1,82 @@
+create table t1(a int);
+insert into t1 values(25);
+insert into t1 values(24);
+insert into t1 values(23);
+insert into t1 values(22);
+insert into t1 values(21);
+insert into t1 values(20);
+insert into t1 values(19);
+insert into t1 values(18);
+insert into t1 values(17);
+insert into t1 values(16);
+insert into t1 values(15);
+insert into t1 values(14);
+insert into t1 values(13);
+insert into t1 values(12);
+insert into t1 values(11);
+insert into t1 values(10);
+insert into t1 values(9);
+insert into t1 values(8);
+insert into t1 values(7);
+insert into t1 values(6);
+insert into t1 values(5);
+insert into t1 values(4);
+insert into t1 values(3);
+insert into t1 values(2);
+insert into t1 values(1);
+select * from t1;
+a
+25
+24
+23
+22
+21
+20
+19
+18
+17
+16
+15
+14
+13
+12
+11
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+truncate table t1;
+select * from t1;
+a
+25
+24
+23
+22
+21
+20
+19
+18
+17
+16
+15
+14
+13
+12
+11
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+drop table t1;

@@ -1,0 +1,29 @@
+# Test no-load-data-infile-if-repl option which makes LOAD DATA LOCAL INFILE
+# fail if it would cause an event to go to the bin log. There are also
+# tests for this option in the rpl_loaddatalocal and rpl_hierarchical tests.
+
+# Should be no failures in this test because server running with --skip-log-bin
+
+create table t1(a int);
+let $1=25;
+while ($1)
+{
+ eval insert into t1 values($1);
+ dec $1;
+}
+
+disable_query_log;
+eval select * into outfile '$MYSQLTEST_VARDIR/tmp/t1' from t1;
+truncate table t1;
+eval load data infile '$MYSQLTEST_VARDIR/tmp/t1' into table t1;
+enable_query_log;
+select * from t1;
+truncate table t1;
+
+disable_query_log;
+eval load data local infile '$MYSQLTEST_VARDIR/tmp/t1' into table t1;
+enable_query_log;
+select * from t1;
+
+--remove_file $MYSQLTEST_VARDIR/tmp/t1
+drop table t1;

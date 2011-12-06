@@ -75,6 +75,21 @@ SET sql_mode='PIPES_AS_CONCAT,ANSI_QUOTES,NO_KEY_OPTIONS,NO_TABLE_OPTIONS,NO_FIE
 LOAD DATA LOCAL INFILE 'MYSQLD_DATADIR/bug43746.sql' INTO TABLE t1;
 [slave]
 [master]
+set global no_local_infile_if_repl= 1;
+drop table t1;
+create table t1(a int);
+insert into t1 values (1), (2), (2), (3);
+select * into outfile 'MYSQLD_DATADIR/rpl_loaddatalocal.select_outfile' from t1;
+truncate table t1;
+load data local infile 'MYSQLD_DATADIR/rpl_loaddatalocal.select_outfile' into table t1;
+ERROR HY000: The MySQL server is running with the no-local-infile-if-repl option so it cannot execute this statement
+select * from t1;
+a
+set global no_local_infile_if_repl= 0;
+[slave]
+select * from t1;
+a
+[master]
 DROP TABLE t1;
 SET SESSION sql_mode=@old_mode;
 [slave]

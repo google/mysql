@@ -514,6 +514,7 @@ my_bool opt_skip_slave_start = 0; ///< If set, slave is not autostarted
 my_bool opt_reckless_slave = 0;
 my_bool opt_enable_named_pipe= 0;
 my_bool opt_local_infile, opt_slave_compressed_protocol;
+my_bool opt_no_local_infile_if_repl;
 my_bool opt_safe_user_create = 0, opt_no_mix_types = 0;
 my_bool opt_show_slave_auth_info, opt_sql_bin_update = 0;
 my_bool opt_log_slave_updates= 0;
@@ -6389,7 +6390,8 @@ enum options_mysqld
   OPT_RESTRICT_BKA_TO_GOOGLESTATS,
   OPT_USE_MRR_FOR_QUICK_RANGE,
   OPT_ALLOW_DEFAULT_MRR_BKA,
-  OPT_MAPPED_USERS
+  OPT_MAPPED_USERS,
+  OPT_NO_LOCAL_INFILE_IF_REPL
 };
 
 
@@ -6656,6 +6658,11 @@ each time the SQL thread starts.",
    "Enable/disable LOAD DATA LOCAL INFILE (takes values 1 or 0).",
    &opt_local_infile, &opt_local_infile, 0, GET_BOOL, OPT_ARG,
    1, 0, 0, 0, 0, 0},
+  {"no-local-infile-if-repl", OPT_NO_LOCAL_INFILE_IF_REPL,
+   "Prevents LOAD DATA LOCAL INFILE if the operation would result in events "
+   "being written to the bin log (takes values 1 or 0).",
+   &opt_no_local_infile_if_repl, &opt_no_local_infile_if_repl, 0, GET_BOOL,
+   OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"log", 'l', "Log connections and queries to file (deprecated option, use "
    "--general_log/--general_log_file instead).", &opt_logname,
    &opt_logname, 0, GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},

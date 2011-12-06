@@ -3863,6 +3863,28 @@ end_with_restore_list:
 	my_message(ER_NOT_ALLOWED_COMMAND, ER(ER_NOT_ALLOWED_COMMAND), MYF(0));
 	goto error;
       }
+
+      if (opt_no_local_infile_if_repl && might_write_binlog())
+      {
+        /*
+          LOAD DATA statments are not crash proof on slaves and can
+          lead to data drift. Therefore, when opt_no_local_infile_if_repl
+          is set, we don't allow the command if running it would result
+          in an event being logged to the bin log.
+
+          In the rpl_hierarchical case there is a race condition here,
+          but I think that it is acceptable. A server could be configured
+          as a slave and allow this check to pass. Then, if a "CHANGE
+          MASTER TO MASTER_HOST=''" is processed before the call to
+          mysql_log_bin.write, the load data event will end up in the
+          bin log. The failover process should be designed in such a way
+          that this race won't ever get run. e.g. run "SET FAILOVER=1"
+          before "CHANGE MASTER TO ..." as part of the failover process.
+        */
+        my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                 "no-local-infile-if-repl");
+        goto error;
+      }
     }
 
     if (check_one_table_access(thd, privilege, all_tables))
