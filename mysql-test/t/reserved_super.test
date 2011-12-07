@@ -1,0 +1,101 @@
+# This test checks that the --reserved-super-connections
+# option behaves as expected.
+
+--source include/not_embedded.inc
+
+GRANT USAGE ON *.* TO mysqltest_u1@localhost;
+
+--echo
+let $saved_max_connections = `SELECT @@global.max_connections`;
+SET GLOBAL max_connections = 4;
+let $saved_reserved_super = `SELECT @@global.reserved_super_connections`;
+SET GLOBAL reserved_super_connections = 2;
+
+--echo
+--echo # -- Disconnecting default connection...
+--disconnect default
+
+--echo
+--echo # -- Check that we allow exactly 2 non-SUPER connections
+
+--echo
+--echo # -- Connecting (1)...
+let $con_name = con_1;
+let $con_user_name = mysqltest_u1;
+--source include/connect2.inc
+
+--echo
+--echo # -- Connecting (2)...
+let $con_name = con_2;
+let $con_user_name = mysqltest_u1;
+--source include/connect2.inc
+
+--echo
+--echo # -- Connecting (3) [should fail]...
+let $con_name = con_3;
+let $con_user_name = mysqltest_u1;
+let $wait_timeout = 5;
+--source include/connect2.inc
+
+--echo
+--echo # -- Check that there are still two SUPER-user connections available.
+
+--echo
+--echo # -- Connecting super (1)...
+let $con_name = con_super_1;
+let $con_user_name = root;
+--source include/connect2.inc
+
+--echo
+--echo # -- Connecting super (2)...
+let $con_name = con_super_2;
+let $con_user_name = root;
+--source include/connect2.inc
+
+--echo
+--echo # -- Check that we allow one extra SUPER-user connection above
+--echo # -- max_connections.
+
+--echo
+--echo # -- Connecting super (3)...
+let $con_name = con_super_3;
+let $con_user_name = root;
+--source include/connect2.inc
+
+--echo
+--echo # -- Further connections should be denied, even for SUPER.
+
+--echo
+--echo # -- Connecting super (4) [should fail]...
+let $con_name = con_super_4;
+let $con_user_name = root;
+let $wait_timeout = 5;
+--source include/connect2.inc
+
+--echo
+--echo # -- Resetting variables...
+--eval SET GLOBAL max_connections = $saved_max_connections
+--eval SET GLOBAL reserved_super_connections = $saved_reserved_super
+
+--echo
+--echo # -- That's it. Closing connections...
+--disconnect con_1
+--disconnect con_2
+--disconnect con_super_1
+--disconnect con_super_2
+--disconnect con_super_3
+
+--echo
+--echo # -- Restoring default connection...
+--connect (default,localhost,root,,test)
+
+--echo
+--echo # -- Waiting for connections to close...
+let $wait_condition =
+  SELECT COUNT(*) = 1
+  FROM information_schema.processlist
+  WHERE db = 'test';
+--source include/wait_condition.inc
+
+--echo
+DROP USER mysqltest_u1@localhost;

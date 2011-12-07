@@ -146,6 +146,7 @@ drop table t1;
 GRANT USAGE ON *.* TO mysqltest_u1@localhost;
 
 SET GLOBAL max_connections = 3;
+SET GLOBAL reserved_super_connections = 0;
 SET GLOBAL event_scheduler = ON;
 
 # -- Waiting for Event Scheduler to start...
@@ -193,6 +194,7 @@ root
 
 # -- Resetting variables...
 SET GLOBAL max_connections = 151;
+SET GLOBAL reserved_super_connections = 10;
 
 # -- Stopping Event Scheduler...
 SET GLOBAL event_scheduler = OFF;

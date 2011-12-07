@@ -2431,6 +2431,13 @@ static Sys_var_ulong Sys_query_prealloc_size(
        BLOCK_SIZE(1024), NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
        ON_UPDATE(fix_thd_mem_root));
 
+static Sys_var_ulong Sys_reserved_super_connections(
+       "reserved_super_connections",
+       "The number of reserved connections for users with SUPER privileges.",
+       GLOBAL_VAR(opt_reserved_super_connections), CMD_LINE(REQUIRED_ARG),
+       VALID_RANGE(0, 50), DEFAULT(10), BLOCK_SIZE(1),
+       NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0), ON_UPDATE(0));
+
 static Sys_var_mybool Sys_update_connection_privs(
        "update_connection_privs",
        "When ON automatically update user-level and db-level privileges "

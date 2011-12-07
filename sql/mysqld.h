@@ -142,6 +142,7 @@ extern char *opt_logname, *opt_slow_logname, *opt_bin_logname,
             *opt_relay_logname;
 extern char *opt_backup_history_logname, *opt_backup_progress_logname,
             *opt_backup_settings_name;
+extern ulong opt_reserved_super_connections;
 extern const char *log_output_str;
 extern const char *log_backup_output_str;
 extern char *mysql_home_ptr, *pidfile_name_ptr;

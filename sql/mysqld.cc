@@ -515,6 +515,7 @@ ulong binlog_cache_use= 0, binlog_cache_disk_use= 0;
 ulong binlog_stmt_cache_use= 0, binlog_stmt_cache_disk_use= 0;
 ulong max_connections, max_connect_errors;
 ulong extra_max_connections;
+ulong opt_reserved_super_connections;
 ulong slave_retried_transactions;
 ulonglong denied_connections;
 my_decimal decimal_zero;
@@ -8164,6 +8165,7 @@ static int mysql_init_variables(void)
   bzero((char *) &global_status_var, sizeof(global_status_var));
   opt_large_pages= 0;
   opt_super_large_pages= 0;
+  opt_reserved_super_connections= 0;
   opt_update_connection_privs= 1;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;

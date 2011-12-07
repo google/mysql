@@ -12506,7 +12506,9 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
   {
     mysql_mutex_lock(&LOCK_connection_count);
     bool count_ok= (*thd->scheduler->connection_count <=
-                    *thd->scheduler->max_connections);
+                    *thd->scheduler->max_connections -
+                      MY_MIN(opt_reserved_super_connections,
+                             *thd->scheduler->max_connections));
     mysql_mutex_unlock(&LOCK_connection_count);
     if (!count_ok)
     {                                         // too many connections
