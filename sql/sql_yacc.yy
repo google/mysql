@@ -8856,6 +8856,13 @@ select_derived_init:
           {
             LEX *lex= Lex;
 
+            if (!opt_allow_subqueries)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                       "--skip-allow-subqueries");
+              MYSQL_YYABORT;
+            }
+
             if (! lex->parsing_options.allows_derived)
             {
               my_error(ER_VIEW_SELECT_DERIVED, MYF(0));
@@ -13166,6 +13173,14 @@ subselect_start:
               my_parse_error(ER(ER_SYNTAX_ERROR));
               MYSQL_YYABORT;
             }
+
+            if (!opt_allow_subqueries)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                       "--skip-allow-subqueries");
+              MYSQL_YYABORT;
+            }
+
             /* 
               we are making a "derived table" for the parenthesis
               as we need to have a lex level to fit the union 
@@ -13315,6 +13330,12 @@ view_tail:
             THD *thd= YYTHD;
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_CREATE_VIEW;
+            if (!opt_allow_views)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                       "--skip-allow-views");
+              MYSQL_YYABORT;
+            }
             /* first table in list is target VIEW name */
             if (!lex->select_lex.add_table_to_list(thd, $3, NULL, TL_OPTION_UPDATING))
               MYSQL_YYABORT;
@@ -13412,6 +13433,13 @@ trigger_tail:
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
             sp_head *sp;
+
+            if (!opt_allow_triggers)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                       "--skip-allow-triggers");
+              MYSQL_YYABORT;
+            }
 
             if (lex->sphead)
             {
@@ -13520,6 +13548,13 @@ sf_tail:
 
             lex->stmt_definition_begin= $1;
             lex->spname= $3;
+
+            if (!opt_allow_stored_procedures)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                       "--skip-allow-stored-procedures");
+              MYSQL_YYABORT;
+            }
 
             if (lex->sphead)
             {
@@ -13646,6 +13681,13 @@ sp_tail:
           {
             LEX *lex= Lex;
             sp_head *sp;
+
+            if (!opt_allow_stored_procedures)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                       "--skip-allow-stored-procedures");
+              MYSQL_YYABORT;
+            }
 
             if (lex->sphead)
             {

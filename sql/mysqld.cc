@@ -682,6 +682,10 @@ SHOW_COMP_OPTION have_crypt, have_compress;
 SHOW_COMP_OPTION have_community_features;
 
 my_bool opt_update_connection_privs;
+my_bool opt_allow_views;
+my_bool opt_allow_triggers;
+my_bool opt_allow_stored_procedures;
+my_bool opt_allow_subqueries;
 
 /* Thread specific variables */
 
@@ -5881,7 +5885,12 @@ enum options_mysqld
   OPT_BINLOG_DIRECT_NON_TRANS_UPDATE,
   OPT_DEFAULT_CHARACTER_SET_OLD,
   OPT_MAX_LONG_DATA_SIZE,
-  OPT_UPDATE_CONNECTION_PRIVS
+  OPT_UPDATE_CONNECTION_PRIVS,
+  OPT_RPL_CRASH_ON_BINLOG_IO_ERROR,
+  OPT_ALLOW_VIEWS,
+  OPT_ALLOW_TRIGGERS,
+  OPT_ALLOW_STORED_PROCEDURES,
+  OPT_ALLOW_SUBQUERIES
 };
 
 
@@ -7361,6 +7370,23 @@ thread is in the relay logs.",
    "associated with connection.",
    &opt_update_connection_privs, &opt_update_connection_privs,
    0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"rpl_crash_on_binlog_io_error", OPT_RPL_CRASH_ON_BINLOG_IO_ERROR,
+   "When ON, if the binlog dump thread encounters an I/O error, truncation, "
+   "or bogus event while reading the active binlog the processes will crash.",
+   &rpl_crash_on_binlog_io_error,
+   0, 0, GET_BOOL, NO_ARG, 1, 0, 1, 0, 1, 0},
+  {"allow-views", OPT_ALLOW_VIEWS,
+   "Allow use of views.", &opt_allow_views, &opt_allow_views,
+   0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"allow-triggers", OPT_ALLOW_TRIGGERS,
+   "Allow use of triggers.", &opt_allow_triggers, &opt_allow_triggers,
+   0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"allow-stored-procedures", OPT_ALLOW_STORED_PROCEDURES,
+   "Allow use of stored procedures.", &opt_allow_stored_procedures,
+   &opt_allow_stored_procedures, 0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"allow-subqueries", OPT_ALLOW_SUBQUERIES,
+   "Allow use of subqueries.", &opt_allow_subqueries, &opt_allow_subqueries,
+   0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -7981,6 +8007,10 @@ static int mysql_init_variables(void)
   bzero((char *) &global_status_var, sizeof(global_status_var));
   opt_large_pages= 0;
   opt_update_connection_privs= 1;
+  opt_allow_views= 0;
+  opt_allow_triggers= 0;
+  opt_allow_stored_procedures= 0;
+  opt_allow_subqueries= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */
