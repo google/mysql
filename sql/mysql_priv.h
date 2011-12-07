@@ -2017,6 +2017,11 @@ extern uint opt_large_page_size;
 extern char *opt_logname, *opt_slow_logname;
 extern const char *log_output_str;
 
+extern my_bool opt_allow_views;
+extern my_bool opt_allow_triggers;
+extern my_bool opt_allow_stored_procedures;
+extern my_bool opt_allow_subqueries;
+
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;
 extern TABLE_LIST general_log, slow_log;
