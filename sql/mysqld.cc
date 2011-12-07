@@ -586,6 +586,7 @@ ulong delayed_insert_errors,flush_time;
 ulong specialflag=0;
 ulong binlog_cache_use= 0, binlog_cache_disk_use= 0;
 ulong max_connections, max_connect_errors;
+ulong opt_reserved_super_connections;
 /*
   Maximum length of parameter value which can be set through
   mysql_send_long_data() call.
@@ -5890,7 +5891,8 @@ enum options_mysqld
   OPT_ALLOW_VIEWS,
   OPT_ALLOW_TRIGGERS,
   OPT_ALLOW_STORED_PROCEDURES,
-  OPT_ALLOW_SUBQUERIES
+  OPT_ALLOW_SUBQUERIES,
+  OPT_RESERVED_SUPER_CONNECTIONS
 };
 
 
@@ -7387,6 +7389,10 @@ thread is in the relay logs.",
   {"allow-subqueries", OPT_ALLOW_SUBQUERIES,
    "Allow use of subqueries.", &opt_allow_subqueries, &opt_allow_subqueries,
    0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"reserved-super-connections", OPT_RESERVED_SUPER_CONNECTIONS,
+   "The number of reserved connections for users with SUPER privileges.",
+   &opt_reserved_super_connections, &opt_reserved_super_connections,
+   0, GET_ULONG, REQUIRED_ARG, 10, 0, 50, 0, 1, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -8011,6 +8017,7 @@ static int mysql_init_variables(void)
   opt_allow_triggers= 0;
   opt_allow_stored_procedures= 0;
   opt_allow_subqueries= 0;
+  opt_reserved_super_connections= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */

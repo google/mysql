@@ -409,7 +409,9 @@ check_user(THD *thd, enum enum_server_command command,
       if (check_count)
       {
         pthread_mutex_lock(&LOCK_connection_count);
-        bool count_ok= connection_count <= max_connections ||
+        bool count_ok= (connection_count <=
+                        (max_connections - min(opt_reserved_super_connections,
+                                               max_connections))) ||
                        (thd->main_security_ctx.master_access & SUPER_ACL);
         VOID(pthread_mutex_unlock(&LOCK_connection_count));
 
@@ -1489,4 +1491,3 @@ end_thread:
   }
 }
 #endif /* EMBEDDED_LIBRARY */
-
