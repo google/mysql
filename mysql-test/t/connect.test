@@ -142,6 +142,8 @@ GRANT USAGE ON *.* TO mysqltest_u1@localhost;
 --echo
 let $saved_max_connections = `SELECT @@global.max_connections`;
 SET GLOBAL max_connections = 3;
+let $saved_reserved_super = `SELECT @@global.reserved_super_connections`;
+SET GLOBAL reserved_super_connections = 0;
 SET GLOBAL event_scheduler = ON;
 
 --echo
@@ -209,6 +211,7 @@ SELECT user FROM information_schema.processlist ORDER BY id;
 --echo
 --echo # -- Resetting variables...
 --eval SET GLOBAL max_connections = $saved_max_connections
+--eval SET GLOBAL reserved_super_connections = $saved_reserved_super
 
 --echo
 --echo # -- Stopping Event Scheduler...
