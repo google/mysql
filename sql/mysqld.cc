@@ -2535,8 +2535,16 @@ static void init_signals(void)
     /* Change limits so that we will get a core file */
     STRUCT_RLIMIT rl;
     rl.rlim_cur = rl.rlim_max = RLIM_INFINITY;
-    if (setrlimit(RLIMIT_CORE, &rl) && global_system_variables.log_warnings)
-      sql_print_warning("setrlimit could not change the size of core files to 'infinity';  We may not be able to generate a core file on signals");
+    int res= setrlimit(RLIMIT_CORE, &rl);
+    if (res && global_system_variables.log_warnings)
+    {
+      const int EBUF_LEN= 255;
+      char buf[EBUF_LEN + 1];
+      sql_print_warning("setrlimit could not change the size of core files to "
+                        "'infinity'; we may not be able to generate a core "
+                        "file on signals. The errno was '%s'.",
+                        strerror_r(errno, buf, EBUF_LEN));
+    }
   }
 #endif
   (void) sigemptyset(&set);
