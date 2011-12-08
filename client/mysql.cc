@@ -1446,9 +1446,10 @@ static struct my_option my_long_options[] =
    &column_types_flag, &column_types_flag,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"comments", 'c', "Preserve comments. Send comments to the server."
-   " The default is --skip-comments (discard comments), enable with --comments.",
+   " The default is --comments (preserve comments), disable with "
+   "--skip-comments.",
    &preserve_comments, &preserve_comments,
-   0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+   0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
   {"compress", 'C', "Use compression in server/client protocol.",
    &opt_compress, &opt_compress, 0, GET_BOOL, NO_ARG, 0, 0, 0,
    0, 0, 0},
