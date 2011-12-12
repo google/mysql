@@ -170,6 +170,7 @@ static my_bool	innobase_locks_unsafe_for_binlog	= FALSE;
 static my_bool	innobase_rollback_on_timeout		= FALSE;
 static my_bool	innobase_create_status_file		= FALSE;
 static my_bool	innobase_stats_on_metadata		= TRUE;
+static my_bool	innobase_exit_on_init_failure		= FALSE;
 
 static my_bool	innobase_supw_dirty_tablespace		= FALSE;
 static my_bool	innobase_cleanup_dirty_tablespace	= FALSE;
@@ -2333,6 +2334,11 @@ innobase_change_buffering_inited_ok:
 
 	DBUG_RETURN(FALSE);
 error:
+	if (innobase_exit_on_init_failure) {
+		fprintf(stderr, "InnoDB initialization failure; exiting.\n");
+		exit(1);
+	}
+
 	DBUG_RETURN(TRUE);
 }
 
@@ -11222,6 +11228,12 @@ static MYSQL_SYSVAR_UINT(trx_rseg_n_slots_debug, trx_rseg_n_slots_debug,
   NULL, NULL, 0, 0, 1024, 0);
 #endif /* UNIV_DEBUG */
 
+static MYSQL_SYSVAR_BOOL(exit_on_init_failure, innobase_exit_on_init_failure,
+  PLUGIN_VAR_NOCMDARG | PLUGIN_VAR_READONLY,
+  "When enable the process will exit() if InnoDB cannot be initialized. "
+  "Disable with --skip-innodb-exit_on_init_failure.",
+  NULL, NULL, FALSE);
+
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(additional_mem_pool_size),
   MYSQL_SYSVAR(autoextend_increment),
@@ -11289,6 +11301,7 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
 #ifdef UNIV_DEBUG
   MYSQL_SYSVAR(trx_rseg_n_slots_debug),
 #endif /* UNIV_DEBUG */
+  MYSQL_SYSVAR(exit_on_init_failure),
   NULL
 };
 
