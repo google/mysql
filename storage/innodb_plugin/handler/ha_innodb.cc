@@ -170,6 +170,7 @@ static my_bool	innobase_locks_unsafe_for_binlog	= FALSE;
 static my_bool	innobase_rollback_on_timeout		= FALSE;
 static my_bool	innobase_create_status_file		= FALSE;
 static my_bool	innobase_stats_on_metadata		= TRUE;
+static my_bool	innobase_exit_on_init_failure		= FALSE;
 
 
 static char*	internal_innobase_data_file_path	= NULL;
@@ -2302,6 +2303,11 @@ innobase_change_buffering_inited_ok:
 
 	DBUG_RETURN(FALSE);
 error:
+	if (innobase_exit_on_init_failure) {
+		fprintf(stderr, "InnoDB initialization failure; exiting.\n");
+		exit(1);
+	}
+
 	DBUG_RETURN(TRUE);
 }
 
@@ -10999,6 +11005,12 @@ static MYSQL_SYSVAR_ULONG(read_ahead_threshold, srv_read_ahead_threshold,
   "trigger a readahead.",
   NULL, NULL, 56, 0, 64, 0);
 
+static MYSQL_SYSVAR_BOOL(exit_on_init_failure, innobase_exit_on_init_failure,
+  PLUGIN_VAR_NOCMDARG | PLUGIN_VAR_READONLY,
+  "When enable the process will exit() if InnoDB cannot be initialized. "
+  "Disable with --skip-innodb-exit_on_init_failure.",
+  NULL, NULL, FALSE);
+
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(additional_mem_pool_size),
   MYSQL_SYSVAR(autoextend_increment),
@@ -11061,6 +11073,7 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(random_read_ahead),
   MYSQL_SYSVAR(read_ahead_threshold),
   MYSQL_SYSVAR(io_capacity),
+  MYSQL_SYSVAR(exit_on_init_failure),
   NULL
 };
 
