@@ -7,16 +7,19 @@
 --let $allow_subqueries_saved= query_get_value(show variables like 'allow_subqueries', Value, 1)
 --let $allow_triggers_saved= query_get_value(show variables like 'allow_triggers', Value, 1)
 --let $allow_views_saved= query_get_value(show variables like 'allow_views', Value, 1)
+--let $allow_xa_saved= query_get_value(show variables like 'allow_xa', Value, 1)
 
 set global allow_stored_procedures= 0;
 set global allow_subqueries= 0;
 set global allow_triggers= 0;
 set global allow_views= 0;
+set global allow_xa= 0;
 
 show variables like 'allow_stored_procedures';
 show variables like 'allow_subqueries';
 show variables like 'allow_triggers';
 show variables like 'allow_views';
+show variables like 'allow_xa';
 
 create table foo (v varchar(4));
 insert into foo values ("abc"), ("def"), ("ghi");
@@ -51,6 +54,10 @@ for each row set @num_inserted = @num_inserted + 1;
 --error ER_OPTION_PREVENTS_STATEMENT
 create view vw as select v from foo where length(v) > 0;
 
+# Confirm that xa cannot be used.
+--error ER_OPTION_PREVENTS_STATEMENT
+xa start 'foobar';
+
 --replace_result $allow_stored_procedures_saved allow_stored_procedures_saved
 eval set global allow_stored_procedures= $allow_stored_procedures_saved;
 --replace_result $allow_subqueries_saved allow_subqueries_saved
@@ -59,5 +66,7 @@ eval set global allow_subqueries= $allow_subqueries_saved;
 eval set global allow_triggers= $allow_triggers_saved;
 --replace_result $allow_views_saved allow_views_saved
 eval set global allow_views= $allow_views_saved;
+--replace_result $allow_xa_saved allow_xa_saved
+eval set global allow_xa= $allow_xa_saved;
 
 drop table foo;
