@@ -684,6 +684,7 @@ my_bool opt_allow_views;
 my_bool opt_allow_triggers;
 my_bool opt_allow_stored_procedures;
 my_bool opt_allow_subqueries;
+my_bool opt_allow_delayed_write;
 
 /* Thread specific variables */
 
@@ -5699,6 +5700,7 @@ enum options_mysqld
   OPT_ALLOW_TRIGGERS,
   OPT_ALLOW_STORED_PROCEDURES,
   OPT_ALLOW_SUBQUERIES,
+  OPT_ALLOW_DELAYED_WRITE,
   OPT_RESERVED_SUPER_CONNECTIONS
 };
 
@@ -7187,6 +7189,9 @@ thread is in the relay logs.",
   {"allow-subqueries", OPT_ALLOW_SUBQUERIES,
    "Allow use of subqueries.", &opt_allow_subqueries, &opt_allow_subqueries,
    0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"allow-delayed-write", OPT_ALLOW_DELAYED_WRITE,
+   "Allow use of delayed insert and replace", &opt_allow_delayed_write,
+   &opt_allow_delayed_write, 0, GET_BOOL, NO_ARG, 1, 0, 1, 0, 0, 0},
   {"reserved-super-connections", OPT_RESERVED_SUPER_CONNECTIONS,
    "The number of reserved connections for users with SUPER privileges.",
    &opt_reserved_super_connections, &opt_reserved_super_connections,
@@ -7853,6 +7858,7 @@ static int mysql_init_variables(void)
   strmov(server_version, MYSQL_SERVER_VERSION);
   myisam_recover_options_str= sql_mode_str= "OFF";
   myisam_stats_method_str= "nulls_unequal";
+  opt_allow_delayed_write= TRUE;
   my_bind_addr = htonl(INADDR_ANY);
   threads.empty();
   thread_cache.empty();

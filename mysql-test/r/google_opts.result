@@ -2,12 +2,18 @@ set global allow_views= 0;
 set global allow_triggers= 0;
 set global allow_stored_procedures= 0;
 set global allow_subqueries= 0;
-show variables like 'allow_%';
+show variables like 'allow_views';
+Variable_name	Value
+allow_views	OFF
+show variables like 'allow_triggers';
+Variable_name	Value
+allow_triggers	OFF
+show variables like 'allow_stored_procedures';
 Variable_name	Value
 allow_stored_procedures	OFF
+show variables like 'allow_subqueries';
+Variable_name	Value
 allow_subqueries	OFF
-allow_triggers	OFF
-allow_views	OFF
 create table foo (v varchar(4));
 insert into foo values ("abc"), ("def"), ("ghi");
 select count(*) from (select 1) a;

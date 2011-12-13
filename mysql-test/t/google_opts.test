@@ -7,7 +7,11 @@ set global allow_views= 0;
 set global allow_triggers= 0;
 set global allow_stored_procedures= 0;
 set global allow_subqueries= 0;
-show variables like 'allow_%';
+
+show variables like 'allow_views';
+show variables like 'allow_triggers';
+show variables like 'allow_stored_procedures';
+show variables like 'allow_subqueries';
 
 create table foo (v varchar(4));
 insert into foo values ("abc"), ("def"), ("ghi");
