@@ -167,17 +167,16 @@ static sys_var_chain vars = { NULL, NULL };
 
 static sys_var_bool_ptr sys_allow_delayed_write(&vars, "allow_delayed_write",
                                                 &opt_allow_delayed_write);
-static sys_var_bool_ptr sys_allow_views(&vars, "allow_views",
-                                        &opt_allow_views);
-static sys_var_bool_ptr sys_allow_triggers(&vars, "allow_triggers",
-                                           &opt_allow_triggers);
 static sys_var_bool_ptr
   sys_allow_stored_procedures(&vars,
                               "allow_stored_procedures",
                               &opt_allow_stored_procedures);
 static sys_var_bool_ptr sys_allow_subqueries(&vars, "allow_subqueries",
                                              &opt_allow_subqueries);
-
+static sys_var_bool_ptr sys_allow_triggers(&vars, "allow_triggers",
+                                           &opt_allow_triggers);
+static sys_var_bool_ptr sys_allow_views(&vars, "allow_views",
+                                        &opt_allow_views);
 static sys_var_thd_ulong
 sys_auto_increment_increment(&vars, "auto_increment_increment",
                              &SV::auto_increment_increment, NULL, NULL,

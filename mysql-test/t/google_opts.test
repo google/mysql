@@ -3,34 +3,23 @@
 # These options have to be set inside the test case since the test framework
 # makes use of some of the features they disable.
 
-set global allow_views= 0;
-set global allow_triggers= 0;
+--let $allow_stored_procedures_saved= query_get_value(show variables like 'allow_stored_procedures', Value, 1)
+--let $allow_subqueries_saved= query_get_value(show variables like 'allow_subqueries', Value, 1)
+--let $allow_triggers_saved= query_get_value(show variables like 'allow_triggers', Value, 1)
+--let $allow_views_saved= query_get_value(show variables like 'allow_views', Value, 1)
+
 set global allow_stored_procedures= 0;
 set global allow_subqueries= 0;
+set global allow_triggers= 0;
+set global allow_views= 0;
 
-show variables like 'allow_views';
-show variables like 'allow_triggers';
 show variables like 'allow_stored_procedures';
 show variables like 'allow_subqueries';
+show variables like 'allow_triggers';
+show variables like 'allow_views';
 
 create table foo (v varchar(4));
 insert into foo values ("abc"), ("def"), ("ghi");
-
-# Confirm that subqueries cannot be used.
---error ER_OPTION_PREVENTS_STATEMENT
-select count(*) from (select 1) a;
-
---error ER_OPTION_PREVENTS_STATEMENT
-select * from foo where v not in (select v from foo);
-
-# Confirm that views cannot be used.
---error ER_OPTION_PREVENTS_STATEMENT
-create view vw as select v from foo where length(v) > 0;
-
-# Confirm that triggers cannot be used.
---error ER_OPTION_PREVENTS_STATEMENT
-create trigger bar before insert on foo
-for each row set @num_inserted = @num_inserted + 1;
 
 # Confirm that stored procedures cannot be used.
 delimiter //;
@@ -46,9 +35,29 @@ create function hello (s char(20))
 returns char(50) deterministic
 return concat('Hello, ', s, '!');
 
-set global allow_views= 1;
-set global allow_triggers= 1;
-set global allow_stored_procedures= 1;
-set global allow_subqueries= 1;
+# Confirm that subqueries cannot be used.
+--error ER_OPTION_PREVENTS_STATEMENT
+select count(*) from (select 1) a;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+select * from foo where v not in (select v from foo);
+
+# Confirm that triggers cannot be used.
+--error ER_OPTION_PREVENTS_STATEMENT
+create trigger bar before insert on foo
+for each row set @num_inserted = @num_inserted + 1;
+
+# Confirm that views cannot be used.
+--error ER_OPTION_PREVENTS_STATEMENT
+create view vw as select v from foo where length(v) > 0;
+
+--replace_result $allow_stored_procedures_saved allow_stored_procedures_saved
+eval set global allow_stored_procedures= $allow_stored_procedures_saved;
+--replace_result $allow_subqueries_saved allow_subqueries_saved
+eval set global allow_subqueries= $allow_subqueries_saved;
+--replace_result $allow_triggers_saved allow_triggers_saved
+eval set global allow_triggers= $allow_triggers_saved;
+--replace_result $allow_views_saved allow_views_saved
+eval set global allow_views= $allow_views_saved;
 
 drop table foo;
