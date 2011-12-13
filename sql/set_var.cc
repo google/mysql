@@ -177,6 +177,8 @@ static sys_var_bool_ptr sys_allow_triggers(&vars, "allow_triggers",
                                            &opt_allow_triggers);
 static sys_var_bool_ptr sys_allow_views(&vars, "allow_views",
                                         &opt_allow_views);
+static sys_var_bool_ptr sys_allow_xa(&vars, "allow_xa",
+                                     &opt_allow_xa);
 static sys_var_thd_ulong
 sys_auto_increment_increment(&vars, "auto_increment_increment",
                              &SV::auto_increment_increment, NULL, NULL,

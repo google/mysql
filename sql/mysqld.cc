@@ -688,6 +688,7 @@ my_bool opt_allow_stored_procedures;
 my_bool opt_allow_subqueries;
 my_bool opt_allow_triggers;
 my_bool opt_allow_views;
+my_bool opt_allow_xa;
 
 /* Thread specific variables */
 
@@ -5902,6 +5903,7 @@ enum options_mysqld
   OPT_ALLOW_SUBQUERIES,
   OPT_ALLOW_TRIGGERS,
   OPT_ALLOW_VIEWS,
+  OPT_ALLOW_XA,
   OPT_RESERVED_SUPER_CONNECTIONS
 };
 
@@ -7402,6 +7404,9 @@ thread is in the relay logs.",
   {"allow-views", OPT_ALLOW_VIEWS,
    "Allow use of views.", &opt_allow_views, &opt_allow_views,
    0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"allow-xa", OPT_ALLOW_XA,
+   "Allow use of XA transactions.", &opt_allow_xa, &opt_allow_xa,
+   0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"reserved-super-connections", OPT_RESERVED_SUPER_CONNECTIONS,
    "The number of reserved connections for users with SUPER privileges.",
    &opt_reserved_super_connections, &opt_reserved_super_connections,
@@ -8030,6 +8035,7 @@ static int mysql_init_variables(void)
   opt_allow_subqueries= 0;
   opt_allow_triggers= 0;
   opt_allow_views= 0;
+  opt_allow_xa= 0;
   opt_reserved_super_connections= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
