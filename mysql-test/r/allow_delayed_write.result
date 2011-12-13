@@ -1,0 +1,7 @@
+create table t1 (a int);
+insert into t1 set a = 1;
+insert delayed into t1 set a = 2;
+ERROR HY000: The MariaDB server is running with the --allow-delayed-write=0 option so it cannot execute this statement
+replace delayed into t1 set a = 2;
+ERROR HY000: The MariaDB server is running with the --allow-delayed-write=0 option so it cannot execute this statement
+drop table t1;

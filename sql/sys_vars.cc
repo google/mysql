@@ -2355,6 +2355,12 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type type)
 }
 
 
+static Sys_var_mybool Sys_allow_delayed_write(
+       "allow_delayed_write",
+       "Allow use of delayed insert and replace",
+       READ_ONLY GLOBAL_VAR(opt_allow_delayed_write), CMD_LINE(OPT_ARG),
+       DEFAULT(TRUE));
+
 /**
   The read_only boolean is always equal to the opt_readonly boolean except
   during fix_read_only(); when that function is entered, opt_readonly is
