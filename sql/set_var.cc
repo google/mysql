@@ -165,6 +165,8 @@ static int check_net_buffer_length(THD *thd,  set_var *var);
 
 static sys_var_chain vars = { NULL, NULL };
 
+static sys_var_bool_ptr sys_allow_delayed_write(&vars, "allow_delayed_write",
+                                                &opt_allow_delayed_write);
 static sys_var_bool_ptr sys_allow_views(&vars, "allow_views",
                                         &opt_allow_views);
 static sys_var_bool_ptr sys_allow_triggers(&vars, "allow_triggers",

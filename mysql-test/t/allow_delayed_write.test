@@ -1,0 +1,15 @@
+# Confirm that skip_allow_delayed_write prevents delayed write
+
+# delayed works differently in embedded server
+--source include/not_embedded.inc
+
+create table t1 (a int);
+insert into t1 set a = 1;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+insert delayed into t1 set a = 2;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+replace delayed into t1 set a = 2;
+
+drop table t1;

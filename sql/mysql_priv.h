@@ -2023,6 +2023,7 @@ extern my_bool opt_allow_views;
 extern my_bool opt_allow_triggers;
 extern my_bool opt_allow_stored_procedures;
 extern my_bool opt_allow_subqueries;
+extern my_bool opt_allow_delayed_write;
 extern ulong opt_reserved_super_connections;
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
