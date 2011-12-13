@@ -16344,6 +16344,11 @@ xa:
           XA_SYM begin_or_start xid opt_join_or_resume
           {
             Lex->sql_command = SQLCOM_XA_START;
+            if (!opt_allow_xa)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--allow-xa=0");
+              MYSQL_YYABORT;
+            }
           }
         | XA_SYM END xid opt_suspend
           {

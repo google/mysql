@@ -697,6 +697,7 @@ SHOW_COMP_OPTION have_profiling;
 SHOW_COMP_OPTION have_openssl;
 
 my_bool opt_allow_delayed_write;
+my_bool opt_allow_xa;
 
 my_bool opt_update_connection_privs;
 
@@ -8167,6 +8168,7 @@ static int mysql_init_variables(void)
   bzero((char *) &global_status_var, sizeof(global_status_var));
   opt_large_pages= 0;
   opt_super_large_pages= 0;
+  opt_allow_xa= 0;
   opt_reserved_super_connections= 0;
   opt_update_connection_privs= 1;
 #if defined(ENABLED_DEBUG_SYNC)

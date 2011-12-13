@@ -1,0 +1,21 @@
+# Test google-specific options settings
+
+# These options have to be set inside the test case since the test framework
+# makes use of some of the features they disable.
+#
+# Some options were removed over the course of history. This is all that's left
+# at the moment.
+
+--let $allow_xa_saved= query_get_value(show variables like 'allow_xa', Value, 1)
+
+set global allow_xa= 0;
+
+show variables like 'allow_xa';
+
+# Confirm that xa cannot be used.
+--error ER_OPTION_PREVENTS_STATEMENT
+xa start 'foobar';
+
+--replace_result $allow_xa_saved allow_xa_saved
+eval set global allow_xa= $allow_xa_saved;
+

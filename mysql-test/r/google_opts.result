@@ -1,0 +1,7 @@
+set global allow_xa= 0;
+show variables like 'allow_xa';
+Variable_name	Value
+allow_xa	OFF
+xa start 'foobar';
+ERROR HY000: The MariaDB server is running with the --allow-xa=0 option so it cannot execute this statement
+set global allow_xa= allow_xa_saved;

@@ -2361,6 +2361,12 @@ static Sys_var_mybool Sys_allow_delayed_write(
        READ_ONLY GLOBAL_VAR(opt_allow_delayed_write), CMD_LINE(OPT_ARG),
        DEFAULT(TRUE));
 
+static Sys_var_mybool Sys_allow_xa(
+       "allow_xa",
+       "Allow use of XA transactions.",
+       GLOBAL_VAR(opt_allow_xa), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 /**
   The read_only boolean is always equal to the opt_readonly boolean except
   during fix_read_only(); when that function is entered, opt_readonly is

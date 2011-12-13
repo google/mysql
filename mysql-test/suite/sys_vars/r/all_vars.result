@@ -11,6 +11,7 @@ select distinct variable_name as `there should be *no* variables listed below:` 
 left join t1 on variable_name=test_name where test_name is null;
 there should be *no* variables listed below:
 allow_delayed_write
+allow_xa
 reserved_super_connections
 update_connection_privs
 drop table t1;
