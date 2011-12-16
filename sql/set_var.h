@@ -116,6 +116,7 @@ public:
   { return option_limits == 0; }
   virtual bool is_struct() { return 0; }
   virtual bool is_readonly() const { return 0; }
+  virtual bool requires_super() const { return false; }
   CHARSET_INFO *charset(THD *thd);
   virtual sys_var_pluginvar *cast_pluginvar() { return 0; }
 
@@ -671,6 +672,7 @@ public:
   bool check_default(enum_var_type type) { return 0; }
   SHOW_TYPE show_type() { return SHOW_LONG; }
   uchar *value_ptr(THD *thd, enum_var_type type, LEX_STRING *base);
+  bool requires_super() const;
 };
 
 

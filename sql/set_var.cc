@@ -577,6 +577,10 @@ static sys_var_const    sys_socket(&vars, "socket",
                                    OPT_GLOBAL, SHOW_CHAR_PTR,
                                    (uchar*) &mysqld_unix_port);
 
+static sys_var_bool_ptr sys_super_to_set_timestamp(&vars,
+                                                   "super_to_set_timestamp",
+                                                   &opt_super_to_set_timestamp);
+
 #ifdef HAVE_THR_SETCONCURRENCY
 /* purecov: begin tested */
 static sys_var_const    sys_thread_concurrency(&vars, "thread_concurrency",
@@ -2770,6 +2774,10 @@ uchar *sys_var_timestamp::value_ptr(THD *thd, enum_var_type type,
   return (uchar*) &thd->sys_var_tmp.long_value;
 }
 
+bool sys_var_timestamp::requires_super() const
+{
+  return opt_super_to_set_timestamp;
+}
 
 bool sys_var_last_insert_id::update(THD *thd, set_var *var)
 {
@@ -3566,6 +3574,8 @@ int set_var::check(THD *thd)
     return -1;
   }
   if ((type == OPT_GLOBAL && check_global_access(thd, SUPER_ACL)))
+    return 1;
+  if (var->requires_super() && check_global_access(thd, SUPER_ACL))
     return 1;
   /* value is a NULL pointer if we are using SET ... = DEFAULT */
   if (!value)
