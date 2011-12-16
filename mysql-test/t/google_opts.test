@@ -1,5 +1,7 @@
 # Test google-specific options settings
 
+--source include/not_embedded.inc
+
 # These options have to be set inside the test case since the test framework
 # makes use of some of the features they disable.
 #
@@ -15,6 +17,21 @@ show variables like 'allow_xa';
 # Confirm that xa cannot be used.
 --error ER_OPTION_PREVENTS_STATEMENT
 xa start 'foobar';
+
+# Confirm user with SUPER can set timestamp.
+set timestamp = 1293840000;
+set timestamp = default;
+
+# Confirm user without SUPER cannot set timestamp.
+create user mysqltest_1@localhost;
+connect (con1,localhost,mysqltest_1,,);
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+set timestamp = 1293840000;
+
+# Clean up.
+connection default;
+disconnect con1;
+drop user mysqltest_1@localhost;
 
 --replace_result $allow_xa_saved allow_xa_saved
 eval set global allow_xa= $allow_xa_saved;

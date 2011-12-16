@@ -698,6 +698,7 @@ SHOW_COMP_OPTION have_openssl;
 
 my_bool opt_allow_delayed_write;
 my_bool opt_allow_xa;
+my_bool opt_super_to_set_timestamp;
 
 my_bool opt_update_connection_privs;
 
@@ -8200,6 +8201,7 @@ static int mysql_init_variables(void)
   my_atomic_rwlock_init(&slave_executed_entries_lock);
   strmov(server_version, MYSQL_SERVER_VERSION);
   opt_allow_delayed_write= TRUE;
+  opt_super_to_set_timestamp= TRUE;
   threads.empty();
   thread_cache.empty();
   key_caches.empty();

@@ -46,6 +46,7 @@
 #include "sql_time.h"                       // known_date_time_formats
 #include "sql_acl.h" // SUPER_ACL,
                      // mysql_user_table_is_in_short_password_format
+#include "sql_parse.h" // check_global_access
 #include "derror.h"  // read_texts
 #include "sql_base.h"                           // close_cached_tables
 #include "hostname.h"                           // host_cache_size
@@ -2496,6 +2497,12 @@ static Sys_var_charptr Sys_socket(
        READ_ONLY GLOBAL_VAR(mysqld_unix_port), CMD_LINE(REQUIRED_ARG),
        IN_FS_CHARSET, DEFAULT(0));
 
+static Sys_var_mybool Sys_super_to_set_timestamp(
+       "super_to_set_timestamp",
+       "Must have SUPER privilege to perform SET TIMESTAMP",
+       READ_ONLY GLOBAL_VAR(opt_super_to_set_timestamp), CMD_LINE(OPT_ARG),
+       DEFAULT(TRUE));
+
 /* 
   thread_concurrency is a no-op on all platforms since
   MySQL 5.1.  It will be removed in the context of
@@ -3586,6 +3593,13 @@ static Sys_var_harows Sys_select_limit(
        SESSION_VAR(select_limit), NO_CMD_LINE,
        VALID_RANGE(0, HA_POS_ERROR), DEFAULT(HA_POS_ERROR), BLOCK_SIZE(1));
 
+static bool check_timestamp(sys_var *, THD *thd, set_var *)
+{
+  if (opt_super_to_set_timestamp && check_global_access(thd, SUPER_ACL))
+    return true;
+
+  return false;
+}
 static bool update_timestamp(THD *thd, set_var *var)
 {
   if (var->value)
@@ -3606,7 +3620,7 @@ static Sys_var_session_special_double Sys_timestamp(
        "timestamp", "Set the time for this client",
        sys_var::ONLY_SESSION, NO_CMD_LINE,
        VALID_RANGE(0, TIMESTAMP_MAX_VALUE),
-       NO_MUTEX_GUARD, IN_BINLOG, ON_CHECK(0), 
+       NO_MUTEX_GUARD, IN_BINLOG, ON_CHECK(check_timestamp),
        ON_UPDATE(update_timestamp), ON_READ(read_timestamp));
 
 static bool update_last_insert_id(THD *thd, set_var *var)

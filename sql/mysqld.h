@@ -145,6 +145,7 @@ extern char *opt_backup_history_logname, *opt_backup_progress_logname,
 extern my_bool opt_allow_delayed_write;
 extern my_bool opt_allow_xa;
 extern ulong opt_reserved_super_connections;
+extern my_bool opt_super_to_set_timestamp;
 extern const char *log_output_str;
 extern const char *log_backup_output_str;
 extern char *mysql_home_ptr, *pidfile_name_ptr;

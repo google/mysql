@@ -13,6 +13,7 @@ there should be *no* variables listed below:
 allow_delayed_write
 allow_xa
 reserved_super_connections
+super_to_set_timestamp
 update_connection_privs
 drop table t1;
 drop table t2;
