@@ -1,0 +1,17 @@
+# Test with google-specific options settings disabled.
+
+# Confirm user with SUPER can set timestamp.
+set timestamp = 1293840000;
+set timestamp = default;
+
+# Confirm user without SUPER cannot set timestamp.
+create user mysqltest_1@localhost;
+connect (con1,localhost,mysqltest_1,,);
+set timestamp = 1293840000;
+set timestamp = default;
+
+# Clean up.
+connection default;
+disconnect con1;
+drop user mysqltest_1@localhost;
+

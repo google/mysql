@@ -58,6 +58,21 @@ create view vw as select v from foo where length(v) > 0;
 --error ER_OPTION_PREVENTS_STATEMENT
 xa start 'foobar';
 
+# Confirm user with SUPER can set timestamp.
+set timestamp = 1293840000;
+set timestamp = default;
+
+# Confirm user without SUPER cannot set timestamp.
+create user mysqltest_1@localhost;
+connect (con1,localhost,mysqltest_1,,);
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+set timestamp = 1293840000;
+
+# Clean up.
+connection default;
+disconnect con1;
+drop user mysqltest_1@localhost;
+
 --replace_result $allow_stored_procedures_saved allow_stored_procedures_saved
 eval set global allow_stored_procedures= $allow_stored_procedures_saved;
 --replace_result $allow_subqueries_saved allow_subqueries_saved

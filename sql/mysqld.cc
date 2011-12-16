@@ -686,6 +686,8 @@ my_bool opt_allow_subqueries;
 my_bool opt_allow_triggers;
 my_bool opt_allow_views;
 my_bool opt_allow_xa;
+my_bool opt_super_to_set_timestamp;
+
 
 /* Thread specific variables */
 
@@ -5703,7 +5705,8 @@ enum options_mysqld
   OPT_ALLOW_TRIGGERS,
   OPT_ALLOW_VIEWS,
   OPT_ALLOW_XA,
-  OPT_RESERVED_SUPER_CONNECTIONS
+  OPT_RESERVED_SUPER_CONNECTIONS,
+  OPT_SUPER_TO_SET_TIMESTAMP
 };
 
 
@@ -7201,6 +7204,10 @@ thread is in the relay logs.",
    "The number of reserved connections for users with SUPER privileges.",
    &opt_reserved_super_connections, &opt_reserved_super_connections,
    0, GET_ULONG, REQUIRED_ARG, 10, 0, 50, 0, 1, 0},
+  {"super-to-set-timestamp", OPT_SUPER_TO_SET_TIMESTAMP,
+   "Must have SUPER privilege to perform SET TIMESTAMP",
+   &opt_super_to_set_timestamp, &opt_super_to_set_timestamp,
+   0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -7865,6 +7872,7 @@ static int mysql_init_variables(void)
   myisam_recover_options_str= sql_mode_str= "OFF";
   myisam_stats_method_str= "nulls_unequal";
   opt_allow_delayed_write= TRUE;
+  opt_super_to_set_timestamp= TRUE;
   my_bind_addr = htonl(INADDR_ANY);
   threads.empty();
   thread_cache.empty();

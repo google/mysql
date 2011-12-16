@@ -1,0 +1,6 @@
+set timestamp = 1293840000;
+set timestamp = default;
+create user mysqltest_1@localhost;
+set timestamp = 1293840000;
+set timestamp = default;
+drop user mysqltest_1@localhost;

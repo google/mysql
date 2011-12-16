@@ -40,6 +40,12 @@ create view vw as select v from foo where length(v) > 0;
 ERROR HY000: The MySQL server is running with the --skip-allow-views option so it cannot execute this statement
 xa start 'foobar';
 ERROR HY000: The MySQL server is running with the --allow-xa=0 option so it cannot execute this statement
+set timestamp = 1293840000;
+set timestamp = default;
+create user mysqltest_1@localhost;
+set timestamp = 1293840000;
+ERROR 42000: Access denied; you need the SUPER privilege for this operation
+drop user mysqltest_1@localhost;
 set global allow_stored_procedures= allow_stored_procedures_saved;
 set global allow_subqueries= allow_subqueries_saved;
 set global allow_triggers= allow_triggers_saved;
