@@ -77,6 +77,8 @@ sinclude(config/ac-macros/misc.m4)
 sinclude(config/ac-macros/readline.m4)
 sinclude(config/ac-macros/ssl.m4)
 sinclude(config/ac-macros/zlib.m4)
+sinclude(config/ac-macros/ncurses.m4)
+sinclude(config/ac-macros/perftools.m4)
 
 # Remember to add a directory sql/share/LANGUAGE
 AVAILABLE_LANGUAGES="\
@@ -361,13 +363,12 @@ export CC CXX CFLAGS LD LDFLAGS AR ARFLAGS
 
 if test "$GCC" = "yes"
 then
-  # mysqld requires -fno-implicit-templates.
   # Disable exceptions as they seams to create problems with gcc and threads.
   # mysqld doesn't use run-time-type-checking, so we disable it.
   # We should use -Wno-invalid-offsetof flag to disable some warnings from gcc
   # regarding offset() usage in C++ which are done in a safe manner in the
   # server
-  CXXFLAGS="$CXXFLAGS -fno-implicit-templates -fno-exceptions -fno-rtti"
+  CXXFLAGS="$CXXFLAGS -fno-rtti"
   AC_DEFINE([HAVE_EXPLICIT_TEMPLATE_INSTANTIATION],
     [1], [Defined by configure. Use explicit template instantiation.])
 fi
@@ -850,6 +851,8 @@ AC_SEARCH_LIBS(sched_yield, posix4,
   AC_DEFINE(HAVE_SCHED_YIELD, 1, [sched_yield]))
 
 MYSQL_CHECK_ZLIB_WITH_COMPRESS
+
+GOOGLE_CHECK_PERFTOOLS
 
 # For large pages support
 if test "$TARGET_LINUX" = "true"
@@ -1991,26 +1994,17 @@ MYSQL_STRUCT_DIRENT_D_INO
 MYSQL_STRUCT_DIRENT_D_NAMLEN
 MYSQL_TYPE_SIGHANDLER
 MYSQL_CHECK_MULTIBYTE
-if test "$with_named_curses" = "no"
+GOOGLE_CHECK_NCURSES
+if test "$mysql_ncurses_dir" = "no"
 then
-  MYSQL_CHECK_LIB_TERMCAP
-else
-  TERMCAP_LIB="$with_named_curses"
+  if test "$with_named_curses" = "no"
+  then
+    MYSQL_CHECK_LIB_TERMCAP
+  else
+    TERMCAP_LIB="$with_named_curses"
+  fi
 fi
 AC_SUBST(TERMCAP_LIB)
-
-# Check if the termcap function 'tgoto' is already declared in
-# system header files or if it need to be declared locally
-AC_CHECK_DECLS(tgoto,,,[
-#ifdef HAVE_CURSES_H
-# include <curses.h>
-#elif HAVE_NCURSES_H
-# include <ncurses.h>
-#endif
-#ifdef HAVE_TERM_H
-# include <term.h>
-#endif
-])
 
 LIBEDIT_LOBJECTS=""
 AC_CHECK_FUNC(strunvis, ,[LIBEDIT_LOBJECTS="$LIBEDIT_LOBJECTS unvis.o"])
