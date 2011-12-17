@@ -1,0 +1,111 @@
+#!/bin/bash
+
+INSTANCE_PREFIX="/tmp"
+
+if [[ ! -d ${INSTANCE_PREFIX}/instance ]]
+then
+  mkdir -p ${INSTANCE_PREFIX}/instance
+fi
+
+if [[ ! -h instance ]]
+then
+  ln -s ${INSTANCE_PREFIX}/instance
+fi
+
+start() {
+  NAME="$1"
+  case ${NAME} in
+    "instance/master" | "instance/slave")
+      MYSQLD_DEFAULT_ARGS="--log-bin=master-bin --log-slave-updates"
+      source google/instance.inc
+      ;;
+    *)
+      [[ -n "${NAME}" ]] && source google/instance.inc
+      ;;
+  esac
+}
+
+stop() {
+  NAME="$1"
+  if [[ -a ${NAME}/mysql.sock ]]
+  then
+    echo "Stopping ${NAME}..."
+    build/client/mysqladmin shutdown -u root -S ${NAME}/mysql.sock
+  else
+    echo "No socket file for ${NAME}"
+  fi
+}
+
+delete() {
+  NAME="$1"
+  stop ${NAME}
+  echo "Deleting ${NAME}..."
+  rm -rf ${NAME}
+}
+
+case "$1" in
+  "start")
+    shift
+    for i in $@
+    do
+      start instance/${i}
+    done
+    ;;
+
+  "stop")
+    shift
+    for i in $@
+    do
+      stop instance/${i}
+    done
+    ;;
+
+  "stop-all")
+    for i in instance/*
+    do
+      stop ${i}
+    done
+    ;;
+
+  "restart")
+    shift
+    for i in $@
+    do
+      stop instance/${i}
+      start instance/${i}
+    done
+    ;;
+
+  "delete")
+    shift
+    for i in $@
+    do
+      delete instance/${i}
+    done
+    ;;
+
+  "delete-all")
+    for i in instance/*
+    do
+      delete ${i}
+    done
+    rm -rf instance
+    ;;
+
+  "slave-connect")
+    PORT=$(cat instance/master/mysql.port)
+    # This assumes that the both the master and slave are fresh.
+    echo "CHANGE MASTER TO MASTER_HOST='localhost', MASTER_PORT=${PORT},"\
+      "MASTER_USER='root', MASTER_LOG_FILE='master-bin.000001',"\
+      "MASTER_LOG_POS=106; start slave;" |  \
+    build/client/mysql -u root -S instance/slave/mysql.sock
+    echo "SHOW SLAVE STATUS\G" | \
+    build/client/mysql -u root -S instance/slave/mysql.sock | grep Running
+    ;;
+
+  "gdb")
+    GDB=1
+    start instance/$2
+    ;;
+
+esac

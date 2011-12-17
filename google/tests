@@ -1,0 +1,35 @@
+#!/bin/bash
+
+die() {
+  echo $1
+  exit 1
+}
+
+set -e -o pipefail
+
+TEST_DIR="$(pwd)/mysql-test"
+
+if [[ ! -a sql/mysqld ]]
+then
+  [[ -a build/sql/mysqld ]] || die "Nothing to do: mysqld is not built yet"
+  : ${ROOT_DIR:="$(pwd)/root"}
+  rm -rf root
+  [[ -d ${ROOT_DIR} ]] || mkdir -p ${ROOT_DIR}
+  [[ -a $root ]] || ln -s ${ROOT_DIR} root
+  ( cd build/client && make -s install DESTDIR=${ROOT_DIR} )
+  ( cd build/sql ; make -s install DESTDIR=${ROOT_DIR} )
+  ( cd build/extra ; make -s install DESTDIR=${ROOT_DIR} )
+  ( cd build/scripts ; make -s install DESTDIR=${ROOT_DIR} )
+  ( cd build/mysql-test ; make -s install DESTDIR=${ROOT_DIR}/usr )
+  ( cd build/tests ; make -s install DESTDIR=${ROOT_DIR} )
+  ( cd build/storage/myisam ; make -s install DESTDIR=${ROOT_DIR} )
+  TEST_DIR="${ROOT_DIR}/usr/mysql-test"
+fi
+
+cd ${TEST_DIR}
+./mysql-test-run.pl \
+  --timer \
+  --force \
+  --max-test-fail=0 \
+  --parallel=auto \
+  --experimental=collections/default.experimental 2>&1 | tee log.tests

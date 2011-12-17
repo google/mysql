@@ -1,0 +1,33 @@
+#!/bin/bash
+
+start=$(date +%s)
+
+print_duration() {
+  echo "Duration: $(expr $(date +%s) - ${start}) seconds"
+}
+
+error_exit() {
+  echo '*** Exit on error'
+  print_duration
+}
+
+trap error_exit ERR
+
+set -e -o pipefail
+
+# By default we produce the ./google/deb debug version.
+: ${GOOGLE_DEBUG:=1}
+enable_minimal="--enable-minimal"
+[[ "$1" == "prod" ]] && GOOGLE_DEBUG=
+if [[ "$1" == "profile" ]]
+then
+  enable_minimal=
+  GOOGLE_DEBUG=
+  GOOGLE_PROFILE=1
+fi
+[[ "$1" == "valgrind" ]] && GOOGLE_VALGRIND=1
+
+source google/env.inc
+source google/compile.inc 2>&1 | tee log
+
+print_duration
