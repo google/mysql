@@ -20,7 +20,7 @@ MYSQLSHAREdir =		$(pkgdatadir)
 MYSQLBASEdir=		$(prefix)
 MYSQLLIBdir=            $(pkglibdir)
 pkgplugindir =		$(pkglibdir)/plugin
-INCLUDES =		@ZLIB_INCLUDES@ \
+INCLUDES =		@ZLIB_INCLUDES@ @PERFTOOLS_INCLUDES@ \
 			-I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_srcdir)/regex -I$(srcdir) $(openssl_includes)
 WRAPLIBS=		@WRAPLIBS@
@@ -38,7 +38,7 @@ SUPPORTING_LIBS =	$(top_builddir)/vio/libvio.a \
 			$(top_builddir)/regex/libregex.a \
 			$(top_builddir)/strings/libmystrings.a
 mysqld_DEPENDENCIES=	@mysql_plugin_libs@ $(SUPPORTING_LIBS) libndb.la
-LDADD = $(SUPPORTING_LIBS) @ZLIB_LIBS@ @NDB_SCI_LIBS@
+LDADD = $(SUPPORTING_LIBS) @ZLIB_LIBS@ @NDB_SCI_LIBS@ @PERFTOOLS_LIBS@
 mysqld_LDADD =		libndb.la \
 			@MYSQLD_EXTRA_LDFLAGS@ \
 			@mysql_plugin_libs@ \

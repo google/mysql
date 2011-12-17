@@ -53,7 +53,7 @@ bin_PROGRAMS =			mysql \
 
 mysql_SOURCES =			mysql.cc readline.cc sql_string.cc \
 				completion_hash.cc
-mysql_LDADD =			@readline_link@ @TERMCAP_LIB@ \
+mysql_LDADD =			@readline_link@ @TERMCAP_LIB@ @NCURSES_LIBS@ \
 				$(LDADD) $(CXXLDFLAGS)
 mysqladmin_SOURCES =		mysqladmin.cc
 
