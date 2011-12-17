@@ -1,0 +1,77 @@
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/110/trunk/packages/deb
+END
+libgoogle-perftools-dev.install
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/99/trunk/packages/deb/libgoogle-perftools-dev.install
+END
+control
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/94/trunk/packages/deb/control
+END
+libgoogle-perftools0.install
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/11/trunk/packages/deb/libgoogle-perftools0.install
+END
+compat
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/9/trunk/packages/deb/compat
+END
+changelog
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/110/trunk/packages/deb/changelog
+END
+libgoogle-perftools0.manpages
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/9/trunk/packages/deb/libgoogle-perftools0.manpages
+END
+copyright
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/11/trunk/packages/deb/copyright
+END
+docs
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/44/trunk/packages/deb/docs
+END
+rules
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/9/trunk/packages/deb/rules
+END
+libgoogle-perftools-dev.dirs
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/99/trunk/packages/deb/libgoogle-perftools-dev.dirs
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/9/trunk/packages/deb/README
+END
+libgoogle-perftools0.dirs
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/9/trunk/packages/deb/libgoogle-perftools0.dirs
+END
