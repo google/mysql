@@ -39,6 +39,7 @@ ${SRC_DIR}/configure \
   --mandir=/usr/share/man \
   --enable-thread-safe-client \
   --with-plugins=innodb_plugin \
+  --with-lzo2-dir=bundled \
   --with-ncurses-dir=bundled \
   --with-readline \
   --with-perftools-dir=bundled \

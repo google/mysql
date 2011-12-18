@@ -22,7 +22,7 @@ EXTRA_DIST =		INSTALL-SOURCE INSTALL-WIN-SOURCE \
 			README COPYING CMakeLists.txt
 
 SUBDIRS =		. include @docs_dirs@ @zlib_dir@ \
-			@ncurses_dir@ @perftools_dir@ \
+			@ncurses_dir@ @lzo_dir@ @perftools_dir@ \
 			@readline_topdir@ sql-common scripts \
 			@sql_union_dirs@ unittest \
 			@sql_server@ @man_dirs@ tests \
