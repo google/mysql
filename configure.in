@@ -77,6 +77,7 @@ sinclude(config/ac-macros/misc.m4)
 sinclude(config/ac-macros/readline.m4)
 sinclude(config/ac-macros/ssl.m4)
 sinclude(config/ac-macros/zlib.m4)
+sinclude(config/ac-macros/lzo2.m4)
 sinclude(config/ac-macros/ncurses.m4)
 sinclude(config/ac-macros/perftools.m4)
 
@@ -852,6 +853,7 @@ AC_SEARCH_LIBS(sched_yield, posix4,
 
 MYSQL_CHECK_ZLIB_WITH_COMPRESS
 
+GOOGLE_CHECK_LZO2
 GOOGLE_CHECK_PERFTOOLS
 
 # For large pages support

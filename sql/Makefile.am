@@ -20,7 +20,7 @@ MYSQLSHAREdir =		$(pkgdatadir)
 MYSQLBASEdir=		$(prefix)
 MYSQLLIBdir=            $(pkglibdir)
 pkgplugindir =		$(pkglibdir)/plugin
-INCLUDES =		@ZLIB_INCLUDES@ @PERFTOOLS_INCLUDES@ \
+INCLUDES =		@ZLIB_INCLUDES@ @LZO_INCLUDES@ @PERFTOOLS_INCLUDES@ \
 			-I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_srcdir)/regex -I$(srcdir) $(openssl_includes)
 WRAPLIBS=		@WRAPLIBS@
@@ -43,7 +43,8 @@ mysqld_LDADD =		libndb.la \
 			@MYSQLD_EXTRA_LDFLAGS@ \
 			@mysql_plugin_libs@ \
 			$(LDADD)  $(CXXLDFLAGS) $(WRAPLIBS) @LIBDL@ \
-			$(yassl_libs) $(openssl_libs) @MYSQLD_EXTRA_LIBS@
+			$(yassl_libs) $(openssl_libs) @MYSQLD_EXTRA_LIBS@ \
+			@LZO_LIBS@
 
 noinst_HEADERS =	item.h item_func.h item_sum.h item_cmpfunc.h \
 			item_strfunc.h item_timefunc.h \
