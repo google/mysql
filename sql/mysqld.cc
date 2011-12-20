@@ -706,6 +706,7 @@ SHOW_COMP_OPTION have_openssl;
 my_bool opt_allow_delayed_write;
 my_bool opt_allow_xa;
 my_bool opt_super_to_set_timestamp;
+my_bool rpl_allow_implicit_commit;
 
 my_bool opt_update_connection_privs;
 my_bool opt_system_user_table;
@@ -8238,6 +8239,7 @@ static int mysql_init_variables(void)
   opt_allow_xa= 0;
   opt_reserved_super_connections= 0;
   opt_update_connection_privs= 1;
+  rpl_allow_implicit_commit= 0;
   opt_system_user_table= 0;
   opt_block_user_access= 0;
 #if defined(ENABLED_DEBUG_SYNC)

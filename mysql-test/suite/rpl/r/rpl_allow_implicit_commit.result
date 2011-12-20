@@ -1,0 +1,39 @@
+include/master-slave.inc
+[connection master]
+call mtr.add_suppression("Stopping replication SQL thread with error because it would have done an implicit commit");
+call mtr.add_suppression("Replication SQL thread may have skipped events. Another BEGIN encountered while already in a transaction");
+include/stop_slave_sql.inc
+create table t1 (a int primary key) engine=innodb;
+begin;
+insert into t1 values (1);
+insert into t1 values (2);
+insert into t1 values (3);
+insert into t1 values (4);
+insert into t1 values (5);
+commit;
+include/sync_slave_io_with_master.inc
+include/stop_slave_io.inc
+create temporary table relay_logs(file varchar(60) primary key);
+load data local infile 'MYSQLTEST_VARDIR/tmp/relay_logs.txt' into table relay_logs;
+create temporary table commit_pos (pos int);
+load data local infile 'MYSQLTEST_VARDIR/tmp/commit_pos.txt' into table commit_pos;
+start slave io_thread;
+include/wait_for_slave_io_to_start.inc
+begin;
+insert into t1 values (6);
+insert into t1 values (7);
+commit;
+begin;
+insert into t1 values (8);
+insert into t1 values (9);
+insert into t1 values (10);
+commit;
+start slave sql_thread;
+include/wait_for_slave_sql_error.inc [errno=1967]
+Last_SQL_Error = 'Replication SQL thread may have skipped events. Another BEGIN encountered while already in a transaction, implying that events were skipped.'
+include/stop_slave.inc
+reset slave;
+drop table t1;
+include/start_slave.inc
+drop table t1;
+include/rpl_end.inc

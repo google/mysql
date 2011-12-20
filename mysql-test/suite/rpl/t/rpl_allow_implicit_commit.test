@@ -1,0 +1,110 @@
+#
+# Tests that with the default value (OFF) of rpl-allow-implicit-commit
+# an error is generated when the replication SQL thread encounters a
+# BEGIN when already in a transaction.
+#
+--source include/have_innodb.inc
+--source include/master-slave.inc
+
+call mtr.add_suppression("Stopping replication SQL thread with error because it would have done an implicit commit");
+call mtr.add_suppression("Replication SQL thread may have skipped events. Another BEGIN encountered while already in a transaction");
+
+#
+# Stop the slave's SQL thread so that the test can manipulate the relay log.
+#
+sync_slave_with_master;
+--source include/stop_slave_sql.inc
+
+#
+# Create some events on the master.
+#
+connection master;
+create table t1 (a int primary key) engine=innodb;
+begin;
+insert into t1 values (1);
+insert into t1 values (2);
+insert into t1 values (3);
+insert into t1 values (4);
+insert into t1 values (5);
+commit;
+
+#
+# Wait for slave's IO thread to get all transactions.
+#
+--source include/sync_slave_io_with_master.inc
+
+#
+# Force a rotate to a new relay log so the last relay log ends on a COMMIT.
+#
+--source include/stop_slave_io.inc
+
+#
+# Find the last relay log name.
+#
+let $MYSQLD_SLAVE_DATADIR= `select @@datadir`;
+let $RELAY_LOG_NAME= `select @@relay_log`;
+list_files_write_file $MYSQLTEST_VARDIR/tmp/relay_logs.txt $MYSQLD_SLAVE_DATADIR $RELAY_LOG_NAME.0*;
+create temporary table relay_logs(file varchar(60) primary key);
+--replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR
+eval load data local infile '$MYSQLTEST_VARDIR/tmp/relay_logs.txt' into table relay_logs;
+let $LAST_RELAY_LOG= query_get_value(select file from relay_logs order by file desc limit 1, file, 1);
+remove_file $MYSQLTEST_VARDIR/tmp/relay_logs.txt;
+
+#
+# Run $LAST_RELAY_LOG through mysqlbinlog to find the pos of the last commit
+# event.
+#
+--exec $MYSQL_BINLOG $MYSQLD_SLAVE_DATADIR/$LAST_RELAY_LOG | grep -e '^# at' | tail -1 | cut -d\  -f3 > $MYSQLTEST_VARDIR/tmp/commit_pos.txt;
+create temporary table commit_pos (pos int);
+--replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR
+eval load data local infile '$MYSQLTEST_VARDIR/tmp/commit_pos.txt' into table commit_pos;
+let $POS= `select pos from commit_pos`;
+remove_file $MYSQLTEST_VARDIR/tmp/commit_pos.txt;
+
+#
+# Restart IO thread now so that the roate event can be written to
+# $LAST_RELAY_LOG before it gets truncated.
+#
+start slave io_thread;
+--source include/wait_for_slave_io_to_start.inc
+
+#
+# Send some more events ot the master so there will be some after the
+# truncated log.
+#
+connection master;
+begin;
+insert into t1 values (6);
+insert into t1 values (7);
+commit;
+begin;
+insert into t1 values (8);
+insert into t1 values (9);
+insert into t1 values (10);
+commit;
+
+#
+# Truncate the relay log to remove the commit event.
+#
+let $file= $MYSQLD_SLAVE_DATADIR/$LAST_RELAY_LOG;
+let $size= $POS;
+--source include/truncate_file.inc
+
+#
+# Start the slave's SQL thread, which should error.
+#
+connection slave;
+start slave sql_thread;
+--let $slave_sql_errno= 1967
+--let $show_slave_sql_error= 1
+--source include/wait_for_slave_sql_error.inc
+
+# Cleanup
+--source include/stop_slave.inc
+reset slave;
+drop table t1;
+--source include/start_slave.inc
+
+connection master;
+drop table t1;
+--source include/rpl_end.inc

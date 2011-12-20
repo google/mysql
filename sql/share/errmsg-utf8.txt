@@ -7110,5 +7110,7 @@ ER_IT_IS_A_VIEW 42S02
         eng "'%-.192s' is a view"
 ER_SLAVE_SKIP_NOT_IN_GTID
 	eng "When using GTID, @@sql_slave_skip_counter can not be used. Instead, setting @@gtid_slave_pos explicitly can be used to skip to after a given GTID position."
+ER_IMPLICIT_COMMIT_ON_SLAVE_THREAD
+        eng "Replication SQL thread may have skipped events. Another BEGIN encountered while already in a transaction, implying that events were skipped."
 ER_ENGINE_DEPRECATED
         eng "Create or alter table %s.%s requested with engine %s, which is deprecated by the system administrator. Please use a different storage engine."

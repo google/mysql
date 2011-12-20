@@ -2757,6 +2757,14 @@ static Sys_var_enum Sys_query_cache_type(
        ON_UPDATE(fix_query_cache_type));
 
 #ifdef HAVE_REPLICATION
+static Sys_var_mybool Sys_rpl_allow_implicit_commit(
+       "rpl_allow_implicit_commit",
+       "When OFF, stop the replication SQL thread if a BEGIN statement would result "
+       "in an implicit commit of a pending transaction as it implies replication "
+       "events (i.e. the COMMIT) were somehow skipped.",
+       READ_ONLY GLOBAL_VAR(rpl_allow_implicit_commit), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 static Sys_var_mybool Sys_rpl_crash_on_binlog_io_error(
        "rpl_crash_on_binlog_io_error",
        "When ON, if the binlog dump thread encounters an I/O error, truncation, "

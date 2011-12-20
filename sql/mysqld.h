@@ -146,6 +146,7 @@ extern my_bool opt_allow_delayed_write;
 extern my_bool opt_allow_xa;
 extern ulong opt_reserved_super_connections;
 extern my_bool opt_super_to_set_timestamp;
+extern my_bool rpl_allow_implicit_commit;
 extern my_bool opt_system_user_table;
 extern ulong opt_block_user_access;
 extern const char *log_output_str;

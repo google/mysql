@@ -6530,7 +6530,6 @@ Gtid_log_event::do_apply_event(rpl_group_info *rgi)
       return 1;
   }
 
-  DBUG_ASSERT((thd->variables.option_bits & OPTION_GTID_BEGIN) == 0);
   if (flags2 & FL_STANDALONE)
     return 0;
 
