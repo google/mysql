@@ -690,6 +690,7 @@ my_bool opt_allow_triggers;
 my_bool opt_allow_views;
 my_bool opt_allow_xa;
 my_bool opt_super_to_set_timestamp;
+my_bool rpl_allow_implicit_commit;
 
 
 /* Thread specific variables */
@@ -5907,7 +5908,8 @@ enum options_mysqld
   OPT_ALLOW_VIEWS,
   OPT_ALLOW_XA,
   OPT_RESERVED_SUPER_CONNECTIONS,
-  OPT_SUPER_TO_SET_TIMESTAMP
+  OPT_SUPER_TO_SET_TIMESTAMP,
+  OPT_RPL_ALLOW_IMPLICIT_COMMIT
 };
 
 
@@ -7418,6 +7420,12 @@ thread is in the relay logs.",
    "Must have SUPER privilege to perform SET TIMESTAMP",
    &opt_super_to_set_timestamp, &opt_super_to_set_timestamp,
    0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"rpl-allow-implicit-commit", OPT_RPL_ALLOW_IMPLICIT_COMMIT,
+   "When ON, stop the replication SQL thread if a BEGIN statement would result "
+   "in an implicit commit of a pending transaction as it implies replication "
+   "events (i.e. the COMMIT) were somehow skipped.",
+   &rpl_allow_implicit_commit, &rpl_allow_implicit_commit,
+   0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -8044,6 +8052,7 @@ static int mysql_init_variables(void)
   opt_allow_views= 0;
   opt_allow_xa= 0;
   opt_reserved_super_connections= 0;
+  rpl_allow_implicit_commit= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */

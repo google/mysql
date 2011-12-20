@@ -29,6 +29,7 @@
 #include "sp_cache.h"
 #include "events.h"
 #include "sql_trigger.h"
+#include "rpl_mi.h"
 #include "debug_sync.h"
 
 /**
@@ -200,6 +201,35 @@ bool begin_trans(THD *thd)
     thd->lock=thd->locked_tables;
     thd->locked_tables=0;			// Will be automatically closed
     close_thread_tables(thd);			// Free tables
+  }
+  if (!rpl_allow_implicit_commit && thd->slave_thread &&
+      thd->options & OPTION_BEGIN)
+  {
+    /*
+      Refer to comment in slave.h. Currently active_mi and active_mi->rli
+      never move so we don't need to take locks in order to dereference
+      them. Further, the fields we're accessing are only written to by
+      this, the replication SQL thread, or a CHANGE MASTER TO. Since
+      CHANGE MASTER TO can't run while the slave is running, it is safe
+      to read these values without any locks. Note that SHOW SLAVE STATUS
+      may also be reading these values concurrently with this thread,
+      but that's okay.
+    */
+    char llbuff1[22], llbuff2[22], llbuff3[22];
+    sql_print_error("Stopping replication SQL thread with error because it "
+                    "would have done an implicit commit at:\n"
+                    "    event_relay_log_name:        %s\n"
+                    "    event_relay_log_pos:         %s\n"
+                    "    group_master_log_name:       %s\n"
+                    "    group_master_log_pos:        %s\n"
+                    "    future_group_master_log_pos: %s",
+                    active_mi->rli.event_relay_log_name,
+                    llstr(active_mi->rli.event_relay_log_pos, llbuff1),
+                    active_mi->rli.group_master_log_name,
+                    llstr(active_mi->rli.group_master_log_pos, llbuff2),
+                    llstr(active_mi->rli.future_group_master_log_pos, llbuff3));
+    my_error(ER_IMPLICIT_COMMIT_ON_SLAVE_THREAD, MYF(0));
+    return 1;
   }
   if (end_active_trans(thd))
     error= -1;
