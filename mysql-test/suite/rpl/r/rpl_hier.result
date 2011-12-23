@@ -1,7 +1,7 @@
 include/rpl_init.inc [topology=1->2, 1->3]
 call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+ which couldn't be found in the bin logs\.");
 call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+, but server_id from the slave doesn't match that found in the bin log\. Slave appea.*");
-call mtr.add_suppression("Slave SQL thread encountered ev->group_id==[0-9]+ < last processed ID==[0-9]+. Stopping replication. Error_code: 1642");
+call mtr.add_suppression("Slave SQL thread encountered ev->group_id==[0-9]+ < last processed ID==[0-9]+. Stopping replication. Error_code: 1643");
 create table t1 (a int, b char(32));
 drop table t1;
 zero
@@ -125,11 +125,11 @@ create table t2 (a int, b char(32));
 drop table t2;
 change master to master_log_file='master-bin.000001', master_log_pos=4;
 start slave;
-include/wait_for_slave_sql_error.inc [errno=1642]
+include/wait_for_slave_sql_error.inc [errno=1643]
 Last_SQL_Error = 'Slave SQL thread encountered ev->group_id==20 < last processed ID==1056. Stopping replication.'
 change master to master_log_file='master-bin.000001', master_log_pos=4;
 start slave;
-include/wait_for_slave_sql_error.inc [errno=1642]
+include/wait_for_slave_sql_error.inc [errno=1643]
 Last_SQL_Error = 'Slave SQL thread encountered ev->group_id==20 < last processed ID==1056. Stopping replication.'
 include/stop_slave_io.inc
 change master to master_log_file='master-bin.000001', master_log_pos=4;
