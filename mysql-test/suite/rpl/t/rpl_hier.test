@@ -10,7 +10,7 @@ let $cache_frequency= query_get_value(show variables like 'rpl_hierarchical_cach
 # Suppress expected errors
 call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+ which couldn't be found in the bin logs\.");
 call mtr.add_suppression(".*Slave trying to connect using group_id = [0-9]+, but server_id from the slave doesn't match that found in the bin log\. Slave appea.*");
-call mtr.add_suppression("Slave SQL thread encountered ev->group_id==[0-9]+ < last processed ID==[0-9]+. Stopping replication. Error_code: 1642");
+call mtr.add_suppression("Slave SQL thread encountered ev->group_id==[0-9]+ < last processed ID==[0-9]+. Stopping replication. Error_code: 1643");
 
 #
 # Slave's binlog should only contain events from the master.
@@ -200,7 +200,7 @@ purge binary logs before now();
 connection server_1;
 
 # Changing group_id to be lower than the current requires 'with reset'.
---error 1641
+--error 1642
 set binlog_group_id=19, master_server_id=1;
 set binlog_group_id=19, master_server_id=1 with reset;
 create table t2 (a int, b char(32));
@@ -210,14 +210,14 @@ connection server_2;
 change master to master_log_file='master-bin.000001', master_log_pos=4;
 start slave;
 --let $show_slave_sql_error= 1
---let $slave_sql_errno= 1642
+--let $slave_sql_errno= 1643
 --source include/wait_for_slave_sql_error.inc
 
 connection server_3;
 change master to master_log_file='master-bin.000001', master_log_pos=4;
 start slave;
 --let $show_slave_sql_error= 1
---let $slave_sql_errno= 1642
+--let $slave_sql_errno= 1643
 --source include/wait_for_slave_sql_error.inc
 
 #
