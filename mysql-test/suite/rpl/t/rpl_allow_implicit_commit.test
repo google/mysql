@@ -103,6 +103,12 @@ start slave sql_thread;
 --source include/stop_slave.inc
 reset slave;
 drop table t1;
+if (`SELECT @@rpl_hierarchical = '1'`)
+{
+  disable_query_log;
+  set binlog_group_id=0, master_server_id=0 with reset;
+  enable_query_log;
+}
 --source include/start_slave.inc
 
 connection master;
