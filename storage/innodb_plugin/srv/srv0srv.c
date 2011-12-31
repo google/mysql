@@ -1744,6 +1744,8 @@ srv_printf_innodb_monitor(
 	fputs("----------\n"
 	      "SEMAPHORES\n"
 	      "----------\n", file);
+	fprintf(file, "Lock wait timeouts %lu\n",
+	        export_vars.innodb_lock_wait_timeouts);
 	sync_print(file);
 
 	/* Conceptually, srv_innodb_monitor_mutex has a very high latching
@@ -2220,6 +2222,7 @@ loop:
 				if (trx->wait_lock) {
 					lock_cancel_waiting_and_release(
 						trx->wait_lock);
+					export_vars.innodb_lock_wait_timeouts++;
 				}
 			}
 		}
