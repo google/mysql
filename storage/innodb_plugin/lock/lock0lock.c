@@ -4529,6 +4529,14 @@ lock_print_info_all_transactions(
 	ulint	i;
 	mtr_t	mtr;
 	trx_t*	trx;
+	time_t  current_time = time(NULL);
+
+	export_vars.innodb_num_lock_waiters = 0;
+	export_vars.innodb_summed_lock_wait_time = 0;
+	export_vars.innodb_longest_lock_wait = 0;
+	export_vars.innodb_num_active_transactions = 0;
+	export_vars.innodb_summed_transaction_age = 0;
+	export_vars.innodb_longest_transaction_age = 0;
 
 	if (file) {
 		fprintf(file, "LIST OF TRANSACTIONS FOR EACH SESSION:\n");
@@ -4585,13 +4593,49 @@ loop:
 					TRX_ID_PREP_PRINTF(
 						trx->read_view->up_limit_id));
 			}
+		}
 
-			if (trx->que_state == TRX_QUE_LOCK_WAIT) {
+
+		if (trx->conc_state == TRX_ACTIVE) {
+			ulong trx_age
+				= (ulong) difftime(current_time,
+						   trx->start_time);
+			/* Skip if time() fails. */
+			if (current_time < 0) {
+				trx_age = 0;
+			}
+			export_vars.innodb_num_active_transactions++;
+			export_vars.innodb_summed_transaction_age
+				+= trx_age;
+			if (export_vars.innodb_longest_transaction_age
+			    < trx_age) {
+				export_vars.innodb_longest_transaction_age
+					= trx_age;
+			}
+		}
+
+		if (trx->que_state == TRX_QUE_LOCK_WAIT) {
+			ulong wait_time
+				= (ulong) difftime(current_time,
+						   trx->wait_started);
+			/* Skip if time() fails. */
+			if (current_time < 0) {
+				wait_time = 0;
+			}
+			export_vars.innodb_num_lock_waiters++;
+			export_vars.innodb_summed_lock_wait_time
+				+= wait_time;
+			if (export_vars.innodb_longest_lock_wait
+			    < wait_time) {
+				export_vars.innodb_longest_lock_wait
+					= wait_time;
+			}
+
+			if (file) {
 				fprintf(file,
 					"------- TRX HAS BEEN WAITING %lu SEC"
 					" FOR THIS LOCK TO BE GRANTED:\n",
-					(ulong) difftime(time(NULL),
-							 trx->wait_started));
+					wait_time);
 
 				if (lock_get_type_low(trx->wait_lock) == LOCK_REC) {
 					lock_rec_print(file, trx->wait_lock);

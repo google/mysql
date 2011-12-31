@@ -635,6 +635,10 @@ struct export_var_struct{
 	ulint innodb_log_waits;			/*!< srv_log_waits */
 	ulint innodb_log_write_requests;	/*!< srv_log_write_requests */
 	ulint innodb_log_writes;		/*!< srv_log_writes */
+	ulint innodb_longest_lock_wait;
+	ulint innodb_longest_transaction_age;
+	ulint innodb_num_active_transactions;
+	ulint innodb_num_lock_waiters;
 	ulint innodb_os_log_written;		/*!< srv_os_log_written */
 	ulint innodb_os_log_fsyncs;		/*!< fil_n_log_flushes */
 	ulint innodb_os_log_pending_writes;	/*!< srv_os_log_pending_writes */
@@ -656,6 +660,8 @@ struct export_var_struct{
 	ulint innodb_rows_inserted;		/*!< srv_n_rows_inserted */
 	ulint innodb_rows_updated;		/*!< srv_n_rows_updated */
 	ulint innodb_rows_deleted;		/*!< srv_n_rows_deleted */
+	ulint innodb_summed_lock_wait_time;
+	ulint innodb_summed_transaction_age;
 	ulint innodb_transaction_count;
 	ulint innodb_transaction_purge_count;
 	ulint innodb_transaction_purge_lag;
