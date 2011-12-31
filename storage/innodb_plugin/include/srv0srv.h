@@ -628,6 +628,7 @@ struct export_var_struct{
 	ulint innodb_buffer_pool_read_ahead_evicted;/*!< srv_read_ahead evicted*/
 	ulint innodb_dblwr_pages_written;	/*!< srv_dblwr_pages_written */
 	ulint innodb_dblwr_writes;		/*!< srv_dblwr_writes */
+	ulint innodb_deadlocks;
 	ulint innodb_hash_nonsearches;		/*!< btr_cur_n_sea */
 	ulint innodb_hash_searches;		/*!< btr_cur_n_non_sea */
 	ibool innodb_have_atomic_builtins;	/*!< HAVE_ATOMIC_BUILTINS */
@@ -638,6 +639,7 @@ struct export_var_struct{
 	ulint innodb_log_waits;			/*!< srv_log_waits */
 	ulint innodb_log_write_requests;	/*!< srv_log_write_requests */
 	ulint innodb_log_writes;		/*!< srv_log_writes */
+	ulint innodb_lock_wait_timeouts;
 	ulint innodb_longest_lock_wait;
 	ulint innodb_longest_transaction_age;
 	ulint innodb_num_active_transactions;

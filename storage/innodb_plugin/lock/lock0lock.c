@@ -3442,6 +3442,7 @@ lock_deadlock_recursive(
 
 				FILE*	ef = lock_latest_err_file;
 
+				export_vars.innodb_deadlocks++;
 				rewind(ef);
 				ut_print_timestamp(ef);
 
