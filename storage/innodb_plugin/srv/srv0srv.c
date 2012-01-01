@@ -1986,6 +1986,22 @@ srv_export_innodb_status(void)
 	export_vars.innodb_rows_updated = srv_n_rows_updated;
 	export_vars.innodb_rows_deleted = srv_n_rows_deleted;
 
+	if (export_vars.innodb_os_aio_read_requests > 0 ) {
+		export_vars.innodb_os_aio_read_time_avg =
+			export_vars.innodb_os_aio_read_time /
+			export_vars.innodb_os_aio_read_requests;
+	} else {
+		export_vars.innodb_os_aio_read_time_avg = 0;
+	}
+
+	if (export_vars.innodb_os_aio_write_requests > 0 ) {
+		export_vars.innodb_os_aio_write_time_avg =
+			export_vars.innodb_os_aio_write_time /
+			export_vars.innodb_os_aio_write_requests;
+	} else {
+		export_vars.innodb_os_aio_write_time_avg = 0;
+	}
+
 	current_time = time(NULL);
 	time_elapsed = difftime(current_time, srv_last_innodb_status_time);
 	if (time_elapsed >= innobase_min_status_update_time_interval) {
