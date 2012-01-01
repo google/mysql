@@ -2003,6 +2003,13 @@ srv_export_innodb_status(void)
 	}
 
 	export_vars.innodb_background_loops = srv_main_1_second_loops;
+	export_vars.innodb_dict_size = dict_sys->size;
+
+#ifdef UNIV_DISABLE_MEM_POOL
+	export_vars.innodb_heap_enabled = 0;
+#else
+	export_vars.innodb_heap_enabled = 1;
+#endif
 
 	current_time = time(NULL);
 	time_elapsed = difftime(current_time, srv_last_innodb_status_time);
