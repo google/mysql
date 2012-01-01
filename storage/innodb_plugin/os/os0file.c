@@ -3940,6 +3940,8 @@ os_aio_simulated_handle(
 	ibool		ret;
 	ulint		n;
 	ulint		i;
+	ullint		start_us, stop_us;
+	ib_int64_t	elapsed_us;
 
 	/* Fix compiler warning */
 	*consecutive_ios = NULL;
@@ -4141,6 +4143,7 @@ consecutive_loop:
 	}
 
 	/* Do the i/o with ordinary, synchronous i/o functions: */
+	ut_time_us(&start_us);
 	if (slot->type == OS_FILE_WRITE) {
 		ret = os_file_write(slot->name, slot->file, combined_buf,
 				    slot->offset, slot->offset_high,
@@ -4148,6 +4151,12 @@ consecutive_loop:
 	} else {
 		ret = os_file_read(slot->file, combined_buf,
 				   slot->offset, slot->offset_high, total_len);
+	}
+
+	ut_time_us(&stop_us);
+	elapsed_us = stop_us - start_us;
+	if (elapsed_us < 0) {
+		elapsed_us = 0;
 	}
 
 	ut_a(ret);
@@ -4176,6 +4185,19 @@ consecutive_loop:
 	}
 
 	os_mutex_enter(array->mutex);
+
+	/* Update statistics. Note that there may be a race between updates to
+	a few of the global variables. */
+
+	if (slot->type == OS_FILE_WRITE) {
+		export_vars.innodb_os_aio_write_requests++;
+		export_vars.innodb_os_aio_pages_written += n_consecutive;
+		export_vars.innodb_os_aio_write_time += elapsed_us;
+	} else {
+		export_vars.innodb_os_aio_read_requests++;
+		export_vars.innodb_os_aio_pages_read += n_consecutive;
+		export_vars.innodb_os_aio_read_time += elapsed_us;
+	}
 
 	/* Mark the i/os done in slots */
 
