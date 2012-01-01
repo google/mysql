@@ -963,6 +963,13 @@ sync_array_print_long_waits(
 	}
 
 	if (noticed) {
+		/* We set the status variable so SHOW STATUS indicates there
+		is a long wait. We now assume the wait lasts through the 30
+		second sleep in this loop and the one second sleep in the
+		caller's loop before updating status again. */
+		export_vars.innodb_long_lock_wait = TRUE;
+		export_vars.innodb_long_lock_waits++;
+
 		fprintf(stderr,
 			"InnoDB: ###### Starts InnoDB Monitor"
 			" for 30 secs to print diagnostic info:\n");
