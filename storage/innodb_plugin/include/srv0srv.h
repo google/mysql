@@ -601,6 +601,7 @@ typedef srv_slot_t	srv_table_t;
 
 /** Status variables to be passed to MySQL */
 struct export_var_struct{
+	ulint innodb_background_loops;		/*!< srv_main_1_second_loops */
 	ulint innodb_data_pending_reads;	/*!< Pending reads */
 	ulint innodb_data_pending_writes;	/*!< Pending writes */
 	ulint innodb_data_pending_fsyncs;	/*!< Pending fsyncs */
@@ -687,6 +688,7 @@ struct export_var_struct{
 	ulint innodb_transaction_count;
 	ulint innodb_transaction_purge_count;
 	ulint innodb_transaction_purge_lag;
+	ulint innodb_wake_ups;
 };
 
 /** The server system struct */

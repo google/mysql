@@ -491,6 +491,8 @@ static SHOW_VAR innodb_status_variables[]= {
   (char*) &export_vars.innodb_hash_searches,		  SHOW_LONG},
   {"adaptive_hash_misses",
   (char*) &export_vars.innodb_hash_nonsearches,		  SHOW_LONG},
+  {"background_loops",
+  (char*) &export_vars.innodb_background_loops,		  SHOW_LONG},
   {"buffer_pool_hit_rate",
   (char*) &export_vars.innodb_buffer_pool_hit_rate,	 SHOW_DOUBLE},
   {"buffer_pool_pages_data",
@@ -647,6 +649,8 @@ static SHOW_VAR innodb_status_variables[]= {
   (char*) &export_vars.innodb_transaction_purge_count,	  SHOW_LONG},
   {"transaction_purge_lag",
   (char*) &export_vars.innodb_transaction_purge_lag,	  SHOW_LONG},
+  {"wake_ups",
+  (char*) &export_vars.innodb_wake_ups,			  SHOW_LONG},
   {NullS, NullS, SHOW_LONG}
 };
 
