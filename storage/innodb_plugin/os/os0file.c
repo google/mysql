@@ -4298,21 +4298,24 @@ os_aio_print(
 	double		avg_bytes_read;
 	ulint		i;
 
-	for (i = 0; i < srv_n_file_io_threads; i++) {
-		fprintf(file, "I/O thread %lu state: %s (%s)", (ulong) i,
-			srv_io_thread_op_info[i],
-			srv_io_thread_function[i]);
+	if (file) {
+		for (i = 0; i < srv_n_file_io_threads; i++) {
+			fprintf(file, "I/O thread %lu state: %s (%s)", (ulong) i,
+				srv_io_thread_op_info[i],
+				srv_io_thread_function[i]);
 
 #ifndef __WIN__
-		if (os_aio_segment_wait_events[i]->is_set) {
-			fprintf(file, " ev set");
-		}
+			if (os_aio_segment_wait_events[i]->is_set) {
+				fprintf(file, " ev set");
+			}
 #endif
 
-		fprintf(file, "\n");
+			fprintf(file, "\n");
+		}
+
+		fputs("Pending normal aio reads:", file);
 	}
 
-	fputs("Pending normal aio reads:", file);
 
 	array = os_aio_read_array;
 loop:
@@ -4341,14 +4344,18 @@ loop:
 
 	ut_a(array->n_reserved == n_reserved);
 
-	fprintf(file, " %lu", (ulong) n_reserved);
+	if (file) {
+		fprintf(file, " %lu", (ulong) n_reserved);
+	}
 
 	os_mutex_exit(array->mutex);
 
 	if (array == os_aio_read_array) {
 		export_vars.innodb_pending_normal_aio_reads
 			= (ulong) n_reserved;
-		fputs(", aio writes:", file);
+		if (file) {
+			fputs(", aio writes:", file);
+		}
 
 		array = os_aio_write_array;
 
@@ -4358,7 +4365,9 @@ loop:
 	if (array == os_aio_write_array) {
 		export_vars.innodb_pending_normal_aio_writes
 			= (ulong) n_reserved;
-		fputs(",\n ibuf aio reads:", file);
+		if (file) {
+			fputs(",\n ibuf aio reads:", file);
+		}
 		array = os_aio_ibuf_array;
 
 		goto loop;
@@ -4366,7 +4375,9 @@ loop:
 
 	if (array == os_aio_ibuf_array) {
 		export_vars.innodb_pending_ibuf_aio_reads = (ulong) n_reserved;
-		fputs(", log i/o's:", file);
+		if (file) {
+			fputs(", log i/o's:", file);
+		}
 		array = os_aio_log_array;
 
 		goto loop;
@@ -4374,7 +4385,9 @@ loop:
 
 	if (array == os_aio_log_array) {
 		export_vars.innodb_pending_log_ios = (ulong) n_reserved;
-		fputs(", sync i/o's:", file);
+		if (file) {
+			fputs(", sync i/o's:", file);
+		}
 		array = os_aio_sync_array;
 
 		goto loop;
@@ -4384,23 +4397,28 @@ loop:
 		export_vars.innodb_pending_sync_ios = (ulong) n_reserved;
 	}
 
-	putc('\n', file);
+	if (file) {
+		putc('\n', file);
+	}
 	current_time = time(NULL);
 	time_elapsed = 0.001 + difftime(current_time, os_last_printout);
 
-	fprintf(file,
-		"Pending flushes (fsync) log: %lu; buffer pool: %lu\n"
-		"%lu OS file reads, %lu OS file writes, %lu OS fsyncs\n",
-		(ulong) fil_n_pending_log_flushes,
-		(ulong) fil_n_pending_tablespace_flushes,
-		(ulong) os_n_file_reads, (ulong) os_n_file_writes,
-		(ulong) os_n_fsyncs);
-
-	if (os_file_n_pending_preads != 0 || os_file_n_pending_pwrites != 0) {
+	if (file) {
 		fprintf(file,
-			"%lu pending preads, %lu pending pwrites\n",
-			(ulong) os_file_n_pending_preads,
+			"Pending flushes (fsync) log: %lu; buffer pool: %lu\n"
+			"%lu OS file reads, %lu OS file writes, %lu OS fsyncs\n",
+			(ulong) fil_n_pending_log_flushes,
+			(ulong) fil_n_pending_tablespace_flushes,
+			(ulong) os_n_file_reads, (ulong) os_n_file_writes,
+			(ulong) os_n_fsyncs);
+
+		if (os_file_n_pending_preads != 0
+		    || os_file_n_pending_pwrites != 0) {
+			fprintf(file,
+				"%lu pending preads, %lu pending pwrites\n",
+				(ulong) os_file_n_pending_preads,
 			(ulong) os_file_n_pending_pwrites);
+		}
 	}
 
 	if (os_n_file_reads == os_n_file_reads_old) {
@@ -4410,16 +4428,18 @@ loop:
 			/ (os_n_file_reads - os_n_file_reads_old);
 	}
 
-	fprintf(file,
-		"%.2f reads/s, %lu avg bytes/read,"
-		" %.2f writes/s, %.2f fsyncs/s\n",
-		(os_n_file_reads - os_n_file_reads_old)
-		/ time_elapsed,
-		(ulong)avg_bytes_read,
-		(os_n_file_writes - os_n_file_writes_old)
-		/ time_elapsed,
-		(os_n_fsyncs - os_n_fsyncs_old)
-		/ time_elapsed);
+	if (file) {
+		fprintf(file,
+			"%.2f reads/s, %lu avg bytes/read,"
+			" %.2f writes/s, %.2f fsyncs/s\n",
+			(os_n_file_reads - os_n_file_reads_old)
+			/ time_elapsed,
+			(ulong)avg_bytes_read,
+			(os_n_file_writes - os_n_file_writes_old)
+			/ time_elapsed,
+			(os_n_fsyncs - os_n_fsyncs_old)
+			/ time_elapsed);
+	}
 
 	os_n_file_reads_old = os_n_file_reads;
 	os_n_file_writes_old = os_n_file_writes;
