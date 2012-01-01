@@ -641,10 +641,13 @@ struct export_var_struct{
 	ulint innodb_longest_transaction_age;
 	ulint innodb_num_active_transactions;
 	ulint innodb_num_lock_waiters;
+	ulint innodb_os_fsyncs;			/*!< fil_n_log_flushes */
 	ulint innodb_os_log_written;		/*!< srv_os_log_written */
 	ulint innodb_os_log_fsyncs;		/*!< fil_n_log_flushes */
 	ulint innodb_os_log_pending_writes;	/*!< srv_os_log_pending_writes */
 	ulint innodb_os_log_pending_fsyncs;	/*!< fil_n_pending_log_flushes */
+	ulint innodb_os_reads;			/*!< os_n_file_reads */
+	ulint innodb_os_writes;			/*!< os_n_file_writes */
 	ulint innodb_page_size;			/*!< UNIV_PAGE_SIZE */
 	ulint innodb_pages_created;		/*!< buf_pool->stat.n_pages_created */
 	ulint innodb_pages_read;		/*!< buf_pool->stat.n_pages_read */
