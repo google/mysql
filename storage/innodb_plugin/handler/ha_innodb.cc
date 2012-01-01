@@ -557,6 +557,8 @@ static SHOW_VAR innodb_status_variables[]= {
   (char*) &export_vars.innodb_lock_wait_timeouts,	  SHOW_LONG},
   {"lock_waiters",
   (char*) &export_vars.innodb_num_lock_waiters,		  SHOW_LONG},
+  {"log_ios_done",
+  (char*) &export_vars.innodb_log_ios_done,		  SHOW_LONG},
   {"log_waits",
   (char*) &export_vars.innodb_log_waits,		  SHOW_LONG},
   {"log_write_requests",

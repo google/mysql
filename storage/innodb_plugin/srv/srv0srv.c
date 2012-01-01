@@ -2019,6 +2019,8 @@ srv_export_innodb_status(void)
 		srv_last_innodb_status_time = current_time;
 	}
 
+	export_vars.innodb_log_ios_done = (ulong) log_sys->n_log_ios;
+
 	mutex_exit(&srv_innodb_monitor_mutex);
 }
 

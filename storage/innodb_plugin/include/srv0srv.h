@@ -637,6 +637,7 @@ struct export_var_struct{
 	ulint innodb_log_write_requests;	/*!< srv_log_write_requests */
 	ulint innodb_log_writes;		/*!< srv_log_writes */
 	ulint innodb_lock_wait_timeouts;
+	ulint innodb_log_ios_done;		/*!< log_sys->n_log_ios */
 	ulint innodb_longest_lock_wait;
 	ulint innodb_longest_transaction_age;
 	ulint innodb_num_active_transactions;
