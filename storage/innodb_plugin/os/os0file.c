@@ -4346,6 +4346,8 @@ loop:
 	os_mutex_exit(array->mutex);
 
 	if (array == os_aio_read_array) {
+		export_vars.innodb_pending_normal_aio_reads
+			= (ulong) n_reserved;
 		fputs(", aio writes:", file);
 
 		array = os_aio_write_array;
@@ -4354,6 +4356,8 @@ loop:
 	}
 
 	if (array == os_aio_write_array) {
+		export_vars.innodb_pending_normal_aio_writes
+			= (ulong) n_reserved;
 		fputs(",\n ibuf aio reads:", file);
 		array = os_aio_ibuf_array;
 
@@ -4361,6 +4365,7 @@ loop:
 	}
 
 	if (array == os_aio_ibuf_array) {
+		export_vars.innodb_pending_ibuf_aio_reads = (ulong) n_reserved;
 		fputs(", log i/o's:", file);
 		array = os_aio_log_array;
 
@@ -4368,10 +4373,15 @@ loop:
 	}
 
 	if (array == os_aio_log_array) {
+		export_vars.innodb_pending_log_ios = (ulong) n_reserved;
 		fputs(", sync i/o's:", file);
 		array = os_aio_sync_array;
 
 		goto loop;
+	}
+
+	if (array == os_aio_sync_array) {
+		export_vars.innodb_pending_sync_ios = (ulong) n_reserved;
 	}
 
 	putc('\n', file);

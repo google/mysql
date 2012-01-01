@@ -660,6 +660,11 @@ struct export_var_struct{
 	ulint innodb_pages_created;		/*!< buf_pool->stat.n_pages_created */
 	ulint innodb_pages_read;		/*!< buf_pool->stat.n_pages_read */
 	ulint innodb_pages_written;		/*!< buf_pool->stat.n_pages_written */
+	ulint innodb_pending_ibuf_aio_reads;
+	ulint innodb_pending_log_ios;
+	ulint innodb_pending_normal_aio_reads;
+	ulint innodb_pending_normal_aio_writes;
+	ulint innodb_pending_sync_ios;
 	ulint innodb_row_lock_waits;		/*!< srv_n_lock_wait_count */
 	ulint innodb_row_lock_current_waits;	/*!< srv_n_lock_wait_current_count */
 	ib_int64_t innodb_row_lock_time;	/*!< srv_n_lock_wait_time
