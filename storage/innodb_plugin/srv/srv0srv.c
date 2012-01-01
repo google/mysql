@@ -2005,6 +2005,7 @@ srv_export_innodb_status(void)
 	current_time = time(NULL);
 	time_elapsed = difftime(current_time, srv_last_innodb_status_time);
 	if (time_elapsed >= innobase_min_status_update_time_interval) {
+		os_aio_print(NULL);
 		buf_print_io(NULL);
 		// Tricky stuff: lock_print_info_summary grabs the
 		// kernel mutex while lock_print_info_all_transactions
