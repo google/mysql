@@ -630,9 +630,11 @@ struct export_var_struct{
 	ulint innodb_dblwr_pages_written;	/*!< srv_dblwr_pages_written */
 	ulint innodb_dblwr_writes;		/*!< srv_dblwr_writes */
 	ulint innodb_deadlocks;
+	ulint innodb_dict_size;			/*!< dict_sys->size */
 	ulint innodb_hash_nonsearches;		/*!< btr_cur_n_sea */
 	ulint innodb_hash_searches;		/*!< btr_cur_n_non_sea */
 	ibool innodb_have_atomic_builtins;	/*!< HAVE_ATOMIC_BUILTINS */
+	ibool innodb_heap_enabled;		/*!< UNIV_DISABLE_MEM_POOL */
 	ulint innodb_ibuf_inserts;		/*!< ibuf->n_inserts */
 	ulint innodb_ibuf_merged_records;	/*!< ibuf->n_merged_recs */
 	ulint innodb_ibuf_merges;		/*!< ibuf->n_merges */
