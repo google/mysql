@@ -902,6 +902,7 @@ sync_arr_wake_threads_if_sema_free(void)
 			event = sync_cell_get_event(cell);
 
 			os_event_set(event);
+			export_vars.innodb_wake_ups++;
 		}
 
 	}

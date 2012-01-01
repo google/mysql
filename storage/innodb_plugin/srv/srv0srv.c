@@ -2002,6 +2002,8 @@ srv_export_innodb_status(void)
 		export_vars.innodb_os_aio_write_time_avg = 0;
 	}
 
+	export_vars.innodb_background_loops = srv_main_1_second_loops;
+
 	current_time = time(NULL);
 	time_elapsed = difftime(current_time, srv_last_innodb_status_time);
 	if (time_elapsed >= innobase_min_status_update_time_interval) {
