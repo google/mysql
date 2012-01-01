@@ -1955,10 +1955,13 @@ srv_export_innodb_status(void)
 	export_vars.innodb_ibuf_size = ibuf->size;
 	export_vars.innodb_page_size = UNIV_PAGE_SIZE;
 	export_vars.innodb_log_waits = srv_log_waits;
+	export_vars.innodb_os_fsyncs = os_n_fsyncs;
 	export_vars.innodb_os_log_written = srv_os_log_written;
 	export_vars.innodb_os_log_fsyncs = fil_n_log_flushes;
 	export_vars.innodb_os_log_pending_fsyncs = fil_n_pending_log_flushes;
 	export_vars.innodb_os_log_pending_writes = srv_os_log_pending_writes;
+	export_vars.innodb_os_reads = os_n_file_reads;
+	export_vars.innodb_os_writes = os_n_file_writes;
 	export_vars.innodb_log_write_requests = srv_log_write_requests;
 	export_vars.innodb_log_writes = srv_log_writes;
 	export_vars.innodb_dblwr_pages_written = srv_dblwr_pages_written;
