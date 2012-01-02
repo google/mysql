@@ -671,6 +671,16 @@ struct export_var_struct{
 	ulint innodb_os_log_pending_writes;	/*!< srv_os_log_pending_writes */
 	ulint innodb_os_log_pending_fsyncs;	/*!< fil_n_pending_log_flushes */
 	ulint innodb_os_reads;			/*!< os_n_file_reads */
+	ib_int64_t innodb_os_sync_read_avg_usecs;
+	ib_int64_t innodb_os_sync_read_bytes;
+	ib_int64_t innodb_os_sync_read_pages;
+	ib_int64_t innodb_os_sync_read_usecs;
+	ib_int64_t innodb_os_sync_reads;
+	ib_int64_t innodb_os_sync_write_avg_usecs;
+	ib_int64_t innodb_os_sync_write_bytes;
+	ib_int64_t innodb_os_sync_write_pages;
+	ib_int64_t innodb_os_sync_write_usecs;
+	ib_int64_t innodb_os_sync_writes;
 	ulint innodb_os_writes;			/*!< os_n_file_writes */
 	ulint innodb_page_size;			/*!< UNIV_PAGE_SIZE */
 	ulint innodb_pages_created;		/*!< buf_pool->stat.n_pages_created */

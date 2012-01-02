@@ -3639,14 +3639,38 @@ os_aio(
 		therefore we have built a special mechanism for synchronous
 		wait in the Windows case. */
 
+		ibool r;
+		ullint start, end;
+		ib_int64_t elapsed = 0;
+
+		ut_time_us(&start);
 		if (type == OS_FILE_READ) {
-			return(os_file_read(file, buf, offset,
-					    offset_high, n));
+			r = os_file_read(file, buf, offset,
+					 offset_high, n);
+		} else {
+			ut_a(type == OS_FILE_WRITE);
+			r = os_file_write(name, file, buf, offset,
+					  offset_high, n);
+		}
+		ut_time_us(&end);
+		elapsed = max(end - start, 0);
+
+		/* These stats are not exact because a mutex is not locked. */
+		if (type == OS_FILE_READ) {
+			export_vars.innodb_os_sync_reads++;
+			export_vars.innodb_os_sync_read_bytes += n;
+			export_vars.innodb_os_sync_read_pages
+				+= max(n / UNIV_PAGE_SIZE, 1);
+			export_vars.innodb_os_sync_read_usecs += elapsed;
+		} else {
+			export_vars.innodb_os_sync_writes++;
+			export_vars.innodb_os_sync_write_bytes += n;
+			export_vars.innodb_os_sync_write_pages
+				+= max(n / UNIV_PAGE_SIZE, 1);
+			export_vars.innodb_os_sync_write_usecs += elapsed;
 		}
 
-		ut_a(type == OS_FILE_WRITE);
-
-		return(os_file_write(name, file, buf, offset, offset_high, n));
+		return r;
 	}
 
 try_again:
