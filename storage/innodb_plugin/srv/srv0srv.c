@@ -2011,6 +2011,22 @@ srv_export_innodb_status(void)
 		export_vars.innodb_os_aio_write_time_avg = 0;
 	}
 
+	if (export_vars.innodb_os_sync_reads > 0 ) {
+		export_vars.innodb_os_sync_read_avg_usecs =
+			export_vars.innodb_os_sync_read_usecs /
+			export_vars.innodb_os_sync_reads;
+	} else {
+		export_vars.innodb_os_sync_read_avg_usecs = 0;
+	}
+
+	if (export_vars.innodb_os_sync_writes > 0 ) {
+		export_vars.innodb_os_sync_write_avg_usecs =
+			export_vars.innodb_os_sync_write_usecs /
+			export_vars.innodb_os_sync_writes;
+	} else {
+		export_vars.innodb_os_sync_write_avg_usecs = 0;
+	}
+
 	export_vars.innodb_background_loops = srv_main_1_second_loops;
 	export_vars.innodb_dict_size = dict_sys->size;
 
