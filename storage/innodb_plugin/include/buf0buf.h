@@ -1362,6 +1362,9 @@ struct buf_pool_struct{
 	ulint		n_flush[BUF_FLUSH_N_TYPES];
 					/*!< this is the number of pending
 					writes in the given flush type */
+	ulint		n_flushed[BUF_FLUSH_N_TYPES];
+					/*!< this is the number of total
+					writes in the given flush type */
 	os_event_t	no_flush[BUF_FLUSH_N_TYPES];
 					/*!< this is in the set state
 					when there is no flush batch

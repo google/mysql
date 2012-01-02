@@ -919,6 +919,7 @@ buf_pool_init(void)
 
 	for (i = BUF_FLUSH_LRU; i < BUF_FLUSH_N_TYPES; i++) {
 		buf_pool->no_flush[i] = os_event_create(NULL);
+		buf_pool->n_flushed[i] = 0;
 	}
 
 	/* 3. Initialize LRU fields

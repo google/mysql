@@ -1079,6 +1079,8 @@ buf_flush_page_try(
 		os_event_reset(buf_pool->no_flush[BUF_FLUSH_LRU]);
 	}
 
+	buf_pool->n_flushed[BUF_FLUSH_LRU]++
+
 	/* VERY IMPORTANT:
 	Because any thread may call the LRU flush, even when owning
 	locks on pages, to avoid deadlocks, we must make sure that the
@@ -1154,6 +1156,7 @@ buf_flush_page(
 	}
 
 	buf_pool->n_flush[flush_type]++;
+	buf_pool->n_flushed[flush_type]++;
 
 	is_uncompressed = (buf_page_get_state(bpage) == BUF_BLOCK_FILE_PAGE);
 	ut_ad(is_uncompressed == (block_mutex != &buf_pool_zip_mutex));
