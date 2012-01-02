@@ -1920,6 +1920,9 @@ srv_export_innodb_status(void)
 		= srv_buf_pool_write_requests;
 	export_vars.innodb_buffer_pool_wait_free = srv_buf_pool_wait_free;
 	export_vars.innodb_buffer_pool_pages_flushed = srv_buf_pool_flushed;
+	export_vars.innodb_buffer_pool_pct_dirty
+		= ((double) (UT_LIST_GET_LEN(buf_pool->flush_list))
+		/ buf_pool->curr_size) * 100;
 	export_vars.innodb_buffer_pool_reads = srv_buf_pool_reads;
 	export_vars.innodb_buffer_pool_read_ahead_rnd
 		= buf_pool->stat.n_ra_pages_read_rnd;
