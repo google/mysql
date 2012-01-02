@@ -507,6 +507,8 @@ static SHOW_VAR innodb_status_variables[]= {
 #endif /* UNIV_DEBUG */
   {"buffer_pool_pages_misc",
   (char*) &export_vars.innodb_buffer_pool_pages_misc,	  SHOW_LONG},
+  {"buffer_pool_pages_pct_dirty",
+  (char*) &export_vars.innodb_buffer_pool_pct_dirty,	  SHOW_DOUBLE},
   {"buffer_pool_pages_total",
   (char*) &export_vars.innodb_buffer_pool_pages_total,	  SHOW_LONG},
   {"buffer_pool_read_ahead_rnd",
