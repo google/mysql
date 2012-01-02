@@ -501,6 +501,12 @@ static SHOW_VAR innodb_status_variables[]= {
   (char*) &export_vars.innodb_buffer_pool_pages_dirty,	  SHOW_LONG},
   {"buffer_pool_pages_flushed",
   (char*) &export_vars.innodb_buffer_pool_pages_flushed,  SHOW_LONG},
+  {"buffer_pool_pages_flushed_for_free_margin",
+  (char*) &export_vars.innodb_buffer_pool_flushed_free_margin, SHOW_LONGLONG},
+  {"buffer_pool_pages_flushed_for_preflush",
+  (char*) &export_vars.innodb_buffer_pool_flushed_preflush, SHOW_LONGLONG},
+  {"buffer_pool_pages_flushed_for_recv",
+  (char*) &export_vars.innodb_buffer_pool_flushed_recv,	  SHOW_LONGLONG},
   {"buffer_pool_pages_free",
   (char*) &export_vars.innodb_buffer_pool_pages_free,	  SHOW_LONG},
 #ifdef UNIV_DEBUG

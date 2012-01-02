@@ -1838,6 +1838,8 @@ loop:
 					  IB_ULONGLONG_MAX);
 		ut_a(n_pages != ULINT_UNDEFINED);
 
+		export_vars.innodb_buffer_pool_flushed_recv += n_pages;
+
 		buf_flush_wait_batch_end(BUF_FLUSH_LIST);
 
 		buf_pool_invalidate();

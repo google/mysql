@@ -1646,6 +1646,8 @@ log_preflush_pool_modified_pages(
 	if (n_pages == ULINT_UNDEFINED) {
 
 		return(FALSE);
+	} else {
+		export_vars.innodb_buffer_pool_flushed_preflush += n_pages;
 	}
 
 	return(TRUE);
