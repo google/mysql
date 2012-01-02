@@ -1915,6 +1915,12 @@ srv_export_innodb_status(void)
 	export_vars.innodb_data_reads = os_n_file_reads;
 	export_vars.innodb_data_writes = os_n_file_writes;
 	export_vars.innodb_data_written = srv_data_written;
+	export_vars.innodb_buffer_pool_flushed_list
+		= buf_pool->n_flushed[BUF_FLUSH_LIST];
+	export_vars.innodb_buffer_pool_flushed_lru
+		= buf_pool->n_flushed[BUF_FLUSH_LRU];
+	export_vars.innodb_buffer_pool_flushed_page
+		= buf_pool->n_flushed[BUF_FLUSH_SINGLE_PAGE];
 	export_vars.innodb_buffer_pool_read_requests = buf_pool->stat.n_page_gets;
 	export_vars.innodb_buffer_pool_write_requests
 		= srv_buf_pool_write_requests;
