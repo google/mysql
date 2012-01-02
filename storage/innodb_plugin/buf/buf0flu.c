@@ -1566,6 +1566,9 @@ buf_flush_free_margin(void)
 			let us wait for it to end */
 
 			buf_flush_wait_batch_end(BUF_FLUSH_LRU);
+		} else {
+			export_vars.innodb_buffer_pool_flushed_free_margin
+				+= n_flushed;
 		}
 	}
 }
