@@ -1427,6 +1427,7 @@ void clean_up(bool print_message)
   my_free(sys_init_slave.value, MYF(MY_ALLOW_ZERO_PTR));
   my_free(sys_var_general_log_path.value, MYF(MY_ALLOW_ZERO_PTR));
   my_free(sys_var_slow_log_path.value, MYF(MY_ALLOW_ZERO_PTR));
+  my_free(sys_var_audit_log_path.value, MYF(MY_ALLOW_ZERO_PTR));
   free_tmpdir(&mysql_tmpdir_list);
 #ifdef HAVE_REPLICATION
   my_free(slave_load_tmpdir,MYF(MY_ALLOW_ZERO_PTR));
