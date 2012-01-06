@@ -1,3 +1,8 @@
+# Because this test intentionally crashes the server valgrind
+# reports lots of leaked memory. Thus, exclude it from running
+# under valgrind.
+--source include/not_valgrind.inc
+
 # Test the http server:
 #  check the /quitquitquit
 
