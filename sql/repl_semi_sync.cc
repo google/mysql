@@ -904,13 +904,13 @@ int Repl_semi_sync::commit_trx(THD *thd)
           my_snprintf(msg, sizeof(msg),
                       "%s while waiting for replication semi-sync ack.",
                       (thd->killed ? "Killed" : "Timeout"));
-          sql_print_information(msg);
+          sql_print_information("%s", msg);
 
           if (thd->killed)
           {
             /* Return error to client. */
             error= 1;
-            my_printf_error(ER_ERROR_DURING_COMMIT, msg, MYF(0));
+            my_printf_error(ER_ERROR_DURING_COMMIT, "%s", MYF(0), msg);
           }
 
           if (trace_level & trace_general)
@@ -951,11 +951,11 @@ int Repl_semi_sync::commit_trx(THD *thd)
                         "Replication semi-sync gettimeofday fail (1) at "
                         "wait position (%s, %d)",
                         trx_wait_binlog_name, (uint)trx_wait_binlog_pos);
-            sql_print_information(msg);
+            sql_print_information("%s", msg);
 
             /* Return error to client. */
             error= 1;
-            my_printf_error(ER_ERROR_DURING_COMMIT, msg, MYF(0));
+            my_printf_error(ER_ERROR_DURING_COMMIT, "%s", MYF(0), msg);
             timefunc_fails++;
           }
           else
@@ -972,11 +972,11 @@ int Repl_semi_sync::commit_trx(THD *thd)
                     "Replication semi-sync gettimeofday fail (2) at "
                     "wait position (%s, %d)",
                     trx_wait_binlog_name, (uint)trx_wait_binlog_pos);
-        sql_print_information(msg);
+        sql_print_information("%s", msg);
 
         /* Return error to client. */
         error= 1;
-        my_printf_error(ER_ERROR_DURING_COMMIT, msg, MYF(0));
+        my_printf_error(ER_ERROR_DURING_COMMIT, "%s", MYF(0), msg);
         timefunc_fails++;
 
         /* Switch semi-sync off. */
