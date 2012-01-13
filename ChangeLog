@@ -1,0 +1,211 @@
+------------------------------------------------------------
+revno: 3622
+tags: clone-5.1.61-build
+committer: Mattias Jonsson <mattias.jonsson@oracle.com>
+branch nick: topush-5.1-sec
+timestamp: Thu 2011-12-15 16:59:18 +0100
+message:
+  Post push fix for merge.test and mysqlcheck.test on windows
+------------------------------------------------------------
+revno: 3621 [merge]
+committer: Georgi Kodinov <Georgi.Kodinov@Oracle.com>
+branch nick: merge-5.1-security
+timestamp: Thu 2011-12-15 14:10:20 +0200
+message:
+  merge mysql-5.1->mysql-5.1-security
+    ------------------------------------------------------------
+    revno: 3560.6.71
+    committer: Annamalai Gurusami <annamalai.gurusami@oracle.com>
+    branch nick: mysql-5.1-bug13117023
+    timestamp: Tue 2011-12-13 14:26:12 +0530
+    message:
+      Bug #13117023: Innodb increments handler_read_key when it should not
+      
+      The counter handler_read_key (SSV::ha_read_key_count) is incremented 
+      incorrectly.
+      
+      The mysql server maintains a per thread system_status_var (SSV)
+      object.  This object contains among other things the counter
+      SSV::ha_read_key_count. The purpose of this counter is to measure the
+      number of requests to read a row based on a key (or the number of
+      index lookups).
+      
+      This counter was wrongly incremented in the
+      ha_innobase::innobase_get_index(). The fix removes
+      this increment statement (for both innodb and innodb_plugin).
+      
+      The various callers of the innobase_get_index() was checked to
+      determine if anybody must increment this counter (if they first call
+      innobase_get_index() and then perform an index lookup).  It was found
+      that no caller of innobase_get_index() needs to worry about the
+      SSV::ha_read_key_count counter.
+    ------------------------------------------------------------
+    revno: 3560.6.70
+    committer: Marko M?kel? <marko.makela@oracle.com>
+    branch nick: mysql-5.1
+    timestamp: Mon 2011-12-12 13:48:24 +0200
+    message:
+      Bug#13418887 ERROR IN DIAGNOSTIC FUNCTION PAGE_REC_PRINT()
+      
+      When printing information about a ROW_FORMAT=REDUNDANT record, pass
+      the correct flag to rec_get_next_offs().
+      
+      rb:821 approved by Jimmy Yang
+------------------------------------------------------------
+revno: 3620 [merge]
+committer: Mattias Jonsson <mattias.jonsson@oracle.com>
+branch nick: topush-5.1-sec
+timestamp: Wed 2011-12-14 14:41:40 +0100
+message:
+  merge
+    ------------------------------------------------------------
+    revno: 1810.3997.36 [merge]
+    committer: Mattias Jonsson <mattias.jonsson@oracle.com>
+    branch nick: topush-5.0-sec
+    timestamp: Wed 2011-12-14 14:05:22 +0100
+    message:
+      merge
+        ------------------------------------------------------------
+        revno: 1810.4002.1
+        committer: Mattias Jonsson <mattias.jonsson@oracle.com>
+        branch nick: b12361113-50-sec
+        timestamp: Mon 2011-12-12 14:07:02 +0100
+        message:
+          Bug#12361113: CRASH WHEN "LOAD INDEX INTO CACHE" WITH TOO
+          SMALL KEY CACHE
+          
+          The server crashed on division by zero because the key cache was not
+          initialized and the block length was 0 which was used in a division.
+          
+          The fix was to not allow CACHE INDEX if the key cache was not initiallized.
+          Thus never try LOAD INDEX INTO CACHE for an uninitialized key cache.
+          
+          Also added some windows files/directories to .bzrignore.
+------------------------------------------------------------
+revno: 3619 [merge]
+committer: Georgi Kodinov <Georgi.Kodinov@Oracle.com>
+branch nick: merge-5.1-security
+timestamp: Mon 2011-12-12 12:25:35 +0100
+message:
+  merge 5.1->5.1-security.
+    ------------------------------------------------------------
+    revno: 3560.6.69
+    committer: Tor Didriksen <tor.didriksen@oracle.com>
+    branch nick: 5.1-sighandler
+    timestamp: Wed 2011-11-30 17:11:13 +0100
+    message:
+      Bug#11761576 54082: HANDLE_SEGFAULT MAKES USE OF UNSAFE FUNCTIONS
+      
+      Post-push fix: build break on windows/optimized
+    ------------------------------------------------------------
+    revno: 3560.6.68
+    committer: Tor Didriksen <tor.didriksen@oracle.com>
+    branch nick: 5.1-sighandler
+    timestamp: Wed 2011-11-30 15:39:29 +0100
+    message:
+      Bug#11761576 54082: HANDLE_SEGFAULT MAKES USE OF UNSAFE FUNCTIONS
+      
+      handle_segfault is the signal handler code of mysqld.  however, it makes
+      calls to potentially unsafe functions localtime_r, fprintf, fflush.
+    ------------------------------------------------------------
+    revno: 3560.6.67
+    committer: Tor Didriksen <tor.didriksen@oracle.com>
+    branch nick: 5.1
+    timestamp: Tue 2011-11-29 15:52:47 +0100
+    message:
+      Build broken for gcc 4.5.1 in optimized mode.
+      
+      readline.cc: In function char* batch_readline(LINE_BUFFER*):
+      readline.cc:60:9: error: out_length may be used uninitialized in this function
+      log.cc: In function int find_uniq_filename(char*):
+      log.cc:1857:8: error: number may be used uninitialized in this function
+    ------------------------------------------------------------
+    revno: 3560.6.66
+    committer: Nirbhay Choubey <nirbhay.choubey@oracle.com>
+    branch nick: B11756764-5.1
+    timestamp: Tue 2011-11-29 17:59:35 +0530
+    message:
+      Bug#11756764 48726: MYSQLD KEEPS CRASHING WITH SIGSEGV
+                          WITH MYISAM_USE_MMAP ENABLED
+      
+      MySQL server can crash due to segmentation fault when
+      started with myisam_use_mmap.
+      
+      The reason behind this being, while making a request to
+      unmap (munmap) the previously mapped memory (mmap), the
+      size passed was 7 bytes larger than the size requested at
+      the time of mapping. This can eventually unmap the adjacent
+      memory mapped block, belonging to some other memory-map pool.
+      Hence the subsequent call to mmap can map a region which was
+      still a valid memory mapped area.
+      
+      Fixed by removing the extra 7-byte margin which was erroneously
+      added to the size, used for unmappping.
+    ------------------------------------------------------------
+    revno: 3560.6.65
+    committer: Ashish Agarwal<ashish.y.agarwal@oracle.com>
+    branch nick: bug_93_5.1
+    timestamp: Wed 2011-11-23 18:33:29 +0530
+    message:
+      BUG#11751793 - 42784: ARCHIVE TABLES CAUSE 100% CPU USAGE
+                            AND HANG IN SHOW TABLE STATUS.
+      
+      ISSUE: Table corruption due to concurrent queries.
+             Different threads running insert and check
+             query leads to table corruption. Not properly locked,
+             rows are inserted in between check query.
+      
+      SOLUTION: In check query mutex lock is acquired
+                for a longer time to handle concurrent
+                insert and check query.
+      
+      NOTE: Additionally we backported the fix for CHECKSUM
+            issue(bug#11758979).
+    ------------------------------------------------------------
+    revno: 3560.6.64
+    committer: Jon Olav Hauglid <jon.hauglid@oracle.com>
+    branch nick: mysql-5.1-test
+    timestamp: Tue 2011-11-22 14:16:13 +0100
+    message:
+      Disabling main.query_cache_28249.test since this test fails
+      sporadically on 5.1. See Bug#12584161.
+      
+      Test runs successfully on 5.5/trunk, so this changeset will
+      be null-merged.
+    ------------------------------------------------------------
+    revno: 3560.6.63
+    committer: Inaam Rana <inaam.rana@oracle.com>
+    branch nick: mysql-5.1
+    timestamp: Fri 2011-11-18 10:59:10 -0500
+    message:
+      Bug#13390506 - VALGRIND FAILURE AFTER THE FIX FOR 13371000
+        
+      rb://816
+      approved by: Marko Makela
+        
+      The title is misleading. This bug was actually introduced by
+      bug 12635227 and was unearthed by a later optimization.
+      We need to free buf_page_t structs that we are allocating using
+      malloc() at shutdown.
+    ------------------------------------------------------------
+    revno: 3560.6.62
+    committer: Jorgen Loland <jorgen.loland@oracle.com>
+    branch nick: mysql-5.1
+    timestamp: Fri 2011-11-18 14:47:11 +0100
+    message:
+      Backmerge of BUG#12997905
+    ------------------------------------------------------------
+    revno: 3560.6.61 [merge]
+    committer: Karen Langford <karen.langford@oracle.com>
+    branch nick: mysql-5.1
+    timestamp: Thu 2011-11-17 00:26:16 +0100
+    message:
+      Merge from mysql-5.1.60-release
+        ------------------------------------------------------------
+        revno: 3615.1.2
+        tags: mysql-5.1.60
+        committer: Karen Langford <karen.langford@oracle.com>
+        branch nick: mysql-5.1.60-release
+        timestamp: Sat 2011-10-29 20:08:40 +0200
+        message:
+          Patch to fix stdint.h missing from pre Solaris 10 versions.
