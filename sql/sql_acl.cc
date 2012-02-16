@@ -920,7 +920,10 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
         */
         if (sctx->current_user && opt_mystubby_proxy_user &&
             !strcmp(sctx->current_user, opt_mystubby_proxy_user))
+        {
+          acl_user= acl_user_tmp;
           res= 0;
+        }
 
         /* check password: it should be empty or valid */
         else if (passwd_len == acl_user_tmp->salt_len)
