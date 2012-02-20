@@ -5,8 +5,10 @@
 -- source include/have_innodb.inc
 -- source include/master-slave.inc
 
-# Use instead of SHOW ENGINES so we can get consistent ordering.
-select * from information_schema.engines order by engine;
+# Use instead of SHOW ENGINES so we can filter and get a consistent ordering.
+select * from information_schema.engines
+where engine in ('GoogleStats', 'InnoDB', 'MyISAM')
+order by engine;
 
 show variables like 'log_bin';
 show variables like 'googlestats_query_on_update';
