@@ -34,6 +34,7 @@ our $skip_rpl;
 our $do_test;
 our $skip_test;
 our $skip_combinations;
+our $one_combination;
 our $binlog_format;
 our $enable_disabled;
 our $default_storage_engine;
@@ -469,7 +470,9 @@ sub collect_one_suite($)
         foreach my $option ( $group->options() ) {
 	  push(@{$comb->{comb_opt}}, $option->option());
 	}
-	push(@combinations, $comb);
+	if (! $one_combination || $comb->{name} eq $one_combination) {
+	  push(@combinations, $comb);
+	}
       }
     }
 
@@ -481,6 +484,7 @@ sub collect_one_suite($)
       my @new_cases;
       foreach my $comb (@combinations)
       {
+	print "   + adding combination $comb->{name}\n";
 	foreach my $test (@cases)
 	{
 
