@@ -34,6 +34,7 @@ use mtr_match;
 our $skip_rpl;
 our $do_test;
 our $skip_test;
+our $one_combination;
 our $binlog_format;
 our $enable_disabled;
 our $default_storage_engine;
@@ -305,7 +306,11 @@ sub combinations_from_file($$)
         push(@{$comb->{comb_opt}}, $option->option());
       }
       $comb->{in_overlay} = 1 if $in_overlay;
-      push @combs, $comb;
+      if (! $one_combination || $comb->{name} eq $one_combination ||
+          $comb->{name} eq "xtradb" || $comb->{name} eq "innodb")
+      {
+        push(@combs, $comb);
+      }
     }
     @combs = ({ skip => 'Requires: ' . basename($filename, '.combinations') }) unless @combs;
   }
