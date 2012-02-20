@@ -86,7 +86,9 @@ commit;
 #
 # Truncate the relay log to remove the commit event.
 #
---exec truncate -s $POS $MYSQLD_SLAVE_DATADIR/$LAST_RELAY_LOG;
+let $file= $MYSQLD_SLAVE_DATADIR/$LAST_RELAY_LOG;
+let $size= $POS;
+--source include/truncate_file.inc
 
 #
 # Start the slave's SQL thread, which should error.
