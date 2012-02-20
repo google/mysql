@@ -17,7 +17,9 @@ let $start_log_pos= query_get_value(show binlog events in '$slave_file' from $sl
 let $end_log_pos= query_get_value(show binlog events in '$slave_file' from $slave_pos, End_log_pos, 2);
 let $new_pos= query_get_value(select round($start_log_pos + ($end_log_pos - $start_log_pos)/2) as Pos, Pos, 1);
 
---exec truncate -s $new_pos $MYSQLTEST_VARDIR/mysqld.1/data/$slave_file;
+let $file= $MYSQLTEST_VARDIR/mysqld.1/data/$slave_file;
+let $size= $new_pos;
+--source include/truncate_file.inc
 
 --exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
 
