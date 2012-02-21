@@ -1,18 +1,17 @@
-# Testing with 2 ports on list.
-# 1st port in port list.
-connect (conn1,127.0.0.1,root,,test,$MASTER_MYPORT1);
---replace_result $MASTER_MYPORT1 MASTER_MYPORT1 $ALT_PORT2 ALT_PORT2
+# Test the 1st port in --port list.
+connect (conn1,127.0.0.1,root,,test,$MYPORT1);
+--replace_result $MYPORT1 MYPORT1 $MYPORT2 MYPORT2
 SHOW VARIABLES LIKE "port";
 disconnect conn1;
 
-# 2nd port in port list.
-connect (conn1,127.0.0.1,root,,test,$ALT_PORT2);
---replace_result $MASTER_MYPORT1 MASTER_MYPORT1 $ALT_PORT2 ALT_PORT2
+# Test the 2nd port in --port list.
+connect (conn1,127.0.0.1,root,,test,$MYPORT2);
+--replace_result $MYPORT1 MYPORT1 $MYPORT2 MYPORT2
 SHOW VARIABLES LIKE "port";
 disconnect conn1;
 
-# Port not on list.
+# Test a port not in the --port list.
 --replace_result $MASTER_MYPORT MASTER_MYPORT $MASTER_MYSOCK MASTER_MYSOCK
---Error 2003
+Error 2003;
 connect (conn1,127.0.0.1,root,,test,$MASTER_MYPORT, $MASTER_MYSOCK);
 
