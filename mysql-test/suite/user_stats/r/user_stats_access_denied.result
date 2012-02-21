@@ -242,17 +242,11 @@ revoke all on db2.* from user1@localhost;
 revoke all on db2.* from user2@localhost;
 flush privileges;
 use test;
-select type,db,name from mysql.proc;
+select type,db,name from mysql.proc where db != 'mtr';
 type	db	name
-PROCEDURE	mtr	add_suppression
-PROCEDURE	mtr	check_testcase
-PROCEDURE	mtr	check_warnings
 drop database db2;
-select type,db,name from mysql.proc;
+select type,db,name from mysql.proc where db != 'mtr';
 type	db	name
-PROCEDURE	mtr	add_suppression
-PROCEDURE	mtr	check_testcase
-PROCEDURE	mtr	check_warnings
 delete from mysql.user where user='user1' or user='user2';
 delete from mysql.user where user='' and host='%';
 delete from mysql.procs_priv where user='user1' or user='user2';
