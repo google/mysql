@@ -368,12 +368,12 @@ void Http_request::status(void)
     write_body_fmt("<td>Started: %s -- up %lld seconds<br>\r\n", start_time_str,
                    diff);
   }
-  write_body("<br></td>\r\n");
+  write_body("</td>\r\n");
 
   write_body("<td align=right valign=top>\r\n");
   write_body_fmt("Running on %s<br>\r\n", glob_hostname);
+  write_body_fmt("View <a href=\"/var\">variables</a><br>\r\n");
   write_body("</td></tr></table>\r\n");
-  write_body("<p><a href=\"/var\">Local variables</a></p>");
 
   pthread_mutex_lock(&LOCK_server_started);
   if (mysqld_server_started)
