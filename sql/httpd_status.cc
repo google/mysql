@@ -40,10 +40,13 @@ int Http_request::status_process_list(time_t current_time)
     NULL
   };
 
-  write_table_header("Thread List", headings);
   pthread_mutex_lock(&LOCK_thread_count);
   I_List_iterator<THD> it(threads);
   THD *tmp;
+  if (!threads.is_empty())
+  {
+    write_table_header("Thread List", headings);
+  }
   while ((tmp= it++))
   {
     Security_context *tmp_sctx= tmp->security_ctx;
@@ -376,9 +379,9 @@ void Http_request::status(void)
   if (mysqld_server_started)
   {
     pthread_mutex_unlock(&LOCK_server_started);
-    status_process_list(current_time);
     status_master_status();
     status_slave_status();
+    status_process_list(current_time);
     status_user_statistics();
     status_table_statistics();
   }

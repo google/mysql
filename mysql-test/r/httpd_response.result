@@ -3,6 +3,9 @@ include/master-slave.inc
 Test the ip port
 Test the main page
 Check the master table headers
+   File 
+   Position 
+   Group ID / Server ID 
    Id 
    User 
    Host 
@@ -11,9 +14,6 @@ Check the master table headers
    Time 
    State 
    Info 
-   File 
-   Position 
-   Group ID / Server ID 
    User 
    Total Cxn 
    Concurrent Cxn 
@@ -44,14 +44,6 @@ Check the binary log on the master
 Check the slave connection on the master
    Binlog Dump 
 Check the slave table headers
-   Id 
-   User 
-   Host 
-   Database 
-   Command 
-   Time 
-   State 
-   Info 
    Master Host 
    User 
    Connect Retries 
@@ -61,6 +53,14 @@ Check the slave table headers
    Group ID / Server ID 
    Slave IO / SQL 
    Seconds Behind 
+   Id 
+   User 
+   Host 
+   Database 
+   Command 
+   Time 
+   State 
+   Info 
    User 
    Total Cxn 
    Concurrent Cxn 
@@ -110,6 +110,9 @@ OK
 Test the unix socket
 Test the main page
 Check the master table headers
+   File 
+   Position 
+   Group ID / Server ID 
    Id 
    User 
    Host 
@@ -118,9 +121,6 @@ Check the master table headers
    Time 
    State 
    Info 
-   File 
-   Position 
-   Group ID / Server ID 
    User 
    Total Cxn 
    Concurrent Cxn 
@@ -151,14 +151,6 @@ Check the binary log on the master
 Check the slave connection on the master
    Binlog Dump 
 Check the slave table headers
-   Id 
-   User 
-   Host 
-   Database 
-   Command 
-   Time 
-   State 
-   Info 
    Master Host 
    User 
    Connect Retries 
@@ -168,6 +160,14 @@ Check the slave table headers
    Group ID / Server ID 
    Slave IO / SQL 
    Seconds Behind 
+   Id 
+   User 
+   Host 
+   Database 
+   Command 
+   Time 
+   State 
+   Info 
    User 
    Total Cxn 
    Concurrent Cxn 
