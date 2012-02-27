@@ -784,6 +784,9 @@ log_init(void)
 
 	log_sys->n_log_ios_old = log_sys->n_log_ios;
 	log_sys->last_printout_time = time(NULL);
+
+	log_sys->n_syncs = 0;
+	log_sys->n_checkpoints = 0;
 	/*----------------------------*/
 
 	log_sys->buf_next_to_write = 0;
@@ -1488,6 +1491,7 @@ loop:
 		so we have also flushed to disk what we have written */
 
 		log_sys->flushed_to_disk_lsn = log_sys->write_lsn;
+		log_sys->n_syncs++;
 
 	} else if (flush_to_disk) {
 
@@ -1495,6 +1499,7 @@ loop:
 
 		fil_flush(group->space_id);
 		log_sys->flushed_to_disk_lsn = log_sys->write_lsn;
+		log_sys->n_syncs++;
 	}
 
 	mutex_enter(&(log_sys->mutex));
@@ -1972,6 +1977,7 @@ log_checkpoint(
 	}
 
 	mutex_enter(&(log_sys->mutex));
+	log_sys->n_checkpoints++;
 
 	ut_ad(!recv_no_log_write);
 	oldest_lsn = log_buf_pool_get_oldest_modification();
@@ -3337,12 +3343,15 @@ log_print(
 					log_sys->last_printout_time);
 	fprintf(file,
 		"%lu pending log writes, %lu pending chkp writes\n"
-		"%lu log i/o's done, %.2f log i/o's/second\n",
+		"%lu log i/o's done, %.2f log i/o's/second, "
+		"%lu syncs, %lu checkpoints\n",
 		(ulong) log_sys->n_pending_writes,
 		(ulong) log_sys->n_pending_checkpoint_writes,
 		(ulong) log_sys->n_log_ios,
 		((log_sys->n_log_ios - log_sys->n_log_ios_old)
-		 / time_elapsed));
+		 / time_elapsed),
+		log_sys->n_syncs,
+		log_sys->n_checkpoints);
 
 	age = log_sys->lsn - log_buf_pool_get_oldest_modification();
 	fprintf(file,
