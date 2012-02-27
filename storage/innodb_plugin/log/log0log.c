@@ -97,6 +97,12 @@ archive */
 UNIV_INTERN byte	log_archive_io;
 #endif /* UNIV_LOG_ARCHIVE */
 
+/* Counts number of pages that were flushed (a)synchronously. These frequently
+make user connections wait so this is an indicator for a possible performance
+problem. */
+UNIV_INTERN ib_uint64_t log_pages_flushed_sync = 0;
+UNIV_INTERN ib_uint64_t log_pages_flushed_async = 0;
+
 /* A margin for free space in the log buffer before a log entry is catenated */
 #define LOG_BUF_WRITE_MARGIN	(4 * OS_FILE_LOG_BLOCK_SIZE)
 
@@ -1624,11 +1630,10 @@ log_preflush_pool_modified_pages(
 	ib_uint64_t	new_oldest,	/*!< in: try to advance
 					oldest_modified_lsn at least
 					to this lsn */
-	ibool		sync)		/*!< in: TRUE if synchronous
+	ibool		sync,		/*!< in: TRUE if synchronous
 					operation is desired */
+	ulint*		n_pages)	/*!< out: number of pages flushed */
 {
-	ulint	n_pages;
-
 	if (recv_recovery_on) {
 		/* If the recovery is running, we must first apply all
 		log records to their respective file pages to get the
@@ -1642,17 +1647,17 @@ log_preflush_pool_modified_pages(
 		recv_apply_hashed_log_recs(TRUE);
 	}
 
-	n_pages = buf_flush_batch(BUF_FLUSH_LIST, ULINT_MAX, new_oldest);
+	*n_pages = buf_flush_batch(BUF_FLUSH_LIST, ULINT_MAX, new_oldest);
 
 	if (sync) {
 		buf_flush_wait_batch_end(BUF_FLUSH_LIST);
 	}
 
-	if (n_pages == ULINT_UNDEFINED) {
-
+	if (*n_pages == ULINT_UNDEFINED) {
+		*n_pages = 0;
 		return(FALSE);
 	} else {
-		export_vars.innodb_buffer_pool_flushed_preflush += n_pages;
+		export_vars.innodb_buffer_pool_flushed_preflush += *n_pages;
 	}
 
 	return(TRUE);
@@ -2060,9 +2065,10 @@ log_make_checkpoint_at(
 					physical write will always be made to
 					log files */
 {
+	ulint n_pages;
 	/* Preflush pages synchronously */
 
-	while (!log_preflush_pool_modified_pages(lsn, TRUE));
+	while (!log_preflush_pool_modified_pages(lsn, TRUE, &n_pages));
 
 	while (!log_checkpoint(TRUE, write_always));
 }
@@ -2141,8 +2147,20 @@ loop:
 
 	if (advance) {
 		ib_uint64_t	new_oldest = oldest_lsn + advance;
+		ulint		npages;
 
-		success = log_preflush_pool_modified_pages(new_oldest, sync);
+		success = log_preflush_pool_modified_pages(new_oldest, sync, &npages);
+
+		if (success) {
+			/* This is done in the context of a user's connection.
+			Count these as that might indicate the background IO
+			threads are not keeping up. */
+			if (sync) {
+				log_pages_flushed_sync += npages;
+			} else {
+				log_pages_flushed_async += npages;
+			}
+		}
 
 		/* If the flush succeeded, this thread has done its part
 		and can proceed. If it did not succeed, there was another
@@ -3355,11 +3373,14 @@ log_print(
 
 	age = log_sys->lsn - log_buf_pool_get_oldest_modification();
 	fprintf(file,
+		"Page flushes:                     sync %llu async %llu\n"
 		"Flush margins                     sync %lu async %lu\n"
 		"Space to flush margin             sync %llu async %llu\n"
 		"Current LSN - Oldest modified LSN %llu\n"
 		"Checkpoint age                    %llu\n"
 		"Max checkpoint age                %lu\n",
+		log_pages_flushed_sync,
+		log_pages_flushed_async,
 		log_sys->max_modified_age_sync,
 		log_sys->max_modified_age_async,
 		(age < log_sys->max_modified_age_sync) ?
