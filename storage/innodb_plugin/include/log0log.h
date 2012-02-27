@@ -235,8 +235,9 @@ log_preflush_pool_modified_pages(
 	ib_uint64_t	new_oldest,	/*!< in: try to advance
 					oldest_modified_lsn at least
 					to this lsn */
-	ibool		sync);		/*!< in: TRUE if synchronous
+	ibool		sync,		/*!< in: TRUE if synchronous
 					operation is desired */
+	ulint*		n_pages);	/*!< out: number of pages flushed */
 /******************************************************//**
 Makes a checkpoint. Note that this function does not flush dirty
 blocks from the buffer pool: it only checks what is lsn of the oldest
