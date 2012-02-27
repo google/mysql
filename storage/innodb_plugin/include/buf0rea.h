@@ -79,9 +79,13 @@ Issues read requests for pages which the ibuf module wants to read in, in
 order to contract the insert buffer tree. Technically, this function is like
 a read-ahead function. */
 UNIV_INTERN
-void
+ulint
 buf_read_ibuf_merge_pages(
 /*======================*/
+					/* out: number of read requests.
+					Requests are not made for blocks in
+					the buffer cache or with pending
+					IO requests. */
 	ibool		sync,		/*!< in: TRUE if the caller
 					wants this function to wait
 					for the highest address page

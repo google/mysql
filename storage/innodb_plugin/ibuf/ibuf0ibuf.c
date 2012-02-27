@@ -182,6 +182,10 @@ UNIV_INTERN ibuf_t*	ibuf			= NULL;
 /** Counter for ibuf_should_try() */
 UNIV_INTERN ulint	ibuf_flush_count	= 0;
 
+/** Counters for ibuf_contract_for_n_pages */
+UNIV_INTERN ulint	ibuf_merge_io_requested	= 0;
+UNIV_INTERN ulint	ibuf_merge_io_actual	= 0;
+
 #ifdef UNIV_IBUF_COUNT_DEBUG
 /** Number of tablespaces in the ibuf_counts array */
 #define IBUF_COUNT_N_SPACES	4
@@ -2165,9 +2169,10 @@ ulint
 ibuf_contract_ext(
 /*==============*/
 	ulint*	n_pages,/*!< out: number of pages to which merged */
-	ibool	sync)	/*!< in: TRUE if the caller wants to wait for the
+	ibool	sync,	/*!< in: TRUE if the caller wants to wait for the
 			issued read with the highest tablespace address
 			to complete */
+	ulint*	n_reads)/*!< out: number of pages read into the buffer pool */
 {
 	btr_pcur_t	pcur;
 	ulint		page_nos[IBUF_MAX_N_PAGES_MERGED];
@@ -2178,6 +2183,7 @@ ibuf_contract_ext(
 	mtr_t		mtr;
 
 	*n_pages = 0;
+	*n_reads = 0;
 	ut_ad(!ibuf_inside());
 
 	mutex_enter(&ibuf_mutex);
@@ -2229,8 +2235,8 @@ ibuf_is_empty:
 	mtr_commit(&mtr);
 	btr_pcur_close(&pcur);
 
-	buf_read_ibuf_merge_pages(sync, space_ids, space_versions, page_nos,
-				  n_stored);
+	*n_reads = buf_read_ibuf_merge_pages(sync, space_ids, space_versions,
+					    page_nos, n_stored);
 	*n_pages = n_stored;
 
 	return(sum_sizes + 1);
@@ -2250,8 +2256,9 @@ ibuf_contract(
 			to complete */
 {
 	ulint	n_pages;
+	ulint	n_reads;
 
-	return(ibuf_contract_ext(&n_pages, sync));
+	return(ibuf_contract_ext(&n_pages, sync, &n_reads));
 }
 
 /*********************************************************************//**
@@ -2274,18 +2281,25 @@ ibuf_contract_for_n_pages(
 	ulint	sum_pages	= 0;
 	ulint	n_bytes;
 	ulint	n_pag2;
+	ulint	n_reads		= 0;
+	ulint	reads;
 
 	while (sum_pages < n_pages) {
-		n_bytes = ibuf_contract_ext(&n_pag2, sync);
+          n_bytes = ibuf_contract_ext(&n_pag2, sync, &reads);
 
 		if (n_bytes == 0) {
+			ibuf_merge_io_requested += n_pages;
+			ibuf_merge_io_actual += n_reads;
 			return(sum_bytes);
 		}
 
 		sum_bytes += n_bytes;
 		sum_pages += n_pag2;
+		n_reads += reads;
 	}
 
+	ibuf_merge_io_requested += n_pages;
+	ibuf_merge_io_actual += n_reads;
 	return(sum_bytes);
 }
 
@@ -3731,6 +3745,11 @@ ibuf_print(
 		}
 	}
 #endif /* UNIV_IBUF_COUNT_DEBUG */
+
+	fprintf(file,
+		"Ibuf read pages: %lu requested, %lu actual\n",
+		ibuf_merge_io_requested,
+		ibuf_merge_io_actual);
 
 	mutex_exit(&ibuf_mutex);
 }

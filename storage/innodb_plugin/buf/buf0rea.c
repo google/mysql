@@ -659,9 +659,13 @@ Issues read requests for pages which the ibuf module wants to read in, in
 order to contract the insert buffer tree. Technically, this function is like
 a read-ahead function. */
 UNIV_INTERN
-void
+ulint
 buf_read_ibuf_merge_pages(
 /*======================*/
+					/* out: number of read requests.
+					Requests are not made for blocks in
+					the buffer cache or with pending
+					IO requests. */
 	ibool		sync,		/*!< in: TRUE if the caller
 					wants this function to wait
 					for the highest address page
@@ -683,6 +687,7 @@ buf_read_ibuf_merge_pages(
 					in the arrays */
 {
 	ulint	i;
+	ulint	n_reads = 0;		/* Number of read requests */
 
 	ut_ad(!ibuf_inside());
 #ifdef UNIV_IBUF_DEBUG
@@ -702,7 +707,7 @@ buf_read_ibuf_merge_pages(
 			goto tablespace_deleted;
 		}
 
-		buf_read_page_low(&err, sync && (i + 1 == n_stored),
+		n_reads += buf_read_page_low(&err, sync && (i + 1 == n_stored),
 				  BUF_READ_ANY_PAGE, space_ids[i],
 				  zip_size, TRUE, space_versions[i],
 				  page_nos[i]);
@@ -730,6 +735,7 @@ tablespace_deleted:
 			(ulong) space_ids[0], (ulong) n_stored);
 	}
 #endif /* UNIV_DEBUG */
+	return n_reads;
 }
 
 /********************************************************************//**
