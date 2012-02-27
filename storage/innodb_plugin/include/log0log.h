@@ -862,6 +862,9 @@ struct log_struct{
 					previous printout */
 	time_t		last_printout_time;/*!< when log_print was last time
 					called */
+	ulint		n_syncs;	/*!< number of fsyncs done */
+	ulint		n_checkpoints;	/*!< number of calls to
+					log_checkpoint */
 	/* @} */
 
 	/** Fields involved in checkpoints @{ */
