@@ -4456,6 +4456,26 @@ loop:
 			(ulong) os_n_file_reads, (ulong) os_n_file_writes,
 			(ulong) os_n_fsyncs);
 
+		fprintf(file,
+			"Sync reads: requests %lld, pages %lld, bytes %lld, "
+			"seconds %.2f, msecs/r %.2f\n",
+			export_vars.innodb_os_sync_reads,
+			export_vars.innodb_os_sync_read_pages,
+			export_vars.innodb_os_sync_read_bytes,
+			export_vars.innodb_os_sync_read_usecs / 1000000.0,
+			(export_vars.innodb_os_sync_read_usecs / 1000.0) /
+			(export_vars.innodb_os_sync_reads + 1));
+
+		fprintf(file,
+			"Sync writes: requests %lld, pages %lld, bytes %lld, "
+			"seconds %.2f, msecs/r %.2f\n",
+			export_vars.innodb_os_sync_writes,
+			export_vars.innodb_os_sync_write_pages,
+			export_vars.innodb_os_sync_write_bytes,
+			export_vars.innodb_os_sync_write_usecs / 1000000.0,
+			(export_vars.innodb_os_sync_write_usecs / 1000.0) /
+			(export_vars.innodb_os_sync_writes + 1));
+
 		if (os_file_n_pending_preads != 0
 		    || os_file_n_pending_pwrites != 0) {
 			fprintf(file,
