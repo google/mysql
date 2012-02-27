@@ -3319,6 +3319,7 @@ log_print(
 {
 	double	time_elapsed;
 	time_t	current_time;
+	ib_uint64_t	age;
 
 	mutex_enter(&(log_sys->mutex));
 
@@ -3342,6 +3343,23 @@ log_print(
 		(ulong) log_sys->n_log_ios,
 		((log_sys->n_log_ios - log_sys->n_log_ios_old)
 		 / time_elapsed));
+
+	age = log_sys->lsn - log_buf_pool_get_oldest_modification();
+	fprintf(file,
+		"Flush margins                     sync %lu async %lu\n"
+		"Space to flush margin             sync %llu async %llu\n"
+		"Current LSN - Oldest modified LSN %llu\n"
+		"Checkpoint age                    %llu\n"
+		"Max checkpoint age                %lu\n",
+		log_sys->max_modified_age_sync,
+		log_sys->max_modified_age_async,
+		(age < log_sys->max_modified_age_sync) ?
+		(log_sys->max_modified_age_sync - age) : 0,
+		(age < log_sys->max_modified_age_async) ?
+		(log_sys->max_modified_age_async - age) : 0,
+		age,
+		log_sys->lsn - log_sys->last_checkpoint_lsn,
+		log_sys->max_checkpoint_age);
 
 	log_sys->n_log_ios_old = log_sys->n_log_ios;
 	log_sys->last_printout_time = current_time;
