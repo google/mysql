@@ -996,7 +996,8 @@ buf_flush_write_block_low(
 	}
 #else
 	/* Force the log to the disk before writing the modified block */
-	log_write_up_to(bpage->newest_modification, LOG_WAIT_ALL_GROUPS, TRUE);
+	log_write_up_to(bpage->newest_modification, LOG_WAIT_ALL_GROUPS, TRUE,
+			LOG_SYNC_TYPE_DIRTY_BUFFER);
 #endif
 	switch (buf_page_get_state(bpage)) {
 	case BUF_BLOCK_ZIP_FREE:

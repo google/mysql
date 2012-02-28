@@ -973,18 +973,20 @@ trx_commit_off_kernel(
 				/* Write the log but do not flush it to disk */
 
 				log_write_up_to(lsn, LOG_WAIT_ONE_GROUP,
-						FALSE);
+						FALSE, LOG_SYNC_TYPE_COMMIT_ASYNC);
 			} else {
 				/* Write the log to the log files AND flush
 				them to disk */
 
-				log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, TRUE);
+				log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, TRUE,
+						LOG_SYNC_TYPE_COMMIT_SYNC);
 			}
 		} else if (srv_flush_log_at_trx_commit == 2) {
 
 			/* Write the log but do not flush it to disk */
 
-			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE);
+			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE,
+					LOG_SYNC_TYPE_COMMIT_ASYNC);
 		} else {
 			ut_error;
 		}
@@ -1657,18 +1659,21 @@ trx_commit_complete_for_mysql(
 		if (srv_unix_file_flush_method == SRV_UNIX_NOSYNC) {
 			/* Write the log but do not flush it to disk */
 
-			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE);
+			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE,
+					LOG_SYNC_TYPE_COMMIT_ASYNC);
 		} else {
 			/* Write the log to the log files AND flush them to
 			disk */
 
-			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, TRUE);
+			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, TRUE,
+					LOG_SYNC_TYPE_COMMIT_SYNC);
 		}
 	} else if (srv_flush_log_at_trx_commit == 2) {
 
 		/* Write the log but do not flush it to disk */
 
-		log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE);
+		log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE,
+				LOG_SYNC_TYPE_COMMIT_ASYNC);
 	} else {
 		ut_error;
 	}
@@ -1950,19 +1955,21 @@ trx_prepare_off_kernel(
 			if (srv_unix_file_flush_method == SRV_UNIX_NOSYNC) {
 				/* Write the log but do not flush it to disk */
 
-				log_write_up_to(lsn, LOG_WAIT_ONE_GROUP,
-						FALSE);
+				log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE,
+						LOG_SYNC_TYPE_COMMIT_ASYNC);
 			} else {
 				/* Write the log to the log files AND flush
 				them to disk */
 
-				log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, TRUE);
+				log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, TRUE,
+						LOG_SYNC_TYPE_COMMIT_SYNC);
 			}
 		} else if (srv_flush_log_at_trx_commit == 2) {
 
 			/* Write the log but do not flush it to disk */
 
-			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE);
+			log_write_up_to(lsn, LOG_WAIT_ONE_GROUP, FALSE,
+						LOG_SYNC_TYPE_COMMIT_ASYNC);
 		} else {
 			ut_error;
 		}
