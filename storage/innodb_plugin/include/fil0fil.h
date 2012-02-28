@@ -156,6 +156,16 @@ extern ulint	fil_n_pending_log_flushes;
 /** Number of pending tablespace flushes */
 extern ulint	fil_n_pending_tablespace_flushes;
 
+/** Description of the caller of fil_flush. */
+typedef enum {
+	FLUSH_TYPE_DIRTY_BUFFER,
+	FLUSH_TYPE_OTHER,
+	FLUSH_TYPE_CHECKPOINT,
+	FLUSH_TYPE_LOG_IO_COMPLETE,
+	FLUSH_TYPE_LOG_WRITE_UP_TO,
+	FLUSH_TYPE_ARCHIVE,
+	FLUSH_TYPE_COUNT	/* number of entries in flush_type_t */
+} flush_type_t;
 
 #ifndef UNIV_HOTBACKUP
 /*******************************************************************//**
@@ -656,8 +666,10 @@ UNIV_INTERN
 void
 fil_flush(
 /*======*/
-	ulint	space_id);	/*!< in: file space id (this can be a group of
+	ulint	space_id,	/*!< in: file space id (this can be a group of
 				log files or a tablespace of the database) */
+	flush_type_t	flush_type);
+				/*!< in: identifies the caller */
 /**********************************************************************//**
 Flushes to disk writes in file spaces of the given type possibly cached by
 the OS. */
@@ -665,7 +677,9 @@ UNIV_INTERN
 void
 fil_flush_file_spaces(
 /*==================*/
-	ulint	purpose);	/*!< in: FIL_TABLESPACE, FIL_LOG */
+	ulint	purpose,	/*!< in: FIL_TABLESPACE, FIL_LOG */
+	flush_type_t	flush_type);
+				/*!< in: identifies the caller */
 /******************************************************************//**
 Checks the consistency of the tablespace cache.
 @return	TRUE if ok */
@@ -725,5 +739,13 @@ fil_tablespace_is_being_deleted(
 	ulint		id);	/*!< in: space id */
 
 typedef	struct fil_space_struct	fil_space_t;
+
+/*******************************************************************//**
+Prints internal counters */
+UNIV_INTERN
+void
+fil_print(
+/*======*/
+	FILE *file);	/*!< in: output file */
 
 #endif
