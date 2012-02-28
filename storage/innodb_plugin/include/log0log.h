@@ -46,6 +46,19 @@ typedef struct log_struct	log_t;
 /** Redo log group */
 typedef struct log_group_struct	log_group_t;
 
+/** Description of the caller of log_write_up_to. */
+typedef enum {
+	LOG_SYNC_TYPE_DIRTY_BUFFER = 0,
+	LOG_SYNC_TYPE_BACKGROUND_SYNC,
+	LOG_SYNC_TYPE_BACKGROUND_ASYNC,
+	LOG_SYNC_TYPE_INTERNAL,
+	LOG_SYNC_TYPE_CHECKPOINT_SYNC,
+	LOG_SYNC_TYPE_LOG_ARCHIVE,
+	LOG_SYNC_TYPE_COMMIT_SYNC,
+	LOG_SYNC_TYPE_COMMIT_ASYNC,
+	LOG_SYNC_TYPE_COUNT	/* number of entries in log_sync_type_t */
+} log_sync_type_t;
+
 #ifdef UNIV_DEBUG
 /** Flag: write to log file? */
 extern	ibool	log_do_write;
@@ -203,9 +216,10 @@ log_write_up_to(
 				IB_ULONGLONG_MAX if not specified */
 	ulint		wait,	/*!< in: LOG_NO_WAIT, LOG_WAIT_ONE_GROUP,
 				or LOG_WAIT_ALL_GROUPS */
-	ibool		flush_to_disk);
+	ibool		flush_to_disk,
 				/*!< in: TRUE if we want the written log
 				also to be flushed to disk */
+	log_sync_type_t	caller);/*!< in: identifies the caller */
 /****************************************************************//**
 Does a syncronous flush of the log buffer to disk. */
 UNIV_INTERN
@@ -834,6 +848,11 @@ struct log_struct{
 					AND flushed to disk */
 	ulint		n_pending_writes;/*!< number of currently
 					pending flushes or writes */
+	ulint		log_sync_callers[LOG_SYNC_TYPE_COUNT];
+					/*!< counts calls to log_write_up_to */
+	ulint		log_sync_syncers[LOG_SYNC_TYPE_COUNT];
+					/*!< counts calls to log_write_up_to
+					when log file is sync'd */
 	/* NOTE on the 'flush' in names of the fields below: starting from
 	4.0.14, we separate the write of the log file and the actual fsync()
 	or other method to flush it to disk. The names below shhould really

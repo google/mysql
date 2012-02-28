@@ -791,6 +791,13 @@ log_init(void)
 	log_sys->n_log_ios_old = log_sys->n_log_ios;
 	log_sys->last_printout_time = time(NULL);
 
+	{
+		int i;
+		for (i = 0; i < LOG_SYNC_TYPE_COUNT; i++) {
+			log_sys->log_sync_callers[i] = 0;
+			log_sys->log_sync_syncers[i] = 0;
+		}
+	}
 	log_sys->n_syncs = 0;
 	log_sys->n_checkpoints = 0;
 	/*----------------------------*/
@@ -1331,9 +1338,10 @@ log_write_up_to(
 				IB_ULONGLONG_MAX if not specified */
 	ulint		wait,	/*!< in: LOG_NO_WAIT, LOG_WAIT_ONE_GROUP,
 				or LOG_WAIT_ALL_GROUPS */
-	ibool		flush_to_disk)
+	ibool		flush_to_disk,
 				/*!< in: TRUE if we want the written log
 				also to be flushed to disk */
+	log_sync_type_t	caller)	/*!< in: identifies the caller */
 {
 	log_group_t*	group;
 	ulint		start_offset;
@@ -1344,6 +1352,8 @@ log_write_up_to(
 	ulint		loop_count	= 0;
 #endif /* UNIV_DEBUG */
 	ulint		unlock;
+
+	log_sys->log_sync_callers[caller]++;
 
 	if (recv_no_ibuf_operations) {
 		/* Recovery is running and no operations on the log files are
@@ -1498,6 +1508,7 @@ loop:
 
 		log_sys->flushed_to_disk_lsn = log_sys->write_lsn;
 		log_sys->n_syncs++;
+		log_sys->log_sync_syncers[caller]++;
 
 	} else if (flush_to_disk) {
 
@@ -1506,6 +1517,7 @@ loop:
 		fil_flush(group->space_id);
 		log_sys->flushed_to_disk_lsn = log_sys->write_lsn;
 		log_sys->n_syncs++;
+		log_sys->log_sync_syncers[caller]++;
 	}
 
 	mutex_enter(&(log_sys->mutex));
@@ -1561,7 +1573,8 @@ log_buffer_flush_to_disk(void)
 
 	mutex_exit(&(log_sys->mutex));
 
-	log_write_up_to(lsn, LOG_WAIT_ALL_GROUPS, TRUE);
+	log_write_up_to(lsn, LOG_WAIT_ALL_GROUPS, TRUE,
+			LOG_SYNC_TYPE_BACKGROUND_SYNC);
 }
 
 /****************************************************************//**
@@ -1583,7 +1596,9 @@ log_buffer_sync_in_background(
 
 	mutex_exit(&(log_sys->mutex));
 
-	log_write_up_to(lsn, LOG_NO_WAIT, flush);
+	log_write_up_to(lsn, LOG_NO_WAIT, flush, flush == 1 ?
+			LOG_SYNC_TYPE_BACKGROUND_SYNC :
+			LOG_SYNC_TYPE_BACKGROUND_ASYNC);
 }
 
 /********************************************************************
@@ -1613,7 +1628,8 @@ log_flush_margin(void)
 	mutex_exit(&(log->mutex));
 
 	if (lsn) {
-		log_write_up_to(lsn, LOG_NO_WAIT, FALSE);
+		log_write_up_to(lsn, LOG_NO_WAIT, FALSE,
+				LOG_SYNC_TYPE_INTERNAL);
 	}
 }
 
@@ -1997,7 +2013,8 @@ log_checkpoint(
 	write-ahead-logging algorithm ensures that the log has been flushed
 	up to oldest_lsn. */
 
-	log_write_up_to(oldest_lsn, LOG_WAIT_ALL_GROUPS, TRUE);
+	log_write_up_to(oldest_lsn, LOG_WAIT_ALL_GROUPS, TRUE,
+			LOG_SYNC_TYPE_CHECKPOINT_SYNC);
 
 	mutex_enter(&(log_sys->mutex));
 
@@ -2686,7 +2703,8 @@ arch_none:
 
 		mutex_exit(&(log_sys->mutex));
 
-		log_write_up_to(limit_lsn, LOG_WAIT_ALL_GROUPS, TRUE);
+		log_write_up_to(limit_lsn, LOG_WAIT_ALL_GROUPS, TRUE,
+				LOG_SYNC_TYPE_LOG_ARCHIVE);
 
 		calc_new_limit = FALSE;
 
@@ -3370,6 +3388,34 @@ log_print(
 		 / time_elapsed),
 		log_sys->n_syncs,
 		log_sys->n_checkpoints);
+
+	fprintf(file,
+		"log sync callers: %lu buffer pool, "
+		"background %lu sync and %lu async, %lu internal, "
+		"checkpoint %lu sync, %lu archive, "
+		"commit %lu sync and %lu async\n",
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_DIRTY_BUFFER],
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_BACKGROUND_SYNC],
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_BACKGROUND_ASYNC],
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_INTERNAL],
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_CHECKPOINT_SYNC],
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_LOG_ARCHIVE],
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_COMMIT_SYNC],
+		log_sys->log_sync_callers[LOG_SYNC_TYPE_COMMIT_ASYNC]);
+
+	fprintf(file,
+		"log sync syncers: %lu buffer pool, "
+		"background %lu sync and %lu async, %lu internal, "
+		"checkpoint %lu sync, %lu archive, "
+		"commit %lu sync and %lu async\n",
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_DIRTY_BUFFER],
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_BACKGROUND_SYNC],
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_BACKGROUND_ASYNC],
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_INTERNAL],
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_CHECKPOINT_SYNC],
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_LOG_ARCHIVE],
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_COMMIT_SYNC],
+		log_sys->log_sync_syncers[LOG_SYNC_TYPE_COMMIT_ASYNC]);
 
 	age = log_sys->lsn - log_buf_pool_get_oldest_modification();
 	fprintf(file,
