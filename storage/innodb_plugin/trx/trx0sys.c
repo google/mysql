@@ -612,7 +612,7 @@ trx_sys_doublewrite_init_or_restore_pages(
 		page += UNIV_PAGE_SIZE;
 	}
 
-	fil_flush_file_spaces(FIL_TABLESPACE);
+	fil_flush_file_spaces(FIL_TABLESPACE, FLUSH_TYPE_OTHER);
 
 leave_func:
 	ut_free(unaligned_read_buf);

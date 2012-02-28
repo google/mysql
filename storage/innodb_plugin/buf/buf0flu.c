@@ -571,7 +571,7 @@ buf_flush_sync_datafiles(void)
 	os_aio_wait_until_no_pending_writes();
 
 	/* Now we flush the data to disk (for example, with fsync) */
-	fil_flush_file_spaces(FIL_TABLESPACE);
+	fil_flush_file_spaces(FIL_TABLESPACE, FLUSH_TYPE_DIRTY_BUFFER);
 
 	return;
 }
@@ -743,7 +743,7 @@ corrupted_page:
 flush:
 	/* Now flush the doublewrite buffer data to disk */
 
-	fil_flush(TRX_SYS_SPACE);
+	fil_flush(TRX_SYS_SPACE, FLUSH_TYPE_DIRTY_BUFFER);
 
 	/* We know that the writes have been flushed to disk now
 	and in recovery we will find them in the doublewrite buffer

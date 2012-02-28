@@ -1740,6 +1740,7 @@ srv_printf_innodb_monitor(
 	      "BACKGROUND THREAD\n"
 	      "-----------------\n", file);
 	srv_print_master_thread_info(file);
+	fil_print(file);
 
 	fputs("----------\n"
 	      "SEMAPHORES\n"

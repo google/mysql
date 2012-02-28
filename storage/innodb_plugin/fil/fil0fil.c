@@ -283,6 +283,8 @@ struct fil_system_struct {
 					/* !< TRUE if fil_space_create()
 					has issued a warning about
 					potential space_id reuse */
+	ulint fil_flush_callers[FLUSH_TYPE_COUNT];
+					/*!< calls to fil_flush by caller */
 };
 
 /** The tablespace memory cache. This variable is NULL before the module is
@@ -1001,7 +1003,7 @@ close_more:
 	/* Flush tablespaces so that we can close modified files in the LRU
 	list */
 
-	fil_flush_file_spaces(FIL_TABLESPACE);
+	fil_flush_file_spaces(FIL_TABLESPACE, FLUSH_TYPE_OTHER);
 
 	count++;
 
@@ -1546,6 +1548,12 @@ fil_init(
 	UT_LIST_INIT(fil_system->LRU);
 
 	fil_system->max_n_open = max_n_open;
+
+	{
+		int i;
+		for (i = 0; i < FLUSH_TYPE_COUNT; i++)
+			fil_system->fil_flush_callers[i] = 0;
+	}
 }
 
 /*******************************************************************//**
@@ -2554,7 +2562,7 @@ retry:
 
 		os_thread_sleep(20000);
 
-		fil_flush(id);
+		fil_flush(id, FLUSH_TYPE_OTHER);
 
 		goto retry;
 
@@ -3955,7 +3963,7 @@ fil_extend_space_to_desired_size(
 	size_after_extend, *actual_size); */
 	mutex_exit(&fil_system->mutex);
 
-	fil_flush(space_id);
+	fil_flush(space_id, FLUSH_TYPE_OTHER);
 
 	return(success);
 }
@@ -4521,8 +4529,10 @@ UNIV_INTERN
 void
 fil_flush(
 /*======*/
-	ulint	space_id)	/*!< in: file space id (this can be a group of
+	ulint	space_id,/*!< in: file space id (this can be a group of
 				log files or a tablespace of the database) */
+	flush_type_t	flush_type)
+			/*!< in: identifies the caller */
 {
 	fil_space_t*	space;
 	fil_node_t*	node;
@@ -4530,6 +4540,7 @@ fil_flush(
 	ib_int64_t	old_mod_counter;
 
 	mutex_enter(&fil_system->mutex);
+	fil_system->fil_flush_callers[flush_type]++;
 
 	space = fil_space_get_by_id(space_id);
 
@@ -4636,7 +4647,9 @@ UNIV_INTERN
 void
 fil_flush_file_spaces(
 /*==================*/
-	ulint	purpose)	/*!< in: FIL_TABLESPACE, FIL_LOG */
+	ulint	purpose,	/*!< in: FIL_TABLESPACE, FIL_LOG */
+	flush_type_t	flush_type)
+				/*!< in: identifies the caller */
 {
 	fil_space_t*	space;
 	ulint*		space_ids;
@@ -4676,7 +4689,7 @@ fil_flush_file_spaces(
 	a non-existing space id. */
 	for (i = 0; i < n_space_ids; i++) {
 
-		fil_flush(space_ids[i]);
+          fil_flush(space_ids[i], flush_type);
 	}
 
 	mem_free(space_ids);
@@ -4832,4 +4845,23 @@ fil_close(void)
 	mem_free(fil_system);
 
 	fil_system = NULL;
+}
+
+/****************************************************************//**
+Prints internal counters */
+UNIV_INTERN
+void
+fil_print(
+/*======*/
+	FILE *file)	/*!< in: output file */
+{
+	fprintf(file,
+		"fsync callers: %lu buffer pool, %lu other, %lu checkpoint,"
+		" %lu log aio, %lu log sync, %lu archive\n",
+		fil_system->fil_flush_callers[FLUSH_TYPE_DIRTY_BUFFER],
+		fil_system->fil_flush_callers[FLUSH_TYPE_OTHER],
+		fil_system->fil_flush_callers[FLUSH_TYPE_CHECKPOINT],
+		fil_system->fil_flush_callers[FLUSH_TYPE_LOG_IO_COMPLETE],
+		fil_system->fil_flush_callers[FLUSH_TYPE_LOG_WRITE_UP_TO],
+		fil_system->fil_flush_callers[FLUSH_TYPE_ARCHIVE]);
 }
