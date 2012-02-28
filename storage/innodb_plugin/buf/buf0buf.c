@@ -3443,7 +3443,13 @@ buf_print_io(
 			"Old database pages %lu\n"
 			"Modified db pages  %lu\n"
 			"Pending reads %lu\n"
-			"Pending writes: LRU %lu, flush list %lu, single page %lu\n",
+			"Pending writes:"
+			" LRU %lu, flush list %lu, single page %lu\n"
+			"Total writes:"
+			" LRU %lu, flush list %lu, single page %lu\n"
+			"Write sources:"
+			" free margin %lld, recv %lld, preflush %lld\n"
+			"pct_dirty %.2f\n",
 			(ulong) buf_pool->curr_size,
 			(ulong) UT_LIST_GET_LEN(buf_pool->free),
 			(ulong) UT_LIST_GET_LEN(buf_pool->LRU),
@@ -3454,7 +3460,15 @@ buf_print_io(
 			+ buf_pool->init_flush[BUF_FLUSH_LRU],
 			(ulong) buf_pool->n_flush[BUF_FLUSH_LIST]
 			+ buf_pool->init_flush[BUF_FLUSH_LIST],
-			(ulong) buf_pool->n_flush[BUF_FLUSH_SINGLE_PAGE]);
+			(ulong) buf_pool->n_flush[BUF_FLUSH_SINGLE_PAGE],
+			(ulong) buf_pool->n_flushed[BUF_FLUSH_LRU],
+			(ulong) buf_pool->n_flushed[BUF_FLUSH_LIST],
+			(ulong) buf_pool->n_flushed[BUF_FLUSH_SINGLE_PAGE],
+			export_vars.innodb_buffer_pool_flushed_free_margin,
+			export_vars.innodb_buffer_pool_flushed_recv,
+			export_vars.innodb_buffer_pool_flushed_preflush,
+			((double) (UT_LIST_GET_LEN(buf_pool->flush_list)) /
+			buf_pool->curr_size) * 100.0);
 	}
 
 	current_time = time(NULL);
