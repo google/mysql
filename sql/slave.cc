@@ -2084,6 +2084,11 @@ static int request_dump(MYSQL* mysql, Master_info* mi,
     else
       cmd= COM_BINLOG_DUMP2_50;
     len= 18;
+
+    char llbuf[22];
+    snprintf(llbuf, 22, "%llu", group_id);
+    sql_print_information("Slave IO thread requesting dump from master at "
+                          "group_id=%s, server_id=%u", llbuf, event_server_id);
   }
 
   if (simple_command(mysql, cmd, buf, len, 1))
