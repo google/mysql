@@ -7470,6 +7470,14 @@ int TC_LOG_BINLOG::open(const char *opt_name)
       goto err;
     }
 
+    if (rpl_hierarchical)
+    {
+      char llbuf[22];
+      snprintf(llbuf, 22, "%llu", group_id);
+      sql_print_information("Read group_id=%s, server_id=%u from index file.",
+                            llbuf, last_event_server_id);
+    }
+
     if ((file= open_binlog(&log, log_name, &errmsg)) < 0)
     {
       sql_print_error("%s", errmsg);
@@ -7488,6 +7496,12 @@ int TC_LOG_BINLOG::open(const char *opt_name)
       */
       if (rpl_hierarchical)
       {
+        char llbuf[22];
+        snprintf(llbuf, 22, "%llu", group_id);
+        sql_print_information("Recovered group_id=%s, server_id=%u from "
+                              "most recent binlog.",
+                              llbuf, last_event_server_id);
+
         error|= write_group_id_to_index(log_name, true, true);
 
         /*
