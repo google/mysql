@@ -357,6 +357,13 @@ disconnect foo0;
 --replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
 --error ER_ACCESS_DENIED_ERROR
 connect (foo0, localhost, foo, wrong,,);
+
+# On the failed connection the test case is unblocked and continues executing
+# prior to the code in the server which increments the denied connection for
+# the user executing, creating a race. Attempt to work around the race by
+# introducing a small sleep.
+real_sleep 0.5;
+
 connection default;
 
 echo total_connections should be 1;
@@ -455,6 +462,7 @@ flush user_statistics;
 --replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
 --error ER_ACCESS_DENIED_ERROR
 connect (userDNE, localhost, userDNE,,,);
+real_sleep 0.5;
 
 # userDNE should not exist in the output.
 select user from information_schema.user_statistics where user = 'userDNE';
