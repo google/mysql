@@ -1,3 +1,8 @@
+# Because this test intentionally crashes the server valgrind
+# reports lots of leaked memory. Thus, exclude it from running
+# under valgrind.
+--source include/not_valgrind.inc
+
 source include/master-slave.inc;
 
 call mtr.add_suppression("Failed in mysql_binlog_send.*binlog truncated in the middle of event");
