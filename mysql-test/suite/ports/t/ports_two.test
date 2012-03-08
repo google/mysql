@@ -11,7 +11,7 @@ SHOW VARIABLES LIKE "port";
 disconnect conn1;
 
 # Test a port not in the --port list.
---replace_result $MASTER_MYPORT MASTER_MYPORT $MASTER_MYSOCK MASTER_MYSOCK
+--replace_result $MYPORT3 MYPORT3 $MASTER_MYSOCK MASTER_MYSOCK
 Error 2003;
-connect (conn1,127.0.0.1,root,,test,$MASTER_MYPORT, $MASTER_MYSOCK);
+connect (conn1,127.0.0.1,root,,test,$MYPORT3, $MASTER_MYSOCK);
 
