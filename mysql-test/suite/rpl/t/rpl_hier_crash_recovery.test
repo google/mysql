@@ -5,6 +5,12 @@
 --source include/have_rpl_hierarchical.inc
 --source include/have_debug.inc
 --source include/have_innodb.inc
+
+# Because this test intentionally crashes the server valgrind
+# reports lots of leaked memory. Thus, exclude it from running
+# under valgrind.
+--source include/not_valgrind.inc
+
 --source include/master-slave.inc
 
 # This test intentionally corrupts the bin log of the master.
