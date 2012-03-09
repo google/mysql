@@ -59,19 +59,19 @@ select Role, sum(Total_connections), sum(Select_commands),
 from information_schema.user_statistics
 where Role = 'showrole';
 
-select User, Host, db, Command, Time, State, Info, Role
+select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User;
 
 connection conn1;
 
-select User, Host, db, Command, Time, State, Info, Role
+select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User;
 
 connect (conn4, localhost, showrole, foo,);
 
-select User, Host, db, Command, Time, State, Info, Role
+select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User;
 
