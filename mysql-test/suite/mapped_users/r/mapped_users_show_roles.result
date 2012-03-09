@@ -51,28 +51,28 @@ from information_schema.user_statistics
 where Role = 'showrole';
 Role	sum(Total_connections)	sum(Select_commands)	sum(Lost_connections)	sum(Access_denied)	sum(Empty_queries)
 showrole	2	3	0	0	0
-select User, Host, db, Command, Time, State, Info, Role
+select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User;
-User	Host	db	Command	Time	State	Info	Role
-root	localhost	test	Query	0	executing	select User, Host, db, Command, Time, State, Info, Role
+User	Host	db	Command	State	Info	Role
+root	localhost	test	Query	executing	select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User	root
-showmapuser1	localhost	test	Sleep	1		NULL	showrole
-showmapuser2	localhost	test	Sleep	1		NULL	showrole
-showmapuser3	localhost	test	Sleep	1		NULL	showrole2
-select User, Host, db, Command, Time, State, Info, Role
+showmapuser1	localhost	test	Sleep		NULL	showrole
+showmapuser2	localhost	test	Sleep		NULL	showrole
+showmapuser3	localhost	test	Sleep		NULL	showrole2
+select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User;
-User	Host	db	Command	Time	State	Info	Role
-showmapuser1	localhost	test	Query	0	executing	select User, Host, db, Command, Time, State, Info, Role
+User	Host	db	Command	State	Info	Role
+showmapuser1	localhost	test	Query	executing	select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User	showrole
-select User, Host, db, Command, Time, State, Info, Role
+select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User;
-User	Host	db	Command	Time	State	Info	Role
-showrole	localhost	test	Query	0	executing	select User, Host, db, Command, Time, State, Info, Role
+User	Host	db	Command	State	Info	Role
+showrole	localhost	test	Query	executing	select User, Host, db, Command, State, Info, Role
 from information_schema.processlist
 order by User	showrole
 drop user showrole@localhost;
