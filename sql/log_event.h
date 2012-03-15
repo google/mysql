@@ -962,7 +962,7 @@ public:
     return thd ? thd->db : 0;
   }
 #else
-  Log_event() : temp_buf(0) {}
+  Log_event() : temp_buf(0), flags(0) {}
     /* avoid having to link mysqlbinlog against libpthread */
   static Log_event* read_log_event(IO_CACHE* file,
                                    const Format_description_log_event
