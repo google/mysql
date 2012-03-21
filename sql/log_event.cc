@@ -48,6 +48,7 @@
 my_bool rpl_hierarchical;
 my_bool rpl_hierarchical_act_as_root;
 my_bool rpl_hierarchical_slave_recovery;
+my_bool rpl_hierarchical_50_compat;
 
 /*
   Size of buffer for printing a double in format %.<PREC>g
