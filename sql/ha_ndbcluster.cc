@@ -4005,6 +4005,7 @@ int ha_ndbcluster::info(uint flag)
   if (flag & HA_STATUS_VARIABLE)
   {
     DBUG_PRINT("info", ("HA_STATUS_VARIABLE"));
+    stats.mrr_length_per_rec= table_share->reclength + 2*sizeof(void*) + sizeof(uint16);
     if (m_table_info)
     {
       if (m_ha_not_exact_count)

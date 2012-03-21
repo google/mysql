@@ -2066,6 +2066,7 @@ extern my_bool opt_allow_xa;
 extern ulong opt_reserved_super_connections;
 extern my_bool opt_super_to_set_timestamp;
 extern my_bool rpl_allow_implicit_commit;
+extern my_bool opt_restrict_bka_to_googlestats;
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;

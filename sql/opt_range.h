@@ -349,6 +349,20 @@ class PARAM;
 class SEL_ARG;
 
 /*
+  MRR range sequence, array<QUICK_RANGE> implementation: sequence traversal
+  context.
+*/
+typedef struct st_quick_range_seq_ctx
+{
+  QUICK_RANGE **first;
+  QUICK_RANGE **cur;
+  QUICK_RANGE **last;
+} QUICK_RANGE_SEQ_CTX;
+
+range_seq_t quick_range_seq_init(void *init_param, uint n_ranges, uint flags);
+uint quick_range_seq_next(range_seq_t rseq, KEY_MULTI_RANGE *range);
+
+/*
   Quick select that does a range scan on a single key. The records are
   returned in key order.
 */
@@ -392,6 +406,9 @@ protected:
   friend class QUICK_INDEX_MERGE_SELECT;
   friend class QUICK_ROR_INTERSECT_SELECT;
   friend class QUICK_GROUP_MIN_MAX_SELECT;
+  friend uint quick_range_seq_next(range_seq_t rseq, KEY_MULTI_RANGE *range);
+  friend range_seq_t quick_range_seq_init(void *init_param,
+                                          uint n_ranges, uint flags);
 
   DYNAMIC_ARRAY ranges;     /* ordered array of range ptrs */
   QUICK_RANGE **cur_range;  /* current element in ranges  */
@@ -399,6 +416,19 @@ protected:
   QUICK_RANGE *last_range;
   KEY_PART *key_parts;
   KEY_PART_INFO *key_part_info;
+
+  /* Members needed to use the MRR interface */
+  QUICK_RANGE_SEQ_CTX qr_traversal_ctx;
+
+  /*
+    True if the new MRR will be used. Depends on
+    thd->variables.use_mrr_for_quick_range and
+    restrict_bka_to_googlestats.
+  */
+  bool use_new_mrr_interface;
+  /* Copy from thd->variables.use_mrr_for_quick_range. */
+  bool thd_use_mrr_for_quick_range;
+
   int cmp_next(QUICK_RANGE *range);
   int cmp_prev(QUICK_RANGE *range);
   bool row_in_ranges();

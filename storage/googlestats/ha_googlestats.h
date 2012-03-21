@@ -190,12 +190,12 @@ class ha_googlestats: public handler
   int mrr_range_done;
 
   // The index into the vector orig_keys, to start the FETCH from.
-  int keys_index;
+  uint keys_index;
   // The index into the vector orig_keys, of the last FETCH command, used for
   // restarting a FETCH.
   int keys_index_for_restart;
   // # of keys requested in last fetch, used for FETCH_MULTI.
-  int num_requested_keys;
+  uint num_requested_keys;
 
   // True if FETCH_MULTI can be used to fetch the ranges.  If all the ranges
   // are equalities, then FETCH_MULTI is possible.
@@ -473,9 +473,7 @@ public:
   virtual const COND *cond_push(const COND *cond);
   virtual void cond_pop();
 
-  // TODO(seanrees): multi_range reading is not presently in MySQL 5.1,
-  // return this code to service when it's back.
-  /*virtual ha_rows multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
+  virtual ha_rows multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
                                               void *seq_init_param,
                                               uint n_ranges_arg, uint *bufsz,
                                               uint *flags, COST_VECT *cost);
@@ -486,7 +484,7 @@ public:
                                     uint n_ranges, uint mode,
                                     HANDLER_BUFFER *buf);
   virtual int multi_range_read_next(char **range_info);
-  */
+
   friend class IncrementNonfetch;
   friend class IncrementFetch;
 };

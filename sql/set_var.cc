@@ -324,6 +324,40 @@ static sys_var_thd_ulong	sys_interactive_timeout(&vars, "interactive_timeout",
 						&SV::net_interactive_timeout);
 static sys_var_thd_ulong	sys_join_buffer_size(&vars, "join_buffer_size",
 					     &SV::join_buff_size);
+/*
+  Comments from igor@mysql.com:
+
+  With different settings you use different variant of BKA.
+  Level 5 supports a variant when for each join that uses a join buffer all
+  fields referenced in the query are copied into this buffer and keys submitted
+  to the MRR interface may be not distinct.
+  Level 6 supports a variant when only the fields from the joined table are put
+  into the join buffer attached to the table. The fields from the previous
+  tables are reached by a reference to the join buffers attached to these
+  tables. Keys submitted to the MRR interface may be not distinct for this
+  level (these join caches are called linked).
+
+  Level 7 and 8 supports the counterparts for 5 and 6 where only distinct keys
+  are passed to the MRR interface. Falcon can work only with join caches of
+  these levels.
+
+  Nested outer joins and nested semi-joins (outer joins and semi-joins with
+  more than 1 inner table) can use only join caches of level 6 and 8 (linked
+  caches).
+
+  Setting join_cache_level=1 allows you to use join buffer only for inner cross
+  joins employing Blocked Nested Loops (BNL)Join Algorithm (as it used to be
+  for all previous versions of MySQL) .
+  Setting join_cache_level=2 turns on the linked version of this algorithm.
+  Setting join_cache_level=3(4) allows you to use a BNL variant for outer joins
+  and semi-joins (For such queries we did not use BNL before)
+  Nested outer joins and nested semi-joins cannot work with a join buffer of
+  level 3.
+
+  Setting join_cache_level=0 turns off usage of join buffer for anything.
+*/
+sys_var_thd_ulong sys_join_cache_level(&vars, "join_cache_level",
+                                       &SV::join_cache_level);
 static sys_var_key_buffer_size	sys_key_buffer_size(&vars, "key_buffer_size");
 static sys_var_key_cache_long  sys_key_cache_block_size(&vars, "key_cache_block_size",
 						 offsetof(KEY_CACHE,
@@ -993,6 +1027,13 @@ static sys_var_readonly    sys_repl_report_port(&vars, "report_port", OPT_GLOBAL
 
 sys_var_thd_bool  sys_keep_files_on_create(&vars, "keep_files_on_create", 
                                            &SV::keep_files_on_create);
+
+sys_var_thd_bool  sys_allow_default_mrr_bka(&vars, "allow_default_mrr_bka",
+                                            &SV::allow_default_mrr_bka);
+
+sys_var_thd_bool  sys_use_mrr_for_quick_range(&vars, "use_mrr_for_quick_range",
+                                              &SV::use_mrr_for_quick_range);
+
 /* Read only variables */
 
 static sys_var_have_variable sys_have_compress(&vars, "have_compress", &have_compress);

@@ -1847,6 +1847,7 @@ int ha_myisam::info(uint flag)
     stats.max_data_file_length=  misam_info.max_data_file_length;
     stats.max_index_file_length= misam_info.max_index_file_length;
     stats.create_time= (ulong) misam_info.create_time;
+    stats.mrr_length_per_rec= misam_info.reflength + sizeof(void*);
     ref_length= misam_info.reflength;
     share->db_options_in_use= misam_info.options;
     stats.block_size= myisam_block_size;        /* record block size */

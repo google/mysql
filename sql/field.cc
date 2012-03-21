@@ -1722,6 +1722,12 @@ uint Field::fill_cache_field(CACHE_FIELD *copy)
     copy->type= CACHE_STRIPPED;
     store_length= 2;
   }
+  else if (type() == MYSQL_TYPE_VARCHAR)
+  {
+    copy->type= (pack_length() - row_pack_length()) == 1 ? CACHE_VARSTR1 :
+      CACHE_VARSTR2;
+    store_length= 0;
+  }
   else
   {
     copy->type= 0;

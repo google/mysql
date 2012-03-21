@@ -1035,6 +1035,156 @@ typedef struct st_handler_buffer
   uchar *end_of_used_area;     /* End of area that was used by handler */
 } HANDLER_BUFFER;
 
+
+typedef void *range_seq_t;
+
+typedef struct st_range_seq_if
+{
+  /*
+    Initialize the traversal of range sequence
+
+    SYNOPSIS
+      init()
+        init_params  The seq_init_param parameter
+        n_ranges     The number of ranges obtained
+        flags        A combination of HA_MRR_SINGLE_POINT, HA_MRR_FIXED_KEY
+
+    RETURN
+      An opaque value to be used as RANGE_SEQ_IF::next() parameter
+  */
+  range_seq_t (*init)(void *init_params, uint n_ranges, uint flags);
+
+
+  /*
+    Get the next range in the range sequence
+
+    SYNOPSIS
+      next()
+        seq    The value returned by RANGE_SEQ_IF::init()
+        range  OUT Information about the next range
+
+    RETURN
+      0 - Ok, the range structure filled with info about the next range
+      1 - No more ranges
+  */
+  uint (*next) (range_seq_t seq, KEY_MULTI_RANGE *range);
+
+  /*
+     Check whether range_info orders to skip the next record
+
+     SYNOPSIS
+     skip_record()
+     seq         The value returned by RANGE_SEQ_IF::init()
+     range_info  Information about the next range
+                 (Ignored if MRR_NO_ASSOCIATION is set)
+     rowid       Rowid of the record to be checked (ignored if set to 0)
+
+     RETURN
+     1 - Record with this range_info and/or this rowid shall be filtered
+         out from the stream of records returned by multi_range_read_next()
+     0 - The record shall be left in the stream
+  */
+  bool (*skip_record) (range_seq_t seq, char *range_info, uchar *rowid);
+
+} RANGE_SEQ_IF;
+
+class COST_VECT
+{
+public:
+  double io_count;     /* number of I/O                 */
+  double avg_io_cost;  /* cost of an average I/O oper.  */
+  double cpu_cost;     /* cost of operations in CPU     */
+  double mem_cost;     /* cost of used memory           */
+  double import_cost;  /* cost of remote operations     */
+
+  enum { IO_COEFF=1 };
+  enum { CPU_COEFF=1 };
+  enum { MEM_COEFF=1 };
+  enum { IMPORT_COEFF=1 };
+
+  COST_VECT() {}                              // keep gcc happy
+
+  double total_cost()
+  {
+    return IO_COEFF*io_count*avg_io_cost + CPU_COEFF * cpu_cost +
+           MEM_COEFF*mem_cost + IMPORT_COEFF*import_cost;
+  }
+
+  void zero()
+  {
+    avg_io_cost= 1.0;
+    io_count= cpu_cost= mem_cost= import_cost= 0.0;
+  }
+
+  void multiply(double m)
+  {
+    io_count *= m;
+    cpu_cost *= m;
+    import_cost *= m;
+    /* Don't multiply mem_cost */
+  }
+
+  void add(const COST_VECT* cost)
+  {
+    double io_count_sum= io_count + cost->io_count;
+    add_io(cost->io_count, cost->avg_io_cost);
+    io_count= io_count_sum;
+    cpu_cost += cost->cpu_cost;
+  }
+  void add_io(double add_io_cnt, double add_avg_cost)
+  {
+    double io_count_sum= io_count + add_io_cnt;
+    avg_io_cost= (io_count * avg_io_cost +
+                  add_io_cnt * add_avg_cost) / io_count_sum;
+    io_count= io_count_sum;
+  }
+};
+
+/*
+  The below two are not used (and not handled) in this milestone of this WL
+  entry because there seems to be no use for them at this stage of
+  implementation.
+*/
+#define HA_MRR_SINGLE_POINT 1
+#define HA_MRR_FIXED_KEY  2
+
+/*
+  Indicates that RANGE_SEQ_IF::next(&range) doesn't need to fill in the
+  'range' parameter.
+*/
+#define HA_MRR_NO_ASSOCIATION 4
+
+/*
+  The MRR user will provide ranges in key order, and MRR implementation
+  must return rows in key order.
+*/
+#define HA_MRR_SORTED 8
+
+/* MRR implementation doesn't have to retrieve full records */
+#define HA_MRR_INDEX_ONLY 16
+
+/*
+  The passed memory buffer is of maximum possible size, the caller can't
+  assume larger buffer.
+*/
+#define HA_MRR_LIMITS 32
+
+
+/*
+  Flag set <=> default MRR implementation is used
+  (The choice is made by **_info[_const]() function which may set this
+   flag. SQL layer remembers the flag value and then passes it to
+   multi_read_range_init().
+*/
+#define HA_MRR_USE_DEFAULT_IMPL 64
+
+/*
+  Used only as parameter to multi_range_read_info():
+  Flag set <=> the caller guarantees that the bounds of the scanned ranges
+  will not have NULL values.
+*/
+#define HA_MRR_NO_NULL_ENDPOINTS 128
+
 typedef struct system_status_var SSV;
 
 class ha_statistics
@@ -1061,6 +1211,11 @@ public:
   ulong check_time;
   ulong update_time;
   uint block_size;			/* index block size */
+
+  /*
+    number of buffer bytes that native mrr implementation needs,
+  */
+  uint mrr_length_per_rec;
 
   ha_statistics():
     data_file_length(0), max_data_file_length(0),
@@ -1110,6 +1265,29 @@ public:
   KEY_MULTI_RANGE *multi_range_curr;
   KEY_MULTI_RANGE *multi_range_end;
   HANDLER_BUFFER *multi_range_buffer;
+
+  /** MultiRangeRead-related members: */
+  range_seq_t mrr_iter;   /* Interator to traverse the range sequence */
+  RANGE_SEQ_IF mrr_funcs; /* Range sequence traversal functions */
+  uint ranges_in_seq;     /* Total number of ranges in the traversed sequence */
+  /* TRUE <=> source MRR ranges and the output are ordered */
+  bool mrr_is_output_sorted;
+
+  /** TRUE <=> we're currently traversing a range in mrr_cur_range. */
+  bool mrr_have_range;
+  /** Current range (the one we're now returning rows from) */
+  KEY_MULTI_RANGE mrr_cur_range;
+  virtual ha_rows multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
+                                              void *seq_init_param,
+                                              uint n_ranges_arg, uint *bufsz,
+                                              uint *flags, COST_VECT *cost);
+  virtual int multi_range_read_info(uint keyno, uint n_ranges, uint n_rows,
+                                    uint *bufsz, uint *flags, COST_VECT *cost);
+  virtual int multi_range_read_init(RANGE_SEQ_IF *seq_funcs,
+                                    void *seq_init_param,
+                                    uint n_ranges, uint mode,
+                                    HANDLER_BUFFER *buf);
+  virtual int multi_range_read_next(char **range_info);
 
   /** The following are for read_range() */
   key_range save_end_range, *end_range;
@@ -1988,6 +2166,7 @@ private:
   int version_table_stats;
 };
 
+bool key_uses_partial_cols(TABLE *table, uint keyno);
 
 	/* Some extern variables used with handlers */
 

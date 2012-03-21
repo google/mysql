@@ -215,6 +215,10 @@ int mysql_load(THD *thd,sql_exchange *ex,TABLE_LIST *table_list,
   */
   transactional_table= table->file->has_transactions() || rpl_hierarchical;
 
+  // TODO(seanrees): copied in from the BKA port; this seems unnecessary here.
+  if (table->found_next_number_field)
+    table->mark_auto_increment_column();
+
   if (!fields_vars.elements)
   {
     Field **field;

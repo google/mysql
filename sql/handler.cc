@@ -4539,6 +4539,121 @@ TYPELIB *ha_known_exts(void)
   return &known_extensions;
 }
 
+bool key_uses_partial_cols(TABLE *table, uint keyno)
+{
+  KEY_PART_INFO *kp= table->key_info[keyno].key_part;
+  KEY_PART_INFO *kp_end= kp + table->key_info[keyno].key_parts;
+
+  for (; kp != kp_end; kp++)
+  {
+    if (!kp->field->part_of_key.is_set(keyno))
+      return true;
+  }
+
+  return false;
+}
+
+ha_rows handler::multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
+                                             void *seq_init_param,
+                                             uint n_ranges_arg, uint *bufsz,
+                                             uint *flags, COST_VECT *cost)
+{
+  DBUG_ASSERT(0);
+  return 1;
+}
+
+int handler::multi_range_read_info(uint keyno, uint n_ranges, uint n_rows,
+                                   uint *bufsz, uint *flags, COST_VECT *cost)
+{
+  /* Default implementation doesn't need a buffer. */
+  *bufsz= 0;
+
+  if (*flags & HA_MRR_INDEX_ONLY ||
+      (keyno == table->s->primary_key && primary_key_is_clustered()) ||
+      key_uses_partial_cols(table, keyno))
+  {
+    /*
+      Tell the optimizer we are using the default implementation. This will
+      disallow BKA for this table, unless allow_default_mrr_bka is on.
+    */
+    *flags|= HA_MRR_USE_DEFAULT_IMPL;
+  }
+
+  cost->zero();
+  cost->avg_io_cost= 1;                         /* assume random seeks */
+
+  /* Produce the same cost as non-MRR code does */
+  cost->io_count= read_time(keyno, n_ranges, n_rows);
+
+  return 0;
+}
+
+int handler::multi_range_read_init(RANGE_SEQ_IF *seq_funcs,
+                                   void *seq_init_param,
+                                   uint n_ranges, uint mode,
+                                   HANDLER_BUFFER *buf)
+{
+  DBUG_ENTER("handler::multi_range_read_init");
+  mrr_iter= seq_funcs->init(seq_init_param, n_ranges, mode);
+  mrr_funcs= *seq_funcs;
+  mrr_is_output_sorted= test(mode & HA_MRR_SORTED);
+  mrr_have_range= FALSE;
+  DBUG_RETURN(0);
+}
+
+int handler::multi_range_read_next(char **range_info)
+{
+  int result;
+  int range_res;
+  DBUG_ENTER("handler::multi_range_read_next");
+  LINT_INIT(result);
+
+  if (!mrr_have_range)
+  {
+    mrr_have_range= TRUE;
+    goto start;
+  }
+
+  do
+  {
+    /* Save a call if there can be only one row in range. */
+    if (mrr_cur_range.range_flag != (UNIQUE_RANGE | EQ_RANGE))
+    {
+      result= read_range_next();
+
+      /* On success or non-EOF errors jump to the end. */
+      if (result != HA_ERR_END_OF_FILE)
+        break;
+    }
+    else
+    {
+      /*
+        We need to set this for the last range only, but checking this
+        condition is more expensive than just setting the result code.
+      */
+      result= HA_ERR_END_OF_FILE;
+    }
+
+start:
+    /* Try the next range(s) until one matches a record. */
+    while (!(range_res= mrr_funcs.next(mrr_iter, &mrr_cur_range)))
+    {
+      result= read_range_first(mrr_cur_range.start_key.keypart_map ?
+                               &mrr_cur_range.start_key : 0,
+                               mrr_cur_range.end_key.keypart_map ?
+                               &mrr_cur_range.end_key : 0,
+                               test(mrr_cur_range.range_flag & EQ_RANGE),
+                               mrr_is_output_sorted);
+      if (result != HA_ERR_END_OF_FILE)
+        break;
+    }
+  }
+  while ((result == HA_ERR_END_OF_FILE) && !range_res);
+
+  *range_info= mrr_cur_range.ptr;
+  DBUG_PRINT("exit",("handler::multi_range_read_next result %d", result));
+  DBUG_RETURN(result);
+}
 
 static bool stat_print(THD *thd, const char *type, uint type_len,
                        const char *file, uint file_len,
