@@ -197,6 +197,7 @@ struct sql_ex_info
 extern my_bool rpl_hierarchical;
 extern my_bool rpl_hierarchical_act_as_root;
 extern my_bool rpl_hierarchical_slave_recovery;
+extern my_bool rpl_hierarchical_50_compat;
 
 /*****************************************************************************
 

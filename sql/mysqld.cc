@@ -5808,7 +5808,8 @@ enum options_mysqld
   OPT_RPL_HIERARCHICAL_ENABLED,
   OPT_RPL_HIERARCHICAL_ACT_AS_ROOT,
   OPT_RPL_HIERARCHICAL_CACHE_FREQUENCY,
-  OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY
+  OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY,
+  OPT_RPL_HIERARCHICAL_50_COMPAT
 };
 
 
@@ -7338,27 +7339,31 @@ thread is in the relay logs.",
    "events (i.e. the COMMIT) were somehow skipped.",
    &rpl_allow_implicit_commit, &rpl_allow_implicit_commit,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
-  {"rpl_hierarchical", OPT_RPL_HIERARCHICAL_ENABLED,
+  {"rpl-hierarchical", OPT_RPL_HIERARCHICAL_ENABLED,
    "Enable replication global group IDs and hierarchical replication "
    "features. Must set --log-bin and --log-slave-updates to use this.",
-   &rpl_hierarchical, 0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
-  {"rpl_hierarchical_act_as_root", OPT_RPL_HIERARCHICAL_ACT_AS_ROOT,
+   &rpl_hierarchical, 0, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"rpl-hierarchical-act-as-root", OPT_RPL_HIERARCHICAL_ACT_AS_ROOT,
    "Used for testing rpl_hierarchical. Makes a slave pretend to be "
    "the root master, issuing group_ids for events rather than preserving the "
    "group_ids from the real master.", &rpl_hierarchical_act_as_root,
-   0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
-  {"rpl_hierarchical_cache_frequency", OPT_RPL_HIERARCHICAL_CACHE_FREQUENCY,
+   0, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"rpl-hierarchical-cache-frequency", OPT_RPL_HIERARCHICAL_CACHE_FREQUENCY,
    "Group IDs which are a multiple of this value are inserted into a "
    "cache to make converting group ID to log name and pos faster. Disable "
    "by setting to 0.",
    &rpl_hierarchical_cache_frequency_not_thd_safe,
    &rpl_hierarchical_cache_frequency_not_thd_safe,
    0, GET_ULL, REQUIRED_ARG, 5000, 0, (longlong) ULONG_MAX, 0, 1, 0},
-  {"rpl_hierarchical_slave_recovery", OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY,
+  {"rpl-hierarchical-slave-recovery", OPT_RPL_HIERARCHICAL_SLAVE_RECOVERY,
    "Use hierarchical information to connect to the master if a recovery of"
    "the bin log is done at server start.",
    &rpl_hierarchical_slave_recovery,
-   0, 0, GET_BOOL, NO_ARG, 1, 0, 1, 0, 1, 0},
+   0, 0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"rpl-hierarchical-50-compatible", OPT_RPL_HIERARCHICAL_50_COMPAT,
+   "Enable the code which maps commands so that 5.1 can server as both a "
+   "master and a slave to a 5.0 server and use CONNECT_USING_GROUP_ID.",
+   &rpl_hierarchical_50_compat, 0, 0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
