@@ -652,18 +652,15 @@ int Repl_semi_sync::report_reply_binlog(THD      *thd,
 
   function_enter(who);
 
-  lock();
-
-  /* This is the real check inside the mutex. */
-  if (!get_master_enabled())
-    goto end;
-
   /*
     Sanity check the log and pos from the reply. If it is from the 'future'
     then the slave is horked in some way or the packet was corrupted
     on the network. In either case we should ignore the reply.
 
-    NOTE: get_current_log acquired LOCK_log.
+    NOTE: get_current_log acquires LOCK_log so must be called prior to
+    calling lock() to avoid a deadlock between this thread and a thread
+    inside Repl_semi_sync::write_tranx_in_binlog which also acquires both
+    locks.
   */
   if (mysql_bin_log.get_current_log(&linfo))
   {
@@ -671,6 +668,12 @@ int Repl_semi_sync::report_reply_binlog(THD      *thd,
                     "current binlog position for sanity check.");
     goto end;
   }
+
+  lock();
+
+  /* This is the real check inside the mutex. */
+  if (!get_master_enabled())
+    goto end;
 
   if (Active_tranx::compare(log_file_name, log_file_pos,
                             base_name(linfo.log_file_name), linfo.pos) > 0)
