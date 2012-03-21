@@ -825,6 +825,12 @@ static char *opt_audit_log_filter;
 */
 extern my_bool opt_checksum_temp_files;
 
+/*
+  If --restrict_bka_to_googlestats, we only allow BKA for use on
+  GoogleStats tables.
+*/
+my_bool opt_restrict_bka_to_googlestats;
+
 int orig_argc;
 char **orig_argv;
 
@@ -6226,7 +6232,7 @@ enum options_mysqld
   OPT_DELAYED_INSERT_LIMIT, OPT_DELAYED_QUEUE_SIZE,
   OPT_FLUSH_TIME, OPT_FT_MIN_WORD_LEN, OPT_FT_BOOLEAN_SYNTAX,
   OPT_FT_MAX_WORD_LEN, OPT_FT_QUERY_EXPANSION_LIMIT, OPT_FT_STOPWORD_FILE,
-  OPT_INTERACTIVE_TIMEOUT, OPT_JOIN_BUFF_SIZE,
+  OPT_INTERACTIVE_TIMEOUT, OPT_JOIN_BUFF_SIZE, OPT_JOIN_CACHE_LEVEL,
   OPT_KEY_BUFFER_SIZE, OPT_KEY_CACHE_BLOCK_SIZE,
   OPT_KEY_CACHE_DIVISION_LIMIT, OPT_KEY_CACHE_AGE_THRESHOLD,
   OPT_LONG_QUERY_TIME,
@@ -6377,7 +6383,10 @@ enum options_mysqld
   OPT_SQL_LOG_DDL_BASE64_ENCODE_STMTS,
   OPT_SQL_LOG_ERR_ABORTS_TXN,
   OPT_SQL_LOG_CACHE_SIZE,
-  OPT_SQL_LOG_CACHE_SIZE_MAX
+  OPT_SQL_LOG_CACHE_SIZE_MAX,
+  OPT_RESTRICT_BKA_TO_GOOGLESTATS,
+  OPT_USE_MRR_FOR_QUICK_RANGE,
+  OPT_ALLOW_DEFAULT_MRR_BKA
 };
 
 
@@ -7119,6 +7128,11 @@ thread is in the relay logs.",
    MYSQL_PORT, 0, 0, 0, 0, 0},
   {"report-user", OPT_REPORT_USER, "Undocumented.", &report_user,
    &report_user, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"restrict-bka-to-googlestats", OPT_RESTRICT_BKA_TO_GOOGLESTATS,
+   "Allow batched key access only for googlestats tables when true.",
+   &opt_restrict_bka_to_googlestats,
+   &opt_restrict_bka_to_googlestats,
+   0, GET_BOOL, NO_ARG, 1, 0, 1, 0, 0, 0},
   {"rpl-recovery-rank", OPT_RPL_RECOVERY_RANK, "Undocumented.",
    &rpl_recovery_rank, &rpl_recovery_rank, 0, GET_ULONG,
    REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
@@ -7427,6 +7441,18 @@ thread is in the relay logs.",
    &global_system_variables.keep_files_on_create,
    &max_system_variables.keep_files_on_create,
    0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"join_cache_level", OPT_JOIN_CACHE_LEVEL,
+   "Controls what join operations can be executed with join buffers. Odd "
+   "numbers are used for plain join buffers while even numbers are used "
+   "for linked buffers. Valid levels are: 1,2 - join buffer is used only "
+   "for inner joins with 'JT_ALL' access method,  3,4 - join buffer is "
+   "used for any join operation (inner join, outer join, semi-join) with "
+   "'JT_ALL' access method. 5,6 - JOIN_CACHE_BKA object is used for index "
+   "access to joined table, 7,8 - JOIN_CACHE_BKA_UNIQUE object is used "
+   "for index access to joined table.",
+   &global_system_variables.join_cache_level,
+   &max_system_variables.join_cache_level,
+   0, GET_ULONG, REQUIRED_ARG, 1, 0, 8, 0, 1, 0},
   {"key_buffer_size", OPT_KEY_BUFFER_SIZE,
    "The size of the buffer used for index blocks for MyISAM tables. Increase "
    "this to get better index handling (for all reads and multiple writes) to "
@@ -8085,6 +8111,19 @@ thread is in the relay logs.",
    "Can be used to restrict the total size used to cache a sql_log transaction",
    &sql_log_cache_size_max, &sql_log_cache_size_max, 0,
    GET_ULONG, REQUIRED_ARG, ~0L, IO_SIZE, ~0L, 0, IO_SIZE, 0},
+  {"use_mrr_for_quick_range", OPT_USE_MRR_FOR_QUICK_RANGE,
+   "Enable multi-range read for quick ranges. If true, this will use the new "
+   "MRR interface (and possibly batched key access) to execute quick ranges "
+   "(IN lists)",
+   &global_system_variables.use_mrr_for_quick_range,
+   &max_system_variables.use_mrr_for_quick_range, 0, GET_BOOL, NO_ARG,
+   0, 0, 0, 0, 0, 0},
+  {"allow_default_mrr_bka", OPT_ALLOW_DEFAULT_MRR_BKA,
+   "Allow batched key access for the default MRR implementation. Original "
+   "mysql 6.0 code does not use BKA for the default MRR impl.",
+   &global_system_variables.allow_default_mrr_bka,
+   &max_system_variables.allow_default_mrr_bka,
+   0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -8835,6 +8874,7 @@ static int mysql_init_variables(void)
                                                  &slave_exec_mode_typelib,
                                                  NULL, &error);
   opt_deprecated_engines= (char*)"";
+  opt_restrict_bka_to_googlestats= TRUE;
 
   /* Default mode string must not yield a error. */
   DBUG_ASSERT(!error);

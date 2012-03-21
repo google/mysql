@@ -190,6 +190,10 @@ private:
     }
     return false;
   }
+
+  friend void st_table::mark_columns_needed_for_insert(void);
+  friend void st_table::mark_columns_needed_for_update(void);
+  friend void st_table::mark_columns_needed_for_delete(void);
 };
 
 extern const LEX_STRING trg_action_time_type_names[];
@@ -208,4 +212,3 @@ bool load_table_name_for_trigger(THD *thd,
                                  const sp_name *trg_name,
                                  const LEX_STRING *trn_path,
                                  LEX_STRING *tbl_name);
-

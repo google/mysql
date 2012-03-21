@@ -1863,6 +1863,7 @@ tz_load_from_open_tables(const String *tz_name, TABLE_LIST *tz_tables)
   */
   table= tz_tables->table;
   tz_tables= tz_tables->next_local;
+  table->use_all_columns();
   table->field[0]->store(tz_name->ptr(), tz_name->length(),
                          &my_charset_latin1);
   /*
@@ -1896,6 +1897,7 @@ tz_load_from_open_tables(const String *tz_name, TABLE_LIST *tz_tables)
     using the only index in this table).
   */
   table= tz_tables->table;
+  table->use_all_columns();
   tz_tables= tz_tables->next_local;
   table->field[0]->store((longlong) tzid, TRUE);
   (void)table->file->ha_index_init(0, 1);
@@ -1923,6 +1925,7 @@ tz_load_from_open_tables(const String *tz_name, TABLE_LIST *tz_tables)
     Right - using special index.
   */
   table= tz_tables->table;
+  table->use_all_columns();
   tz_tables= tz_tables->next_local;
   table->field[0]->store((longlong) tzid, TRUE);
   (void)table->file->ha_index_init(0, 1);
@@ -1995,6 +1998,7 @@ tz_load_from_open_tables(const String *tz_name, TABLE_LIST *tz_tables)
     in ascending order by index scan also satisfies us.
   */
   table= tz_tables->table; 
+  table->use_all_columns();
   table->field[0]->store((longlong) tzid, TRUE);
   (void)table->file->ha_index_init(0, 1);
 

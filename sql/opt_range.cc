@@ -1100,7 +1100,8 @@ QUICK_SELECT_I::QUICK_SELECT_I()
 
 QUICK_RANGE_SELECT::QUICK_RANGE_SELECT(THD *thd, TABLE *table, uint key_nr,
                                        bool no_alloc, MEM_ROOT *parent_alloc)
-  :dont_free(0),error(0),free_file(0),in_range(0),cur_range(NULL),last_range(0)
+  :dont_free(0),error(0),free_file(0),in_range(0),cur_range(NULL),last_range(0),
+   use_new_mrr_interface(false)
 {
   my_bitmap_map *bitmap;
   DBUG_ENTER("QUICK_RANGE_SELECT::QUICK_RANGE_SELECT");
@@ -1118,6 +1119,7 @@ QUICK_RANGE_SELECT::QUICK_RANGE_SELECT(THD *thd, TABLE *table, uint key_nr,
   multi_range_length= 0;
   multi_range= NULL;
   multi_range_buff= NULL;
+  thd_use_mrr_for_quick_range= thd->variables.use_mrr_for_quick_range;
 
   if (!no_alloc && !parent_alloc)
   {
@@ -4884,14 +4886,28 @@ static TRP_RANGE *get_key_scans_params(PARAM *param, SEL_TREE *tree,
       }
       else
       {
-        /*
-          cost(read_through_index) = cost(disk_io) + cost(row_in_range_checks)
-          The row_in_range check is in QUICK_RANGE_SELECT::cmp_next function.
-        */
-	found_read_time= param->table->file->read_time(keynr,
-                                                       param->range_count,
-                                                       found_records) +
-			 cpu_cost + 0.01;
+        if (!param->thd->variables.use_mrr_for_quick_range)
+        {
+          /*
+            cost(read_through_index) = cost(disk_io) + cost(row_in_range_checks)
+            The row_in_range check is in QUICK_RANGE_SELECT::cmp_next function.
+          */
+          found_read_time= param->table->file->read_time(keynr,
+                                                         param->range_count,
+                                                         found_records) +
+                           cpu_cost + 0.01;
+        }
+        else
+        {
+          /* Use the new MRR cost functions for the MRR interface. */
+          uint flags= 0;
+          uint bufsz= 4096;
+          COST_VECT cost;
+          param->table->file->multi_range_read_info(keynr, param->range_count,
+                                                    found_records, &bufsz,
+                                                    &flags, &cost);
+          found_read_time= cost.io_count + cpu_cost + 0.01;
+        }
       }
       DBUG_PRINT("info",("key %s: found_read_time: %g (cur. read_time: %g)",
                          param->table->key_info[keynr].name, found_read_time,
@@ -8461,6 +8477,10 @@ int QUICK_RANGE_SELECT::reset()
   in_range= FALSE;
   cur_range= (QUICK_RANGE**) ranges.buffer;
 
+  /* variables used for the new MRR interface. */
+  HANDLER_BUFFER empty_buf;
+  uint mrr_flags= 0;
+
   if (file->inited == handler::NONE)
   {
     if (in_ror_merged_scan)
@@ -8470,68 +8490,151 @@ int QUICK_RANGE_SELECT::reset()
   }
 
   /* Do not allocate the buffers twice. */
-  if (multi_range_length)
+  if (!multi_range_length)
   {
-    DBUG_ASSERT(multi_range_length == min(multi_range_count, ranges.elements));
-    DBUG_RETURN(0);
-  }
 
-  /* Allocate the ranges array. */
-  DBUG_ASSERT(ranges.elements);
-  multi_range_length= min(multi_range_count, ranges.elements);
-  DBUG_ASSERT(multi_range_length > 0);
-  while (multi_range_length && ! (multi_range= (KEY_MULTI_RANGE*)
-                                  my_malloc(multi_range_length *
-                                            sizeof(KEY_MULTI_RANGE),
-                                            MYF(MY_WME))))
-  {
-    /* Try to shrink the buffers until it is 0. */
-    multi_range_length/= 2;
-  }
-  if (! multi_range)
-  {
-    multi_range_length= 0;
-    DBUG_RETURN(HA_ERR_OUT_OF_MEM);
-  }
-
-  /* Allocate the handler buffer if necessary.  */
-  if (file->ha_table_flags() & HA_NEED_READ_RANGE_BUFFER)
-  {
-    mrange_bufsiz= min(multi_range_bufsiz,
-                       ((uint)QUICK_SELECT_I::records + 1)* head->s->reclength);
-
-    while (mrange_bufsiz &&
-           ! my_multi_malloc(MYF(MY_WME),
-                             &multi_range_buff,
-                             (uint) sizeof(*multi_range_buff),
-                             &mrange_buff, (uint) mrange_bufsiz,
-                             NullS))
+    /* Allocate the ranges array. */
+    DBUG_ASSERT(ranges.elements);
+    multi_range_length= min(multi_range_count, ranges.elements);
+    DBUG_ASSERT(multi_range_length > 0);
+    while (multi_range_length && !(multi_range= (KEY_MULTI_RANGE*)
+                                   my_malloc(multi_range_length *
+                                             sizeof(KEY_MULTI_RANGE),
+                                             MYF(MY_WME))))
     {
-      /* Try to shrink the buffers until both are 0. */
-      mrange_bufsiz/= 2;
+      /* Try to shrink the buffers until it is 0. */
+      multi_range_length/= 2;
     }
-    if (! multi_range_buff)
+    if (!multi_range)
     {
-      my_free((char*) multi_range, MYF(0));
-      multi_range= NULL;
       multi_range_length= 0;
       DBUG_RETURN(HA_ERR_OUT_OF_MEM);
     }
 
-    /* Initialize the handler buffer. */
-    multi_range_buff->buffer= mrange_buff;
-    multi_range_buff->buffer_end= mrange_buff + mrange_bufsiz;
-    multi_range_buff->end_of_used_area= mrange_buff;
-#ifdef HAVE_purify
-    /*
-      We need this until ndb will use the buffer efficiently
-      (Now ndb stores  complete row in here, instead of only the used fields
-      which gives us valgrind warnings in compare_record[])
-    */
-    bzero((char*) mrange_buff, mrange_bufsiz);
-#endif
+    /* Allocate the handler buffer if necessary.  */
+    if (file->ha_table_flags() & HA_NEED_READ_RANGE_BUFFER)
+    {
+      mrange_bufsiz= min(multi_range_bufsiz,
+                         (QUICK_SELECT_I::records + 1) * head->s->reclength);
+
+      while (mrange_bufsiz &&
+             !my_multi_malloc(MYF(MY_WME),
+                              &multi_range_buff, sizeof(*multi_range_buff),
+                              &mrange_buff, mrange_bufsiz,
+                              NullS))
+      {
+        /* Try to shrink the buffers until both are 0. */
+        mrange_bufsiz/= 2;
+      }
+      if (!multi_range_buff)
+      {
+        my_free((char*) multi_range, MYF(0));
+        multi_range= NULL;
+        multi_range_length= 0;
+        DBUG_RETURN(HA_ERR_OUT_OF_MEM);
+      }
+
+      /* Initialize the handler buffer. */
+      multi_range_buff->buffer= (uchar*)mrange_buff;
+      multi_range_buff->buffer_end= (uchar*)mrange_buff + mrange_bufsiz;
+      multi_range_buff->end_of_used_area= (uchar*)mrange_buff;
+    }
   }
-  DBUG_RETURN(0);
+
+  DBUG_ASSERT(multi_range_length == min(multi_range_count, ranges.elements));
+
+  error= 0;
+  use_new_mrr_interface = false;
+  if ((!opt_restrict_bka_to_googlestats
+       || (file->ht && file->ht->db_type == DB_TYPE_GOOGLESTATS))
+      && thd_use_mrr_for_quick_range)
+  {
+    /* Use the new MRR interface for potential BKA implementation. */
+    use_new_mrr_interface = true;
+    empty_buf.buffer= empty_buf.buffer_end= empty_buf.end_of_used_area= NULL;
+
+    mrr_flags = 0;
+    if (sorted)
+      mrr_flags |= HA_MRR_SORTED;
+    RANGE_SEQ_IF seq_funcs= {quick_range_seq_init, quick_range_seq_next, 0};
+    error= file->multi_range_read_init(&seq_funcs, (void*)this,
+                                       ranges.elements, mrr_flags, &empty_buf);
+  }
+
+  DBUG_RETURN(error);
+}
+
+
+/*
+  Range sequence interface implementation for array<QUICK_RANGE>: initialize
+
+  SYNOPSIS
+    quick_range_seq_init()
+      init_param  Caller-opaque paramenter: QUICK_RANGE_SELECT* pointer
+      n_ranges    Number of ranges in the sequence (ignored)
+      flags       MRR flags (currently not used)
+
+  RETURN
+    Opaque value to be passed to quick_range_seq_next
+*/
+
+range_seq_t quick_range_seq_init(void *init_param, uint n_ranges, uint flags)
+{
+  QUICK_RANGE_SELECT *quick= (QUICK_RANGE_SELECT*)init_param;
+  quick->qr_traversal_ctx.first=  (QUICK_RANGE**)quick->ranges.buffer;
+  quick->qr_traversal_ctx.cur=    (QUICK_RANGE**)quick->ranges.buffer;
+  quick->qr_traversal_ctx.last=   quick->qr_traversal_ctx.cur +
+                                  quick->ranges.elements;
+  return &quick->qr_traversal_ctx;
+}
+
+
+/*
+  Range sequence interface implementation for array<QUICK_RANGE>: get next
+
+  SYNOPSIS
+    quick_range_seq_next()
+      rseq        Value returned from quick_range_seq_init
+      range  OUT  Store information about the range here
+
+  RETURN
+    0  Ok
+    1  No more ranges in the sequence
+*/
+
+uint quick_range_seq_next(range_seq_t rseq, KEY_MULTI_RANGE *range)
+{
+  QUICK_RANGE_SEQ_CTX *ctx= (QUICK_RANGE_SEQ_CTX*)rseq;
+
+  if (ctx->cur == ctx->last)
+    return 1; /* no more ranges */
+
+  QUICK_RANGE *cur= *(ctx->cur);
+  key_range *start_key= &range->start_key;
+  key_range *end_key=   &range->end_key;
+
+  start_key->key=    cur->min_key;
+  start_key->length= cur->min_length;
+  // NOTE: keypart_map implementation is NOT done.  However, handler.cc
+  // only uses keypart_map as a boolean, to dtermine if the key exists.  the
+  // key length can serve the same purpose.
+  start_key->keypart_map= cur->min_length;
+  start_key->flag=   ((cur->flag & NEAR_MIN) ? HA_READ_AFTER_KEY :
+                      (cur->flag & EQ_RANGE) ?
+                      HA_READ_KEY_EXACT : HA_READ_KEY_OR_NEXT);
+  end_key->key=      cur->max_key;
+  end_key->length=   cur->max_length;
+  // NOTE: see note above regarding keypart_map.
+  end_key->keypart_map= cur->max_length;
+  /*
+    We use HA_READ_AFTER_KEY here because if we are reading on a key
+    prefix. We want to find all keys with this prefix.
+  */
+  end_key->flag=     (cur->flag & NEAR_MAX ? HA_READ_BEFORE_KEY :
+                      HA_READ_AFTER_KEY);
+  range->range_flag= cur->flag;
+  ctx->cur++;
+  return 0;
 }
 
 
@@ -8554,6 +8657,7 @@ int QUICK_RANGE_SELECT::get_next()
 {
   int             result;
   KEY_MULTI_RANGE *mrange;
+  char            *dummy;
   DBUG_ENTER("QUICK_RANGE_SELECT::get_next");
   DBUG_ASSERT(multi_range_length && multi_range &&
               (cur_range >= (QUICK_RANGE**) ranges.buffer) &&
@@ -8568,42 +8672,50 @@ int QUICK_RANGE_SELECT::get_next()
     head->column_bitmaps_set_no_signal(&column_bitmap, &column_bitmap);
   }
 
-  for (;;)
+  if (use_new_mrr_interface)
   {
-    if (in_range)
+    /* Use the new MRR interface for potential BKA implementation. */
+    result= file->multi_range_read_next(&dummy);
+  }
+  else
+  {
+    for (;;)
     {
-      /* We did already start to read this key. */
-      result= file->read_multi_range_next(&mrange);
+      if (in_range)
+      {
+        /* We did already start to read this key. */
+        result= file->read_multi_range_next(&mrange);
+        if (result != HA_ERR_END_OF_FILE)
+          goto end;
+      }
+
+      uint count= min(multi_range_length, ranges.elements -
+                      (cur_range - (QUICK_RANGE**) ranges.buffer));
+      if (count == 0)
+      {
+        /* Ranges have already been used up before. None is left for read. */
+        in_range= FALSE;
+        if (in_ror_merged_scan)
+          head->column_bitmaps_set_no_signal(save_read_set, save_write_set);
+        DBUG_RETURN(HA_ERR_END_OF_FILE);
+      }
+      KEY_MULTI_RANGE *mrange_slot, *mrange_end;
+      for (mrange_slot= multi_range, mrange_end= mrange_slot+count;
+           mrange_slot < mrange_end;
+           mrange_slot++)
+      {
+        last_range= *(cur_range++);
+        last_range->make_min_endpoint(&mrange_slot->start_key);
+        last_range->make_max_endpoint(&mrange_slot->end_key);
+        mrange_slot->range_flag= last_range->flag;
+      }
+
+      result= file->read_multi_range_first(&mrange, multi_range, count,
+                                           sorted, multi_range_buff);
       if (result != HA_ERR_END_OF_FILE)
         goto end;
+      in_range= FALSE; /* No matching rows; go to next set of ranges. */
     }
-
-    uint count= min(multi_range_length, ranges.elements -
-                    (cur_range - (QUICK_RANGE**) ranges.buffer));
-    if (count == 0)
-    {
-      /* Ranges have already been used up before. None is left for read. */
-      in_range= FALSE;
-      if (in_ror_merged_scan)
-        head->column_bitmaps_set_no_signal(save_read_set, save_write_set);
-      DBUG_RETURN(HA_ERR_END_OF_FILE);
-    }
-    KEY_MULTI_RANGE *mrange_slot, *mrange_end;
-    for (mrange_slot= multi_range, mrange_end= mrange_slot+count;
-         mrange_slot < mrange_end;
-         mrange_slot++)
-    {
-      last_range= *(cur_range++);
-      last_range->make_min_endpoint(&mrange_slot->start_key);
-      last_range->make_max_endpoint(&mrange_slot->end_key);
-      mrange_slot->range_flag= last_range->flag;
-    }
-
-    result= file->read_multi_range_first(&mrange, multi_range, count,
-                                         sorted, multi_range_buff);
-    if (result != HA_ERR_END_OF_FILE)
-      goto end;
-    in_range= FALSE; /* No matching rows; go to next set of ranges. */
   }
 
 end:

@@ -2082,6 +2082,7 @@ extern my_bool rpl_allow_implicit_commit;
 extern my_bool opt_system_user_table;
 extern long opt_block_user_access;
 extern ulonglong limit_tmp_disk_space;
+extern my_bool opt_restrict_bka_to_googlestats;
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;

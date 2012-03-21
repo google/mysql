@@ -307,6 +307,7 @@ struct system_variables
   ulong auto_increment_increment, auto_increment_offset;
   ulong bulk_insert_buff_size;
   ulong join_buff_size;
+  ulong join_cache_level;
   ulong max_allowed_packet;
   ulong max_error_count;
   ulong max_length_for_sort_data;
@@ -381,6 +382,18 @@ struct system_variables
 
   my_bool old_alter_table;
   my_bool old_passwords;
+
+  /*
+    If true, use multi-range read for quick range, which allows
+    BKA for IN lists.
+  */
+  my_bool use_mrr_for_quick_range;
+
+  /*
+    If true, BKA can be used for the default MRR implementation. Original
+    mysql 6.0 code does not use BKA for the default MRR impl.
+  */
+  my_bool allow_default_mrr_bka;
 
   plugin_ref table_plugin;
 

@@ -199,8 +199,7 @@ static MYSQL_THDVAR_ULONG(multifetch_max_keys,
   PLUGIN_VAR_OPCMDARG,
   "max keys to send for a multifetch request. 0 == no limit.",
   /* check_func */ NULL, /* update_func */ NULL,
-  // TODO(seanrees): make 100 when BKA is ported.
-  /* default */ 0,
+  /* default */ 100,
   /* minimum */ 0,
   /* maximum */ 2000,
   /* by      */ 0);
@@ -1903,7 +1902,7 @@ ha_googlestats::server_scan_start(
       return(GSS_ERR_BAD_SCAN_TYPE);
     }
 
-    int max_keys = 0;
+    uint max_keys = 0;
     if (THDVAR(current_thd, multifetch_max_keys)) {
       max_keys = THDVAR(current_thd, multifetch_max_keys);
       max_keys = gs_min(max_keys, num_requested_keys);
@@ -1917,8 +1916,8 @@ ha_googlestats::server_scan_start(
     // A map for keys in the request, to find duplicates.
     std::map<std::string, int> existing_keys;
 
-    int index;
-    for (index = keys_index; index < (int)orig_keys->vals.size(); ++index) {
+    uint index;
+    for (index = keys_index; index < orig_keys->vals.size(); ++index) {
       std::vector<std::string>* key = &orig_keys->vals[index];
       if (index > keys_index && max_keys && (index - keys_index) >= max_keys) {
         break;
@@ -3230,8 +3229,6 @@ void ha_googlestats::cond_pop() {
   }
 }
 
-/* TODO(seanrees): uncomment when multi-range reads come back. */
-#if 0
 ha_rows ha_googlestats::multi_range_read_info_const(uint keyno,
                                                     RANGE_SEQ_IF *seq,
                                                     void *seq_init_param,
@@ -3281,7 +3278,7 @@ int ha_googlestats::multi_range_read_init(RANGE_SEQ_IF *seq_funcs,
   UpdateProcInfo updater(kWho);
 
   if (googlestats_log_level >= GsLogLevelHigh) {
-    printError("%s: for %s", kWho, table->s->table_name);
+    printError("%s: for %s", kWho, table->s->table_name.str);
   }
 
   if (sock_fd < 0) {
@@ -3365,7 +3362,7 @@ int ha_googlestats::multi_range_read_init(RANGE_SEQ_IF *seq_funcs,
   // Start scanning from the first key.
   keys_index = 0;
   int res = 0;
-  if (res = server_scan_start(0)) {
+  if ((res = server_scan_start(0))) {
     printError("%s: cannot start server scan", kWho);
     return(res);
   }
@@ -3396,7 +3393,7 @@ int ha_googlestats::multi_range_read_next(char **range_info)
   const char* kWho = "ha_googlestats::read_multi_range_next";
   UpdateProcInfo updater(kWho);
   if (googlestats_log_level >= GsLogLevelHigh) {
-    printError("%s: for %s", kWho, table->s->table_name);
+    printError("%s: for %s", kWho, table->s->table_name.str);
   }
 
   if (sock_fd < 0) {
@@ -3428,7 +3425,7 @@ int ha_googlestats::multi_range_read_next(char **range_info)
         // Move on to the next multi-range.
         mrr_range_done = mrr_funcs.next(mrr_iter, &mrr_cur_range);
 
-        if (scan_res = server_scan_start(0)) {
+        if ((scan_res = server_scan_start(0))) {
           printError("%s: cannot start server scan", kWho);
           return(scan_res);
         }
@@ -3464,7 +3461,6 @@ int ha_googlestats::multi_range_read_next(char **range_info)
   table->status = 0;
   return(0);
 }
-#endif
 
 /* GoogleStats plugin initialization */
 static handler *googlestats_create_handler(handlerton *hton,

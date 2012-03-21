@@ -80,6 +80,9 @@ static ulonglong get_exact_record_count(TABLE_LIST *tables)
   ulonglong count= 1;
   for (TABLE_LIST *tl= tables; tl; tl= tl->next_leaf)
   {
+    DBUG_ASSERT(tl->table->file->ha_table_flags() &
+                (HA_STATS_RECORDS_IS_EXACT | HA_HAS_RECORDS));
+
     ha_rows tmp= tl->table->file->records();
     if ((tmp == HA_POS_ERROR))
       return ULONGLONG_MAX;

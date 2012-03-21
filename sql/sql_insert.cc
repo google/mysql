@@ -264,6 +264,11 @@ static int check_insert_fields(THD *thd, TABLE_LIST *table_list,
       }
     }
   }
+
+  // TODO(seanrees): copied this in from the BKA port code, not sure if it's
+  // required.
+  table->mark_columns_needed_for_insert();
+
   // For the values we need select_priv
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   table->grant.want_privilege= (SELECT_ACL & ~table->grant.privilege);
