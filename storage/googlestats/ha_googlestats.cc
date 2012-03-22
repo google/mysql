@@ -248,10 +248,8 @@ static const char *gss_err_msgs[] = {
 inline
 static bool might_write_binlog()
 {
-  return (mysql_bin_log.is_open());
-  // TODO(seanrees): contination of the return above; add back when we have
-  // rpl_hierarchical.
-  //        && (!rpl_hierarchical || !mysql_bin_log.get_have_master()));
+  return (mysql_bin_log.is_open() &&
+         (!rpl_hierarchical || !mysql_bin_log.get_have_master()));
 }
 
 // Optimized memcpy for common field lengths.
