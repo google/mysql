@@ -90,16 +90,11 @@ show variables like 'log_slave_updates';
 Variable_name	Value
 log_slave_updates	ON
 insert into mi select * from gs;
-ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
 replace into mi select * from gs;
-ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
 create table mi2 as select * from gs;
-ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
 create table gs4 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
 update mi, gs set mi.a = 2 where mi.b = gs.b;
-ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
 delete mi from mi, gs where mi.a = gs.a;
-ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
 set session googlestats_query_on_update = 1;
 insert into mi select * from gs;
 ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
