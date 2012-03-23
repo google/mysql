@@ -115,22 +115,64 @@ set session googlestats_query_on_update = 0;
 show variables like 'log_bin';
 show variables like 'log_slave_updates';
 
---error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
-insert into mi select * from gs;
+--disable_result_log
+if (`SELECT @@rpl_hierarchical = '1'`)
+{
+  --error ER_GET_ERRMSG
+  insert into mi select * from gs;
+}
+if (`SELECT @@rpl_hierarchical = '0'`)
+{
+  --error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+  insert into mi select * from gs;
+}
 
---error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
-replace into mi select * from gs;
+if (`SELECT @@rpl_hierarchical = '1'`)
+{
+  --error ER_GET_ERRMSG
+  replace into mi select * from gs;
+}
+if (`SELECT @@rpl_hierarchical = '0'`)
+{
+  --error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+  replace into mi select * from gs;
+}
 
---error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
-create table mi2 as select * from gs;
+if (`SELECT @@rpl_hierarchical = '1'`)
+{
+  --error ER_GET_ERRMSG
+  create table mi2 as select * from gs;
+}
+if (`SELECT @@rpl_hierarchical = '0'`)
+{
+  --error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+  create table mi2 as select * from gs;
+}
 
 create table gs4 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
 
---error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
-update mi, gs set mi.a = 2 where mi.b = gs.b;
+if (`SELECT @@rpl_hierarchical = '1'`)
+{
+  --error ER_GET_ERRMSG
+  update mi, gs set mi.a = 2 where mi.b = gs.b;
+}
+if (`SELECT @@rpl_hierarchical = '0'`)
+{
+  --error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+  update mi, gs set mi.a = 2 where mi.b = gs.b;
+}
 
---error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
-delete mi from mi, gs where mi.a = gs.a;
+if (`SELECT @@rpl_hierarchical = '1'`)
+{
+  --error ER_GET_ERRMSG
+  delete mi from mi, gs where mi.a = gs.a;
+}
+if (`SELECT @@rpl_hierarchical = '0'`)
+{
+  --error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+  delete mi from mi, gs where mi.a = gs.a;
+}
+--enable_result_log
 
 # Now check that the DML statements fail when run on a slave
 # because a StatsServer is not up
