@@ -1039,6 +1039,18 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   DBUG_ENTER("dispatch_command");
   DBUG_PRINT("info",("packet: '%*.s'; command: %d", packet_length, packet, command));
 
+  /*
+    The id used for COM_BINLOG_DUMP2 in the Google build of 5.0 conflicts
+    with an id which was added in the official release of 5.1. To allow a
+    Google 5.0 slave to CHANGE MASTER TO CONNECT_USING_GROUP_ID to a Google
+    5.1 master, and have it work, it is necessary to map the COM_ value.
+
+    Searching the code base seems to reveal that COM_DAEMON wouldn't otherwise
+    be a value for command here.
+  */
+  if (rpl_hierarchical_50_compat && command == COM_DAEMON)
+    command= COM_BINLOG_DUMP2;
+
   thd->command=command;
   /*
     Commands which always take a long time are logged into
@@ -1062,18 +1074,6 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
 
   VOID(pthread_mutex_lock(&LOCK_thread_count));
   thd->query_id= global_query_id;
-
-  /*
-    The id used for COM_BINLOG_DUMP2 in the Google build of 5.0 conflicts
-    with an id which was added in the official release of 5.1. To allow a
-    Google 5.0 slave to CHANGE MASTER TO CONNECT_USING_GROUP_ID to a Google
-    5.1 master, and have it work, it is necessary to map the COM_ value.
-
-    Searching the code base seems to reveal that COM_DAEMON wouldn't otherwise
-    be a value for command here.
-  */
-  if (rpl_hierarchical_50_compat && command == COM_DAEMON)
-    command= COM_BINLOG_DUMP2;
 
   switch( command ) {
   /* Ignore these statements. */
