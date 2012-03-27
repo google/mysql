@@ -2671,6 +2671,8 @@ int MYSQL_SQL_LOG::new_file()
 
     close(LOG_CLOSE_TO_BE_OPENED);
 
+    DBUG_EXECUTE_IF("sleep_in_sqllog_new_file", sleep(3););
+
     /*
       Note that at this point, log_state != LOG_CLOSED
       (important for is_open()).
@@ -2780,6 +2782,16 @@ bool MYSQL_SQL_LOG::sql_log_write(THD *thd, const uchar *text, int length,
   if (!is_open())
     return 0;
 
+  /*
+    Acquire LOCK_log to fix a race between this function and
+    MYSQL_SQL_LOG::new_file.
+
+    NB: The sql logging code appears to implicitly rely on InnoDB's
+    prepare_commit_mutex to ensure only a single writer at a time and
+    for transactions to be logged in the proper order.
+  */
+  pthread_mutex_lock(&LOCK_log);
+
   err= my_b_write(&log_file, text, length);
   /* Only write the '\n' at the end of the line. */
   if (err == 0 && line_done)
@@ -2802,6 +2814,8 @@ bool MYSQL_SQL_LOG::sql_log_write(THD *thd, const uchar *text, int length,
       sql_print_error(ER(ER_ERROR_ON_WRITE), name, tmp_errno);
     }
   }
+
+  pthread_mutex_unlock(&LOCK_log);
 
   /*
     Rotate the log if it exceeds max_binlog_size.  Only check if the line is
