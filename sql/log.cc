@@ -3176,8 +3176,8 @@ bool sqllog_update_row(THD *thd, TABLE *table, const uchar *old_data,
       different from the old field value.
     */
     if (bitmap_is_set(table->write_set, field->field_index) &&
-        field->cmp(new_data + field->offset(table->record[0]),
-                   old_data + field->offset(table->record[0])))
+        field->cmp_binary(new_data + field->offset(table->record[0]),
+                          old_data + field->offset(table->record[0])))
     {
       /* Append the field name. */
       error|= update->append(field->field_name);
