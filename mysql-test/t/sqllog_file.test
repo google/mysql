@@ -41,6 +41,9 @@ update log_test1 set col2="changed1" where col1=1;
 update log_test1 set col1=2 where col1=1;
 update log_test1 set col2="foo" where col1=2;
 
+# Check UPDATE statements which only change case
+update log_test1 set col2="FOO" where col1=2;
+
 # Check DELETE statements
 delete from log_test1 where col1=3;
 delete from log_test1 where col1=4;
@@ -261,4 +264,4 @@ drop database mysqltest;
 
 # Show the log content (timestamp is removed)
 let $MYSQLD_DATADIR= `select @@datadir;`;
---exec tail --lines=211 $MYSQLD_DATADIR/mysqld-sql.000001 | cut -d' ' -f9-
+--exec tail --lines=214 $MYSQLD_DATADIR/mysqld-sql.000001 | cut -d' ' -f9-
