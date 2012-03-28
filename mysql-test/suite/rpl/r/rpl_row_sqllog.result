@@ -19,6 +19,7 @@ insert into log_test3 select * from log_test1;
 update log_test1 set col2="changed1" where col1=1;
 update log_test1 set col1=2 where col1=1;
 update log_test1 set col2="foo" where col1=2;
+update log_test1 set col2="FOO" where col1=2;
 delete from log_test1 where col1=3;
 delete from log_test1 where col1=4;
 delete from log_test1;
@@ -192,12 +193,15 @@ drop database mysqltest;
 1 1 UPDATE test.log_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 2 AND col2 STRING b64'Y2hhbmdlZDE='
 1 1 UPDATE test.log_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 2 AND col2 STRING b64'dGVzdDI='
 1 1 UPDATE test.log_test1 col2 STRING b64'Zm9v' WHERE col1 LONG 2 AND col2 STRING b64'Y2hhbmdlZDE='
+1 1 UPDATE test.log_test1 col2 STRING b64'Rk9P' WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
+1 1 UPDATE test.log_test1 col2 STRING b64'Rk9P' WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
+1 1 UPDATE test.log_test1 col2 STRING b64'Rk9P' WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
 1 1 DELETE test.log_test1 WHERE col1 LONG 3 AND col2 STRING b64'YXJnIHdpdGggJ3NpbmdsZSBxdW90ZScgYmxhaA=='
 1 1 DELETE test.log_test1 WHERE col1 LONG 4 AND col2 STRING b64'YXJnIHdpdGggImRvdWJsZSBxdW90ZSIgYmxhaA=='
-1 1 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
-1 1 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
+1 1 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Rk9P'
+1 1 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Rk9P'
 1 1 DELETE test.log_test1 WHERE col1 LONG 5 AND col2 STRING NULL
-1 1 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Zm9v'
+1 1 DELETE test.log_test1 WHERE col1 LONG 2 AND col2 STRING b64'Rk9P'
 1 1 DELETE test.log_test1 WHERE col1 LONG 6 AND col2 STRING b64'cmVwYWxjZSB0ZXN0'
 1 1 DELETE test.log_test1 WHERE col1 LONG 7 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
 1 1 DELETE test.log_test1 WHERE col1 LONG 8 AND col2 STRING b64'TXVsdGktcm93IGluc2VydA=='
@@ -233,7 +237,7 @@ drop database mysqltest;
 1 1 INSERT test.log_bit col1 BIT b'0' AND col2 BIT b'10101010'
 1 1 INSERT test.log_bit col1 BIT b'0' AND col2 BIT b'0'
 1 1 INSERT test.log_bit col1 BIT b'0' AND col2 BIT b'1111111111111111'
-1 1 UPDATE test.log_bit col1 BIT b'1' AND col2 BIT b'11001100' WHERE col1 BIT b'1' AND col2 BIT b'10101010'
+1 1 UPDATE test.log_bit col2 BIT b'11001100' WHERE col1 BIT b'1' AND col2 BIT b'10101010'
 1 1 DELETE test.log_bit WHERE col1 BIT b'0' AND col2 BIT b'0'
 1 1 DELETE test.log_bit WHERE col1 BIT b'0' AND col2 BIT b'0'
 1 1 DELETE test.log_bit WHERE col1 BIT b'0' AND col2 BIT b'1111111111111111'
