@@ -190,7 +190,7 @@ public:
   const char *generate_name(const char *log_name, const char *suffix,
                             bool strip_ext, char *buff);
   int generate_new_name(char *new_name, const char *log_name);
-protected:
+ protected:
   /* LOCK_log is inited by init_pthread_objects() */
   pthread_mutex_t LOCK_log;
   char *name;

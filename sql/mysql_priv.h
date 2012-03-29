@@ -1993,7 +1993,7 @@ extern MYSQL_PLUGIN_IMPORT bool mysqld_embedded;
 #ifdef MYSQL_SERVER
 extern bool opt_large_files, server_id_supplied;
 extern bool opt_update_log, opt_bin_log, opt_error_log;
-extern my_bool opt_log, opt_slow_log, opt_audit_log;
+extern my_bool opt_log, opt_slow_log, opt_audit_log, opt_audit_log_super;
 extern ulong log_output_options;
 extern my_bool opt_log_queries_not_using_indexes;
 extern bool opt_disable_networking, opt_skip_show_db;

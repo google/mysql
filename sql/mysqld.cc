@@ -450,7 +450,7 @@ static pthread_cond_t COND_thread_cache, COND_flush_thread_cache;
 /* Global variables */
 
 bool opt_update_log, opt_bin_log, opt_ignore_builtin_innodb= 0;
-my_bool opt_log, opt_slow_log, opt_audit_log;
+my_bool opt_log, opt_slow_log, opt_audit_log, opt_audit_log_super;
 ulong log_output_options;
 my_bool opt_log_queries_not_using_indexes= 0;
 bool opt_error_log= IF_WIN(1,0);
@@ -5708,9 +5708,10 @@ enum options_mysqld
   OPT_KEEP_FILES_ON_CREATE,
   OPT_GENERAL_LOG,
   OPT_SLOW_LOG,
-  OPT_AUDIT_LOG_TABLES,
   OPT_AUDIT_LOG,
   OPT_AUDIT_LOG_FILTER,
+  OPT_AUDIT_LOG_SUPER,
+  OPT_AUDIT_LOG_TABLES,
   OPT_THREAD_HANDLING,
   OPT_INNODB_ROLLBACK_ON_TIMEOUT,
   OPT_SECURE_FILE_PRIV,
@@ -5723,7 +5724,6 @@ enum options_mysqld
   OPT_SLAVE_EXEC_MODE,
   OPT_GENERAL_LOG_FILE,
   OPT_SLOW_QUERY_LOG_FILE,
-  OPT_AUDIT_LOG_FILE,
   OPT_IGNORE_BUILTIN_INNODB,
   OPT_BINLOG_DIRECT_NON_TRANS_UPDATE,
   OPT_DEFAULT_CHARACTER_SET_OLD,
@@ -5985,17 +5985,20 @@ each time the SQL thread starts.",
    "Log logins, queries against specified tables, and startup",
    &opt_audit_logname, &opt_audit_logname, 0, GET_STR, OPT_ARG,
    0, 0, 0, 0, 0, 0},
-  {"audit-log-tables", OPT_AUDIT_LOG_TABLES,
-   "Log queries that use these tables to the audit log (comma separated). "
-   "Alternatively use 'alltables' if logging all tables is desired.",
-   &opt_audit_log_tables, &opt_audit_log_tables, 0, GET_STR, REQUIRED_ARG,
-   0, 0, 0, 0, 0, 0},
   {"audit-log-filter", OPT_AUDIT_LOG_FILTER,
    "Filter certain statements from appearing in the audit log. "
    "by default everything will be logged.  Statements can be filtered "
    "by specifying a comma separated list here "
    "e.g. select,insert,delete,update",
    &opt_audit_log_filter, &opt_audit_log_filter, 0, GET_STR, REQUIRED_ARG,
+   0, 0, 0, 0, 0, 0},
+  {"audit-log-super", OPT_AUDIT_LOG_SUPER,
+   "Log commands executed by users with SUPER privileges.",
+   &opt_audit_log_super, 0, 0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"audit-log-tables", OPT_AUDIT_LOG_TABLES,
+   "Log queries that use these tables to the audit log (comma separated). "
+   "Alternatively use 'alltables' if logging all tables is desired.",
+   &opt_audit_log_tables, &opt_audit_log_tables, 0, GET_STR, REQUIRED_ARG,
    0, 0, 0, 0, 0, 0},
   {"general_log_file", OPT_GENERAL_LOG_FILE,
    "Log connections and queries to given file.", &opt_logname,
@@ -7840,7 +7843,7 @@ static int mysql_init_variables(void)
   opt_skip_slave_start= opt_reckless_slave = 0;
   mysql_home[0]= pidfile_name[0]= log_error_file[0]= 0;
   myisam_test_invalid_symlink= test_if_data_home_dir;
-  opt_log= opt_slow_log= opt_audit_log= 0;
+  opt_log= opt_slow_log= opt_audit_log= opt_audit_log_super= 0;
   opt_update_log= 0;
   log_output_options= find_bit_type(log_output_str, &log_output_typelib);
   opt_bin_log= 0;
@@ -8209,14 +8212,14 @@ mysqld_get_one_option(int optid,
   case (int) OPT_ERROR_LOG_FILE:
     opt_error_log= 1;
     break;
-  case OPT_AUDIT_LOG_TABLES:
-    init_audit_log_tables(argument);
-    break;
   case (int) OPT_AUDIT_LOG:
-    opt_audit_log= 1;
+    opt_audit_log= test(argument != disabled_my_option);
     break;
   case OPT_AUDIT_LOG_FILTER:
     init_audit_log_filter(argument);
+    break;
+  case OPT_AUDIT_LOG_TABLES:
+    init_audit_log_tables(argument);
     break;
 #ifdef HAVE_REPLICATION
   case (int) OPT_INIT_RPL_ROLE:
