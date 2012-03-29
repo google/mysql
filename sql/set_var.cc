@@ -968,6 +968,9 @@ sys_var_str sys_var_audit_log_path(&vars, "audit_log_file", sys_check_log_path,
                                    sys_update_audit_log_path,
                                    sys_default_audit_log_path,
                                    opt_audit_logname);
+static sys_var_const sys_audit_log_super(&vars, "audit_log_super",
+                                         OPT_GLOBAL, SHOW_BOOL,
+                                         (uchar*) &opt_audit_log_super);
 static sys_var_log_output sys_var_log_output_state(&vars, "log_output", &log_output_options,
 					    &log_output_typelib, 0);
 static sys_var_readonly         sys_myisam_mmap_size(&vars, "myisam_mmap_size",

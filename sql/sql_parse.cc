@@ -6195,6 +6195,7 @@ void mysql_init_multi_delete(LEX *lex)
   lex->query_tables_last= &lex->query_tables;
 }
 
+
 /*
   When you modify mysql_parse(), you may need to mofify
   mysql_test_parse_for_slave() in this same file.

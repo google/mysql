@@ -5522,19 +5522,18 @@ void init_audit_log_tables(const char* comma_list)
   }
 }
 
-/*
+/**
   Determine whether or not a statement should be logged.
 
   @param[in]  thd       the connection object for this query
-  @param[in]  command   the int representing the command from
-                        enum_sql_command
+  @param[in]  command   the command
 
   @return  whether or not 'command' should be logged.
     @retval true   NOT logged
     @retval false  logged
 */
 
-static bool audit_log_block_stmt(THD *thd, int command)
+static bool audit_log_block_stmt(THD *thd, enum enum_sql_command command)
 {
   if (command < 0 || command >= SQLCOM_END)
     return true;
@@ -5700,6 +5699,37 @@ static const char* null_safe(const char *data)
 
 
 /**
+  Determine whether a statement executed by a SUPER user should be logged.
+
+  @param[in]  command   the command
+
+  @return  whether or not 'command' should be logged.
+    @retval true   NOT logged
+    @retval false  logged
+*/
+
+static bool is_super_loggable(enum enum_sql_command command)
+{
+  return (is_update_query(command) ||
+          command == SQLCOM_GRANT ||
+          command == SQLCOM_CREATE_DB ||
+          command == SQLCOM_ALTER_DB ||
+          command == SQLCOM_REPAIR ||
+          command == SQLCOM_REVOKE ||
+          command == SQLCOM_REVOKE_ALL ||
+          command == SQLCOM_OPTIMIZE ||
+          command == SQLCOM_CHECK ||
+          command == SQLCOM_ANALYZE ||
+          command == SQLCOM_RENAME_TABLE ||
+          command == SQLCOM_PURGE ||
+          command == SQLCOM_DROP_USER ||
+          command == SQLCOM_CREATE_USER ||
+          command == SQLCOM_RENAME_USER ||
+          command == SQLCOM_EXECUTE);
+}
+
+
+/**
    Write query information to the audit log.
 
    @param[in]  lex   the lex object for this query
@@ -5715,6 +5745,19 @@ void write_audit_record(LEX *lex, THD *thd)
     */
     return;
   }
+
+  /* For SUPER logging, log the full SQL. */
+  if (opt_audit_log && opt_audit_log_super &&
+      (thd->security_ctx->master_access & SUPER_ACL) &&
+      is_super_loggable(lex->sql_command))
+  {
+    audit_log_print(thd, COM_QUERY, "%s@%s (%d): SUPER %s",
+                    null_safe(thd->main_security_ctx.user),
+                    null_safe(thd->main_security_ctx.host_or_ip),
+                    lex->sql_command,
+                    thd->query());
+  }
+
   if (!(opt_audit_log && hash_inited(&audit_log_tables)))
   {
     return;
