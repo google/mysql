@@ -16,6 +16,7 @@ drop table log_test;
 create table log_test1 (col1 int, col2 varchar(32));
 create table log_test2 (col1 int, col2 varchar(32), col3 text);
 create table log_test3 (col1 int, col2 varchar(32));
+create table log_test4 (col1 int, col2 varchar(32), col3 int);
 
 # Check argument ordering
 insert into log_test1 values (1, "test1");
@@ -27,8 +28,8 @@ insert into log_test1 values (4, "arg with \"double quote\" blah");
 insert into log_test1 values (5, NULL);
 
 # Check replace statement.
-replace into log_test1 values (1, "repalce tests");
-replace into log_test1 values (6, "repalce test");
+replace into log_test1 values (1, "replace tests");
+replace into log_test1 values (6, "replace test");
 
 # Check multi-row statement:
 insert into log_test1 values (7, "Multi-row insert"), (8, "Multi-row insert");
@@ -43,6 +44,23 @@ update log_test1 set col2="foo" where col1=2;
 
 # Check UPDATE statements which only change case
 update log_test1 set col2="FOO" where col1=2;
+
+# Check UPDATE statements which change to/from NULL
+insert into log_test4 values (1, NULL, NULL);
+insert into log_test4 values (2, NULL, NULL);
+insert into log_test4 values (3, "three", 3);
+
+update log_test4 set col2="one" where col1=1;
+update log_test4 set col2=NULL where col1=1;
+
+update log_test4 set col2="" where col1=2;
+update log_test4 set col2=NULL where col1=2;
+
+update log_test4 set col2="new three" where col1=3;
+update log_test4 set col2=NULL where col1=3;
+
+update log_test4 set col3=1 where col1=1;
+update log_test4 set col3=NULL where col1=1;
 
 # Check DELETE statements
 delete from log_test1 where col1=3;
@@ -62,6 +80,7 @@ truncate table log_test1;
 drop table log_test1;
 drop table log_test2;
 drop table log_test3;
+drop table log_test4;
 
 # Test SIGNED INTEGER
 create table log_numeric1 (col1 tinyint, col2 smallint, col3 mediumint, col4 int, col5 bigint);
