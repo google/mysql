@@ -272,6 +272,19 @@ int thd_non_transactional_update(const MYSQL_THD thd);
 int thd_binlog_format(const MYSQL_THD thd);
 
 /**
+  Check if the binlog is open for the slave SQL thread only.
+  @param  thd   Thread handle
+  @retval true the binlog is only open for slave updates, false otherwise.
+*/
+bool thd_binlog_slave_updates_only(const MYSQL_THD thd);
+
+/**
+  Check if the binlog is enabled.
+  @retval true the binlog is enabled, false otherwise.
+*/
+bool binlog_enabled();
+
+/**
   Mark transaction to rollback and mark error as fatal to a sub-statement.
   @param  thd   Thread handle
   @param  all   TRUE <=> rollback main transaction.
@@ -327,4 +340,3 @@ innobase_index_name_is_reserved(
 	const KEY*	key_info,	/*!< in: Indexes to be created */
 	ulint		num_of_keys);	/*!< in: Number of indexes to
 					be created. */
-

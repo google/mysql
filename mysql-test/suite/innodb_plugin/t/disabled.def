@@ -9,3 +9,5 @@
 #  Do not use any TAB characters for whitespace.
 #
 ##############################################################################
+innodb_lock_wait_timeout_1 : BUG#XXXXX Apr 03 2012 seanrees Test does not work for Google because we disable share locks that would trigger ER_LOCK_WAIT_TIMEOUT without binlogging enabled.
+innodb_bug42419 : BUG#XXXXX Apr 03 2012 seanrees Test does not work for Google because we disable share locks that would trigger ER_LOCK_DEADLOCK without binlogging enabled.

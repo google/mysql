@@ -498,6 +498,8 @@ public:
   bool check_write_error(THD *thd);
 
   bool should_skip_event(THD *thd);
+  bool slave_updates_only(const THD *thd);
+
   ulonglong get_group_id_to_use(THD *thd);
 
   void start_union_events(THD *thd, query_id_t query_id_param);
