@@ -3284,6 +3284,16 @@ extern "C" bool thd_binlog_filter_ok(const MYSQL_THD thd)
 {
   return binlog_filter->db_ok(thd->db);
 }
+
+extern "C" bool thd_binlog_slave_updates_only(const MYSQL_THD thd)
+{
+  return mysql_bin_log.slave_updates_only(thd);
+}
+
+extern "C" bool binlog_enabled()
+{
+  return mysql_bin_log.is_open();
+}
 #endif // INNODB_COMPATIBILITY_HOOKS */
 
 /****************************************************************************

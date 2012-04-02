@@ -5643,6 +5643,19 @@ bool MYSQL_BIN_LOG::should_skip_event(THD *thd)
   return rpl_hierarchical && !thd->slave_thread && have_master;
 }
 
+/*
+  This is done without holding LOCK_log. If statements run concurrent with
+  the CHANGE MASTER command used to promote a slave to a master with global
+  group IDs, then this can return an incorrect value. And the value returned
+  by this at statement start could be different then the value returned by
+  ::should_skip_event at statement completion. It is best to prevent DML
+  from user sessions during promotion.
+*/
+bool MYSQL_BIN_LOG::slave_updates_only(const THD *thd)
+{
+  return rpl_hierarchical && !thd->slave_thread && have_master;
+}
+
 /**
   Determine group_id to use for writing event to bin log.
 

@@ -1,0 +1,63 @@
+###############################################################################
+#
+# This patch verifies that slaves do not acquire S locks during
+# INSERT INTO...SELECT FROM (or UPDATE, DELETE, or REPLACE) when there is no
+# concurrent DML.
+#
+# This is deemed safe, because the binlog on the slave is only open for
+# replication.
+#
+###############################################################################
+
+source include/have_innodb.inc;
+--source include/have_rpl_hierarchical.inc
+
+--let $rpl_server_count= 2
+--let $rpl_topology= 1->2
+--source include/rpl_init.inc
+
+--echo ########################################################################
+--echo #                             Environment
+--echo ########################################################################
+connection server_1;
+
+CREATE TABLE t (i INT, PRIMARY KEY (i)) ENGINE=InnoDB;
+INSERT INTO t VALUES (0), (1), (2), (3), (4), (5);
+
+save_master_pos;
+
+--echo ########################################################################
+--echo #                     Testing ER_LOCK_WAIT_TIMEOUT
+--echo ########################################################################
+
+connection server_2;
+sync_with_master;
+
+BEGIN;
+# Without the fix, this will take a S lock on the slave. This will prevent the
+# update below from replicating.
+CREATE TEMPORARY TABLE scratch.t SELECT i FROM t;
+
+connection server_1;
+BEGIN;
+
+# If this update stalls, we've a problem.
+# The error looks like this in mysql.err:
+# 120402 15:39:44 [ERROR] Slave SQL: Error 'Lock wait timeout exceeded;
+# try restarting transaction' on query. Default database: 'test'.
+# Query: 'UPDATE t SET i = 6 WHERE i = 5', Error_code: 1205
+
+UPDATE t SET i = 6 WHERE i = 5;
+COMMIT;
+
+save_master_pos;
+
+connection server_2;
+sync_with_master;
+
+ROLLBACK;
+
+connection server_1;
+DROP TABLE t;
+
+--source include/rpl_end.inc

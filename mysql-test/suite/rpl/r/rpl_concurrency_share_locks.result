@@ -1,0 +1,19 @@
+include/rpl_init.inc [topology=1->2]
+########################################################################
+#                             Environment
+########################################################################
+CREATE TABLE t (i INT, PRIMARY KEY (i)) ENGINE=InnoDB;
+INSERT INTO t VALUES (0), (1), (2), (3), (4), (5);
+########################################################################
+#                     Testing ER_LOCK_WAIT_TIMEOUT
+########################################################################
+BEGIN;
+CREATE TEMPORARY TABLE scratch.t SELECT i FROM t;
+BEGIN;
+UPDATE t SET i = 6 WHERE i = 5;
+COMMIT;
+ROLLBACK;
+Warnings:
+Warning	1196	Some non-transactional changed tables couldn't be rolled back
+DROP TABLE t;
+include/rpl_end.inc

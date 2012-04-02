@@ -9455,12 +9455,15 @@ ha_innobase::store_lock(
 		isolation_level = trx->isolation_level;
 
 		if ((srv_locks_unsafe_for_binlog
+		     || !binlog_enabled()
+		     || thd_binlog_slave_updates_only(thd)
 		     || isolation_level <= TRX_ISO_READ_COMMITTED)
 		    && isolation_level != TRX_ISO_SERIALIZABLE
 		    && (lock_type == TL_READ || lock_type == TL_READ_NO_INSERT)
 		    && (sql_command == SQLCOM_INSERT_SELECT
 			|| sql_command == SQLCOM_REPLACE_SELECT
 			|| sql_command == SQLCOM_UPDATE
+			|| sql_command == SQLCOM_DELETE
 			|| sql_command == SQLCOM_CREATE_TABLE
 			|| sql_command == SQLCOM_SET_OPTION)) {
 
@@ -9472,7 +9475,12 @@ ha_innobase::store_lock(
 			or UPDATE ... = (SELECT ...) or CREATE  ...
 			SELECT... or SET ... = (SELECT ...) without
 			FOR UPDATE or IN SHARE MODE in select,
-			then we use consistent read for select. */
+			then we use consistent read for select.
+
+			We also forgo S locks if the binlog is not
+			open (!binlog_enabled()) or if the binlog is
+			only open for the slave SQL thread.
+			*/
 
 			prebuilt->select_lock_type = LOCK_NONE;
 			prebuilt->stored_select_lock_type = LOCK_NONE;
