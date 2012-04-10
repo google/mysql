@@ -2681,8 +2681,8 @@ bool Query_log_event::write(IO_CACHE *file, bool only_checksum_body)
     (uchar *) query
   };
   const uint buffer_sizes[count_buffers]= {
-    QUERY_HEADER_LEN + get_post_header_size_for_derived(),
-    start - start_of_status,
+    static_cast<uint>(QUERY_HEADER_LEN + get_post_header_size_for_derived()),
+    static_cast<uint>(start - start_of_status),
     db_len + 1,
     q_len
   };
@@ -6013,7 +6013,7 @@ bool User_var_log_event::write(IO_CACHE *file, bool only_checksum_body)
     sizeof(buf),
     name_len,
     buf1_length,
-    val_len
+    static_cast<uint>(val_len)
   };
 
   return write_base(file, only_checksum_body, count_buffers,
@@ -6348,7 +6348,7 @@ bool Slave_log_event::write(IO_CACHE *file, bool only_checksum_body)
     (uchar *) mem_pool
   };
   const uint buffer_sizes[count_buffers]= {
-    get_data_size()
+    static_cast<uint>(get_data_size())
   };
 
   return write_base(file, only_checksum_body, count_buffers,
@@ -8913,14 +8913,14 @@ bool Table_map_log_event::write(IO_CACHE *file, bool only_checksum_body)
   uint buffer_sizes[count_buffers]= {
     TABLE_MAP_HEADER_LEN,
     sizeof(dbuf),
-    m_dblen + 1,
+    static_cast<uint>(m_dblen + 1),
     sizeof(tbuf),
-    m_tbllen + 1,
-    cbuf_end - cbuf,
-    m_colcnt,
-    mbuf_end - mbuf,
-    m_field_metadata_size,
-    (m_colcnt + 7) / 8
+    static_cast<uint>(m_tbllen + 1),
+    static_cast<uint>(cbuf_end - cbuf),
+    static_cast<uint>(m_colcnt),
+    static_cast<uint>(mbuf_end - mbuf),
+    static_cast<uint>(m_field_metadata_size),
+    static_cast<uint>((m_colcnt + 7) / 8)
   };
 
   DBUG_EXECUTE_IF("old_row_based_repl_4_byte_map_id_master",
@@ -10228,7 +10228,7 @@ Incident_log_event::write(IO_CACHE *file, bool only_checksum_body)
   const uint buffer_sizes[count_buffers]= {
     sizeof(buf),
     1,
-    m_message.length
+    static_cast<uint>(m_message.length)
   };
 
   DBUG_RETURN(write_base(file, only_checksum_body, count_buffers,
