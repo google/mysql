@@ -84,8 +84,8 @@ ST_FIELD_INFO query_profile_statistics_info[]=
 
 int make_profile_table_for_show(THD *thd, ST_SCHEMA_TABLE *schema_table)
 {
-  int profile_options = thd->lex->profile_options;
-  int fields_include_condition_truth_values[]= {
+  uint profile_options = thd->lex->profile_options;
+  uint fields_include_condition_truth_values[]= {
     FALSE, /* Query_id */
     FALSE, /* Seq */
     TRUE, /* Status */
