@@ -1158,10 +1158,10 @@ static struct my_option my_long_options[] =
    (longlong)(~(my_off_t)0), 0, 0, 0},
   {"start-group-id", OPT_START_GROUP_ID, "Start the output with group_id N.",
    &start_group_id, &start_group_id, 0, GET_ULL,
-   REQUIRED_ARG, 0, 0, ULONG_MAX, 0, 0, 0},
+   REQUIRED_ARG, 0, 0, (longlong) ULONG_MAX, 0, 0, 0},
   {"stop-group-id", OPT_STOP_GROUP_ID, "Stop the output after group_id N.",
    &stop_group_id, &stop_group_id, 0, GET_ULL,
-   REQUIRED_ARG, 0, 0, ULONG_MAX, 0, 0, 0},
+   REQUIRED_ARG, 0, 0, (longlong) ULONG_MAX, 0, 0, 0},
   {"to-last-log", 't', "Requires -R. Will not stop at the end of the \
 requested binlog but rather continue printing until the end of the last \
 binlog of the MySQL server. If you send the output to the same MySQL server, \

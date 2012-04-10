@@ -106,8 +106,8 @@ struct QueryLogEvent
 
 QueryLogEvent query_with_log[]=
 {
-  { "BEGIN", strlen("BEGIN") },
-  { "COMMIT", strlen("COMMIT") }
+  { "BEGIN", static_cast<uint32>(strlen("BEGIN")) },
+  { "COMMIT", static_cast<uint32>(strlen("COMMIT")) }
 };
 
 /**
