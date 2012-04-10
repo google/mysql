@@ -1548,11 +1548,11 @@ static struct my_option my_long_options[] =
   {"select_limit", OPT_SELECT_LIMIT,
    "Automatic limit for SELECT when using --safe-updates.",
    &select_limit, &select_limit, 0, GET_ULONG, REQUIRED_ARG, 1000L,
-   1, ULONG_MAX, 0, 1, 0},
+   1, (longlong) ULONG_MAX, 0, 1, 0},
   {"max_join_size", OPT_MAX_JOIN_SIZE,
    "Automatic limit for rows in a join when using --safe-updates.",
    &max_join_size, &max_join_size, 0, GET_ULONG, REQUIRED_ARG, 1000000L,
-   1, ULONG_MAX, 0, 1, 0},
+   1, (longlong) ULONG_MAX, 0, 1, 0},
   {"secure-auth", OPT_SECURE_AUTH, "Refuse client connecting to server if it"
     " uses old (pre-4.1.1) protocol.", &opt_secure_auth,
     &opt_secure_auth, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
