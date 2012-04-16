@@ -387,10 +387,10 @@ MARIA_HA *maria_open(const char *name, int mode, uint open_flags)
                          &disk_cache, info_length+128,
                          &rec_per_key_part,
                          (sizeof(*rec_per_key_part) * HA_MAX_POSSIBLE_KEY *
-                          HA_MAX_KEY_SEG),
+                          MARIA_MAX_KEY_SEG),
                          &nulls_per_key_part,
                          (sizeof(*nulls_per_key_part) * HA_MAX_POSSIBLE_KEY *
-                          HA_MAX_KEY_SEG),
+                          MARIA_MAX_KEY_SEG),
                          NullS))
     {
       my_errno=ENOMEM;
@@ -490,7 +490,7 @@ MARIA_HA *maria_open(const char *name, int mode, uint open_flags)
 
     key_parts+=fulltext_keys*FT_SEGS;
     if (share->base.max_key_length > _ma_max_key_length() ||
-        keys > MARIA_MAX_KEY || key_parts > MARIA_MAX_KEY * HA_MAX_KEY_SEG)
+        keys > MARIA_MAX_KEY || key_parts > MARIA_MAX_KEY * MARIA_MAX_KEY_SEG)
     {
       DBUG_PRINT("error",("Wrong key info:  Max_key_length: %d  keys: %d  key_parts: %d", share->base.max_key_length, keys, key_parts));
       my_errno=HA_ERR_UNSUPPORTED;

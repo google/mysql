@@ -39,6 +39,8 @@
 #define O_NEW_DATA	2
 #define O_DATA_LOST	4
 
+#define MYISAM_MAX_KEY_SEG HA_MAX_KEY_SEG_OLD
+
 typedef struct st_sort_key_blocks		/* Used when sorting */
 {
   uchar *buff, *end_pos;
@@ -80,8 +82,8 @@ typedef struct st_handler_check_param
      The next two are used to collect statistics, see update_key_parts for
      description.
   */
-  ulonglong unique_count[HA_MAX_KEY_SEG + 1];
-  ulonglong notnull_count[HA_MAX_KEY_SEG + 1];
+  ulonglong unique_count[MYISAM_MAX_KEY_SEG + 1];
+  ulonglong notnull_count[MYISAM_MAX_KEY_SEG + 1];
 
   my_off_t search_after_block;
   my_off_t new_file_pos, key_file_blocks;
@@ -103,8 +105,8 @@ typedef struct st_handler_check_param
   ulonglong use_buffers;                        /* Used as param to getopt() */
   size_t read_buffer_length, write_buffer_length, sort_key_blocks;
   time_t backup_time;                           /* To sign backup files */
-  ulong rec_per_key_part[HA_MAX_KEY_SEG * HA_MAX_POSSIBLE_KEY];
-  double new_rec_per_key_part[HA_MAX_KEY_SEG * HA_MAX_POSSIBLE_KEY];
+  ulong rec_per_key_part[MYISAM_MAX_KEY_SEG * HA_MAX_POSSIBLE_KEY];
+  double new_rec_per_key_part[MYISAM_MAX_KEY_SEG * HA_MAX_POSSIBLE_KEY];
   uint out_flag, warning_printed, error_printed, note_printed, verbose;
   uint opt_sort_key, total_files, max_level;
   uint key_cache_block_size, pagecache_block_size;

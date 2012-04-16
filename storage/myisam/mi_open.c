@@ -263,7 +263,7 @@ MI_INFO *mi_open(const char *name, int mode, uint open_flags)
 
     key_parts+=fulltext_keys*FT_SEGS;
     if (share->base.max_key_length > HA_MAX_KEY_BUFF || keys > MI_MAX_KEY ||
-	key_parts > MI_MAX_KEY * HA_MAX_KEY_SEG)
+	key_parts > MI_MAX_KEY * MYISAM_MAX_KEY_SEG)
     {
       DBUG_PRINT("error",("Wrong key info:  Max_key_length: %d  keys: %d  key_parts: %d", share->base.max_key_length, keys, key_parts));
       my_errno=HA_ERR_UNSUPPORTED;
@@ -897,12 +897,17 @@ static void setup_key_functions(register MI_KEYDEF *keyinfo)
 
 uint mi_state_info_write(File file, MI_STATE_INFO *state, uint pWrite)
 {
-  uchar  buff[MI_STATE_INFO_SIZE + MI_STATE_EXTRA_SIZE];
-  uchar *ptr=buff;
+  uchar *buff;
+  uchar *ptr;
   uint	i, keys= (uint) state->header.keys,
 	key_blocks=state->header.max_block_size_index;
+  uint result;
   DBUG_ENTER("mi_state_info_write");
 
+  buff= (uchar *) my_malloc(MI_STATE_INFO_SIZE + MI_STATE_EXTRA_SIZE, MYF(0));
+  if (!buff)
+    DBUG_RETURN(1);
+  ptr=buff;
   memcpy(ptr, &state->header, sizeof(state->header));
   ptr+=sizeof(state->header);
 
@@ -952,10 +957,14 @@ uint mi_state_info_write(File file, MI_STATE_INFO *state, uint pWrite)
   }
 
   if (pWrite & 1)
-    DBUG_RETURN(mysql_file_pwrite(file, buff, (size_t) (ptr-buff), 0L,
-                                  MYF(MY_NABP | MY_THREADSAFE)) != 0);
-  DBUG_RETURN(mysql_file_write(file, buff, (size_t) (ptr-buff),
-                               MYF(MY_NABP)) != 0);
+    result= mysql_file_pwrite(file, buff, (size_t) (ptr-buff), 0L,
+                              MYF(MY_NABP | MY_THREADSAFE)) != 0;
+  else
+    result= mysql_file_write(file, buff, (size_t) (ptr-buff),
+                             MYF(MY_NABP)) != 0;
+
+  my_free(buff);
+  DBUG_RETURN(result);
 }
 
 
@@ -1024,20 +1033,27 @@ uchar *mi_state_info_read(uchar *ptr, MI_STATE_INFO *state)
 
 uint mi_state_info_read_dsk(File file, MI_STATE_INFO *state, my_bool pRead)
 {
-  uchar	buff[MI_STATE_INFO_SIZE + MI_STATE_EXTRA_SIZE];
+  uchar	*buff;
+  uint result= 0;
+
+  buff= (uchar *) my_malloc(MI_STATE_INFO_SIZE + MI_STATE_EXTRA_SIZE, MYF(0));
+  if (!buff)
+    return 1;
 
   if (!myisam_single_user)
   {
     if (pRead)
     {
       if (mysql_file_pread(file, buff, state->state_length, 0L, MYF(MY_NABP)))
-	return 1;
+	result= 1;
     }
     else if (mysql_file_read(file, buff, state->state_length, MYF(MY_NABP)))
-      return 1;
-    mi_state_info_read(buff, state);
+      result= 1;
+    if (result == 0)
+      mi_state_info_read(buff, state);
   }
-  return 0;
+  my_free(buff);
+  return result;
 }
 
 

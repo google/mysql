@@ -30,7 +30,7 @@ MARIA_RECORD_POS maria_position(MARIA_HA *info)
 
 uint maria_max_key_length()
 {
-  uint tmp= (_ma_max_key_length() - 8 - HA_MAX_KEY_SEG*3);
+  uint tmp= (_ma_max_key_length() - 8 - MARIA_MAX_KEY_SEG*3);
   return MY_MIN(HA_MAX_KEY_LENGTH, tmp);
 }
 

@@ -61,7 +61,7 @@ class ha_myisam: public handler
 
   ulong index_flags(uint inx, uint part, bool all_parts) const;
   uint max_supported_keys()          const { return MI_MAX_KEY; }
-  uint max_supported_key_parts()     const { return HA_MAX_KEY_SEG; }
+  uint max_supported_key_parts()     const { return MYISAM_MAX_KEY_SEG; }
   uint max_supported_key_length()    const { return HA_MAX_KEY_LENGTH; }
   uint max_supported_key_part_length() const { return HA_MAX_KEY_LENGTH; }
   uint checksum() const;

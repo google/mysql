@@ -474,7 +474,7 @@ static bool set_up_field_array(TABLE *table,
     if (field->flags & GET_FIXED_FIELDS_FLAG)
       num_fields++;
   }
-  if (num_fields > MAX_REF_PARTS)
+  if (num_fields > MAX_REF_PARTS_OLD)
   {
     char *err_str;
     if (is_sub_part)

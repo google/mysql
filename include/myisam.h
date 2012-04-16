@@ -294,7 +294,8 @@ extern uint mi_get_pointer_length(ulonglong file_length, uint def);
 extern int mi_make_backup_of_index(struct st_myisam_info *info,
                                    time_t backup_time, myf flags);
 #define myisam_max_key_length() HA_MAX_KEY_LENGTH
-#define myisam_max_key_segments() HA_MAX_KEY_SEG
+#define MYISAM_MAX_KEY_SEG HA_MAX_KEY_SEG_OLD
+#define myisam_max_key_segments() MYISAM_MAX_KEY_SEG
 
 #define MEMMAP_EXTRA_MARGIN     7       /* Write this as a suffix for mmap file */
 /* this is used to pass to mysql_myisamchk_table */
@@ -351,8 +352,8 @@ typedef struct st_mi_sort_param
     The next two are used to collect statistics, see update_key_parts for
     description.
   */
-  ulonglong unique[HA_MAX_KEY_SEG+1];
-  ulonglong notnull[HA_MAX_KEY_SEG+1];
+  ulonglong unique[MYISAM_MAX_KEY_SEG + 1];
+  ulonglong notnull[MYISAM_MAX_KEY_SEG + 1];
 
   my_off_t pos,max_pos,filepos,start_recpos;
   uint key, key_length,real_key_length;

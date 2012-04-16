@@ -4934,7 +4934,7 @@ part_field_item:
               mem_alloc_error(1);
               MYSQL_YYABORT;
             }
-            if (part_info->num_columns > MAX_REF_PARTS)
+            if (part_info->num_columns > MAX_REF_PARTS_OLD)
             {
               my_error(ER_TOO_MANY_PARTITION_FUNC_FIELDS_ERROR, MYF(0),
                        "list of partition fields");
@@ -5019,7 +5019,7 @@ sub_part_field_item:
               mem_alloc_error(1);
               MYSQL_YYABORT;
             }
-            if (part_info->subpart_field_list.elements > MAX_REF_PARTS)
+            if (part_info->subpart_field_list.elements > MAX_REF_PARTS_OLD)
             {
               my_error(ER_TOO_MANY_PARTITION_FUNC_FIELDS_ERROR, MYF(0),
                        "list of subpartition fields");
@@ -5232,7 +5232,7 @@ part_values_in:
             {
               if (!lex->is_partition_management() ||
                   part_info->num_columns == 0 ||
-                  part_info->num_columns > MAX_REF_PARTS)
+                  part_info->num_columns > MAX_REF_PARTS_OLD)
               {
                 part_info->print_debug("Kilroy III", NULL);
                 my_parse_error(ER(ER_PARTITION_COLUMN_LIST_ERROR));

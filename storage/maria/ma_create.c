@@ -122,15 +122,15 @@ int maria_create(const char *name, enum data_file_type datafile_type,
     ci->reloc_rows=ci->max_rows;		/* Check if wrong parameter */
 
   if (!(rec_per_key_part=
-	(double*) my_malloc((keys + uniques)*HA_MAX_KEY_SEG*sizeof(double) +
-                            (keys + uniques)*HA_MAX_KEY_SEG*sizeof(ulong) +
+	(double*) my_malloc((keys + uniques)*MARIA_MAX_KEY_SEG*sizeof(double) +
+                            (keys + uniques)*MARIA_MAX_KEY_SEG*sizeof(ulong) +
                             sizeof(uint16) * columns,
                             MYF(MY_WME | MY_ZEROFILL))))
     DBUG_RETURN(my_errno);
   nulls_per_key_part= (ulong*) (rec_per_key_part +
-                                (keys + uniques) * HA_MAX_KEY_SEG);
+                                (keys + uniques) * MARIA_MAX_KEY_SEG);
   column_array= (uint16*) (nulls_per_key_part +
-                           (keys + uniques) * HA_MAX_KEY_SEG);
+                           (keys + uniques) * MARIA_MAX_KEY_SEG);
 
 
   /* Start by checking fields and field-types used */
@@ -604,7 +604,7 @@ int maria_create(const char *name, enum data_file_type datafile_type,
       }
     } /* if HA_FULLTEXT */
     key_segs+=keydef->keysegs;
-    if (keydef->keysegs > HA_MAX_KEY_SEG)
+    if (keydef->keysegs > MARIA_MAX_KEY_SEG)
     {
       my_errno=HA_WRONG_CREATE_OPTION;
       goto err_no_lock;

@@ -93,8 +93,8 @@ typedef struct st_maria_sort_param
     The next two are used to collect statistics, see maria_update_key_parts for
     description.
   */
-  ulonglong unique[HA_MAX_KEY_SEG+1];
-  ulonglong notnull[HA_MAX_KEY_SEG+1];
+  ulonglong unique[MARIA_MAX_KEY_SEG + 1];
+  ulonglong notnull[MARIA_MAX_KEY_SEG + 1];
   ulonglong sortbuff_size;
 
   MARIA_RECORD_POS pos,max_pos,filepos,start_recpos, current_filepos;
@@ -218,7 +218,7 @@ typedef struct st_maria_state_info
 #define MARIA_STATE_KEY_SIZE	(8 + 4)
 #define MARIA_STATE_KEYBLOCK_SIZE  8
 #define MARIA_STATE_KEYSEG_SIZE	12
-#define MARIA_STATE_EXTRA_SIZE (MARIA_MAX_KEY*MARIA_STATE_KEY_SIZE + MARIA_MAX_KEY*HA_MAX_KEY_SEG*MARIA_STATE_KEYSEG_SIZE)
+#define MARIA_STATE_EXTRA_SIZE (MARIA_MAX_KEY*MARIA_STATE_KEY_SIZE + MARIA_MAX_KEY*MARIA_MAX_KEY_SEG*MARIA_STATE_KEYSEG_SIZE)
 #define MARIA_KEYDEF_SIZE	(2+ 5*2)
 #define MARIA_UNIQUEDEF_SIZE	(2+1+1)
 #define HA_KEYSEG_SIZE		(6+ 2*2 + 4*2)

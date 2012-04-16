@@ -3203,7 +3203,7 @@ public:
 
   virtual uint max_supported_record_length() const { return HA_MAX_REC_LENGTH; }
   virtual uint max_supported_keys() const { return 0; }
-  virtual uint max_supported_key_parts() const { return MAX_REF_PARTS; }
+  virtual uint max_supported_key_parts() const { return MAX_REF_PARTS_OLD; }
   virtual uint max_supported_key_length() const { return MAX_KEY_LENGTH; }
   virtual uint max_supported_key_part_length() const { return 255; }
   virtual uint min_record_length(uint options) const { return 1; }
