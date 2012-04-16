@@ -449,6 +449,7 @@ public:
     return 0;
   }
   virtual uint max_supported_keys() const { return 1000; }
+  virtual uint max_supported_key_parts() const { return MAX_REF_PARTS; }
   virtual uint max_supported_key_part_length() const { return MAX_KEY_LENGTH; }
 
   // TODO -- store the create comment and pass it to the stats server

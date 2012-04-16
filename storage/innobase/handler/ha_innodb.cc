@@ -2943,7 +2943,7 @@ ha_innobase::open(
 
 	upd_and_key_val_buff_len =
 				table->s->reclength + table->s->max_key_length
-							+ MAX_REF_PARTS * 3;
+							+ MAX_REF_PARTS_OLD * 3;
 	if (!(uchar*) my_multi_malloc(MYF(MY_WME),
 			&upd_buff, upd_and_key_val_buff_len,
 			&key_val_buff, upd_and_key_val_buff_len,
