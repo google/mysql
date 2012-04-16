@@ -951,6 +951,10 @@ sys_var_str sys_var_audit_log_path(&vars, "audit_log_file", sys_check_log_path,
                                    sys_update_audit_log_path,
                                    sys_default_audit_log_path,
                                    opt_audit_logname);
+static sys_var_const sys_audit_log_connections(&vars, "audit_log_connections",
+                                               OPT_GLOBAL, SHOW_BOOL,
+                                               (uchar*)
+                                               &opt_audit_log_connections);
 static sys_var_const sys_audit_log_super(&vars, "audit_log_super",
                                          OPT_GLOBAL, SHOW_BOOL,
                                          (uchar*) &opt_audit_log_super);
