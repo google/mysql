@@ -898,6 +898,8 @@ void Log_to_file_event_handler::flush()
     mysql_log.reopen_file();
   if (opt_slow_log)
     mysql_slow_log.reopen_file();
+  if (opt_audit_log)
+    mysql_audit_log.reopen_file();
 }
 
 /*
