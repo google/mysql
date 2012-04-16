@@ -427,14 +427,15 @@ check_user(THD *thd, enum enum_server_command command,
         check the log for the tried login tried and also to detect
         break-in attempts.
       */
-      audit_log_print(thd, command,
-                      (thd->main_security_ctx.priv_user ==
-                       thd->main_security_ctx.user ?
-                       (char*) "%s@%s on %s" :
-                       (char*) "%s@%s as anonymous on %s"),
-                      thd->main_security_ctx.user,
-                      thd->main_security_ctx.host_or_ip,
-                      db ? db : (char*) "");
+      if (opt_audit_log_connections)
+        audit_log_print(thd, command,
+                        (thd->main_security_ctx.priv_user ==
+                         thd->main_security_ctx.user ?
+                         (char*) "%s@%s on %s" :
+                         (char*) "%s@%s as anonymous on %s"),
+                        thd->main_security_ctx.user,
+                        thd->main_security_ctx.host_or_ip,
+                        db ? db : (char*) "");
 
       general_log_print(thd, command,
                         (thd->main_security_ctx.priv_user ==
@@ -515,10 +516,11 @@ check_user(THD *thd, enum enum_server_command command,
                     thd->main_security_ctx.user,
                     thd->main_security_ctx.host_or_ip,
                     passwd_len ? ER(ER_YES) : ER(ER_NO));
-  audit_log_print(thd, COM_CONNECT, ER(ER_ACCESS_DENIED_ERROR),
-                  thd->main_security_ctx.user,
-                  thd->main_security_ctx.host_or_ip,
-                  passwd_len ? ER(ER_YES) : ER(ER_NO));
+  if (opt_audit_log_connections)
+    audit_log_print(thd, COM_CONNECT, ER(ER_ACCESS_DENIED_ERROR),
+                    thd->main_security_ctx.user,
+                    thd->main_security_ctx.host_or_ip,
+                    passwd_len ? ER(ER_YES) : ER(ER_NO));
   DBUG_RETURN(1);
 #endif /* NO_EMBEDDED_ACCESS_CHECKS */
 }

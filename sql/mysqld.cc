@@ -453,7 +453,8 @@ static pthread_cond_t COND_thread_cache, COND_flush_thread_cache;
 
 bool opt_update_log, opt_bin_log, opt_ignore_builtin_innodb= 0;
 bool opt_disable_binlog_unsafe_warning= 0;
-my_bool opt_log, opt_slow_log, opt_audit_log, opt_audit_log_super;
+my_bool opt_log, opt_slow_log, opt_audit_log,
+  opt_audit_log_connections, opt_audit_log_super;
 ulong log_output_options;
 my_bool opt_log_queries_not_using_indexes= 0;
 bool opt_error_log= IF_WIN(1,0);
@@ -5916,6 +5917,7 @@ enum options_mysqld
   OPT_GENERAL_LOG,
   OPT_SLOW_LOG,
   OPT_AUDIT_LOG,
+  OPT_AUDIT_LOG_CONNECTIONS,
   OPT_AUDIT_LOG_FILTER,
   OPT_AUDIT_LOG_SUPER,
   OPT_AUDIT_LOG_TABLES,
@@ -6194,14 +6196,17 @@ each time the SQL thread starts.",
    "--general_log/--general_log_file instead).", &opt_logname,
    &opt_logname, 0, GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"audit-log", OPT_AUDIT_LOG,
-   "Log logins, queries against specified tables, and startup",
+   "Log logins, queries against specified tables, and startup.",
    &opt_audit_logname, &opt_audit_logname, 0, GET_STR, OPT_ARG,
    0, 0, 0, 0, 0, 0},
+  {"audit-log-connections", OPT_AUDIT_LOG_CONNECTIONS,
+   "Log [failed] connections to the server.",
+   &opt_audit_log_connections, 0, 0, GET_BOOL, OPT_ARG, 1, 0, 0, 0, 0, 0},
   {"audit-log-filter", OPT_AUDIT_LOG_FILTER,
    "Filter certain statements from appearing in the audit log. "
    "by default everything will be logged.  Statements can be filtered "
    "by specifying a comma separated list here "
-   "e.g. select,insert,delete,update",
+   "e.g. select,insert,delete,update.",
    &opt_audit_log_filter, &opt_audit_log_filter, 0, GET_STR, REQUIRED_ARG,
    0, 0, 0, 0, 0, 0},
   {"audit-log-super", OPT_AUDIT_LOG_SUPER,
