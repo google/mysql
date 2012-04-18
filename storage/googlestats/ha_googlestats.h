@@ -11,6 +11,7 @@ class StatsServerKeys;
 class StatsServerKeyVals;
 class StatsServerConnectState;
 class StatsServerPushedConds;
+class StatsServerConnectState;       // gss_cache.h
 
 // Used for FLUSH STATS_SERVERS. Returns false on success.
 extern bool googlestats_reinit(THD*);
@@ -332,8 +333,8 @@ class ha_googlestats: public handler
                             int active_index);
 
   // Get selectivity estimates for the index 'keyinfo' and return the number
-  // of rows in the table.
-  longlong get_sel_estimate(KEY* keyinfo);
+  // of rows in the table. Retries subsequent tiers if failure occurs.
+  longlong get_sel_estimate(StatsServerConnectState *state, KEY* keyinfo);
 
   // Get selectivity estimates for all indexes and return 0 on success.
   int get_sel_estimates();

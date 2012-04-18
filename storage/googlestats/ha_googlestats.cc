@@ -881,70 +881,73 @@ ha_rows ha_googlestats::records_in_range(uint inx,
       printError("%s: %s", kWho, request.c_str());
     last_request = request;
 
-    // make sure we have a connection; we might get called before index_/rnd_init()
-    if (connect_server(key_info->name)) {
-      if (googlestats_log_level >= GsLogLevelLow) {
-        printError("%s for table %s index %d connect_server failed\n",
-                   kWho, table->s->table_name.str, inx);
+    StatsServerConnectState state;
+
+    while (!state.getIsDone()) {
+      // make sure we have a connection; we might get called before index_/rnd_init()
+      if (connect_server_with_state(&state, key_info->name)) {
+        if (googlestats_log_level >= GsLogLevelLow) {
+          printError("%s for table %s index %d connect_server failed\n",
+                     kWho, table->s->table_name.str, inx);
+        }
+
+        continue;
       }
-      DBUG_RETURN(HA_POS_ERROR);
-    }
 
-    int len = StatsServerAux::Write(sock_fd, request.c_str(), request.size());
-    if (len != (int)request.length()) {
-      printError("%s: error(%d) on write returning %d", kWho, errno, len);
-      cleanup();
-      DBUG_RETURN(HA_POS_ERROR);
-    }
-
-    IncrementNonfetch timer(this);  // Time network IO wait
-
-    // read signature 'SC01'
-
-    char signature[4];
-    if (StatsServerAux::readBytes(sock_fd, server_name, &signature,
-                                  sizeof(signature), googlestats_timeout)) {
-      printError("%s: signature didn't receive expected number of bytes", kWho);
-      StatsServerCache::markTableBadAtServer(table->s->db.str,
-                                             table->s->table_name.str,
-                                             key_info->name, server_name,
-                                             server_port);
-      cleanup();
-      DBUG_RETURN(HA_POS_ERROR);
-    }
-    if (strncmp(signature, "SC01", sizeof(signature)) != 0) {
-      printError("%s: received error from stats server (%c%c%c%c)",
-                 kWho, signature[0], signature[1], signature[2], signature[3]);
-      StatsServerCache::markTableBadAtServer(table->s->db.str,
-                                             table->s->table_name.str,
-                                             key_info->name, server_name,
-                                             server_port);
-      cleanup();
-      DBUG_RETURN(HA_POS_ERROR);
-    }
-
-    // read number of rows
-    longlong num_rows;
-    if (StatsServerAux::readBytes(sock_fd, server_name, &num_rows,
-                                  INT_8_BYTES, googlestats_timeout)) {
-      printError("%s: num_rows didn't receive expected number of bytes", kWho);
-      StatsServerCache::markTableBadAtServer(table->s->db.str,
-                                             table->s->table_name.str,
-                                             key_info->name, server_name,
-                                             server_port);
-      cleanup();
-      DBUG_RETURN(HA_POS_ERROR);
-    } else {
-      // TODO(mcallaghan): consider using 2 as the min result
-      ha_rows res = gs_max((longlong) 1, num_rows);
-      if (googlestats_log_level >= GsLogLevelLow) {
-        printError("records_in_range for table %s index %d is %lld\n",
-                   table->s->table_name.str, inx, (long long int)res);
+      int len = StatsServerAux::Write(sock_fd, request.c_str(), request.size());
+      if (len != (int)request.length()) {
+        printError("%s: error(%d) on write returning %d", kWho, errno, len);
+        continue;
       }
-      cleanup();
-      DBUG_RETURN(res);
+
+      IncrementNonfetch timer(this);  // Time network IO wait
+
+      // read signature 'SC01'
+
+      char signature[4];
+      if (StatsServerAux::readBytes(sock_fd, server_name, &signature,
+                                    sizeof(signature), googlestats_timeout)) {
+        printError("%s: signature didn't receive expected number of bytes", kWho);
+        StatsServerCache::markTableBadAtServer(table->s->db.str,
+                                               table->s->table_name.str,
+                                               key_info->name, server_name,
+                                               server_port);
+        continue;
+      }
+      if (strncmp(signature, "SC01", sizeof(signature)) != 0) {
+        printError("%s: received error from stats server (%c%c%c%c)",
+                   kWho, signature[0], signature[1], signature[2], signature[3]);
+        StatsServerCache::markTableBadAtServer(table->s->db.str,
+                                               table->s->table_name.str,
+                                               key_info->name, server_name,
+                                               server_port);
+        continue;
+      }
+
+      // read number of rows
+      longlong num_rows;
+      if (StatsServerAux::readBytes(sock_fd, server_name, &num_rows,
+                                    INT_8_BYTES, googlestats_timeout)) {
+        printError("%s: num_rows didn't receive expected number of bytes", kWho);
+        StatsServerCache::markTableBadAtServer(table->s->db.str,
+                                               table->s->table_name.str,
+                                               key_info->name, server_name,
+                                               server_port);
+        continue;
+      } else {
+        // TODO(mcallaghan): consider using 2 as the min result
+        ha_rows res = gs_max((longlong) 1, num_rows);
+        if (googlestats_log_level >= GsLogLevelLow) {
+          printError("records_in_range for table %s index %d is %lld\n",
+                     table->s->table_name.str, inx, (long long int)res);
+        }
+        cleanup();
+        DBUG_RETURN(res);
+      }
     }
   }
+
+  cleanup();
 
   /* We should never fall-through here. */
   DBUG_ASSERT(1);
@@ -1086,12 +1089,13 @@ ha_googlestats::connect_server_with_state(StatsServerConnectState* state,
 // return total # of rows
 longlong
 ha_googlestats::get_sel_estimate(
+  StatsServerConnectState *state,
   KEY* key_info)
 {
   const char* kWho = "ha_googlestats::get_sel_estimate";
   std::string request;
 
-  if (connect_server(key_info->name)) {
+  if (connect_server_with_state(state, key_info->name)) {
     printError("%s: cannot connect for %s", kWho, key_info->name);
     return -1;
   }
@@ -1111,7 +1115,7 @@ ha_googlestats::get_sel_estimate(
   if (len != (int) request.size()) {
     printError("%s: error on write", kWho);
     cleanup();
-    return GSS_ERR_SOCKET_WRITE;
+    return -1;
   }
 
   IncrementNonfetch timer(this);  // Time network IO wait
@@ -1127,7 +1131,6 @@ ha_googlestats::get_sel_estimate(
                                            table->s->table_name.str,
                                            key_info->name, server_name,
                                            server_port);
-    cleanup();
     return -1;
   }
   if (strncmp(signature, "SI01", 4) != 0) {
@@ -1137,7 +1140,6 @@ ha_googlestats::get_sel_estimate(
                                            table->s->table_name.str,
                                            key_info->name, server_name,
                                            server_port);
-    cleanup();
     return -1;
   }
 
@@ -1150,7 +1152,6 @@ ha_googlestats::get_sel_estimate(
                                            table->s->table_name.str,
                                            key_info->name, server_name,
                                            server_port);
-    cleanup();
     return -1;
   }
 
@@ -1161,7 +1162,6 @@ ha_googlestats::get_sel_estimate(
   memcpy_field((uchar*) &num_est, read_buf + INT_8_BYTES, INT_4_BYTES);
   if (num_est <= 0 || num_est > 10000) {
     printError("%s: Bad index column count %d", kWho, num_est);
-    cleanup();
     return -1;
   }
 
@@ -1175,7 +1175,6 @@ ha_googlestats::get_sel_estimate(
                                            table->s->table_name.str,
                                            key_info->name, server_name,
                                            server_port);
-    cleanup();
     return -1;
   }
   // Store it when it is within the range of key fields for the index.
@@ -1200,7 +1199,6 @@ ha_googlestats::get_sel_estimate(
       key_info->rec_per_key[idx] = 1;
   }
 
-  cleanup();
   return row_count;
 }
 
@@ -1233,12 +1231,31 @@ ha_googlestats::get_sel_estimates()
   // get sel. estimates for each index
   for (uint j = 0; j < table->s->keys; ++j) {
     KEY* key_info = &table->key_info[j];
-    longlong row_count = get_sel_estimate(key_info);
+    StatsServerConnectState state;
+    int attempts;
+    longlong row_count;
+
+    for (attempts = 0; !state.getIsDone(); ++attempts) {
+      row_count = get_sel_estimate(&state, key_info);
+      if (row_count < 0) {
+        if (googlestats_log_level >= GsLogLevelLow) {
+          printError("%s: row_count < 0 for %s index %d (attempt %d)",
+                     kWho, table->s->table_name.str, j, attempts+1);
+        }
+      } else {
+        break;
+      }
+    }
+
+    // From get_sel_estimate();
+    cleanup();
+
     if (row_count < 0) {
-      printError("%s: row_count < 0 for %s index %d",
-                 kWho, table->s->table_name.str, j);
+      printError("%s: row_count < 0 for %s index %d after %d attempts",
+                 kWho, table->s->table_name.str, j, attempts);
       return(-1);
     }
+
     // If this is the PK index, use the estimate from it. Otherwise, use the
     // largest estimate for #rows in the table.
     if (j == table->s->primary_key || table->s->primary_key >= table->s->keys)
