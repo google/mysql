@@ -360,6 +360,9 @@ static sys_var_thd_ulong	sys_join_buffer_size(&vars, "join_buffer_size",
 */
 sys_var_thd_ulong sys_join_cache_level(&vars, "join_cache_level",
                                        &SV::join_cache_level);
+static sys_var_const sys_restrict_bka_to_googlestats(&vars, "restrict_bka_to_googlestats",
+                                                     OPT_GLOBAL, SHOW_BOOL,
+                                                     (uchar*) &opt_restrict_bka_to_googlestats);
 static sys_var_key_buffer_size	sys_key_buffer_size(&vars, "key_buffer_size");
 static sys_var_key_cache_long  sys_key_cache_block_size(&vars, "key_cache_block_size",
 						 offsetof(KEY_CACHE,
