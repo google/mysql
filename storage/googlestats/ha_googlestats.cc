@@ -181,6 +181,8 @@ ulong googlestats_pushdown_max_in_size = 0;
 // The first tier considered "remote".  Used for logging remote connections.
 ulong googlestats_remote_tier = 3;
 
+extern ulong googlestats_write_tries;
+
 //
 // Thread local variables must be defined up here.
 //
@@ -3555,12 +3557,17 @@ static MYSQL_SYSVAR_ULONG(pushdown_max_in_size, googlestats_pushdown_max_in_size
 static MYSQL_SYSVAR_ULONG(estimate_interval, googlestats_estimate_interval,
   PLUGIN_VAR_OPCMDARG,
   "time interval in seconds between consecutive calls to stats-servers",
-  NULL, NULL, 0, 0, 86400, 0);
+  NULL, NULL, 43200, 0, 86400, 0);
 
 static MYSQL_SYSVAR_ULONG(remote_tier, googlestats_remote_tier,
   PLUGIN_VAR_OPCMDARG,
   "first statsserver tier considered remote",
   NULL, NULL, 3, 0, 10, 0);
+
+static MYSQL_SYSVAR_ULONG(write_tries, googlestats_write_tries,
+  PLUGIN_VAR_OPCMDARG,
+  "Number of tries to write to socket",
+  NULL, NULL, 2, 1, 5, 0);
 
 static struct st_mysql_sys_var* googlestats_system_variables[]= {
   MYSQL_SYSVAR(log_level),
@@ -3574,6 +3581,7 @@ static struct st_mysql_sys_var* googlestats_system_variables[]= {
   MYSQL_SYSVAR(version_table),
   MYSQL_SYSVAR(estimate_interval),
   MYSQL_SYSVAR(remote_tier),
+  MYSQL_SYSVAR(write_tries),
   // Thead (session) variables.
   MYSQL_SYSVAR(initial_fetch_rows),
   MYSQL_SYSVAR(multifetch_max_keys),
