@@ -2342,7 +2342,7 @@ int MYSQL_LOG::generate_new_name(char *new_name, const char *log_name)
   if (log_type == LOG_BIN || log_type == LOG_AUDIT || log_type == LOG_RELAY ||
       log_type == LOG_SQL)
   {
-    if (!fn_ext(log_name)[0])
+    if (!fn_ext(log_name)[0] || log_type == LOG_SQL)
     {
       if (find_uniq_filename(new_name))
       {
