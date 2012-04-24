@@ -1,0 +1,1 @@
+--log-bin --sql-log=sqllog_file_naming.log --sql-log-as-master --sql-log-ddl --skip-sql-log-ddl-base64-encode-stmts

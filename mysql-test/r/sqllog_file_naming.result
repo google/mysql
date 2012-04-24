@@ -1,0 +1,17 @@
+create table log_test (col1 int, col2 int);
+insert into log_test values (1, 2);
+insert into log_test values (3, 4);
+drop table log_test;
+1 1 CREATE_TABLE test.log_test create table log_test (col1 int, col2 int)
+1 1 INSERT test.log_test col1 LONG 1 AND col2 LONG 2
+1 1 INSERT test.log_test col1 LONG 3 AND col2 LONG 4
+1 1 DROP_TABLE test.log_test drop table log_test
+flush logs;
+create table log_test_2 (col1 int, col2 int);
+insert into log_test_2 values (1, 2);
+insert into log_test_2 values (3, 4);
+drop table log_test_2;
+1 1 CREATE_TABLE test.log_test_2 create table log_test_2 (col1 int, col2 int)
+1 1 INSERT test.log_test_2 col1 LONG 1 AND col2 LONG 2
+1 1 INSERT test.log_test_2 col1 LONG 3 AND col2 LONG 4
+1 1 DROP_TABLE test.log_test_2 drop table log_test_2

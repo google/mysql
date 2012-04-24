@@ -4365,7 +4365,8 @@ a file name for --log-bin-index option", opt_binlog_index_name);
 
     char buf[FN_REFLEN];
     const char *ln;
-    ln= mysql_sql_log.generate_name(opt_sql_logname, "-sql", 1, buf);
+    ln= mysql_sql_log.generate_name(opt_sql_logname, "-sql",
+                                    false /* strip_ext */, buf);
     if (ln == buf)
     {
       my_free(opt_sql_logname, MYF(MY_ALLOW_ZERO_PTR));

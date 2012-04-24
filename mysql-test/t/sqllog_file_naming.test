@@ -1,0 +1,36 @@
+#
+# Tests that the sql log filename can have an embedded '.'.
+#
+
+# this test needs multithreaded mysqltest
+-- source include/not_embedded.inc
+
+#
+# A few statements just to put something in the log.
+#
+create table log_test (col1 int, col2 int);
+insert into log_test values (1, 2);
+insert into log_test values (3, 4);
+drop table log_test;
+
+#
+# Show the log content (timestamp is removed) to verify log named correctly.
+#
+let $MYSQLD_DATADIR= `select @@datadir;`;
+--exec cat $MYSQLD_DATADIR/sqllog_file_naming.log.000001 | cut -d' ' -f9-
+
+#
+# Make sure that sequence number increments.
+#
+flush logs;
+
+#
+# A few more statements to go into the new log.
+#
+create table log_test_2 (col1 int, col2 int);
+insert into log_test_2 values (1, 2);
+insert into log_test_2 values (3, 4);
+drop table log_test_2;
+
+let $MYSQLD_DATADIR= `select @@datadir;`;
+--exec cat $MYSQLD_DATADIR/sqllog_file_naming.log.000002 | cut -d' ' -f9-
