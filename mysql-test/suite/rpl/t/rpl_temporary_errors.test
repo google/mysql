@@ -1,4 +1,4 @@
-# rpl_hierarchical does not support creating temporary tables on the master.
+# rpl_hierarchical does not support switching binlog_format.
 --source include/not_rpl_hierarchical.inc
 
 source include/master-slave.inc;

@@ -9,9 +9,6 @@
 #   4: sync to slave and check the number of temp tables on slave.
 #
 
-# rpl_hierarchical does not support creating temporary tables on the master.
---source include/not_rpl_hierarchical.inc
-
 source include/master-slave.inc;
 source include/have_binlog_format_mixed.inc;
 source include/have_innodb.inc;

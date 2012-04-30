@@ -1,10 +1,6 @@
 # Requires binlog_format=statement format since query involving
 # get_lock() is logged in row format if binlog_format=mixed or row.
 -- source include/have_binlog_format_statement.inc
-
-# rpl_hierarchical does not support creating temporary tables on the master.
---source include/not_rpl_hierarchical.inc
-
 -- source include/master-slave.inc
 
 --let $engine_type= myisam

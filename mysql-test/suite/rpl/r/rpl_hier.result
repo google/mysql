@@ -207,10 +207,16 @@ Log_name	Pos	Server_ID
 set binlog_group_id=2500, master_server_id=1;
 change master to connect_using_group_id;
 include/start_slave.inc
+create table t6 (f int) engine=innodb;
+begin;
+insert into t6 values (0), (1), (2);
 create temporary table t7 (f int);
-ERROR HY000: The MySQL server is running with the --rpl-hierarchical option so it cannot execute this statement
-create temporary table t7 (f int);
-insert into t7 values (1), (2), (3);
+insert into t7 values (0), (1), (2);
+commit;
+create temporary table t8 (f int);
+insert into t8 select * from t6;
+drop temporary table t7;
+drop temporary table t8;
 include/stop_slave.inc
 set binlog_group_id=9223372036854775807, master_server_id=1;
 show master status;
@@ -274,6 +280,6 @@ change master to master_log_file='master-bin.000001';
 Connect_Using_Group_ID = 'No'
 change master to master_user='root', connect_using_group_id;
 include/start_slave.inc
-drop table t1, t3, t4, t5;
+drop table t1, t3, t4, t5, t6;
 set global rpl_hierarchical_cache_frequency=1;
 include/rpl_end.inc

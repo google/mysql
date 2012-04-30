@@ -8,8 +8,9 @@
 # See if slave crashes when doing a CREATE TEMPORARY TABLE twice, separated by
 # RESET SLAVE.
 
-# Creating temporary tables on a master is incompatible with rpl_hierarchical.
-source include/not_rpl_hierarchical.inc;
+# Test intentionally replays the same transactions on the slave mutliple times
+# thus is incompatible with rpl_hierarchical.
+--source include/not_rpl_hierarchical.inc
 
 -- source include/master-slave.inc
 sync_slave_with_master;

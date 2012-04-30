@@ -1,6 +1,3 @@
-# rpl_hierarchical does not support creating temporary tables on the master.
---source include/not_rpl_hierarchical.inc
-
 -- source include/have_binlog_format_row.inc
 -- source include/master-slave.inc
 

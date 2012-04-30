@@ -1,5 +1,3 @@
-# Creating temporary tables on a master is incompatible with rpl_hierarchical.
-source include/not_rpl_hierarchical.inc;
 source include/master-slave.inc;
 
 #

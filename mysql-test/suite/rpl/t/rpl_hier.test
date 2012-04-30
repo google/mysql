@@ -1,4 +1,5 @@
 --source include/have_rpl_hierarchical.inc
+--source include/have_innodb.inc
 
 --let $rpl_server_count= 3
 --let $rpl_topology= 1->2, 1->3
@@ -480,20 +481,29 @@ connection server_3;
 sync_with_master;
 
 #
-# Test creation of temp tables on a master is disallowed when rpl_hierarchical is ON.
+# Test creation of temp tables on a master.
 #
 connection server_1;
 
-# On the master, creation should fail.
---error ER_OPTION_PREVENTS_STATEMENT
-create temporary table t7 (f int);
+create table t6 (f int) engine=innodb;
 
-# Switch to a slave, where creation should succeed because with
-# rpl_hierarchical statements generated on the slave get filtered
-# before being written to the bin log.
-connection server_2;
+# Temp table creation inside an existing transaction does not do an implicit
+# commit.
+begin;
+insert into t6 values (0), (1), (2);
 create temporary table t7 (f int);
-insert into t7 values (1), (2), (3);
+insert into t7 values (0), (1), (2);
+commit;
+
+# Temp table creation outside of a transaction is it's own group_id
+create temporary table t8 (f int);
+insert into t8 select * from t6;
+drop temporary table t7;
+drop temporary table t8;
+save_master_pos;
+
+connection server_2;
+sync_with_master;
 
 #
 # There is some conversion between ulonglong and longlong so test out that
@@ -604,6 +614,6 @@ connection server_2;
 --source include/start_slave.inc
 
 connection server_1;
-drop table t1, t3, t4, t5;
+drop table t1, t3, t4, t5, t6;
 eval set global rpl_hierarchical_cache_frequency=$cache_frequency;
 --source include/rpl_end.inc

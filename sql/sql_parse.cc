@@ -2766,17 +2766,6 @@ mysql_execute_command(THD *thd)
 	break;
       }
     }
-#ifdef HAVE_REPLICATION
-    else
-    {
-      if (rpl_hierarchical && might_write_binlog())
-      {
-        res= 1;
-        my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--rpl-hierarchical");
-        break;
-      }
-    }
-#endif /* HAVE_REPLICATION */
     DBUG_ASSERT(first_table == all_tables && first_table != 0);
     bool link_to_local;
     // Skip first table, which is the table we are creating
