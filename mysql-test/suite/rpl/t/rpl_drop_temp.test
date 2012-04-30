@@ -5,9 +5,6 @@
 # Purpose: According to TU in 16552 This is how
 # to work around NDB's issue with temp tables
 ##############################################
-
-# Creating temporary tables on a master is incompatible with rpl_hierarchical.
-source include/not_rpl_hierarchical.inc;
 source include/master-slave.inc;
 source include/have_binlog_format_mixed_or_statement.inc;
 
