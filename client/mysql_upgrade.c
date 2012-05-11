@@ -272,6 +272,7 @@ get_one_option(int optid, const struct my_option *opt,
 
   case 'v': /* --verbose   */
   case 'f': /* --force     */
+  case OPT_WRITE_BINLOG:
     add_option= FALSE;
     break;
 
