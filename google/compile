@@ -17,7 +17,11 @@ set -e -o pipefail
 
 # By default we produce the ./google/deb debug version.
 : ${GOOGLE_DEBUG:=1}
-enable_minimal="--enable-minimal"
+
+# Builds tcmalloc_minimal. This does not support heap sampling, so
+# disable it.
+enable_minimal=""
+
 [[ "$1" == "prod" ]] && GOOGLE_DEBUG=
 if [[ "$1" == "profile" ]]
 then

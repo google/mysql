@@ -158,6 +158,7 @@ public:
   */
   int var();
   void health();
+  void heap();
   void status();
   void quitquitquit();
   void abortabortabort();

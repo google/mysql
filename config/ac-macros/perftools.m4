@@ -131,7 +131,12 @@ if test "$mysql_cv_perftools" = "yes"; then
 
   if test "$enable_perftools_tcmalloc" = "yes"; then
     AC_DEFINE([GOOGLE_TCMALLOC], [1], [Define to enable perftools tcmalloc support])
-    PERFTOOLS_LIBS="$PERFTOOLS_LIBS -ltcmalloc_minimal"
+    if test "$enable_minimal" = "yes"; then
+      dnl This does not work for heap sampling.
+      PERFTOOLS_LIBS="$PERFTOOLS_LIBS -ltcmalloc_minimal"
+    else
+      PERFTOOLS_LIBS="$PERFTOOLS_LIBS -ltcmalloc"
+    fi
   fi
 
   if test "$enable_perftools_atomic" = "yes"; then

@@ -373,6 +373,7 @@ void Http_request::status(void)
   write_body("<td align=right valign=top>\r\n");
   write_body_fmt("Running on %s<br>\r\n", glob_hostname);
   write_body_fmt("View <a href=\"/var\">variables</a><br>\r\n");
+  write_body_fmt("View <a href=\"/heap\">heap samples</a><br>\r\n");
   write_body("</td></tr></table>\r\n");
 
   pthread_mutex_lock(&LOCK_server_started);

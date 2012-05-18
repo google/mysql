@@ -7,6 +7,7 @@
 */
 
 #include <ctype.h>
+#include <malloc_extension.h>
 #include <my_global.h>
 #include <my_sys.h>
 #include <my_net.h>
@@ -213,6 +214,26 @@ void Http_request::health(void)
   write_body(STRING_WITH_LEN("OK\r\n"));
 }
 
+
+/**
+  Generate a response body for a /heap URL.
+*/
+
+void Http_request::heap(void)
+{
+#ifdef USE_INTERNAL_MALLOCEXTENSION
+  string heap;
+  StringMallocExtensionWriter writer(&heap);
+#else
+  std::string heap;
+  std::string& writer= heap;
+#endif
+
+  MallocExtension::instance()->GetHeapSample(&writer);
+
+  write_body(heap.c_str());
+  write_body(STRING_WITH_LEN("\r\n"));
+}
 
 /**
   Generate a response to the /quitquitquit URL.
