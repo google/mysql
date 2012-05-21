@@ -158,7 +158,10 @@ public:
   */
   int var();
   void health();
+  void growth();
   void heap();
+  void release_memory();
+  void tcmalloc();
   void status();
   void quitquitquit();
   void abortabortabort();

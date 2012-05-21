@@ -290,9 +290,24 @@ static int httpd_process_request(THD *thd, Http_request *req)
     req->health();
     req->generate_header(200, true);
   }
+  else if (match_url(net, "GET /growth"))
+  {
+    req->growth();
+    req->generate_header(200, false);
+  }
   else if (match_url(net, "GET /heap"))
   {
     req->heap();
+    req->generate_header(200, false);
+  }
+  else if (match_url(net, "GET /release_memory"))
+  {
+    req->release_memory();
+    req->generate_header(200, false);
+  }
+  else if (match_url(net, "GET /tcmalloc"))
+  {
+    req->tcmalloc();
     req->generate_header(200, false);
   }
   else if (match_url(net, "GET /status") || match_url(net, "GET /"))

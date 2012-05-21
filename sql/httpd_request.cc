@@ -6,8 +6,8 @@
   /status is in httpd_status.cc while the /var is in httpd_var.cc.
 */
 
-#include <ctype.h>
-#include <malloc_extension.h>
+#include <string>
+
 #include <my_global.h>
 #include <my_sys.h>
 #include <my_net.h>
@@ -23,6 +23,7 @@
 #include "sql_repl.h"
 #include "httpd.h"
 #include "rpl_mi.h"
+#include "httpd_malloc_wrappers.h"
 
 bool Http_request::write_table_header(const char *title,
                                       const char *const *headings)
@@ -214,6 +215,17 @@ void Http_request::health(void)
   write_body(STRING_WITH_LEN("OK\r\n"));
 }
 
+/**
+  Generate a response body for a /growth URL.
+*/
+
+void Http_request::growth(void)
+{
+  std::string growth;
+  GetMallocHeapGrowthStacks(&growth);
+  write_body(growth.c_str());
+  write_body(STRING_WITH_LEN("\r\n"));
+}
 
 /**
   Generate a response body for a /heap URL.
@@ -221,17 +233,33 @@ void Http_request::health(void)
 
 void Http_request::heap(void)
 {
-#ifdef USE_INTERNAL_MALLOCEXTENSION
-  string heap;
-  StringMallocExtensionWriter writer(&heap);
-#else
   std::string heap;
-  std::string& writer= heap;
-#endif
-
-  MallocExtension::instance()->GetHeapSample(&writer);
-
+  GetMallocHeapSample(&heap);
   write_body(heap.c_str());
+  write_body(STRING_WITH_LEN("\r\n"));
+}
+
+/**
+  Release memory and generate a response body for a /release_memory URL.
+*/
+
+void Http_request::release_memory(void)
+{
+  std::string release_result;
+  ReleaseMallocFreeMemory(&release_result);
+  write_body(release_result.data(), release_result.size());
+  write_body(STRING_WITH_LEN("\r\n"));
+}
+
+/**
+  Generate a response body for a /tcmalloc URL.
+*/
+
+void Http_request::tcmalloc(void)
+{
+  std::string stats;
+  GetMallocStats(&stats);
+  write_body(stats.data(), stats.size());
   write_body(STRING_WITH_LEN("\r\n"));
 }
 
