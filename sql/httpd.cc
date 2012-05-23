@@ -305,9 +305,9 @@ static int httpd_process_request(THD *thd, Http_request *req)
     req->release_memory();
     req->generate_header(200, false);
   }
-  else if (match_url(net, "GET /tcmalloc"))
+  else if (match_url(net, "GET /malloc"))
   {
-    req->tcmalloc();
+    req->malloc();
     req->generate_header(200, false);
   }
   else if (match_url(net, "GET /status") || match_url(net, "GET /"))

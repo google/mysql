@@ -160,8 +160,8 @@ public:
   void health();
   void growth();
   void heap();
+  void malloc();
   void release_memory();
-  void tcmalloc();
   void status();
   void quitquitquit();
   void abortabortabort();

@@ -375,7 +375,7 @@ void Http_request::status(void)
   write_body_fmt("View <a href=\"/var\">variables</a><br>\r\n");
   write_body_fmt("View <a href=\"/heap\">heap samples</a>, "
                  "<a href=\"/growth\">heap growth</a>, "
-                 "<a href=\"/tcmalloc\">tcmalloc stats</a><br>\r\n");
+                 "<a href=\"/malloc\">malloc stats</a><br>\r\n");
 
   write_body("</td></tr></table>\r\n");
 

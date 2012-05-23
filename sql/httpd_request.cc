@@ -240,6 +240,18 @@ void Http_request::heap(void)
 }
 
 /**
+  Generate a response body for a /malloc URL.
+*/
+
+void Http_request::malloc(void)
+{
+  std::string stats;
+  GetMallocStats(&stats);
+  write_body(stats.data(), stats.size());
+  write_body(STRING_WITH_LEN("\r\n"));
+}
+
+/**
   Release memory and generate a response body for a /release_memory URL.
 */
 
@@ -248,18 +260,6 @@ void Http_request::release_memory(void)
   std::string release_result;
   ReleaseMallocFreeMemory(&release_result);
   write_body(release_result.data(), release_result.size());
-  write_body(STRING_WITH_LEN("\r\n"));
-}
-
-/**
-  Generate a response body for a /tcmalloc URL.
-*/
-
-void Http_request::tcmalloc(void)
-{
-  std::string stats;
-  GetMallocStats(&stats);
-  write_body(stats.data(), stats.size());
   write_body(STRING_WITH_LEN("\r\n"));
 }
 
