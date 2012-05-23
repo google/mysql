@@ -561,29 +561,31 @@ pthread_handler_t httpd_handle_connection(void *arg)
     return 0;
   }
 
-  Http_request req(thd);
 
   do
   {
-    NET *net= &thd->net;
+    /* RESTRICTED SCOPE */ {
+      Http_request req(thd);
+      NET *net= &thd->net;
 
-    /* Use "connect_timeout" value during connection phase. */
-    my_net_set_read_timeout(net, connect_timeout);
-    my_net_set_write_timeout(net, connect_timeout);
+      /* Use "connect_timeout" value during connection phase. */
+      my_net_set_read_timeout(net, connect_timeout);
+      my_net_set_write_timeout(net, connect_timeout);
 
-    thd_proc_info(thd, 0);
-    thd->command= COM_SLEEP;
-    thd->set_time();
+      thd_proc_info(thd, 0);
+      thd->command= COM_SLEEP;
+      thd->set_time();
 
-    /* Connect completed, set read/write timeouts back to tdefault. */
-    my_net_set_read_timeout(net, thd->variables.net_read_timeout);
-    my_net_set_write_timeout(net, thd->variables.net_write_timeout);
+      /* Connect completed, set read/write timeouts back to tdefault. */
+      my_net_set_read_timeout(net, thd->variables.net_read_timeout);
+      my_net_set_write_timeout(net, thd->variables.net_write_timeout);
 
-    httpd_read_request(thd);
-    int error= httpd_process_request(thd, &req);
-    if (! error)
-      httpd_send_response(thd, &req);
-    httpd_close_connection(thd, error, 1);
+      httpd_read_request(thd);
+      int error= httpd_process_request(thd, &req);
+      if (! error)
+        httpd_send_response(thd, &req);
+      httpd_close_connection(thd, error, 1);
+    }
 
     /* This call to end_thread should never return.  */
     httpd_end_thread(thd);
