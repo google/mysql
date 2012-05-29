@@ -2056,9 +2056,10 @@ os_file_pread(
 	ulint		offset_high) /*!< in: most significant 32 bits of
 				offset */
 {
+	ssize_t ret;
 	off_t	offs;
 #if defined(HAVE_PREAD) && !defined(HAVE_BROKEN_PREAD)
-	ssize_t	n_bytes;
+	ssize_t	n_bytes = 0;
 #endif /* HAVE_PREAD && !HAVE_BROKEN_PREAD */
 
 	ut_a((offset & 0xFFFFFFFFUL) == offset);
@@ -2081,23 +2082,30 @@ os_file_pread(
 	os_n_file_reads++;
 
 #if defined(HAVE_PREAD) && !defined(HAVE_BROKEN_PREAD)
-	os_mutex_enter(os_file_count_mutex);
-	os_file_n_pending_preads++;
-	os_n_pending_reads++;
-	os_mutex_exit(os_file_count_mutex);
+	do {
+		os_mutex_enter(os_file_count_mutex);
+		os_file_n_pending_preads++;
+		os_n_pending_reads++;
+		os_mutex_exit(os_file_count_mutex);
 
-	n_bytes = pread(file, buf, (ssize_t)n, offs);
+		ret = pread(file, buf + n_bytes,
+			    (ssize_t)n - n_bytes, offs + (off_t)n_bytes);
+		n_bytes += ret;
 
-	os_mutex_enter(os_file_count_mutex);
-	os_file_n_pending_preads--;
-	os_n_pending_reads--;
-	os_mutex_exit(os_file_count_mutex);
+		os_mutex_enter(os_file_count_mutex);
+		os_file_n_pending_preads--;
+		os_n_pending_reads--;
+		os_mutex_exit(os_file_count_mutex);
+	} while (ret > 0 && n_bytes < (ssize_t) n);
 
-	return(n_bytes);
+	if (ret == -1)
+		return(-1);
+	else
+		return(n_bytes);
+
 #else
 	{
 		off_t	ret_offset;
-		ssize_t	ret;
 #ifndef UNIV_HOTBACKUP
 		ulint	i;
 #endif /* !UNIV_HOTBACKUP */
@@ -2151,6 +2159,10 @@ os_file_pwrite(
 {
 	ssize_t	ret;
 	off_t	offs;
+#if defined(HAVE_PREAD) && !defined(HAVE_BROKEN_PREAD)
+	ssize_t	n_bytes = 0;
+#endif /* HAVE_PREAD && !HAVE_BROKEN_PREAD */
+
 
 	ut_a((offset & 0xFFFFFFFFUL) == offset);
 
@@ -2172,17 +2184,21 @@ os_file_pwrite(
 	os_n_file_writes++;
 
 #if defined(HAVE_PWRITE) && !defined(HAVE_BROKEN_PREAD)
-	os_mutex_enter(os_file_count_mutex);
-	os_file_n_pending_pwrites++;
-	os_n_pending_writes++;
-	os_mutex_exit(os_file_count_mutex);
+        do {
+		os_mutex_enter(os_file_count_mutex);
+		os_file_n_pending_pwrites++;
+		os_n_pending_writes++;
+		os_mutex_exit(os_file_count_mutex);
 
-	ret = pwrite(file, buf, (ssize_t)n, offs);
+		ret = pwrite(file, buf + n_bytes,
+			     (ssize_t)n - n_bytes, offs + (off_t)n_bytes);
+		n_bytes += ret;
 
-	os_mutex_enter(os_file_count_mutex);
-	os_file_n_pending_pwrites--;
-	os_n_pending_writes--;
-	os_mutex_exit(os_file_count_mutex);
+		os_mutex_enter(os_file_count_mutex);
+		os_file_n_pending_pwrites--;
+		os_n_pending_writes--;
+		os_mutex_exit(os_file_count_mutex);
+	} while (ret > 0 && n_bytes < (ssize_t) n);
 
 # ifdef UNIV_DO_FLUSH
 	if (srv_unix_file_flush_method != SRV_UNIX_LITTLESYNC
@@ -2197,7 +2213,11 @@ os_file_pwrite(
 	}
 # endif /* UNIV_DO_FLUSH */
 
-	return(ret);
+	if (ret == -1)
+		return(-1);
+	else
+		return(n_bytes);
+
 #else
 	{
 		off_t	ret_offset;
