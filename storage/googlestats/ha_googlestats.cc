@@ -867,7 +867,7 @@ ha_rows ha_googlestats::records_in_range(uint inx,
     }
 
     // Append user name.
-    const char* auth_user = current_thd->main_security_ctx.priv_user;
+    const char* auth_user = current_thd->main_security_ctx.user;
     if (auth_user != NULL) {
       int auth_user_len = strlen(auth_user);
       if (auth_user_len) {
@@ -1075,9 +1075,7 @@ ha_googlestats::connect_server_with_state(StatsServerConnectState* state,
                                "table(%s.%s.%s) host(%s) user(%s)",
                                server_tier, table->s->db.str, table->s->table_name.str,
                                index_name, server_name,
-                               // TODO(seanrees): if priv_user is NULL, should
-                               // we attempt to beautify the error msg?
-                               current_thd->main_security_ctx.priv_user);
+                               current_thd->main_security_ctx.user);
   }
 
   return(0);
@@ -2007,7 +2005,7 @@ ha_googlestats::server_scan_start(
   }
 
   // Append user name.
-  const char* auth_user = current_thd->main_security_ctx.priv_user;
+  const char* auth_user = current_thd->main_security_ctx.user;
   if (auth_user != NULL) {
     int auth_user_len = strlen(auth_user);
     if (auth_user_len) {
