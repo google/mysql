@@ -1,0 +1,218 @@
+------------------------------------------------------------
+revno: 3659 [merge]
+tags: clone-5.1.63-build
+committer: Georgi Kodinov <Georgi.Kodinov@Oracle.com>
+branch nick: merge-5.1-security
+timestamp: Tue 2012-04-10 14:21:57 +0300
+message:
+  merge mysql-5.1->mysql-5.1-security
+    ------------------------------------------------------------
+    revno: 3560.6.139
+    committer: Venkata Sidagam <venkata.sidagam@oracle.com>
+    branch nick: mysql-5.1-59107
+    timestamp: Mon 2012-04-09 16:42:41 +0530
+    message:
+      Bug #11766072 59107: MYSQLSLAP CRASHES IF STARTED WITH NO ARGUMENTS ON WINDOWS
+      
+      This bug is a duplicate of Bug #31173, which was pushed to the 
+      mysql-trunk 5.6 on 4th Aug, 2010. This is just a back-port of 
+      the fix
+    ------------------------------------------------------------
+    revno: 3560.6.138
+    committer: Mayank Prasad <mayank.prasad@oracle.com>
+    branch nick: 5.1
+    timestamp: Fri 2012-04-06 17:03:13 +0530
+    message:
+      BUG#13738989 : 62136 : FAILED TO FETCH SELECT RESULT USING EMBEDDED MYSQLD
+      
+      Background : 
+      In mysql-5.1, in a fix for bug#47485, code has been changed for 
+      mysql client (libmysql/libmysql.c) but corresponding code was not
+      changed for embedded mysql. In that code change, after execution
+      of a statement, mysql_stmt_store_result() checks for mysql->state
+      to be MYSQL_STATUS_STATEMENT_GET_RESULT, instead of
+      MYSQL_STATUS_GET_RESULT (earlier).
+      
+      Reason:
+      In embedded mysql code, after execution, mysql->state was not
+      set to MYSQL_STATUS_STATEMENT_GET_RESULT, so it was throwing
+      OUT_OF_SYNC error.
+      
+      Fix:
+      Fixed the code in libmysqld/lib_sql.cc to have mysql->state
+      to be set to MYSQL_STATUS_STATEMENT_GET_RESULT after execution.
+    ------------------------------------------------------------
+    revno: 3560.6.137
+    committer: Praveenkumar Hulakund <praveenkumar.hulakund@oracle.com>
+    branch nick: mysql_5_1
+    timestamp: Wed 2012-03-28 12:05:31 +0530
+    message:
+      Bug#11763507 - 56224: FUNCTION NAME IS CASE-SENSITIVE
+      
+      Analysis:
+      -------------------------------
+      According to the Manual
+      (http://dev.mysql.com/doc/refman/5.1/en/identifier-case-sensitivity.html):
+      "Column, index, stored routine, and event names are not case sensitive on any
+      platform, nor are column aliases."
+      
+      In other words, 'lower_case_table_names' does not affect the behaviour of 
+      those identifiers.
+      
+      On the other hand, trigger names are case sensitive on some platforms,
+      and case insensitive on others. 'lower_case_table_names' does not affect
+      the behaviour of trigger names either.
+      
+      The bug was that SHOW statements did case sensitive comparison
+      for stored procedure / stored function / event names.
+      
+      Fix:
+      Modified the code so that comparison in case insensitive for routines 
+      and events for "SHOW" operation.
+      
+      As part of this commit, only fixing the test failures due to the actual code fix.
+    ------------------------------------------------------------
+    revno: 3560.6.136 [merge]
+    committer: Sunny Bains <Sunny.Bains@Oracle.Com>
+    branch nick: 5.1
+    timestamp: Wed 2012-03-28 13:35:44 +1100
+    message:
+      Merge from mysql-5.0
+        ------------------------------------------------------------
+        revno: 1810.4001.13
+        committer: Sunny Bains <Sunny.Bains@Oracle.Com>
+        branch nick: mysql-5.0
+        timestamp: Wed 2012-03-28 13:08:25 +1100
+        message:
+          Bug# 13847885 - PURGING STALLS WHEN PURGE_SYS->N_PAGES_HANDLED OVERFLOWS
+          
+          Change the type of purge_sys_t::n_pages_handled and purge_sys_t::handle_limit
+          to ulonglong from ulint. On a 32 bit system doing ~700 deletes per second the
+          counters can overflow in ~3.5 months, if they are 32 bit.
+          
+          Approved by Jimmy Yang over IM.
+    ------------------------------------------------------------
+    revno: 3560.6.135
+    committer: Tor Didriksen <tor.didriksen@oracle.com>
+    branch nick: 5.1
+    timestamp: Tue 2012-03-27 14:39:27 +0200
+    message:
+      Backport of fix for Bug#12763207 - ASSERT IN SUBSELECT::SINGLE_VALUE_TRANSFORMER
+    ------------------------------------------------------------
+    revno: 3560.6.134
+    committer: Praveenkumar Hulakund <praveenkumar.hulakund@oracle.com>
+    branch nick: mysql_5_1
+    timestamp: Tue 2012-03-27 12:42:11 +0530
+    message:
+      Bug#11763507 - 56224: FUNCTION NAME IS CASE-SENSITIVE
+      
+      Analysis:
+      -------------------------------
+      According to the Manual
+      (http://dev.mysql.com/doc/refman/5.1/en/identifier-case-sensitivity.html):
+      "Column, index, stored routine, and event names are not case sensitive on any
+      platform, nor are column aliases."
+      
+      In other words, 'lower_case_table_names' does not affect the behaviour of 
+      those identifiers.
+      
+      On the other hand, trigger names are case sensitive on some platforms,
+      and case insensitive on others. 'lower_case_table_names' does not affect
+      the behaviour of trigger names either.
+      
+      The bug was that SHOW statements did case sensitive comparison
+      for stored procedure / stored function / event names.
+      
+      Fix:
+      Modified the code so that comparison in case insensitive for routines 
+      and events for "SHOW" operation.
+------------------------------------------------------------
+revno: 3658
+committer: Georgi Kodinov <Georgi.Kodinov@Oracle.com>
+branch nick: B13934049-5.1-security
+timestamp: Fri 2012-04-06 12:04:07 +0300
+message:
+  Bug #13934049: 64884: LOGINS WITH INCORRECT PASSWORD ARE ALLOWED
+  
+  Fixed an improper type conversion on return that can make the server accept
+  logins with a wrong password.
+------------------------------------------------------------
+revno: 3657
+committer: Sergey Glukhov <sergey.glukhov@oracle.com>
+branch nick: mysql-5.1-security
+timestamp: Wed 2012-04-04 13:29:45 +0400
+message:
+  Bug#11766300 59387: FAILING ASSERTION: CURSOR->POS_STATE == 1997660512 (BTR_PCUR_IS_POSITIONE
+  Bug#13639204 64111: CRASH ON SELECT SUBQUERY WITH NON UNIQUE INDEX
+  The crash happened due to wrong calculation
+  of key length during creation of reference for
+  sort order index. The problem is that
+  keyuse->used_tables can have OUTER_REF_TABLE_BIT enabled
+  but used_tables parameter(create_ref_for_key() func) does
+  not have it. So key parts which have OUTER_REF_TABLE_BIT
+  are ommited and it could lead to incorrect key length
+  calculation(zero key length).
+------------------------------------------------------------
+revno: 3656 [merge]
+committer: Georgi Kodinov <Georgi.Kodinov@Oracle.com>
+branch nick: merge-5.1-security
+timestamp: Wed 2012-03-21 14:58:27 +0200
+message:
+  empty weave merge mysql-5.0-security->mysql-5.1-security
+    ------------------------------------------------------------
+    revno: 1810.3997.46 [merge]
+    committer: Georgi Kodinov <Georgi.Kodinov@Oracle.com>
+    branch nick: merge-5.0-security
+    timestamp: Wed 2012-03-21 14:35:25 +0200
+    message:
+      weave merge mysql-5.0->mysql-5.0-security
+------------------------------------------------------------
+revno: 3655 [merge]
+committer: Georgi Kodinov <Georgi.Kodinov@Oracle.com>
+branch nick: merge-5.1-security
+timestamp: Wed 2012-03-21 14:53:09 +0200
+message:
+  merge mysql-5.1->mysql-5.1-security
+    ------------------------------------------------------------
+    revno: 3560.6.133 [merge]
+    committer: Joerg Bruehe <joerg.bruehe@oracle.com>
+    branch nick: mysql-5.1
+    timestamp: Wed 2012-03-21 11:18:21 +0100
+    message:
+      Upmerge an empty merge changeset (backmerge of 5.0.96 into main 5.0),
+      solve a conflict in ".bzr-mysql/default.conf".
+        ------------------------------------------------------------
+        revno: 1810.4001.12 [merge]
+        author: karen.langford@oracle.com
+        committer: hery.ramilison@oracle.com
+        branch nick: mysql-5.0
+        timestamp: Tue 2012-03-20 17:30:49 +0100
+        message:
+          Merge from mysql-5.0.96-release
+    ------------------------------------------------------------
+    revno: 3560.6.132 [merge]
+    author: karen.langford@oracle.com
+    committer: hery.ramilison@oracle.com
+    branch nick: mysql-5.1
+    timestamp: Tue 2012-03-20 17:35:41 +0100
+    message:
+      Merge from mysql-5.1.62-release
+        ------------------------------------------------------------
+        revno: 3641.2.3 [merge]
+        tags: mysql-5.1.62
+        committer: Joerg Bruehe <joerg.bruehe@oracle.com>
+        branch nick: clone-5.1
+        timestamp: Fri 2012-03-02 13:18:12 +0100
+        message:
+          Upmerge the yaSSL upgrade (to 2.2.0) from MySQL 5.0 to 5.1.
+            ------------------------------------------------------------
+            revno: 1810.4003.2
+            tags: mysql-5.0.96
+            committer: Joerg Bruehe <joerg.bruehe@oracle.com>
+            branch nick: clone-5.0
+            timestamp: Fri 2012-03-02 13:12:07 +0100
+            message:
+              Further upgrade the yaSSL library to version 2.2.0
+              to pick up some new security fixes that are in it.
+              
+              Patch provided by Georgi Kodinov.
