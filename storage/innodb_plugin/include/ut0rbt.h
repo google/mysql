@@ -107,6 +107,9 @@ struct ib_rbt_bound_struct {
 /* Get data value (t is the data type, n is an rb tree node instance) */
 #define rbt_value(t, n) ((t*) &n->value[0])
 
+/* Get the root node of the tree */
+#define rbt_root(t) (t->root->left)
+
 /* Compare a key with the node value (t is tree, k is key, n is node)*/
 #define rbt_compare(t, k, n) (t->compare(k, n->value))
 
@@ -169,6 +172,19 @@ rbt_insert(
 	const void*	key,		/*!< in: key for ordering */
 	const void*	value);		/*!< in: data that will be
 					copied to the node.*/
+/****************************************************************//**
+Remove the last node and insert a new node into the tree. The pointer to
+last node is reused for inserting the new node. This is mainly for reusing
+the malloc'd memory.
+@return inserted node */
+UNIV_INTERN
+const ib_rbt_node_t*
+rbt_remove_last_and_insert(
+/*=======*/
+        ib_rbt_t*       tree,           /*!< in: rb tree */
+        const void*     key,            /*!< in: key for ordering */
+        const void*     value);         /*!< in: value of key, this value
+                                        is copied to the node */
 /****************************************************************//**
 Add a new node to the tree, useful for data that is pre-sorted.
 @return	appended node */
@@ -305,5 +321,14 @@ rbt_print(
 /*======*/
 	const ib_rbt_t*		tree,	/*!< in: tree to traverse */
 	ib_rbt_print_node	print);	/*!< in: print function */
+
+/****************************************************************//**
+Iterate over the tree and print the nodes in increasing order. */
+UNIV_INTERN
+void
+rbt_print_in_order(
+/*======*/
+	const ib_rbt_t*         tree,   /*!< in: tree to traverse */
+	ib_rbt_print_node       print); /*!< in: print function */
 
 #endif /* INNOBASE_UT0RBT_H */

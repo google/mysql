@@ -180,7 +180,11 @@ For 1 - 8 bytes, the flag value must give the length also! @{ */
 #define MLOG_ZIP_WRITE_HEADER	((byte)50)	/*!< write to compressed page
 						header */
 #define MLOG_ZIP_PAGE_COMPRESS	((byte)51)	/*!< compress an index page */
-#define MLOG_BIGGEST_TYPE	((byte)51)	/*!< biggest value (used in
+#define MLOG_ZIP_PAGE_COMPRESS_NO_DATA ((byte)52) /*!< compress and index page,
+						page image is not logged */
+#define MLOG_ZIP_PAGE_REORGANIZE ((byte)53)	/*!< reorganize a compressed
+						page */
+#define MLOG_BIGGEST_TYPE	((byte)53)	/*!< biggest value (used in
 						assertions) */
 /* @} */
 

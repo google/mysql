@@ -812,6 +812,38 @@ rbt_insert(
 }
 
 /****************************************************************//**
+Remove the last node and insert a new node into the tree. The pointer to
+last node is reused for inserting the new node. This is mainly for reusing
+the malloc'd memory.
+@return inserted node */
+UNIV_INTERN
+const ib_rbt_node_t*
+rbt_remove_last_and_insert(
+/*=======*/
+        ib_rbt_t*       tree,           /*!< in: rb tree */
+        const void*     key,            /*!< in: key for ordering */
+        const void*     value)          /*!< in: value of key, this value
+                                        is copied to the node */
+{
+        ib_rbt_node_t*  node;
+
+        /* remove the last node */
+        node = rbt_remove_node(tree, rbt_last(tree));
+        memset(node, 0, SIZEOF_NODE(tree));
+
+        memcpy(node->value, value, tree->sizeof_value);
+        node->parent = node->left = node->right = tree->nil;
+
+        /* Insert in the tree in the usual way. */
+        rbt_tree_insert(tree, key, node);
+        rbt_balance_tree(tree, node);
+
+        ++tree->n_nodes;
+
+        return(node);
+}
+
+/****************************************************************//**
 Add a new node to the tree, useful for data that is pre-sorted.
 @return	appended node */
 UNIV_INTERN
@@ -1246,4 +1278,25 @@ rbt_print(
 	ib_rbt_print_node	print)	/*!< in: print function */
 {
 	rbt_print_subtree(tree, ROOT(tree), print);
+}
+
+/****************************************************************//**
+Print the nodes of the tree in order. */
+UNIV_INTERN
+void
+rbt_print_in_order(
+        const ib_rbt_t*         tree,
+        ib_rbt_print_node       print)
+{
+        const ib_rbt_node_t*    node;
+        const ib_rbt_node_t*    prev = NULL;
+
+        /* Iterate over all the nodes, call print function on each */
+        for (node = rbt_first(tree); node; node = rbt_next(tree, prev)) {
+                if (ROOT(tree) == node)
+                        fprintf(stderr, "(ROOT)");
+                print(node);
+                prev = node;
+        }
+        fprintf(stderr, "\n");
 }

@@ -512,7 +512,8 @@ page_create_zip(
 	page = page_create_low(block, TRUE);
 	mach_write_to_2(page + PAGE_HEADER + PAGE_LEVEL, level);
 
-	if (UNIV_UNLIKELY(!page_zip_compress(page_zip, page, index, mtr))) {
+	if (UNIV_UNLIKELY(!page_zip_compress(page_compression_level,
+					     page_zip, page, index, mtr))) {
 		/* The compression of a newly created page
 		should always succeed. */
 		ut_error;
@@ -658,7 +659,8 @@ page_copy_rec_list_end(
 		mtr_set_log_mode(mtr, log_mode);
 
 		if (UNIV_UNLIKELY
-		    (!page_zip_compress(new_page_zip, new_page, index, mtr))) {
+		    (!page_zip_compress(page_compression_level,
+					new_page_zip, new_page, index, mtr))) {
 			/* Before trying to reorganize the page,
 			store the number of preceding records on the page. */
 			ulint	ret_pos
@@ -781,7 +783,8 @@ page_copy_rec_list_start(
 		mtr_set_log_mode(mtr, log_mode);
 
 		if (UNIV_UNLIKELY
-		    (!page_zip_compress(new_page_zip, new_page, index, mtr))) {
+		    (!page_zip_compress(page_compression_level,
+					new_page_zip, new_page, index, mtr))) {
 			/* Before trying to reorganize the page,
 			store the number of preceding records on the page. */
 			ulint	ret_pos
@@ -811,9 +814,11 @@ page_copy_rec_list_start(
 				Seek to ret_pos. */
 				ret = new_page + PAGE_NEW_INFIMUM;
 
-				do {
+				while (ret_pos) {
+					ut_a(ret);
 					ret = rec_get_next_ptr(ret, TRUE);
-				} while (--ret_pos);
+					--ret_pos;
+				}
 			}
 		}
 	}

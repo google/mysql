@@ -1149,18 +1149,20 @@ recv_parse_or_apply_log_rec_body(
 		}
 		break;
 	case MLOG_PAGE_REORGANIZE: case MLOG_COMP_PAGE_REORGANIZE:
+	case MLOG_ZIP_PAGE_REORGANIZE:
 		ut_ad(!page || page_type == FIL_PAGE_INDEX);
 
-		if (NULL != (ptr = mlog_parse_index(
-				     ptr, end_ptr,
-				     type == MLOG_COMP_PAGE_REORGANIZE,
+		if (NULL != (ptr = mlog_parse_index(ptr,
+				     end_ptr,
+				     type != MLOG_PAGE_REORGANIZE,
 				     &index))) {
 			ut_a(!page
 			     || (ibool)!!page_is_comp(page)
 			     == dict_table_is_comp(index->table));
-			ptr = btr_parse_page_reorganize(ptr, end_ptr, index,
-							block, mtr);
-		}
+			ptr = btr_parse_page_reorganize(ptr, end_ptr,
+							type == MLOG_ZIP_PAGE_REORGANIZE,
+							index, block, mtr);
+                }
 		break;
 	case MLOG_PAGE_CREATE: case MLOG_COMP_PAGE_CREATE:
 		/* Allow anything in page_type when creating a page. */
@@ -1253,6 +1255,18 @@ recv_parse_or_apply_log_rec_body(
 		/* Allow anything in page_type when creating a page. */
 		ptr = page_zip_parse_compress(ptr, end_ptr,
 					      page, page_zip);
+		break;
+        case MLOG_ZIP_PAGE_COMPRESS_NO_DATA:
+                ptr = mlog_parse_index(ptr, end_ptr, TRUE, &index);
+		if (ptr != NULL) {
+			ut_a(!page || ((ibool)!!page_is_comp(page)
+				== dict_table_is_comp(index->table)));
+			ptr = page_zip_parse_compress_no_data(ptr,
+							      end_ptr,
+							      page,
+							      page_zip,
+							      index);
+		}
 		break;
 	default:
 		ptr = NULL;

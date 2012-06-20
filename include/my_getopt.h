@@ -78,6 +78,9 @@ extern my_bool my_getopt_print_errors;
 extern my_bool my_getopt_skip_unknown;
 extern my_error_reporter my_getopt_error_reporter;
 
+extern int handle_options_low(int *argc, char ***argv,
+			      const struct my_option *longopts,
+			      my_get_one_option, my_bool fix_doubles);
 extern int handle_options (int *argc, char ***argv, 
 			   const struct my_option *longopts, my_get_one_option);
 extern void my_cleanup_options(const struct my_option *options);
@@ -89,6 +92,8 @@ ulonglong getopt_ull_limit_value(ulonglong num, const struct my_option *optp,
                                  my_bool *fix);
 longlong getopt_ll_limit_value(longlong, const struct my_option *,
                                my_bool *fix);
+double getopt_double_limit_value(double num, double max_val, double min_val,
+                                 const char *name, my_bool *was_fixed);
 my_bool getopt_compare_strings(const char *s, const char *t, uint length);
 
 C_MODE_END

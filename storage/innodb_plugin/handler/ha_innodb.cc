@@ -83,6 +83,7 @@ extern "C" {
 #include "ha_prototypes.h"
 #include "ut0mem.h"
 #include "ibuf0ibuf.h"
+#include "page0zip.h"
 }
 
 #include "ha_innodb.h"
@@ -11355,6 +11356,40 @@ static MYSQL_SYSVAR_BOOL(random_read_ahead, srv_random_read_ahead,
   "Whether to use read ahead for random access within an extent.",
   NULL, NULL, FALSE);
 
+static MYSQL_SYSVAR_ULONG(padding_tree_samples,
+  dict_padding_tree_samples, PLUGIN_VAR_OPCMDARG,
+  "Number of page size samples collected from pages that fail to compress to "
+  "determine the ideal page size that won't fail to compress.",
+  NULL, NULL, 200, 0, 1000, 0);
+
+static MYSQL_SYSVAR_ULONG(padding_tree_size,
+  dict_padding_tree_size, PLUGIN_VAR_OPCMDARG,
+  "Size of the red black tree for computing the average page size "
+  "for pages that fail to compress.",
+  NULL, NULL, 10, 0, 1000, 0);
+
+static MYSQL_SYSVAR_DOUBLE(padding_max_fail_rate,
+  dict_padding_max_fail_rate, PLUGIN_VAR_OPCMDARG,
+  "If the compression failure rate of a table is greater than this number "
+  "InnoDB will continue to increase the padding size.",
+  NULL, NULL, 0.05, 0.01, 0.99, 0);
+
+static MYSQL_SYSVAR_DOUBLE(padding_max,
+  dict_padding_max, PLUGIN_VAR_OPCMDARG,
+  "This determines the maximum amount of empty space that can be reserved on a "
+  "page to make the page compressible as a fraction of the page size.",
+  NULL, NULL, 0.75, 0.0, 1.0, 0);
+
+static MYSQL_SYSVAR_UINT(padding_algo,
+  dict_padding_algo, PLUGIN_VAR_OPCMDARG,
+  "Padding algorithm to be used for compressed pages.",
+  NULL, NULL, PADDING_ALGO_LINEAR, 0, PADDING_ALGO_MAX, 0);
+
+static MYSQL_SYSVAR_UINT(simulate_comp_failures, srv_simulate_comp_failures,
+  PLUGIN_VAR_NOCMDARG,
+  "Simulate compression failures.",
+  NULL, NULL, 0, 0, 99, 0);
+
 static MYSQL_SYSVAR_ULONG(read_ahead_threshold, srv_read_ahead_threshold,
   PLUGIN_VAR_RQCMDARG,
   "Number of pages that must be accessed sequentially for InnoDB to "
@@ -11373,6 +11408,20 @@ static MYSQL_SYSVAR_BOOL(exit_on_init_failure, innobase_exit_on_init_failure,
   "When enable the process will exit() if InnoDB cannot be initialized. "
   "Disable with --skip-innodb-exit_on_init_failure.",
   NULL, NULL, FALSE);
+
+static MYSQL_SYSVAR_BOOL(log_compressed_pages, srv_log_compressed_pages,
+  PLUGIN_VAR_OPCMDARG,
+  "Enables/disables the logging of entire compressed page images. InnoDB "
+  "logs the compressed pages to prevent against corruption because of a change "
+  "in the algorithm to compress the pages. When turned OFF, this variable "
+  "makes InnoDB assume that the compression algorithm doesn't change.",
+  NULL, NULL, FALSE);
+
+static MYSQL_SYSVAR_UINT(compression_level, page_compression_level,
+  PLUGIN_VAR_RQCMDARG,
+  "Compression level used for compressed row format.  0 is no compression "
+  "(only for testing), 1 is fastest, 9 is best compression, default is 6.",
+  NULL, NULL, 6, 0, 9, 0);
 
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(additional_mem_pool_size),
@@ -11402,6 +11451,12 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(log_archive),
 #endif /* UNIV_LOG_ARCHIVE */
   MYSQL_SYSVAR(log_buffer_size),
+  MYSQL_SYSVAR(padding_tree_samples),
+  MYSQL_SYSVAR(padding_tree_size),
+  MYSQL_SYSVAR(padding_max_fail_rate),
+  MYSQL_SYSVAR(padding_max),
+  MYSQL_SYSVAR(padding_algo),
+  MYSQL_SYSVAR(simulate_comp_failures),
   MYSQL_SYSVAR(log_file_size),
   MYSQL_SYSVAR(log_files_in_group),
   MYSQL_SYSVAR(log_group_home_dir),
@@ -11443,6 +11498,8 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(trx_rseg_n_slots_debug),
 #endif /* UNIV_DEBUG */
   MYSQL_SYSVAR(exit_on_init_failure),
+  MYSQL_SYSVAR(log_compressed_pages),
+  MYSQL_SYSVAR(compression_level),
   NULL
 };
 

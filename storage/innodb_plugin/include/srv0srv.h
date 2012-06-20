@@ -96,6 +96,12 @@ extern my_bool	srv_file_per_table;
 #else
 extern ibool	srv_file_per_table;
 #endif /* UNIV_HOTBACKUP */
+
+/** If true, always log the images of compressed pages when the page is
+recompressed */
+extern my_bool srv_log_compressed_pages;
+extern uint srv_simulate_comp_failures;
+
 /** The file format to use on new *.ibd files. */
 extern ulint	srv_file_format;
 /** Whether to check file format during startup.  A value of

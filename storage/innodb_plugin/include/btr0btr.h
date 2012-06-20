@@ -528,11 +528,14 @@ UNIV_INTERN
 byte*
 btr_parse_page_reorganize(
 /*======================*/
-	byte*		ptr,	/*!< in: buffer */
-	byte*		end_ptr,/*!< in: buffer end */
-	dict_index_t*	index,	/*!< in: record descriptor */
-	buf_block_t*	block,	/*!< in: page to be reorganized, or NULL */
-	mtr_t*		mtr);	/*!< in: mtr or NULL */
+	byte*		ptr,		/*!< in: buffer */
+	byte*		end_ptr,	/*!< in: buffer end */
+	ibool		compressed,	/*!< in: whether the page belongs to a
+					compressed table */
+	dict_index_t*	index,		/*!< in: record descriptor */
+	buf_block_t*	block,		/*!< in: page to be reorganized,
+					or NULL */
+	mtr_t*		mtr);		/*!< in: mtr or NULL */
 #ifndef UNIV_HOTBACKUP
 /**************************************************************//**
 Gets the number of pages in a B-tree.

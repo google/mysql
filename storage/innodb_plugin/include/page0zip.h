@@ -38,6 +38,8 @@ Created June 2005 by Marko Makela
 #include "trx0types.h"
 #include "mem0mem.h"
 
+extern uint page_compression_level;
+
 /**********************************************************************//**
 Determine the size of a compressed page in bytes.
 @return	size in bytes */
@@ -109,12 +111,13 @@ UNIV_INTERN
 ibool
 page_zip_compress(
 /*==============*/
+	uint		compression_level,/*!< in: zlib compression level */
 	page_zip_des_t*	page_zip,/*!< in: size; out: data, n_blobs,
 				m_start, m_end, m_nonempty */
 	const page_t*	page,	/*!< in: uncompressed page */
 	dict_index_t*	index,	/*!< in: index of the B-tree node */
 	mtr_t*		mtr)	/*!< in: mini-transaction, or NULL */
-	__attribute__((nonnull(1,2,3)));
+	__attribute__((nonnull(2,3,4)));
 
 /**********************************************************************//**
 Decompress a page.  This function should tolerate errors on the compressed
@@ -421,7 +424,12 @@ page_zip_copy_recs(
 	dict_index_t*		index,		/*!< in: index of the B-tree */
 	mtr_t*			mtr)		/*!< in: mini-transaction */
 	__attribute__((nonnull));
+
 #endif /* !UNIV_HOTBACKUP */
+
+/**  Compression level used for compressed row format.  0 is no compression
+  (only for testing), 1 is fastest, 9 is best compression, default is 6. */
+extern uint page_compression_level;
 
 /**********************************************************************//**
 Parses a log record of compressing an index page.
@@ -437,6 +445,21 @@ page_zip_parse_compress(
 	__attribute__((nonnull(1,2)));
 
 /**********************************************************************//**
+Parses a log record of compressing an index page without the data.
+@return end of log record or NULL */
+UNIV_INTERN
+byte*
+page_zip_parse_compress_no_data(
+/*============================*/
+/*====================*/
+	byte*           ptr,    /*!< in: buffer */
+	byte*           end_ptr, /*!< in: buffer end */
+	page_t*         page,   /*!< in: uncompressed page */
+	page_zip_des_t* page_zip, /*!< out: compressed page */
+	dict_index_t*           index)
+	__attribute__((nonnull(1,2)));
+
+/**********************************************************************//**
 Calculate the compressed page checksum.
 @return	page checksum */
 UNIV_INTERN
@@ -446,6 +469,17 @@ page_zip_calc_checksum(
         const void*     data,   /*!< in: compressed page */
         ulint           size)   /*!< in: size of compressed page */
 	__attribute__((nonnull));
+
+/**********************************************************************//**
+Write a log record of compressing an index page without the data on the page. */
+UNIV_INTERN
+void
+page_zip_compress_write_log_no_data(
+/*================================*/
+	uint		compression_level,
+	const page_t*   page,
+	dict_index_t*   index,
+	mtr_t*          mtr);
 
 #ifndef UNIV_HOTBACKUP
 /** Check if a pointer to an uncompressed page matches a compressed page.

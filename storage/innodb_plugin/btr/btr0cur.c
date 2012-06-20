@@ -49,6 +49,7 @@ Created 10/16/1994 Heikki Tuuri
 
 #include "row0upd.h"
 #ifndef UNIV_HOTBACKUP
+#include "log0recv.h"
 #include "mtr0log.h"
 #include "page0page.h"
 #include "page0zip.h"
@@ -1221,6 +1222,8 @@ fail_err:
 		if (UNIV_UNLIKELY(reorg)) {
 			ut_a(zip_size);
 			ut_a(*rec);
+			if(!*rec)
+				goto fail;
 		}
 	}
 
@@ -1661,6 +1664,7 @@ btr_cur_update_alloc_zip(
 				FALSE=update-in-place */
 	mtr_t*		mtr)	/*!< in: mini-transaction */
 {
+	uint compression_level = page_compression_level;
 	ut_a(page_zip == buf_block_get_page_zip(block));
 	ut_ad(page_zip);
 	ut_ad(!dict_index_is_ibuf(index));
@@ -1676,8 +1680,8 @@ btr_cur_update_alloc_zip(
 		return(FALSE);
 	}
 
-	if (!page_zip_compress(page_zip, buf_block_get_frame(block),
-			       index, mtr)) {
+	if (!page_zip_compress(compression_level, page_zip,
+			       buf_block_get_frame(block), index, mtr)) {
 		/* Unable to compress the page */
 		return(FALSE);
 	}
@@ -1974,7 +1978,8 @@ any_extern:
 	}
 
 	max_size = old_rec_size
-		+ page_get_max_insert_size_after_reorganize(page, 1);
+		+ (page_zip ? page_get_max_insert_size(page, 1)
+			    : page_get_max_insert_size_after_reorganize(page, 1));
 
 	if (!(((max_size >= BTR_CUR_PAGE_REORGANIZE_LIMIT)
 	       && (max_size >= new_rec_size))
@@ -2328,7 +2333,10 @@ make_external:
 		err = DB_SUCCESS;
 		goto return_after_reservations;
 	} else {
-		ut_a(optim_err != DB_UNDERFLOW);
+		/* If the page is compressed, it is possible for btr_cur_optimistic_update()
+		   to return DB_UNDERFLOW and btr_cur_insert_if_possible() to return FALSE.
+		   See http://bugs.mysql.com/bug.php?id=61208 */
+		ut_a(page_zip || optim_err != DB_UNDERFLOW);
 
 		/* Out of space: reset the free bits. */
 		if (!dict_index_is_clust(index)

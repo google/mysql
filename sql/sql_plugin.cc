@@ -226,6 +226,8 @@ static void reap_plugins(void);
 extern sys_var *intern_find_sys_var(const char *str, uint length, bool no_error);
 extern bool throw_bounds_warning(THD *thd, bool fixed, bool unsignd,
                                  const char *name, longlong val);
+extern bool throw_bounds_warning_real(THD *thd, bool fixed, const char *name,
+                                      double val);
 
 #ifdef EMBEDDED_LIBRARY
 /* declared in sql_base.cc */
@@ -2001,6 +2003,7 @@ typedef DECLARE_MYSQL_SYSVAR_SIMPLE(sysvar_longlong_t, longlong);
 typedef DECLARE_MYSQL_SYSVAR_SIMPLE(sysvar_uint_t, uint);
 typedef DECLARE_MYSQL_SYSVAR_SIMPLE(sysvar_ulong_t, ulong);
 typedef DECLARE_MYSQL_SYSVAR_SIMPLE(sysvar_ulonglong_t, ulonglong);
+typedef DECLARE_MYSQL_SYSVAR_SIMPLE(sysvar_double_t, double);
 
 typedef DECLARE_MYSQL_THDVAR_SIMPLE(thdvar_int_t, int);
 typedef DECLARE_MYSQL_THDVAR_SIMPLE(thdvar_long_t, long);
@@ -2110,6 +2113,29 @@ static int check_func_longlong(THD *thd, struct st_mysql_sys_var *var,
 
   return throw_bounds_warning(thd, fixed, var->flags & PLUGIN_VAR_UNSIGNED,
                               var->name, (longlong) tmp);
+}
+
+static int check_func_double(THD *thd, struct st_mysql_sys_var *var,
+                             void *save, st_mysql_value *value)
+{
+  my_bool fixed;
+  double tmp, max_value, min_value;
+  sysvar_double_t* dvar= (sysvar_double_t*) var;
+
+  value->val_real(value, &tmp);
+
+  DBUG_ASSERT((dvar->flags &
+              (PLUGIN_VAR_TYPEMASK |
+               PLUGIN_VAR_UNSIGNED |
+               PLUGIN_VAR_THDLOCAL)) == PLUGIN_VAR_DOUBLE);
+
+  min_value= dvar->min_val;
+  max_value= dvar->max_val;
+
+  *(double *)save= getopt_double_limit_value(tmp, max_value, min_value,
+                                             var->name, &fixed);
+
+  return throw_bounds_warning_real(thd, fixed, var->name, tmp);
 }
 
 static int check_func_str(THD *thd, struct st_mysql_sys_var *var,
@@ -2248,6 +2274,12 @@ static void update_func_longlong(THD *thd, struct st_mysql_sys_var *var,
                              void *tgt, const void *save)
 {
   *(longlong *)tgt= *(ulonglong *) save;
+}
+
+static void update_func_double(THD *thd, struct st_mysql_sys_var *var,
+                               void *tgt, const void *save)
+{
+  *(double *)tgt= *(double *) save;
 }
 
 
@@ -2751,6 +2783,8 @@ SHOW_TYPE sys_var_pluginvar::show_type()
     return SHOW_LONG;
   case PLUGIN_VAR_LONGLONG:
     return SHOW_LONGLONG;
+  case PLUGIN_VAR_DOUBLE:
+    return SHOW_DOUBLE;
   case PLUGIN_VAR_STR:
     return SHOW_CHAR_PTR;
   case PLUGIN_VAR_ENUM:
@@ -2943,9 +2977,15 @@ bool sys_var_pluginvar::update(THD *thd, set_var *var)
 
 #define OPTION_SET_LIMITS(type, options, opt) \
   options->var_type= type; \
-  options->def_value= (opt)->def_val; \
-  options->min_value= (opt)->min_val; \
-  options->max_value= (opt)->max_val; \
+  if (type != GET_DOUBLE) { \
+    options->def_value= (opt)->def_val; \
+    options->min_value = (opt)->min_val; \
+    options->max_value = (opt)->max_val; \
+  } else { \
+    options->def_value = (1 << 20) * (opt)->def_val; \
+    options->min_value = (1 << 20) * (opt)->min_val; \
+    options->max_value = (1 << 20) * (opt)->max_val; \
+  } \
   options->block_size= (long) (opt)->blk_sz
 
 
@@ -2974,6 +3014,9 @@ static void plugin_opt_set_limits(struct my_option *options,
     break;
   case PLUGIN_VAR_LONGLONG | PLUGIN_VAR_UNSIGNED:
     OPTION_SET_LIMITS(GET_ULL, options, (sysvar_ulonglong_t*) opt);
+    break;
+  case PLUGIN_VAR_DOUBLE:
+    OPTION_SET_LIMITS(GET_DOUBLE, options, (sysvar_double_t*) opt);
     break;
   case PLUGIN_VAR_ENUM:
     options->var_type= GET_ENUM;
@@ -3205,6 +3248,12 @@ static int construct_options(MEM_ROOT *mem_root, struct st_plugin_int *tmp,
       if (!opt->update)
         opt->update= update_func_longlong;
       break;
+    case PLUGIN_VAR_DOUBLE:
+      if (!opt->check)
+        opt->check= check_func_double;
+      if (!opt->update)
+        opt->update= update_func_double;
+      break;
     case PLUGIN_VAR_STR:
       if (!opt->check)
         opt->check= check_func_str;
@@ -3402,7 +3451,7 @@ static int test_plugin_options(MEM_ROOT *tmp_root, struct st_plugin_int *tmp,
     */
     opts[0].def_value= opts[1].def_value= (int)plugin_load_policy;
 
-    error= handle_options(argc, &argv, opts, get_one_plugin_option);
+    error= handle_options_low(argc, &argv, opts, get_one_plugin_option, FALSE);
     (*argc)++; /* add back one for the program name */
 
     if (error)

@@ -35,6 +35,7 @@ Created 1/8/1996 Heikki Tuuri
 #include "dict0dict.h"
 #ifndef UNIV_HOTBACKUP
 # include "lock0lock.h"
+# include "srv0srv.h"
 #endif /* !UNIV_HOTBACKUP */
 #ifdef UNIV_BLOB_DEBUG
 # include "ut0rbt.h"
@@ -248,6 +249,8 @@ dict_mem_index_create(
 	index->type = type;
 #ifndef UNIV_HOTBACKUP
 	index->space = (unsigned int) space;
+	index->padding_algo = dict_padding_algo;
+	index->padding_state = dict_padding_state_create(index->padding_algo);
 #endif /* !UNIV_HOTBACKUP */
 	index->name = mem_heap_strdup(heap, index_name);
 	index->table_name = table_name;
@@ -319,6 +322,8 @@ dict_mem_index_free(
 {
 	ut_ad(index);
 	ut_ad(index->magic_n == DICT_INDEX_MAGIC_N);
+
+	dict_padding_state_free(index->padding_algo, index->padding_state);
 #ifdef UNIV_BLOB_DEBUG
 	if (index->blobs) {
 		mutex_free(&index->blobs_mutex);

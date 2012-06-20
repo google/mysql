@@ -36,6 +36,7 @@ Created June 2005 by Marko Makela
 #include "btr0cur.h"
 #include "page0types.h"
 #include "log0recv.h"
+#include "srv0srv.h"
 #include "zlib.h"
 #ifndef UNIV_HOTBACKUP
 # include "buf0lru.h"
@@ -51,6 +52,8 @@ Created June 2005 by Marko Makela
 /** Statistics on compression, indexed by page_zip_des_t::ssize - 1 */
 UNIV_INTERN page_zip_stat_t page_zip_stat[PAGE_ZIP_NUM_SSIZE - 1];
 #endif /* !UNIV_HOTBACKUP */
+
+UNIV_INTERN uint page_compression_level = 6;
 
 /* Please refer to ../include/page0zip.ic for a description of the
 compressed page format. */
@@ -305,6 +308,26 @@ page_zip_dir_get(
 }
 
 #ifndef UNIV_HOTBACKUP
+
+/**********************************************************************//**
+Write a log record of compressing an index page without the data on the page. */
+UNIV_INTERN
+void
+page_zip_compress_write_log_no_data(
+/*================================*/
+	uint		compression_level,
+	const page_t*   page,
+	dict_index_t*   index,
+	mtr_t*                          mtr)
+{
+	byte* log_ptr = mlog_open_and_write_index(mtr, page, index,
+						  MLOG_ZIP_PAGE_COMPRESS_NO_DATA, 1);
+	if (!log_ptr)
+		return;
+	mach_write_to_1(log_ptr, compression_level);
+	mlog_close(mtr, log_ptr + 1);
+}
+
 /**********************************************************************//**
 Write a log record of compressing an index page. */
 static
@@ -1168,6 +1191,7 @@ UNIV_INTERN
 ibool
 page_zip_compress(
 /*==============*/
+	uint		compression_level, /*!< in: zlib compression level */
 	page_zip_des_t*	page_zip,/*!< in: size; out: data, n_blobs,
 				m_start, m_end, m_nonempty */
 	const page_t*	page,	/*!< in: uncompressed page */
@@ -1264,6 +1288,23 @@ page_zip_compress(
 		goto err_exit;
 	}
 
+	/* Simulate a compression failure with a probability determined by
+	   innodb_simulate_comp_failures, only if the page has 2 or more records and
+	   the padding computation is finished. */
+	if (srv_simulate_comp_failures
+	    && index->padding_algo == PADDING_ALGO_NONE
+	    && page_get_n_recs(page) >= 2
+	    && (((uint)(rand() % 100)) < srv_simulate_comp_failures)) {
+		fprintf(stderr,
+		        "InnoDB: Simulating a compression failure"
+		        " for table %s, index %s, page %lu (%s)\n",
+		        index->table_name,
+		        index->name,
+		        page_get_page_no(page),
+		        page_is_leaf(page) ? "leaf" : "non-leaf");
+		goto err_exit;
+	}
+
 	heap = mem_heap_create(page_zip_get_size(page_zip)
 			       + n_fields * (2 + sizeof *offsets)
 			       + n_dense * ((sizeof *recs)
@@ -1281,7 +1322,7 @@ page_zip_compress(
 	/* Compress the data payload. */
 	page_zip_set_alloc(&c_stream, heap);
 
-	err = deflateInit2(&c_stream, Z_DEFAULT_COMPRESSION,
+	err = deflateInit2(&c_stream, compression_level,
 			   Z_DEFLATED, UNIV_PAGE_SIZE_SHIFT,
 			   MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY);
 	ut_a(err == Z_OK);
@@ -1504,7 +1545,7 @@ page_zip_fields_free(
 {
 	if (index) {
 		dict_table_t*	table = index->table;
-		mem_heap_free(index->heap);
+                dict_mem_index_free(index);
 		mutex_free(&(table->autoinc_mutex));
 		ut_free(table->name);
 		mem_heap_free(table->heap);
@@ -4486,7 +4527,8 @@ page_zip_reorganize(
 	/* Restore logging. */
 	mtr_set_log_mode(mtr, log_mode);
 
-	if (UNIV_UNLIKELY(!page_zip_compress(page_zip, page, index, mtr))) {
+	if (UNIV_UNLIKELY(!page_zip_compress(page_compression_level,
+					     page_zip, page, index, mtr))) {
 
 #ifndef UNIV_HOTBACKUP
 		buf_block_free(temp_block);
@@ -4597,6 +4639,34 @@ page_zip_copy_recs(
 	page_zip_compress_write_log(page_zip, page, index, mtr);
 }
 #endif /* !UNIV_HOTBACKUP */
+
+/**********************************************************************//**
+Parses a log record of compressing an index page without the data.
+@return end of log record or NULL */
+UNIV_INTERN
+byte*
+page_zip_parse_compress_no_data(
+/*============================*/
+/*====================*/
+	byte*           ptr,    /*!< in: buffer */
+	byte*           end_ptr, /*!< in: buffer end */
+	page_t*         page,   /*!< in: uncompressed page */
+	page_zip_des_t* page_zip, /*!< out: compressed page */
+	dict_index_t* index)
+{
+	uint compression_level;
+	if (end_ptr == ptr)
+		return NULL;
+	compression_level = mach_read_from_1(ptr);
+	/* If page compression fails then there must be something wrong
+	   because a compress log record is logged only if the compression
+	   was successful. Crash in this case. */
+	if (page
+	    && !page_zip_compress(compression_level, page_zip, page, index, NULL)) {
+		ut_error;
+	}
+	return ptr + 1;
+}
 
 /**********************************************************************//**
 Parses a log record of compressing an index page.

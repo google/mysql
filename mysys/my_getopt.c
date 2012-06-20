@@ -110,9 +110,9 @@ void my_getopt_register_get_addr(my_getopt_value func_addr)
   getopt_get_addr= func_addr;
 }
 
-int handle_options(int *argc, char ***argv, 
-		   const struct my_option *longopts,
-                   my_get_one_option get_one_option)
+int handle_options_low(int *argc, char ***argv,
+		       const struct my_option *longopts,
+		       my_get_one_option get_one_option, my_bool fix_doubles)
 {
   uint UNINIT_VAR(opt_found), argvpos= 0, length;
   my_bool end_of_options= 0, must_be_var, set_maximum_value,
@@ -122,6 +122,24 @@ int handle_options(int *argc, char ***argv,
   const struct my_option *optp;
   void *value;
   int error, i;
+  struct my_option *opt = (struct my_option*)longopts;
+
+  /* getopt_double expects that double option values will be multiplied by
+     1 << 20 (to solve the problem of doubles being cast to longlongs losing
+     precision due to rounding).  If fix_double is TRUE, double variables here
+     are not multiplied by 1 << 20 yet, so we apply it. */
+  if (fix_doubles) {
+    for (; opt->name; opt++) {
+      switch (opt->var_type) {
+      case GET_DOUBLE:
+        opt->def_value *= (1 << 20);
+        opt->min_value *= (1 << 20);
+        opt->max_value *= (1 << 20);
+      default:
+        continue;
+      }
+    }
+  }
 
   /* handle_options() assumes arg0 (program name) always exists */
   DBUG_ASSERT(argc && *argc >= 1);
@@ -560,6 +578,12 @@ int handle_options(int *argc, char ***argv,
   return 0;
 }
 
+int handle_options(int *argc, char ***argv,
+		   const struct my_option *longopts,
+                   my_get_one_option get_one_option)
+{
+  return handle_options_low(argc, argv, longopts, get_one_option, TRUE);
+}
 
 /*
   function: check_struct_option
@@ -958,7 +982,7 @@ ulonglong getopt_ull_limit_value(ulonglong num, const struct my_option *optp,
 
 
 /*
-  Get double value withing ranges
+  Get double value within ranges
 
   Evaluates and returns the value that user gave as an argument to a variable.
 
@@ -974,6 +998,8 @@ static double getopt_double(char *arg, const struct my_option *optp, int *err)
   double num;
   int error;
   char *end= arg + 1000;                     /* Big enough as *arg is \0 terminated */
+  double max_value= ((double)optp->max_value) / (1 << 20);
+  double min_value= ((double)optp->min_value) / (1 << 20);
   num= my_strtod(arg, &end, &error);
   if (end[0] != 0 || error)
   {
@@ -983,10 +1009,34 @@ static double getopt_double(char *arg, const struct my_option *optp, int *err)
     *err= EXIT_ARGUMENT_INVALID;
     return 0.0;
   }
-  if (optp->max_value && num > (double) optp->max_value)
-    num= (double) optp->max_value;
-  return max(num, (double) optp->min_value);
+  return getopt_double_limit_value(num, max_value, min_value,
+                                   (char*) optp->name, NULL);
 }
+
+double getopt_double_limit_value(double num, double max_val, double min_val,
+                                 const char *name, my_bool *was_fixed)
+{
+  my_bool adjusted= FALSE;
+  double old= num;
+  if (max_val && num > max_val)
+  {
+    num= max_val;
+    adjusted= TRUE;
+  }
+  if (num < min_val)
+  {
+    num= min_val;
+    adjusted= TRUE;
+  }
+  if (adjusted)
+    my_getopt_error_reporter(WARNING_LEVEL,
+                             "option '%s': value %g adjusted to %g",
+                             name, old, num);
+  if (was_fixed)
+    *was_fixed= adjusted;
+  return num;
+}
+
 
 /*
   Init one value to it's default values
@@ -1030,7 +1080,7 @@ static void init_one_value(const struct my_option *option, void *variable,
     *((ulonglong*) variable)= (ulonglong) value;
     break;
   case GET_DOUBLE:
-    *((double*) variable)=  (double) value;
+    *((double*) variable)=  ((double) value)/(1 << 20);
     break;
   case GET_STR:
     /*
