@@ -1646,12 +1646,12 @@ int merge_buffers(Sort_param *param, IO_CACHE *from_file,
 
   while (queue.elements > 1)
   {
-    if (killable && thd->check_killed())
-    {
-      error= 1; goto err;                        /* purecov: inspected */
-    }
     for (;;)
     {
+      if (killable && thd->check_killed())
+      {
+        error= 1; goto err;
+      }
       buffpek= (BUFFPEK*) queue_top(&queue);
       src= buffpek->key;
       if (cmp)                                        // Remove duplicates
