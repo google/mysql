@@ -1293,12 +1293,12 @@ int merge_buffers(SORTPARAM *param, IO_CACHE *from_file,
 
   while (queue.elements > 1)
   {
-    if (*killed)
-    {
-      error= 1; goto err;                        /* purecov: inspected */
-    }
     for (;;)
     {
+      if (unlikely(*killed))
+      {
+        error= 1; goto err;                        /* purecov: inspected */
+      }
       buffpek= (BUFFPEK*) queue_top(&queue);
       if (cmp)                                        // Remove duplicates
       {
