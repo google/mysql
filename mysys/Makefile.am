@@ -24,8 +24,8 @@ noinst_HEADERS =	mysys_priv.h my_static.h my_handler_errors.h
 libmysys_a_SOURCES = 	my_init.c my_getwd.c mf_getdate.c my_mmap.c \
 			mf_path.c mf_loadpath.c my_file.c \
 			my_open.c my_create.c my_dup.c my_seek.c my_read.c \
-			my_pread.c my_write.c my_getpagesize.c \
-			mf_keycaches.c my_crc32.c \
+			my_pread.c my_write.c my_getpagesize.c checksum_io.c \
+			mf_keycaches.c  my_crc32.c \
 			mf_iocache.c mf_iocache2.c mf_cache.c mf_tempfile.c \
 			mf_tempdir.c my_lock.c mf_brkhant.c my_alarm.c \
 			my_malloc.c my_realloc.c my_once.c mulalloc.c \
@@ -101,7 +101,18 @@ test_thr_lock$(EXEEXT): thr_lock.c $(LIBRARIES)
 	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
 test_io_cache$(EXEEXT): mf_iocache.c $(LIBRARIES)
-	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
+	$(CP) $(srcdir)/mf_iocache.c test_io_cache.c
+	$(LINK) $(FLAGS) -DMAIN ./test_io_cache.c $(LDADD) @ZLIB_LIBS@ $(LIBS)
+	$(RM) -f test_io_cache.c
+
+test_dir$(EXEEXT): test_dir.c $(LIBRARIES)
+	$(LINK) $(FLAGS) -DMAIN $(srcdir)/test_dir.c $(LDADD) $(LIBS)
+
+test_charset$(EXEEXT): test_charset.c $(LIBRARIES)
+	$(LINK) $(FLAGS) -DMAIN $(srcdir)/test_charset.c $(LDADD) $(LIBS)
+
+testhash$(EXEEXT): testhash.c $(LIBRARIES)
+	$(LINK) $(FLAGS) -DMAIN $(srcdir)/testhash.c $(LDADD) $(LIBS)
 
 test_gethwaddr$(EXEEXT): my_gethwaddr.c $(LIBRARIES)
 	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)

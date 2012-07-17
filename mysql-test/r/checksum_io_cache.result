@@ -1,0 +1,27 @@
+DROP TABLE IF EXISTS t1, t2;
+set session debug="+d,chksum_block_corrupted";
+CREATE TABLE t1 (
+id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+gender CHAR(1),
+name VARCHAR(20)
+);
+INSERT INTO t1 (gender, name) VALUES (NULL, NULL);
+INSERT INTO t1 (gender, name) VALUES (NULL, NULL);
+INSERT INTO t1 (gender, name) VALUES (NULL, NULL);
+INSERT INTO t1 (gender, name) VALUES ('F', 'Helen'), ('F', 'Anastasia'),
+('F', 'Katherine'), ('F', 'Margo'), ('F', 'Magdalene'), ('F', 'Mary');
+INSERT INTO t1 (gender, name) VALUES ('F', 'Eva'), ('F', 'Sofia'),
+('F', 'Sara'), ('F', 'Golda'), ('F', 'Toba'), ('F', 'Victory'),
+('F', 'Faina'), ('F', 'Miriam'), ('F', 'Beki'), ('F', 'America'),
+('F', 'Susan'), ('F', 'Glory'), ('F', 'Priscilla'), ('F', 'Rosmary'),
+('F', 'Rose'), ('F', 'Margareth'), ('F', 'Elizabeth'), ('F', 'Meredith'),
+('F', 'Julie'), ('F', 'Xenia'), ('F', 'Zena'), ('F', 'Olga'),
+('F', 'Brunhilda'), ('F', 'Nataly'), ('F', 'Lara'), ('F', 'Svetlana'),
+('F', 'Grethem'), ('F', 'Irene');
+SELECT
+SUM(DISTINCT LENGTH(g1.name)) s1,
+SUM(DISTINCT SUBSTRING(g2.name, 1, 3)) s2,
+SUM(DISTINCT LENGTH(SUBSTRING(g3.name, 1, 4))) s3
+FROM t1 g1, t1 g2, t1 g3 GROUP BY LENGTH(SUBSTRING(g3.name, 5, 10));
+ERROR HY000: Lost connection to MySQL server during query
+DROP TABLE t1;

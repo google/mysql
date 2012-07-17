@@ -824,7 +824,7 @@ static uint NEAR_F read_to_buffer(IO_CACHE *fromfile, BUFFPEK *buffpek,
 
   if ((count=(uint) min((ha_rows) buffpek->max_keys,buffpek->count)))
   {
-    if (my_pread(fromfile->file,(uchar*) buffpek->base,
+    if (fromfile->direct_pread(fromfile->file,(uchar*) buffpek->base,
                  (length= sort_length*count),buffpek->file_pos,MYF_RW))
       return((uint) -1);                        /* purecov: inspected */
     buffpek->key=buffpek->base;
@@ -849,11 +849,12 @@ static uint NEAR_F read_to_buffer_varlen(IO_CACHE *fromfile, BUFFPEK *buffpek,
 
     for (idx=1;idx<=count;idx++)
     {
-      if (my_pread(fromfile->file,(uchar*)&length_of_key,sizeof(length_of_key),
-                   buffpek->file_pos,MYF_RW))
+      if (fromfile->direct_pread(fromfile->file,(uchar*)&length_of_key,
+                                 sizeof(length_of_key),
+                                 buffpek->file_pos,MYF_RW))
         return((uint) -1);
       buffpek->file_pos+=sizeof(length_of_key);
-      if (my_pread(fromfile->file,(uchar*) buffp,length_of_key,
+      if (fromfile->direct_pread(fromfile->file,(uchar*) buffp,length_of_key,
                    buffpek->file_pos,MYF_RW))
         return((uint) -1);
       buffpek->file_pos+=length_of_key;

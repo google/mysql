@@ -66,6 +66,11 @@ my_bool open_cached_file(IO_CACHE *cache, const char* dir, const char *prefix,
 		 (char*) 0);
   cache->file_name=0;
   cache->buffer=0;				/* Mark that not open */
+  /*
+    enable block level checksumming for this cache checksumming is
+    enabled when the io cache flushes to disk, causing it to call
+    real_open_cached_file()
+  */
   if (!init_io_cache(cache,-1,cache_size,WRITE_CACHE,0L,0,
 		     MYF(cache_myflags | MY_NABP)))
   {
@@ -90,6 +95,13 @@ my_bool real_open_cached_file(IO_CACHE *cache)
   {
     error=0;
     cache_remove_open_tmp(cache, name_buff);
+    /* use checksumming for this temp file */
+    cache->direct_read = &chksum_read;
+    cache->direct_pread = &chksum_pread;
+    cache->direct_write = &chksum_write;
+    cache->direct_pwrite = &chksum_pwrite;
+    cache->direct_seek = &chksum_seek;
+    cache->direct_tell = &chksum_tell;
   }
   DBUG_RETURN(error);
 }

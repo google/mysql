@@ -42,3 +42,18 @@ extern pthread_mutex_t THR_LOCK_charset, THR_LOCK_time;
 #endif
 
 void my_error_unregister_all(void);
+
+/* checksum_io.c */
+size_t chksum_read(File Filedes, uchar *Buffer, size_t Count, myf MyFlags);
+
+size_t chksum_pread(File Filedes, uchar *Buffer, size_t Count,
+                    my_off_t offset, myf MyFlags);
+
+size_t chksum_pwrite(File Filedes, const uchar *Buffer, size_t Count,
+                     my_off_t offset, myf MyFlags);
+
+size_t chksum_write(File Filedes, const uchar *Buffer, size_t Count, myf MyFlags);
+
+my_off_t chksum_tell(File fd, myf MyFlags);
+
+my_off_t chksum_seek(File fd, my_off_t pos, int whence, myf MyFlags);

@@ -132,7 +132,10 @@ init_functions(IO_CACHE* info)
 
 
 /*
-  Initialize an IO_CACHE object
+  Initialize an IO_CACHE object. Block level checksumming will be turned
+  on if file == -1, and file is not modified before we attempt to flush
+  the buffer to disk. The checksumming is set when real_open_cached_file
+  is called
 
   SYNOPSOS
     init_io_cache()
@@ -174,9 +177,18 @@ int init_io_cache(IO_CACHE *info, File file, size_t cachesize,
   info->buffer=0;
   info->seek_not_done= 0;
 
+  /* Default our cache to not use checksumming. Checksumming is initialized
+   in real_open_cached_file for temp files. */
+  info->direct_read = &my_read;
+  info->direct_pread = &my_pread;
+  info->direct_write = &my_write;
+  info->direct_pwrite = &my_pwrite;
+  info->direct_seek = &my_seek;
+  info->direct_tell = &my_tell;
+
   if (file >= 0)
   {
-    pos= my_tell(file, MYF(0));
+    pos= info->direct_tell(file, MYF(0));
     if ((pos == (my_off_t) -1) && (my_errno == ESPIPE))
     {
       /*
@@ -208,7 +220,7 @@ int init_io_cache(IO_CACHE *info, File file, size_t cachesize,
     if (!(cache_myflags & MY_DONT_CHECK_FILESIZE))
     {
       /* Calculate end of file to avoid allocating oversized buffers */
-      end_of_file=my_seek(file,0L,MY_SEEK_END,MYF(0));
+      end_of_file=info->direct_seek(file,0L,MY_SEEK_END,MYF(0));
       /* Need to reset seek_not_done now that we just did a seek. */
       info->seek_not_done= end_of_file == seek_offset ? 0 : 1;
       if (end_of_file < seek_offset)
@@ -484,7 +496,7 @@ int _my_b_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
   */
   if (info->seek_not_done)
   {
-    if ((my_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0)) 
+    if ((info->direct_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0))
         != MY_FILEPOS_ERROR))
     {
       /* No error, reset seek_not_done flag. */
@@ -513,7 +525,7 @@ int _my_b_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
       DBUG_RETURN(1);
     }
     length=(Count & (size_t) ~(IO_SIZE-1))-diff_length;
-    if ((read_length= my_read(info->file,Buffer, length, info->myflags))
+    if ((read_length= info->direct_read(info->file,Buffer, length, info->myflags))
 	!= length)
     {
       info->error= (read_length == (size_t) -1 ? -1 :
@@ -540,7 +552,7 @@ int _my_b_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
     }
     length=0;				/* Didn't read any chars */
   }
-  else if ((length= my_read(info->file,info->buffer, max_length,
+  else if ((length= info->direct_read(info->file,info->buffer, max_length,
                             info->myflags)) < Count ||
 	   length == (size_t) -1)
   {
@@ -1013,7 +1025,7 @@ int _my_b_read_r(register IO_CACHE *cache, uchar *Buffer, size_t Count)
         */
         if (cache->seek_not_done)
         {
-          if (my_seek(cache->file, pos_in_file, MY_SEEK_SET, MYF(0))
+          if (cache->direct_seek(cache->file, pos_in_file, MY_SEEK_SET, MYF(0))
               == MY_FILEPOS_ERROR)
           {
             cache->error= -1;
@@ -1021,7 +1033,7 @@ int _my_b_read_r(register IO_CACHE *cache, uchar *Buffer, size_t Count)
             DBUG_RETURN(1);
           }
         }
-        len= my_read(cache->file, cache->buffer, length, cache->myflags);
+        len= cache->direct_read(cache->file, cache->buffer, length, cache->myflags);
       }
       DBUG_PRINT("io_cache_share", ("read %lu bytes", (ulong) len));
 
@@ -1160,7 +1172,7 @@ int _my_b_seq_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
     With read-append cache we must always do a seek before we read,
     because the write could have moved the file pointer astray
   */
-  if (my_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0)) == MY_FILEPOS_ERROR)
+  if (info->direct_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0)) == MY_FILEPOS_ERROR)
   {
    info->error= -1;
    unlock_append_buffer(info);
@@ -1177,7 +1189,7 @@ int _my_b_seq_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
     size_t read_length;
 
     length=(Count & (size_t) ~(IO_SIZE-1))-diff_length;
-    if ((read_length= my_read(info->file,Buffer, length,
+    if ((read_length= info->direct_read(info->file,Buffer, length,
                               info->myflags)) == (size_t) -1)
     {
       info->error= -1;
@@ -1211,7 +1223,7 @@ int _my_b_seq_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
   }
   else
   {
-    length= my_read(info->file,info->buffer, max_length, info->myflags);
+    length= info->direct_read(info->file,info->buffer, max_length, info->myflags);
     if (length == (size_t) -1)
     {
       info->error= -1;
@@ -1388,7 +1400,7 @@ int _my_b_async_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
       return 1;
     }
     
-    if (my_seek(info->file,next_pos_in_file,MY_SEEK_SET,MYF(0))
+    if (info->direct_seek(info->file,next_pos_in_file,MY_SEEK_SET,MYF(0))
         == MY_FILEPOS_ERROR)
     {
       info->error= -1;
@@ -1398,7 +1410,7 @@ int _my_b_async_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
     read_length=IO_SIZE*2- (size_t) (next_pos_in_file & (IO_SIZE-1));
     if (Count < read_length)
     {					/* Small block, read to cache */
-      if ((read_length=my_read(info->file,info->request_pos,
+      if ((read_length=info->direct_read(info->file,info->request_pos,
 			       read_length, info->myflags)) == (size_t) -1)
         return info->error= -1;
       use_length=min(Count,read_length);
@@ -1419,7 +1431,7 @@ int _my_b_async_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
     }
     else
     {						/* Big block, don't cache it */
-      if ((read_length= my_read(info->file,Buffer, Count,info->myflags))
+      if ((read_length= info->direct_read(info->file,Buffer, Count,info->myflags))
 	  != Count)
       {
 	info->error= read_length == (size_t) -1 ? -1 : read_length+left_length;
@@ -1526,14 +1538,14 @@ int _my_b_write(register IO_CACHE *info, const uchar *Buffer, size_t Count)
         "seek_not_done" to indicate this to other functions operating
         on the IO_CACHE.
       */
-      if (my_seek(info->file,info->pos_in_file,MY_SEEK_SET,MYF(0)))
+      if (info->direct_seek(info->file,info->pos_in_file,MY_SEEK_SET,MYF(0)))
       {
         info->error= -1;
         return (1);
       }
       info->seek_not_done=0;
     }
-    if (my_write(info->file, Buffer, length, info->myflags | MY_NABP))
+    if (info->direct_write(info->file, Buffer, length, info->myflags | MY_NABP))
       return info->error= -1;
 
 #ifdef THREAD
@@ -1596,7 +1608,7 @@ int my_b_append(register IO_CACHE *info, const uchar *Buffer, size_t Count)
   if (Count >= IO_SIZE)
   {					/* Fill first intern buffer */
     length=Count & (size_t) ~(IO_SIZE-1);
-    if (my_write(info->file,Buffer, length, info->myflags | MY_NABP))
+    if (info->direct_write(info->file,Buffer, length, info->myflags | MY_NABP))
     {
       unlock_append_buffer(info);
       return info->error= -1;
@@ -1652,11 +1664,11 @@ int my_block_write(register IO_CACHE *info, const uchar *Buffer, size_t Count,
   {
     /* Of no overlap, write everything without buffering */
     if (pos + Count <= info->pos_in_file)
-      return my_pwrite(info->file, Buffer, Count, pos,
+      return info->direct_pwrite(info->file, Buffer, Count, pos,
 		       info->myflags | MY_NABP);
     /* Write the part of the block that is before buffer */
     length= (uint) (info->pos_in_file - pos);
-    if (my_pwrite(info->file, Buffer, length, pos, info->myflags | MY_NABP))
+    if (info->direct_pwrite(info->file, Buffer, length, pos, info->myflags | MY_NABP))
       info->error= error= -1;
     Buffer+=length;
     pos+=  length;
@@ -1746,7 +1758,7 @@ int my_b_flush_io_cache(IO_CACHE *info,
       */
       if (!append_cache && info->seek_not_done)
       {					/* File touched, do seek */
-	if (my_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0)) ==
+	if (info->direct_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0)) ==
 	    MY_FILEPOS_ERROR)
 	{
 	  UNLOCK_APPEND_BUFFER;
@@ -1760,7 +1772,7 @@ int my_b_flush_io_cache(IO_CACHE *info,
       info->write_end= (info->write_buffer+info->buffer_length-
 			((pos_in_file+length) & (IO_SIZE-1)));
 
-      if (my_write(info->file,info->write_buffer,length,
+      if (info->direct_write(info->file,info->write_buffer,length,
 		   info->myflags | MY_NABP))
 	info->error= -1;
       else
@@ -1772,7 +1784,7 @@ int my_b_flush_io_cache(IO_CACHE *info,
       else
       {
 	info->end_of_file+=(info->write_pos-info->append_read_pos);
-	DBUG_ASSERT(info->end_of_file == my_tell(info->file,MYF(0)));
+	DBUG_ASSERT(info->end_of_file == info->direct_tell(info->file,MYF(0)));
       }
 
       info->append_read_pos=info->write_pos=info->write_buffer;
@@ -1883,7 +1895,71 @@ void close_file(IO_CACHE* info)
   my_close(info->file, MYF(MY_WME));
 }
 
-int main(int argc, char** argv)
+int test_chksum()
+{
+  uchar resbuffer[4096];
+  File fd;
+  const uchar *data;
+  size_t len;
+  size_t res;
+
+  fd = my_open("/tmp/chksum_write_test", O_CREAT | O_RDWR,  MYF(0));
+  data = (const uchar *) "hello world";
+  len = strlen((char *)data);
+
+  res = chksum_write(fd, data, len, MYF(0));
+
+  bzero(resbuffer, 4096);
+
+  if (res != len)
+    die("chksum_write did not report writing all the data");
+
+
+  /* see if we get the same data back */
+  chksum_seek(fd, 0, MY_SEEK_SET, MYF(0));
+  res = chksum_read(fd, resbuffer, len, MYF(0));
+
+  if (res != len)
+    die("chksum_read did not report reading all the data");
+
+  if (res != strlen((char*)resbuffer))
+    die("chksum_read did not report as many bytes read as were returned");
+
+  res = memcmp((char*)data, (char*)resbuffer, len);
+
+  if (res)
+    die("chksum I/O data returned did not match data inserted");
+
+
+  res = chksum_write(fd, data, len, MYF(0));
+
+  bzero(resbuffer, 4096);
+
+
+  if (res != len)
+    die("chksum_write did not report writing all the data");
+
+
+  /* see if we get the same data back */
+  my_seek(fd, 0, MY_SEEK_SET, MYF(0));
+  res = chksum_read(fd, resbuffer, len, MYF(0));
+
+
+  if (res != len)
+    die("chksum_read did not report reading all the data");
+
+  if (res != strlen((char*)resbuffer))
+    die("chksum_read did not report as many bytes read as were returned");
+
+  res = strncmp((char*)data, (char*)resbuffer, len);
+
+  if (res)
+    die("chksum I/O data returned did not match data inserted");
+
+  return 0;
+}
+
+int main(int argc __attribute__((unused)), char** argv)
 {
   /* Fix the "unused argument" error message that is not relevant here. */
   (void) argc;
@@ -1899,6 +1975,10 @@ int main(int argc, char** argv)
   uchar* block, *block_end;
   MY_INIT(argv[0]);
   max_block = cache_size*3;
+
+  if (test_chksum())
+    die("test_chksum() failed");
+
   if (!(block=(uchar*)my_malloc(max_block,MYF(MY_WME))))
     die("Not enough memory to allocate test block");
   block_end = block + max_block;

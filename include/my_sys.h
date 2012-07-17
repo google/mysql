@@ -514,6 +514,18 @@ typedef struct st_io_cache		/* Used when cacheing files */
   my_off_t aio_read_pos;
   my_aio_result aio_result;
 #endif
+
+  /*
+    The following variables handle whether or not the IO_CACHE is being
+    checksummed or not. If we are checksumming, these are set to chksum_*
+    if not, they are set to my_*
+  */
+  size_t (*direct_read)(File, uchar *, size_t, myf);
+  size_t (*direct_pread)(File, uchar *, size_t, my_off_t,  myf);
+  size_t (*direct_write)(int, const uchar *, size_t, myf);
+  size_t (*direct_pwrite)(int, const uchar *, size_t, my_off_t, myf);
+  my_off_t (*direct_seek)(File, my_off_t, int, myf);
+  my_off_t (*direct_tell)(File, myf);
 } IO_CACHE;
 
 typedef int (*qsort2_cmp)(const void *, const void *, const void *);
