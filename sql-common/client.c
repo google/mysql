@@ -156,15 +156,20 @@ int my_connect(my_socket fd, const struct sockaddr *name, uint namelen,
     exactly like the normal connect() call does.
   */
 
-  if (timeout == 0)
-    return connect(fd, (struct sockaddr*) name, namelen);
-
+  if (timeout == 0) {
+    do {
+      res= connect(fd, (struct sockaddr*) name, namelen);
+    } while(res < 0 && errno == EINTR);
+    return res;
+  }
   flags = fcntl(fd, F_GETFL, 0);	  /* Set socket to not block */
 #ifdef O_NONBLOCK
   fcntl(fd, F_SETFL, flags | O_NONBLOCK);  /* and save the flags..  */
 #endif
 
-  res= connect(fd, (struct sockaddr*) name, namelen);
+  do {
+    res= connect(fd, (struct sockaddr*) name, namelen);
+  } while(res < 0 && errno == EINTR);
   s_err= errno;			/* Save the error... */
   fcntl(fd, F_SETFL, flags);
   if ((res != 0) && (s_err != EINPROGRESS))
@@ -184,6 +189,8 @@ int my_connect(my_socket fd, const struct sockaddr *name, uint namelen,
 
   We prefer to do this with poll() as there is no limitations with this.
   If not, we will use select()
+
+  If timeout == 0, assume no timeout.
 */
 
 #if !(defined(__WIN__) || defined(__NETWARE__))
@@ -193,14 +200,26 @@ static int wait_for_data(my_socket fd, uint timeout)
 #ifdef HAVE_POLL
   struct pollfd ufds;
   int res;
+  time_t start= time(NULL);
+  time_t remaining_timeout;
 
   ufds.fd= fd;
   ufds.events= POLLIN | POLLPRI;
-  if (!(res= poll(&ufds, 1, (int) timeout*1000)))
-  {
-    errno= EINTR;
-    return -1;
-  }
+
+  do {
+    if (timeout != 0) {
+      remaining_timeout = timeout - (time(NULL) - start);
+      if (remaining_timeout <= 0) {
+        errno= EFAULT;
+        return -1;
+      }
+    }
+    if (!(res= poll(&ufds, 1, (int) timeout*1000)))
+    {
+      errno= EINTR;
+      return -1;
+    }
+  } while(res < 0 && errno == EINTR);
   if (res < 0 || !(ufds.revents & (POLLIN | POLLPRI)))
     return -1;
   return 0;
