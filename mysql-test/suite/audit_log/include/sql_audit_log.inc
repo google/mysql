@@ -24,4 +24,4 @@ drop table log_test2;
 ping;
 
 # Show the log content (timestamp is removed)
---exec sed -e '/Query/!d;s/^.*Query[ \t]*//' $MYSQLD_DATADIR/auditlog
+--exec sed -e '/Query/!d;s/^.*Query[ \t]*//' $MYSQLD_DATADIR/auditlog.000001

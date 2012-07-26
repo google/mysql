@@ -2196,7 +2196,7 @@ bool MYSQL_LOG::open(const char *log_name, enum_log_type log_type_arg,
                         ((log_type == LOG_BIN) ? MY_WAIT_IF_FULL : 0))))
     goto err;
 
-  if (log_type == LOG_NORMAL)
+  if (log_type == LOG_NORMAL || log_type == LOG_AUDIT)
   {
     char *end;
     int len=my_snprintf(buff, sizeof(buff), "%s, Version: %s (%s). "
@@ -2314,7 +2314,7 @@ void MYSQL_LOG::cleanup()
 int MYSQL_LOG::generate_new_name(char *new_name, const char *log_name)
 {
   fn_format(new_name, log_name, mysql_data_home, "", 4);
-  if (log_type == LOG_BIN)
+  if (log_type == LOG_BIN || log_type == LOG_AUDIT)
   {
     if (!fn_ext(log_name)[0])
     {
