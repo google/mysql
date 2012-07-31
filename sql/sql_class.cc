@@ -3960,7 +3960,8 @@ int THD::binlog_query(THD::enum_binlog_query_type qtype, char const *query_arg,
   */
   if (sql_log_bin_toplevel && lex->is_stmt_unsafe() &&
       variables.binlog_format == BINLOG_FORMAT_STMT && 
-      binlog_filter->db_ok(this->db))
+      binlog_filter->db_ok(this->db) &&
+      !opt_disable_binlog_unsafe_warning)
   {
    /*
      A warning can be elevated a error when STRICT sql mode.

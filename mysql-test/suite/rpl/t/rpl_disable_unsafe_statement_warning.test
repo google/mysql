@@ -1,0 +1,18 @@
+# see if --replicate-ignore-db works
+
+--source include/have_binlog_format_statement.inc
+--source include/master-slave.inc
+
+--disable_warnings
+drop database if exists mysqltest1;
+--enable_warnings
+create database mysqltest1;
+
+use mysqltest1;
+create table t1 (a DATETIME);
+#Would normally generate an unsafe statement warning.
+insert into t1 values(SYSDATE());
+
+# cleanup
+drop database mysqltest1;
+--source include/rpl_end.inc

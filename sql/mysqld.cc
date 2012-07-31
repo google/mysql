@@ -450,6 +450,7 @@ static pthread_cond_t COND_thread_cache, COND_flush_thread_cache;
 /* Global variables */
 
 bool opt_update_log, opt_bin_log, opt_ignore_builtin_innodb= 0;
+bool opt_disable_binlog_unsafe_warning= 0;
 my_bool opt_log, opt_slow_log;
 ulong log_output_options;
 my_bool opt_log_queries_not_using_indexes= 0;
@@ -5518,7 +5519,7 @@ enum options_mysqld
   OPT_SQL_BIN_UPDATE_SAME,     OPT_REPLICATE_DO_DB,
   OPT_REPLICATE_IGNORE_DB,     OPT_LOG_SLAVE_UPDATES,
   OPT_BINLOG_DO_DB,            OPT_BINLOG_IGNORE_DB,
-  OPT_BINLOG_FORMAT,
+  OPT_BINLOG_FORMAT,           OPT_DISABLE_BINLOG_UNSAFE_WARNING,
 #ifndef DBUG_OFF
   OPT_BINLOG_SHOW_XID,
 #endif
@@ -5918,6 +5919,10 @@ each time the SQL thread starts.",
    "should be the chosen location for the binary log files.",
    &opt_bin_logname, &opt_bin_logname, 0, GET_STR_ALLOC,
    OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"disable-binlog-unsafe-warning", OPT_DISABLE_BINLOG_UNSAFE_WARNING,
+   "Disable replication unsafe statement warnings.",
+   &opt_disable_binlog_unsafe_warning, &opt_disable_binlog_unsafe_warning, 0,
+   GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"log-bin-index", OPT_BIN_LOG_INDEX,
    "File that holds the names for last binary log files.",
    &opt_binlog_index_name, &opt_binlog_index_name, 0, GET_STR,
@@ -8069,6 +8074,9 @@ mysqld_get_one_option(int optid,
     break;
   case (int) OPT_BIN_LOG:
     opt_bin_log= test(argument != disabled_my_option);
+    break;
+  case (int) OPT_DISABLE_BINLOG_UNSAFE_WARNING:
+    opt_disable_binlog_unsafe_warning= 1;
     break;
   case (int) OPT_ERROR_LOG_FILE:
     opt_error_log= 1;
