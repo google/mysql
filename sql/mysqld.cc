@@ -6122,6 +6122,7 @@ enum options_mysqld
   OPT_DEFAULT_COLLATION_OLD,
   OPT_CHARACTER_SET_CLIENT_HANDSHAKE,
   OPT_CHARACTER_SET_FILESYSTEM,
+  OPT_IO_CACHE_MAX_SIZE,
   OPT_LC_TIME_NAMES,
   OPT_INIT_CONNECT,
   OPT_INIT_SLAVE,
@@ -6433,6 +6434,11 @@ struct my_option my_long_options[] =
 each time the SQL thread starts.",
    &opt_init_slave, &opt_init_slave, 0, GET_STR_ALLOC,
    REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"io-cache-max-size", OPT_IO_CACHE_MAX_SIZE,
+   "If an IO Cache grows to greater than this size (in bytes), it will kill "
+   "the query responsible.",
+   &io_cache_max_size, &io_cache_max_size, 0,
+   GET_INT, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"language", 'L',
    "Client error messages in given language. May be given as a full path.",
    &language_ptr, &language_ptr, 0, GET_STR, REQUIRED_ARG,
@@ -8485,6 +8491,7 @@ static int mysql_init_variables(void)
   mysqld_user= mysqld_chroot= opt_init_file= opt_bin_logname = 0;
   prepared_stmt_count= 0;
   errmesg= 0;
+  io_cache_max_size= 0;
   mysqld_unix_port= opt_mysql_tmpdir= my_bind_addr_str= NullS;
   bzero((uchar*) &mysql_tmpdir_list, sizeof(mysql_tmpdir_list));
   bzero((char *) &global_status_var, sizeof(global_status_var));
@@ -9033,6 +9040,14 @@ mysqld_get_one_option(int optid,
   case (int) OPT_SKIP_SHOW_DB:
     opt_skip_show_db=1;
     opt_specialflag|=SPECIAL_SKIP_SHOW_DB;
+    break;
+  case OPT_IO_CACHE_MAX_SIZE:
+    if (max_binlog_size != 0 && io_cache_max_size < max_binlog_size)
+    {
+      sql_perror("Can't start server: io_cache_max_size is smaller than "
+                 "max_binlog_size");
+      return 1;
+    }
     break;
   case (int) OPT_WANT_CORE:
     test_flags |= TEST_CORE_ON_SIGNAL;
