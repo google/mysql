@@ -530,7 +530,7 @@ int Http_request::var_master_status()
   var_print_var("%s %d\r\n", "until_log_pos", (uint32) mi->rli.until_log_pos);
   var_print_var("%s %s\r\n", "until_log_name",  mi->rli.until_log_name);
   var_print_var("%s %d\r\n", "master_ssl_allowed", (uint32) mi->ssl ? 1 : 0);
-  var_print_var("%s %d\r\n", "group_id", (uint32) group_id);
+  var_print_var("%s %llu\r\n", "group_id", group_id);
   var_print_var("%s %d\r\n", "group_server_id", (uint32) group_server_id);
 
   long secs= 0;
