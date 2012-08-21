@@ -1435,6 +1435,9 @@ err_exit:
 		}
 #endif /* PAGE_ZIP_COMPRESS_DBG */
 #ifndef UNIV_HOTBACKUP
+		if (page_is_leaf(page)) {
+			dict_index_comp_fail(index, page_get_data_size(page));
+		}
 		page_zip_stat[page_zip->ssize - 1].compressed_usec
 			+= ut_time_us(NULL) - usec;
 #endif /* !UNIV_HOTBACKUP */
@@ -1501,6 +1504,9 @@ err_exit:
 			= &page_zip_stat[page_zip->ssize - 1];
 		zip_stat->compressed_ok++;
 		zip_stat->compressed_usec += ut_time_us(NULL) - usec;
+	}
+        if(page_is_leaf(page)) {
+		dict_index_comp_success(index, page_get_data_size(page));
 	}
 #endif /* !UNIV_HOTBACKUP */
 
