@@ -50,7 +50,7 @@ slave-bin.000001	#	Query	#	#	use `test`; create table t2 (a int) engine=myisam
 slave-bin.000001	#	Gtid	#	#	BEGIN GTID #-#-#
 slave-bin.000001	#	Table_map	#	#	table_id: # (test.t2)
 slave-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
-slave-bin.000001	#	Query	#	#	COMMIT
+slave-bin.000001	#	Xid	#	#	COMMIT /* XID */
 slave-bin.000001	#	Gtid	#	#	GTID #-#-#
 slave-bin.000001	#	Query	#	#	use `test`; create table t1 (to_be_deleted int)
 slave-bin.000001	#	Gtid	#	#	BEGIN GTID #-#-#
@@ -59,14 +59,14 @@ slave-bin.000001	#	Query	#	#	use `test`; CREATE TABLE `t1` (
 )
 slave-bin.000001	#	Table_map	#	#	table_id: # (test.t1)
 slave-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
-slave-bin.000001	#	Query	#	#	COMMIT
+slave-bin.000001	#	Xid	#	#	COMMIT /* XID */
 slave-bin.000001	#	Gtid	#	#	BEGIN GTID #-#-#
 slave-bin.000001	#	Query	#	#	use `test`; CREATE OR REPLACE TABLE `t1` (
   `f1` int(1) NOT NULL DEFAULT '0'
 )
 slave-bin.000001	#	Table_map	#	#	table_id: # (test.t1)
 slave-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
-slave-bin.000001	#	Query	#	#	COMMIT
+slave-bin.000001	#	Xid	#	#	COMMIT /* XID */
 slave-bin.000001	#	Gtid	#	#	GTID #-#-#
 slave-bin.000001	#	Query	#	#	use `test`; CREATE OR REPLACE table t1 like t2
 slave-bin.000001	#	Gtid	#	#	GTID #-#-#
@@ -171,7 +171,7 @@ slave-bin.000001	#	Query	#	#	use `test`; CREATE TABLE `t2` (
 )
 slave-bin.000001	#	Table_map	#	#	table_id: # (test.t2)
 slave-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
-slave-bin.000001	#	Query	#	#	COMMIT
+slave-bin.000001	#	Xid	#	#	COMMIT /* XID */
 slave-bin.000001	#	Gtid	#	#	GTID #-#-#
 slave-bin.000001	#	Query	#	#	use `test`; CREATE TABLE `t4` (
   `a` int(11) DEFAULT NULL
@@ -182,7 +182,7 @@ slave-bin.000001	#	Query	#	#	use `test`; CREATE TABLE `t5` (
 )
 slave-bin.000001	#	Table_map	#	#	table_id: # (test.t5)
 slave-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
-slave-bin.000001	#	Query	#	#	COMMIT
+slave-bin.000001	#	Xid	#	#	COMMIT /* XID */
 set @@global.binlog_format=@org_binlog_format;
 stop slave;
 include/wait_for_slave_to_stop.inc
@@ -227,14 +227,14 @@ slave-bin.000001	#	Query	#	#	use `test`; create table t1 (a int)
 slave-bin.000001	#	Gtid	#	#	BEGIN GTID #-#-#
 slave-bin.000001	#	Table_map	#	#	table_id: # (test.t1)
 slave-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
-slave-bin.000001	#	Query	#	#	COMMIT
+slave-bin.000001	#	Xid	#	#	COMMIT /* XID */
 slave-bin.000001	#	Gtid	#	#	BEGIN GTID #-#-#
 slave-bin.000001	#	Query	#	#	use `test`; CREATE TABLE `t2` (
   `a` int(11) DEFAULT NULL
 ) ENGINE=MyISAM
 slave-bin.000001	#	Table_map	#	#	table_id: # (test.t2)
 slave-bin.000001	#	Write_rows_v1	#	#	table_id: # flags: STMT_END_F
-slave-bin.000001	#	Query	#	#	COMMIT
+slave-bin.000001	#	Xid	#	#	COMMIT /* XID */
 slave-bin.000001	#	Gtid	#	#	BEGIN GTID #-#-#
 slave-bin.000001	#	Query	#	#	use `test`; CREATE OR REPLACE TABLE `t2` (
   `a` int(11) DEFAULT NULL

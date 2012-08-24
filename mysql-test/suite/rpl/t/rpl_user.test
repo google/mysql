@@ -24,6 +24,7 @@ create user 'foo'@'fakehost';
 create user 'foo'@'fakehost', 'bar'@'fakehost';
 --error ER_CANNOT_USER
 create user 'foo'@'fakehost', 'bar'@'fakehost';
+create user 'bar'@'fakehost';
 
 sync_slave_with_master;
 select Host,User from mysql.user where Host='fakehost';
@@ -35,6 +36,7 @@ connection master;
 rename user 'foo'@'fakehost' to 'foofoo'@'fakehost';
 --error ER_CANNOT_USER
 rename user 'not_exist_user1'@'fakehost' to 'foobar'@'fakehost', 'bar'@'fakehost' to 'barbar'@'fakehost';
+rename user 'bar'@'fakehost' to 'barbar'@'fakehost';
 --error ER_CANNOT_USER
 rename user 'not_exist_user1'@'fakehost' to 'foobar'@'fakehost', 'not_exist_user2'@'fakehost' to 'barfoo'@'fakehost';
 
@@ -48,6 +50,7 @@ connection master;
 drop user 'foofoo'@'fakehost';
 --error ER_CANNOT_USER
 drop user 'not_exist_user1'@'fakehost', 'barbar'@'fakehost';
+drop user 'barbar'@'fakehost';
 --error ER_CANNOT_USER
 drop user 'not_exist_user1'@'fakehost', 'not_exist_user2'@'fakehost';
 

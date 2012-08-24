@@ -349,6 +349,7 @@ ERROR 23000: Duplicate entry '11' for key 'a'
 SHOW WARNINGS;
 Level	Code	Message
 Error	1062	Duplicate entry '11' for key 'a'
+Warning	1196	Some non-transactional changed tables couldn't be rolled back
 
 DROP TABLE t1;
 DROP FUNCTION f1;

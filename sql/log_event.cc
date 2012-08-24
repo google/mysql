@@ -4195,7 +4195,9 @@ int Query_log_event::do_apply_event(rpl_group_info *rgi,
       if (time_zone_len)
       {
         String tmp(time_zone_str, time_zone_len, &my_charset_bin);
-        if (!(thd->variables.time_zone= my_tz_find(thd, &tmp)))
+        thd->variables.time_zone= my_tz_find(thd, &tmp);
+        trans_commit_stmt(thd);
+        if (!thd->variables.time_zone)
         {
           my_error(ER_UNKNOWN_TIME_ZONE, MYF(0), tmp.c_ptr());
           thd->variables.time_zone= global_system_variables.time_zone;

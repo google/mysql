@@ -29,6 +29,7 @@
 #include "sp_head.h"
 #include "sp_cache.h"
 #include "lock.h"                               // lock_object_name
+#include "transaction.h"
 
 #include <my_user.h>
 
@@ -1564,6 +1565,7 @@ sp_drop_db_routines(THD *thd, char *db)
   table->file->ha_index_end();
 
 err_idx_init:
+  trans_commit_stmt(thd);
   close_thread_tables(thd);
   /*
     Make sure to only release the MDL lock on mysql.proc, not other

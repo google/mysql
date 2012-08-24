@@ -4,11 +4,13 @@
 --source include/not_embedded.inc
 --source include/have_perfschema.inc
 
+mkdir $MYSQLTEST_VARDIR/tmp/perf_bad_option_5;
+
 let $outfile= $MYSQLTEST_VARDIR/tmp/bad_option_5.txt;
---error 0,1
+--error 0,1,2
 --remove_file $outfile
 --error 2
---exec $MYSQLD_BOOTSTRAP_CMD --loose-console -aXbroken > $outfile 2>&1
+--exec $MYSQLD_BOOTSTRAP_CMD --skip-networking --datadir=$MYSQLTEST_VARDIR/tmp/perf_bad_option_5 --loose-console -aXbroken > $outfile 2>&1
 
 # -aXbroken should be parsed as -a -Xbroken, or --ansi -Xbroken,
 # therefore the -X option is what the server should complain about

@@ -1,6 +1,9 @@
 #
 # test mysqld in bootstrap mode
 #
+
+--source include/not_embedded.inc
+
 --disable_warnings
 drop table if exists t1;
 --enable_warnings
@@ -15,7 +18,11 @@ let $MYSQLD_BOOTSTRAP_CMD= $MYSQLD_BOOTSTRAP_CMD --datadir=$MYSQLD_DATADIR --def
 use test;
 CREATE TABLE t1(a int);
 EOF
---exec $MYSQLD_BOOTSTRAP_CMD < $MYSQLTEST_VARDIR/tmp/bootstrap_test.sql >> $MYSQLTEST_VARDIR/tmp/bootstrap.log 2>&1
+
+--let $bootstrap_sql= $MYSQLTEST_VARDIR/tmp/bootstrap_test.sql
+--let $bootstrap_error= 0
+--source include/run_bootstrap_and_restart_mysqld.inc
+
 drop table t1;
 remove_file $MYSQLTEST_VARDIR/tmp/bootstrap_test.sql;
 #
@@ -25,8 +32,11 @@ remove_file $MYSQLTEST_VARDIR/tmp/bootstrap_test.sql;
 use test;
 CREATE TABLE t1;
 EOF
---error 1
---exec $MYSQLD_BOOTSTRAP_CMD  < $MYSQLTEST_VARDIR/tmp/bootstrap_error.sql >> $MYSQLTEST_VARDIR/tmp/bootstrap.log 2>&1
+
+--let $bootstrap_sql= $MYSQLTEST_VARDIR/tmp/bootstrap_error.sql
+--let $bootstrap_error= 1
+--source include/run_bootstrap_and_restart_mysqld.inc
+
 # Table t1 should not exists
 --error 1051
 drop table t1;
@@ -35,28 +45,22 @@ remove_file $MYSQLTEST_VARDIR/tmp/bootstrap_error.sql;
 #
 # Bootstrap with a query larger than 2*thd->net.max_packet
 #
-set @my_max_allowed_packet= @@max_allowed_packet;
+--let $my_max_allowed_packet= `select @@max_allowed_packet`
 set global max_allowed_packet=100*@@max_allowed_packet;
 --disable_query_log
 create table t1 select 2 as a, concat(repeat('MySQL', @@max_allowed_packet/10), ';') as b;
 eval select * into outfile '$MYSQLTEST_VARDIR/tmp/long_query.sql' from t1;
 --enable_query_log
---error 1
---exec $MYSQLD_BOOTSTRAP_CMD < $MYSQLTEST_VARDIR/tmp/long_query.sql >> $MYSQLTEST_VARDIR/tmp/bootstrap.log 2>&1
+
+--let $bootstrap_sql= $MYSQLTEST_VARDIR/tmp/long_query.sql
+--let $bootstrap_error= 1
+--source include/run_bootstrap_and_restart_mysqld.inc
+
 remove_file $MYSQLTEST_VARDIR/tmp/long_query.sql;
 
-set global max_allowed_packet=@my_max_allowed_packet;
+--disable_query_log
+eval set global max_allowed_packet=$my_max_allowed_packet;
+--enable_query_log
 drop table t1;
 
 --echo End of 5.1 tests
-
---echo #
---echo # Bug #11766306: 59393: HAVE_INNODB=YES WHEN MYSQLD 
---echo #  STARTED WITH --SKIP-INNODB
---echo #
-
-# need the --skip-innodb option present for the test to succeed
-SELECT 'bug' as '' FROM INFORMATION_SCHEMA.ENGINES WHERE engine='innodb'
- and SUPPORT='YES';
-
---echo End of 5.5 tests

@@ -324,7 +324,7 @@ public:
   execute_function(THD *thd, Item **args, uint argcount, Field *return_fld);
 
   bool
-  execute_procedure(THD *thd, List<Item> *args);
+  execute_procedure(THD *thd, List<Item> *args, bool need_commit_trans);
 
   bool
   show_create_routine(THD *thd, int type);

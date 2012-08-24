@@ -63,6 +63,7 @@ CREATE PROCEDURE p1(OUT rows INT) SELECT count(*) INTO rows FROM t1;
 CREATE PROCEDURE p1(OUT rows INT) SELECT count(*) INTO rows FROM t1;
 ERROR HY000: Error writing file 'master-bin' ((errno: #)
 SET GLOBAL debug_dbug='';
+CREATE PROCEDURE p1(OUT rows INT) SELECT count(*) INTO rows FROM t1;
 SET GLOBAL debug_dbug='d,injecting_fault_writing';
 DROP PROCEDURE p1;
 DROP PROCEDURE p1;
@@ -78,6 +79,7 @@ CREATE FUNCTION f1() RETURNS INT return 1;
 CREATE FUNCTION f1() RETURNS INT return 1;
 ERROR HY000: Error writing file 'master-bin' ((errno: #)
 SET GLOBAL debug_dbug='';
+CREATE FUNCTION f1() RETURNS INT return 1;
 SET GLOBAL debug_dbug='d,injecting_fault_writing';
 DROP FUNCTION f1;
 DROP FUNCTION f1;
@@ -88,6 +90,7 @@ CREATE USER user1;
 CREATE USER user1;
 ERROR HY000: Error writing file 'master-bin' ((errno: #)
 SET GLOBAL debug_dbug='';
+CREATE USER user1;
 SET GLOBAL debug_dbug='d,injecting_fault_writing';
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM user1;
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM user1;
@@ -98,6 +101,9 @@ DROP USER user1;
 DROP USER user1;
 ERROR HY000: Error writing file 'master-bin' ((errno: #)
 SET GLOBAL debug_dbug='';
+DROP USER user1;
+CREATE USER user1;
+DROP USER user1;
 #
 # Cleanup
 #

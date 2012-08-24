@@ -4794,7 +4794,8 @@ INSERT INTO v2 (a) VALUES (1) ;
 select * from t1;
 drop view v2,v1;
 drop table t1;
-show status like '%view%';
+show status where Variable_name like '%view%'
+ and Variable_name != 'Innodb_purge_view_trx_id_age';
 show status like 'Opened_table%';
 --enable_ps_protocol
 

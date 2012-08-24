@@ -4,7 +4,9 @@
 # originally "innodb_file_format_check") with a user-Defined Variable.
 
 --source include/not_embedded.inc
---source include/restart_and_reinit.inc
+# restart_and_reinit.inc cannot be used when system tables use InnoDB.
+# Clean database is forced by fake parameter in the *.opt file.
+#--source include/restart_and_reinit.inc
 
 # Save the value (Antelope) in 'innodb_file_format_max' to
 # 'old_innodb_file_format_max'

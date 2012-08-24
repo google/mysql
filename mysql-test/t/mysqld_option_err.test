@@ -51,9 +51,9 @@ mkdir $MYSQLTEST_VARDIR/tmp/mysqld_option_err;
 #
 
 --echo Test that --help --verbose works
---exec $MYSQLD_BOOTSTRAP_CMD --help --verbose >>$MYSQLTEST_VARDIR/tmp/mysqld_option_err/mysqltest.log 2>&1
+--exec $MYSQLD_BOOTSTRAP_CMD --skip-networking --datadir=$MYSQLTEST_VARDIR/tmp/mysqld_option_err --help --verbose >>$MYSQLTEST_VARDIR/tmp/mysqld_option_err/mysqltest.log 2>&1
 --echo Test that --not-known-option --help --verbose gives error
 --error 2
---exec $MYSQLD_BOOTSTRAP_CMD --not-known-option --help --verbose >>$MYSQLTEST_VARDIR/tmp/mysqld_option_err/mysqltest.log 2>&1
+--exec $MYSQLD_BOOTSTRAP_CMD --skip-networking --datadir=$MYSQLTEST_VARDIR/tmp/mysqld_option_err --not-known-option --help --verbose >>$MYSQLTEST_VARDIR/tmp/mysqld_option_err/mysqltest.log 2>&1
 
 --echo Done.

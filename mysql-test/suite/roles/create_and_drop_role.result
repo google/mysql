@@ -17,6 +17,7 @@ create role test_role1;
 ERROR HY000: Operation CREATE ROLE failed for 'test_role1'
 create role test_role1, test_role2;
 ERROR HY000: Operation CREATE ROLE failed for 'test_role1'
+create role test_role2;
 select user, host, is_role from user where user like 'test%';
 user	host	is_role
 test_role1		Y
@@ -26,6 +27,7 @@ drop role test_role1;
 ERROR HY000: Operation DROP ROLE failed for 'test_role1'
 drop role test_role1, test_role2;
 ERROR HY000: Operation DROP ROLE failed for 'test_role1'
+drop role test_role2;
 drop role root;
 ERROR HY000: Operation DROP ROLE failed for 'root'
 create user dummy@'';

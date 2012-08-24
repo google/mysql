@@ -1,7 +1,7 @@
---echo connect (master,$IPv6,root,,test,MASTER_MYPORT);
-connect (master,$IPv6,root,,test,$MASTER_MYPORT);
---echo connect (slave,$IPv6,root,,test,SLAVE_MYPORT);
-connect (slave,$IPv6,root,,test,$SLAVE_MYPORT);
+--echo connect (master,$IPv6,root2,,test,MASTER_MYPORT);
+connect (master,$IPv6,root2,,test,$MASTER_MYPORT);
+--echo connect (slave,$IPv6,root2,,test,SLAVE_MYPORT);
+connect (slave,$IPv6,root2,,test,$SLAVE_MYPORT);
 --echo connection master;
 connection master;
 reset master;

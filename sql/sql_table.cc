@@ -2630,6 +2630,7 @@ err:
       if (thd->lock && thd->lock->table_count == 0 &&
           non_temp_tables_count > 0 && !dont_free_locks)
       {
+        trans_commit_stmt(thd);
         thd->locked_tables_list.unlock_locked_tables(thd);
         goto end;
       }

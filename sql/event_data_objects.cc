@@ -1338,6 +1338,7 @@ Event_job_data::execute(THD *thd, bool drop)
   DBUG_ENTER("Event_job_data::execute");
 
   mysql_reset_thd_for_next_command(thd);
+  bool need_commit_trans= !thd->in_active_multi_stmt_transaction();
 
   /*
     MySQL parser currently assumes that current database is either
@@ -1430,7 +1431,7 @@ Event_job_data::execute(THD *thd, bool drop)
     sphead->set_creation_ctx(creation_ctx);
     sphead->optimize();
 
-    ret= sphead->execute_procedure(thd, &empty_item_list);
+    ret= sphead->execute_procedure(thd, &empty_item_list, need_commit_trans);
     /*
       There is no pre-locking and therefore there should be no
       tables open and locked left after execute_procedure.

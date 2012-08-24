@@ -23,10 +23,10 @@ let $IPv6= 0:0:0:0:0:0:0:1;
 
 let $IPv6= ::1;
 --echo #################### IP: $IPv6 mix #######################
---echo connect (master,$IPv6,root,,test,MASTER_MYPORT);
-connect (master,$IPv6,root,,test,$MASTER_MYPORT);
---echo connect (slave,127.0.0.1,root,,test,SLAVE_MYPORT);
-connect (slave,127.0.0.1,root,,test,$SLAVE_MYPORT);
+--echo connect (master,$IPv6,root2,,test,MASTER_MYPORT);
+connect (master,$IPv6,root2,,test,$MASTER_MYPORT);
+--echo connect (slave,127.0.0.1,root2,,test,SLAVE_MYPORT);
+connect (slave,127.0.0.1,root2,,test,$SLAVE_MYPORT);
 --echo connection master;
 connection master;
 reset master;

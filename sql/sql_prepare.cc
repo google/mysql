@@ -3435,9 +3435,7 @@ bool Prepared_statement::prepare(const char *packet, uint packet_len)
   /* The order is important */
   lex->unit.cleanup();
 
-  /* No need to commit statement transaction, it's not started. */
-  DBUG_ASSERT(thd->transaction.stmt.is_empty());
-
+  trans_commit_stmt(thd);
   close_thread_tables(thd);
   thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 

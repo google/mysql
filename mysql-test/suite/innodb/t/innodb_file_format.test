@@ -1,4 +1,6 @@
--- source include/restart_and_reinit.inc
+# restart_and_reinit.inc cannot be used when system tables use InnoDB.
+# Clean database is forced by fake parameter in the *.opt file.
+#--source include/restart_and_reinit.inc
 -- source include/have_innodb.inc
 
 let $innodb_file_format_orig=`select @@innodb_file_format`;

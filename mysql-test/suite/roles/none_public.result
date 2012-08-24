@@ -42,6 +42,7 @@ ERROR OP000: Invalid role specification `public`.
 drop role role1;
 optimize table mysql.user;
 Table	Op	Msg_type	Msg_text
+mysql.user	optimize	note	Table does not support optimize, doing recreate + analyze instead
 mysql.user	optimize	status	OK
 insert mysql.user (user, is_role) values ('none', 'Y'), ('public', 'Y');
 Warnings:

@@ -52,7 +52,9 @@ delimiter ;|
 
 ############ Test Section ###################
 
+BEGIN;
 CALL test.proc_norm();
+COMMIT;
 
 --sync_slave_with_master
 

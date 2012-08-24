@@ -3,6 +3,10 @@
 #
 # this file deletes old innodb files and restarts mysqld
 #
+# This trick cannot be used when system tables use InnoDB. Some fake command
+# line parameter should be used to force restart and reinit of the server.
+# E.g. --loose-force-restart-test-name works well for this purpose.
+#
 source include/not_embedded.inc;
 
 --disable_query_log

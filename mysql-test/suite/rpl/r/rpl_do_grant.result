@@ -204,8 +204,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
 GRANT PROXY ON ''@'%' TO 'root'@'localhost' WITH GRANT OPTION
 ##############################################################
 ## This statement will make the revoke fail because root has no
-## execute grant. However, it will still revoke the grant for
-## user49119.
+## execute grant.
 REVOKE EXECUTE ON PROCEDURE p1 FROM 'user49119'@'localhost', 'root'@'localhost';
 ERROR 42000: There is no such grant defined for user 'root' on host 'localhost' on routine 'p1'
 ##############################################################
@@ -214,6 +213,7 @@ ERROR 42000: There is no such grant defined for user 'root' on host 'localhost' 
 SHOW GRANTS FOR 'user49119'@'localhost';
 Grants for user49119@localhost
 GRANT USAGE ON *.* TO 'user49119'@'localhost'
+GRANT EXECUTE ON PROCEDURE `test`.`p1` TO 'user49119'@'localhost'
 SHOW GRANTS FOR CURRENT_USER;
 Grants for root@localhost
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
@@ -225,6 +225,7 @@ GRANT PROXY ON ''@'%' TO 'root'@'localhost' WITH GRANT OPTION
 SHOW GRANTS FOR 'user49119'@'localhost';
 Grants for user49119@localhost
 GRANT USAGE ON *.* TO 'user49119'@'localhost'
+GRANT EXECUTE ON PROCEDURE `test`.`p1` TO 'user49119'@'localhost'
 SHOW GRANTS FOR CURRENT_USER;
 Grants for root@localhost
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION

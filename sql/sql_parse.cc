@@ -1487,8 +1487,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
 
     mysqld_list_fields(thd,&table_list,fields);
     thd->lex->unit.cleanup();
-    /* No need to rollback statement transaction, it's not started. */
-    DBUG_ASSERT(thd->transaction.stmt.is_empty());
+    trans_rollback_stmt(thd);
     close_thread_tables(thd);
     thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 
@@ -4541,14 +4540,12 @@ end_with_restore_list:
         statement takes metadata locks should be detected by a deadlock
         detector in MDL subsystem and reported as errors.
 
-        No need to commit/rollback statement transaction, it's not started.
-
         TODO: Long-term we should either ensure that implicit GRANT statement
               is written into binary log as a separate statement or make both
               creation of routine and implicit GRANT parts of one fully atomic
               statement.
       */
-      DBUG_ASSERT(thd->transaction.stmt.is_empty());
+      trans_commit_stmt(thd);
       close_thread_tables(thd);
       /*
         Check if the definer exists on slave, 
@@ -4622,6 +4619,8 @@ create_sp_error:
   case SQLCOM_CALL:
     {
       sp_head *sp;
+      bool need_commit_trans= !thd->in_sub_stmt &&
+	                      !thd->in_active_multi_stmt_transaction();
       /*
         This will cache all SP and SF and open and lock all tables
         required for execution.
@@ -4695,7 +4694,7 @@ create_sp_error:
              about writing into binlog.
           So just execute the statement.
         */
-	res= sp->execute_procedure(thd, &lex->value_list);
+	res= sp->execute_procedure(thd, &lex->value_list, need_commit_trans);
 
 	thd->variables.select_limit= select_limit;
 
@@ -4817,14 +4816,12 @@ create_sp_error:
         statement takes metadata locks should be detected by a deadlock
         detector in MDL subsystem and reported as errors.
 
-        No need to commit/rollback statement transaction, it's not started.
-
         TODO: Long-term we should either ensure that implicit REVOKE statement
               is written into binary log as a separate statement or make both
               dropping of routine and implicit REVOKE parts of one fully atomic
               statement.
       */
-      DBUG_ASSERT(thd->transaction.stmt.is_empty());
+      trans_commit_stmt(thd);
       close_thread_tables(thd);
 
       if (sp_result != SP_KEY_NOT_FOUND &&
@@ -5181,6 +5178,17 @@ finish:
       thd->get_stmt_da()->set_overwrite_status(false);
       thd->mdl_context.release_transactional_locks();
     }
+#ifndef NO_EMBEDDED_ACCESS_CHECKS
+    if (thd->is_error() && acl_is_initialized())
+    {
+      // Reload all privileges because in case of error any changes may or may not
+      // be saved depending on the storage engine of mysql.* tables.
+      sql_print_information("Reloading all permissions because of failed DDL statement");
+      int not_used= 0;
+      reload_acl_and_cache(NULL, REFRESH_GRANT, NULL, &not_used);
+      thd->store_globals();
+    }
+#endif
   }
   else if (! thd->in_sub_stmt && ! thd->in_multi_stmt_transaction_mode())
   {

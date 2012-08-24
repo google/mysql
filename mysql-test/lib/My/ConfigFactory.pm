@@ -37,7 +37,8 @@ sub add_opt_values {
 
   # add auto-options
   $config->insert('OPT', 'port'   => sub { fix_port($self, $config) });
-  $config->insert('mysqld', "loose-skip-plugin-$_" => undef) for (@::optional_plugins);
+  $config->insert('mysqld', "loose-skip-plugin-$_" => undef)
+    for grep (!/^innodb/, (@::optional_plugins));
 }
 
 my @pre_rules=

@@ -113,25 +113,6 @@ the magic table names.
 	((str1_len) == sizeof(str2_onstack) \
 	 && memcmp(str1, str2_onstack, sizeof(str2_onstack)) == 0)
 
-/*******************************************************************//**
-Determine if the given name is a name reserved for MySQL system tables.
-@return	TRUE if name is a MySQL system table name */
-static
-ibool
-row_mysql_is_system_table(
-/*======================*/
-	const char*	name)
-{
-	if (strncmp(name, "mysql/", 6) != 0) {
-
-		return(FALSE);
-	}
-
-	return(0 == strcmp(name + 6, "host")
-	       || 0 == strcmp(name + 6, "user")
-	       || 0 == strcmp(name + 6, "db"));
-}
-
 /*********************************************************************//**
 If a table is not yet in the drop list, adds the table to the list of tables
 which the master thread drops in background. We need this on Unix because in
@@ -254,6 +235,7 @@ row_mysql_store_blob_ref(
 	In 32-bit architectures we only use the first 4 bytes of the pointer
 	slot. */
 
+	ut_a(col_len > 8);
 	ut_a(col_len - 8 > 1 || len < 256);
 	ut_a(col_len - 8 > 2 || len < 256 * 256);
 	ut_a(col_len - 8 > 3 || len < 256 * 256 * 256);
@@ -277,6 +259,7 @@ row_mysql_read_blob_ref(
 					(not BLOB length) */
 {
 	byte*	data;
+	ut_a(col_len > 8);
 
 	*len = mach_read_from_n_little_endian(ref, col_len - 8);
 
@@ -2151,7 +2134,9 @@ row_create_table_for_mysql(
 		      " by the user.\n"
 		      "InnoDB: Shut down mysqld and edit my.cnf so that newraw"
 		      " is replaced with raw.\n", stderr);
+#if !defined(DBUG_OFF) && !defined(_lint)
 err_exit:
+#endif
 		dict_mem_table_free(table);
 
 		if (commit) {
@@ -2162,17 +2147,6 @@ err_exit:
 	}
 
 	trx->op_info = "creating table";
-
-	if (row_mysql_is_system_table(table->name)) {
-
-		fprintf(stderr,
-			"InnoDB: Error: trying to create a MySQL system"
-			" table %s of type InnoDB.\n"
-			"InnoDB: MySQL system tables must be"
-			" of the MyISAM type!\n",
-			table->name);
-		goto err_exit;
-	}
 
 	trx_start_if_not_started_xa(trx);
 
@@ -4734,16 +4708,6 @@ row_rename_table_for_mysql(
 		if(srv_force_recovery) {
 			err = DB_READ_ONLY;
 		}
-
-		goto funct_exit;
-	} else if (row_mysql_is_system_table(new_name)) {
-
-		fprintf(stderr,
-			"InnoDB: Error: trying to create a MySQL"
-			" system table %s of type InnoDB.\n"
-			"InnoDB: MySQL system tables must be"
-			" of the MyISAM type!\n",
-			new_name);
 
 		goto funct_exit;
 	}

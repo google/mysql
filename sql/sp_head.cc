@@ -1984,7 +1984,7 @@ err_with_cleanup:
 */
 
 bool
-sp_head::execute_procedure(THD *thd, List<Item> *args)
+sp_head::execute_procedure(THD *thd, List<Item> *args, bool need_commit_trans)
 {
   bool err_status= FALSE;
   uint params = m_pcont->context_var_count();
@@ -2090,42 +2090,52 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
       }
     }
 
-    /*
-      Okay, got values for all arguments. Close tables that might be used by
-      arguments evaluation. If arguments evaluation required prelocking mode,
-      we'll leave it here.
-    */
-    thd->lex->unit.cleanup();
-
-    if (!thd->in_sub_stmt)
-    {
-      thd->get_stmt_da()->set_overwrite_status(true);
-      thd->is_error() ? trans_rollback_stmt(thd) : trans_commit_stmt(thd);
-      thd->get_stmt_da()->set_overwrite_status(false);
-    }
-
-    thd_proc_info(thd, "closing tables");
-    close_thread_tables(thd);
-    thd_proc_info(thd, 0);
-
-    if (! thd->in_sub_stmt)
-    {
-      if (thd->transaction_rollback_request)
-      {
-        trans_rollback_implicit(thd);
-        thd->mdl_context.release_transactional_locks();
-      }
-      else if (! thd->in_multi_stmt_transaction_mode())
-        thd->mdl_context.release_transactional_locks();
-      else
-        thd->mdl_context.release_statement_locks();
-    }
-
-    thd->rollback_item_tree_changes();
-
-    DBUG_PRINT("info",(" %.*s: eval args done", (int) m_name.length, 
+    DBUG_PRINT("info",(" %.*s: eval args done", (int) m_name.length,
                        m_name.str));
   }
+
+  /*
+    Okay, got values for all arguments. Close tables that might be used by
+    arguments evaluation. If arguments evaluation required prelocking mode,
+    we'll leave it here.
+  */
+  thd->lex->unit.cleanup();
+
+  if (!thd->in_sub_stmt)
+  {
+    thd->get_stmt_da()->set_overwrite_status(true);
+    thd->is_error() ? trans_rollback_stmt(thd) : trans_commit_stmt(thd);
+    thd->get_stmt_da()->set_overwrite_status(false);
+  }
+  // Without the commit below all messing with mysql.proc and privilege tables
+  // made before this point could open transaction and not close it in
+  // trans_commit_stmt() above if autocommit is turned off. Such behavior can
+  // lead to failure to change system variables (for which mysql prohibits to
+  // be changed inside open transaction) in stored proc even though this change
+  // of system variable is the very first statement in stored proc and call to
+  // stored proc is the very first statement in the transaction.
+  if (need_commit_trans)
+    trans_commit(thd);
+
+  thd_proc_info(thd, "closing tables");
+  close_thread_tables(thd);
+  thd_proc_info(thd, 0);
+
+  if (! thd->in_sub_stmt)
+  {
+    if (thd->transaction_rollback_request)
+    {
+      trans_rollback_implicit(thd);
+      thd->mdl_context.release_transactional_locks();
+    }
+    else if (! thd->in_multi_stmt_transaction_mode())
+      thd->mdl_context.release_transactional_locks();
+    else
+      thd->mdl_context.release_statement_locks();
+  }
+
+  thd->rollback_item_tree_changes();
+
   save_enable_slow_log= thd->enable_slow_log;
   if (!(m_flags & LOG_SLOW_STATEMENTS) && save_enable_slow_log)
   {

@@ -1499,6 +1499,12 @@ end:
 }
 
 
+bool acl_is_initialized()
+{
+  return initialized;
+}
+
+
 void acl_free(bool end)
 {
   my_hash_free(&acl_roles);
@@ -3583,7 +3589,8 @@ replace_roles_mapping_table(TABLE *table, LEX_STRING *user, LEX_STRING *host,
     {
       table->field[3]->store(!revoke_grant + 1);
 
-      if ((error= table->file->ha_update_row(table->record[1], table->record[0])))
+      if ((error= table->file->ha_update_row(table->record[1], table->record[0])) &&
+	  error != HA_ERR_RECORD_IS_THE_SAME)
       {
         DBUG_PRINT("info", ("error updating row '%s' '%s' '%s'",
                             host->str, user->str, role->str));

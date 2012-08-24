@@ -51,6 +51,7 @@
 #include <mysql/psi/mysql_file.h>
 #include "lock.h"                               // MYSQL_LOCK_IGNORE_FLUSH,
                                                 // MYSQL_LOCK_IGNORE_TIMEOUT
+#include "transaction.h"                        // trans_commit_stmt()
 
 /*
   Now we don't use abbreviations in server but we will do this in future.
@@ -1787,6 +1788,7 @@ end_with_setting_default_tz:
                       default_tzname);
       return_val= 1;
     }
+    trans_commit_stmt(thd);
   }
 
 end_with_close:

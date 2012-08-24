@@ -25,6 +25,7 @@ DROP USER nonexisting@localhost;
 ERROR HY000: Operation DROP USER failed for 'nonexisting'@'localhost'
 DROP USER nonexisting@localhost, dummy@localhost;
 ERROR HY000: Operation DROP USER failed for 'nonexisting'@'localhost'
+DROP USER dummy@localhost;
 DROP USER dummy1@localhost, dummy2@localhost;
 SELECT user, host FROM mysql.user WHERE user like 'dummy%';
 user	host

@@ -8,3 +8,5 @@ SHOW WARNINGS;
 Level	Code	Message
 Warning	1196	Some non-transactional changed tables couldn't be rolled back
 drop table t1;
+Warnings:
+Warning	1196	Some non-transactional changed tables couldn't be rolled back

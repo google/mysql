@@ -3574,6 +3574,8 @@ sub mysql_install_db {
     # Use the mysql database for system tables
     mtr_tofile($bootstrap_sql_file, "use mysql;\n");
 
+    mtr_tofile($bootstrap_sql_file, "set \@\@autocommit= 0;\n");
+
     # Add the offical mysql system tables
     # for a production system
     mtr_appendfile_to_file("$sql_dir/mysql_system_tables.sql",
@@ -3600,10 +3602,6 @@ sub mysql_install_db {
     # building the source dist
     mtr_appendfile_to_file("$sql_dir/fill_help_tables.sql",
 			   $bootstrap_sql_file);
-
-    # mysql.gtid_slave_pos was created in InnoDB, but many tests
-    # run without InnoDB. Alter it to MyISAM now
-    mtr_tofile($bootstrap_sql_file, "ALTER TABLE gtid_slave_pos ENGINE=MyISAM;\n");
   }
   else
   {
@@ -3633,6 +3631,9 @@ sub mysql_install_db {
   # Add procedures for checking server is restored after testcase
   mtr_tofile($bootstrap_sql_file,
              sql_to_bootstrap(mtr_grab_file("include/mtr_check.sql")));
+
+  # Commit everything
+  mtr_tofile($bootstrap_sql_file, "COMMIT;\n");
 
   # Log bootstrap command
   my $path_bootstrap_log= "$opt_vardir/log/bootstrap.log";

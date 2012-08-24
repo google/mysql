@@ -26,6 +26,7 @@ DROP USER nonexisting@localhost;
 # At least one user exists, but not all
 error ER_CANNOT_USER;
 DROP USER nonexisting@localhost, dummy@localhost;
+DROP USER dummy@localhost;
 
 # All users exist
 DROP USER dummy1@localhost, dummy2@localhost;

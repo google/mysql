@@ -4861,7 +4861,8 @@ a
 1
 drop view v2,v1;
 drop table t1;
-show status like '%view%';
+show status where Variable_name like '%view%'
+ and Variable_name != 'Innodb_purge_view_trx_id_age';
 Variable_name	Value
 Com_create_view	2
 Com_drop_view	1

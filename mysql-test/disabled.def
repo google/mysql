@@ -23,3 +23,5 @@ ssl_crl_clrpath          : broken upstream
 mysqld--help             : Test depends on command line flags, some of which are hidden behind ifdefs.
 mysql_binary_mode        : Test depends on result file having Windows-style line endings.
 empty_user_table         : Addition of permission version tracking renders test impossible to run.
+sp-destruct              : InnoDB doesn't survive such destructive tests which isn't so bad
+bad_frm_crash_5029       : Test relies on InnoDB not being loaded.

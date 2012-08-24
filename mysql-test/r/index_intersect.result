@@ -1014,9 +1014,6 @@ f5 int,
 PRIMARY KEY (f1),
 KEY (f4)
 ) ENGINE=InnoDB;
-Warnings:
-Warning	1286	Unknown storage engine 'InnoDB'
-Warning	1266	Using storage engine MyISAM for table 't1'
 INSERT INTO t1 VALUES 
 (5,'H',1), (9,'g',0), (527,'i',0), (528,'y',1), (529,'S',6),
 (530,'m',7), (531,'b',2), (532,'N',1), (533,'V',NULL), (534,'l',1),
@@ -1035,7 +1032,7 @@ EXPLAIN
 SELECT * FROM t1
 WHERE (f1 < 535  OR  f1 > 985) AND ( f4='r' OR f4 LIKE 'a%' ) ;
 id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
-1	SIMPLE	t1	range	PRIMARY,f4	f4	35	NULL	#	Using index condition; Using where
+1	SIMPLE	t1	index_merge	PRIMARY,f4	PRIMARY,f4	4,39	NULL	#	Using sort_intersect(PRIMARY,f4); Using where
 SELECT * FROM t1
 WHERE (f1 < 535  OR  f1 > 985) AND ( f4='r' OR f4 LIKE 'a%' ) ;
 f1	f4	f5

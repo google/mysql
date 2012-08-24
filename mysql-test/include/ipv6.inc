@@ -13,7 +13,7 @@ SELECT current_user();
 --disable_result_log
 SHOW PROCESSLIST;
 --enable_result_log
-connect (con1, $IPv6, root, , test, $MASTER_MYPORT);
+connect (con1, $IPv6, root2, , test, $MASTER_MYPORT);
 connection default;
 disconnect con1;
 eval REVOKE ALL ON test.* FROM testuser@'$IPv6';

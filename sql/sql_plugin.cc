@@ -1502,7 +1502,7 @@ static void init_plugin_psi_keys(void)
 int plugin_init(int *argc, char **argv, int flags)
 {
   uint i;
-  bool is_myisam;
+  bool is_myisam, is_innodb;
   struct st_maria_plugin **builtins;
   struct st_maria_plugin *plugin;
   struct st_plugin_int tmp, *plugin_ptr, **reap;
@@ -1594,17 +1594,19 @@ int plugin_init(int *argc, char **argv, int flags)
         goto err_unlock;
 
       is_myisam= !my_strcasecmp(&my_charset_latin1, plugin->name, "MyISAM");
+      is_innodb= !my_strcasecmp(&my_charset_latin1, plugin->name, "InnoDB");
 
       /*
         strictly speaking, we should to initialize all plugins,
         even for mysqld --help, because important subsystems
         may be disabled otherwise, and the help will be incomplete.
-        For example, if the mysql.plugin table is not MyISAM.
+        For example, if the mysql.plugin table is not MyISAM or InnoDB.
         But for now it's an unlikely corner case, and to optimize
         mysqld --help for all other users, we will only initialize
-        MyISAM here.
+        MyISAM and InnoDB here.
       */
-      if (plugin_initialize(&tmp_root, plugin_ptr, argc, argv, !is_myisam &&
+      if (plugin_initialize(&tmp_root, plugin_ptr, argc, argv,
+                            !is_myisam && !is_innodb &&
                             (flags & PLUGIN_INIT_SKIP_INITIALIZATION)))
       {
         if (mandatory)
@@ -2057,7 +2059,19 @@ static bool finalize_install(THD *thd, TABLE *table, const LEX_STRING *name,
   table->field[0]->store(name->str, name->length, system_charset_info);
   table->field[1]->store(tmp->plugin_dl->dl.str, tmp->plugin_dl->dl.length,
                          files_charset_info);
+  /*
+    When mysql.plugin table uses InnoDB storage engine the call below falls
+    into InnoDB plugin which must start transaction. At the transaction start
+    it needs to check some global system variables and to do that it needs
+    to lock LOCK_global_system_variables. If LOCK_plugin remains locked at
+    that time then they become locked in reverse order compared to many
+    other places where they locked one after another. It seems that there's no
+    harm in unlocking LOCK_plugin here and locking it later again, so we have
+    to do that to avoid possible deadlocks.
+   */
+  mysql_mutex_unlock(&LOCK_plugin);
   error= table->file->ha_write_row(table->record[0]);
+  mysql_mutex_lock(&LOCK_plugin);
   reenable_binlog(thd);
   if (error)
   {
