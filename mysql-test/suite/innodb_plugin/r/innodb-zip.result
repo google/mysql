@@ -65,6 +65,27 @@ Warning	1478	InnoDB: ignoring KEY_BLOCK_SIZE=9.
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t0	Compact	16384	0
 test	t00	Compact	16384	0
 test	t1	Compact	16384	0
@@ -87,16 +108,79 @@ alter table t1 row_format=dynamic;
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t1	Dynamic	16384	0
 alter table t1 row_format=compact;
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t1	Compact	16384	0
 alter table t1 row_format=redundant;
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t1	Redundant	16384	0
 drop table t1;
 create table t1(a int not null, b text, index(b(10))) engine=innodb
@@ -117,6 +201,27 @@ a	left(b,40)
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t1	Compressed	2048	1024
 test	t2	Compact	16384	0
 drop table t1,t2;
@@ -209,6 +314,27 @@ create table t11(id int primary key) engine = innodb row_format = redundant;
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t1	Compact	16384	0
 test	t10	Compact	16384	0
 test	t11	Redundant	16384	0
@@ -248,6 +374,27 @@ key_block_size = 8 row_format = default;
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t1	Compressed	8192	0
 test	t5	Compressed	8192	0
 drop table t1, t5;
@@ -278,6 +425,27 @@ Error	1005	Can't create table 'test.t2' (errno: 1478)
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 set global innodb_file_per_table = off;
 create table t1 (id int primary key) engine = innodb key_block_size = 1;
 ERROR HY000: Can't create table 'test.t1' (errno: 1478)
@@ -326,6 +494,27 @@ create table t9 (id int primary key) engine = innodb row_format = redundant;
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t8	Compact	16384	0
 test	t9	Redundant	16384	0
 drop table t8, t9;
@@ -378,6 +567,27 @@ create table t9 (id int primary key) engine = innodb row_format = redundant;
 SELECT table_schema, table_name, row_format, data_length, index_length
 FROM information_schema.tables WHERE engine='innodb';
 table_schema	table_name	row_format	data_length	index_length
+mysql	columns_priv	Compact	16384	0
+mysql	db	Compact	16384	16384
+mysql	event	Compact	16384	0
+mysql	func	Compact	16384	0
+mysql	help_category	Compact	16384	16384
+mysql	help_keyword	Compact	81920	81920
+mysql	help_relation	Compact	81920	0
+mysql	help_topic	Compact	1589248	81920
+mysql	host	Compact	16384	0
+mysql	ndb_binlog_index	Compact	16384	0
+mysql	plugin	Compact	16384	0
+mysql	proc	Compact	16384	0
+mysql	procs_priv	Compact	16384	16384
+mysql	servers	Compact	16384	0
+mysql	tables_priv	Compact	16384	16384
+mysql	time_zone	Compact	16384	0
+mysql	time_zone_leap_second	Compact	16384	0
+mysql	time_zone_name	Compact	16384	0
+mysql	time_zone_transition	Compact	16384	0
+mysql	time_zone_transition_type	Compact	16384	0
+mysql	user	Compact	16384	0
 test	t8	Compact	16384	0
 test	t9	Redundant	16384	0
 drop table t8, t9;

@@ -103,7 +103,7 @@ Warnings:
 Note	1592	Statement may not be safe to log in statement format.
 SELECT * FROM t1;
 c1
-root@localhost
+root@127.0.0.1
 1234
 # [On slave]
 SELECT * FROM t1;
@@ -121,8 +121,8 @@ Warnings:
 Note	1592	Statement may not be safe to log in statement format.
 SELECT * FROM t1;
 c1
-root@localhost
-root@localhost
+root@127.0.0.1
+root@127.0.0.1
 # [On slave]
 SELECT * FROM t1;
 c1
@@ -159,10 +159,10 @@ Note	1592	Statement may not be safe to log in statement format.
 Note	1592	Statement may not be safe to log in statement format.
 SELECT * FROM t1;
 c1
-root@localhost
+root@127.0.0.1
 SELECT * FROM t2;
 c1
-root@localhost
+root@127.0.0.1
 # [On slave]
 SELECT * FROM t1;
 c1

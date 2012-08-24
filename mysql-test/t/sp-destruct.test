@@ -19,8 +19,6 @@ call mtr.add_suppression("Stored routine .test...bug14233_[123].: invalid value 
 # Backup proc table
 let $MYSQLD_DATADIR= `select @@datadir`;
 --copy_file $MYSQLD_DATADIR/mysql/proc.frm $MYSQLTEST_VARDIR/tmp/proc.frm
---copy_file $MYSQLD_DATADIR/mysql/proc.MYD $MYSQLTEST_VARDIR/tmp/proc.MYD
---copy_file $MYSQLD_DATADIR/mysql/proc.MYI $MYSQLTEST_VARDIR/tmp/proc.MYI
 
 use test;
 
@@ -72,8 +70,6 @@ flush table mysql.proc;
 
 # Drop the mysql.proc table
 --remove_file $MYSQLD_DATADIR/mysql/proc.frm
---remove_file $MYSQLD_DATADIR/mysql/proc.MYD
---remove_file $MYSQLD_DATADIR/mysql/proc.MYI
 --error ER_NO_SUCH_TABLE
 call bug14233();
 --error ER_NO_SUCH_TABLE
@@ -83,11 +79,7 @@ insert into t1 values (0);
 
 # Restore mysql.proc
 --copy_file $MYSQLTEST_VARDIR/tmp/proc.frm $MYSQLD_DATADIR/mysql/proc.frm
---copy_file $MYSQLTEST_VARDIR/tmp/proc.MYD $MYSQLD_DATADIR/mysql/proc.MYD
---copy_file $MYSQLTEST_VARDIR/tmp/proc.MYI $MYSQLD_DATADIR/mysql/proc.MYI 
 --remove_file $MYSQLTEST_VARDIR/tmp/proc.frm
---remove_file $MYSQLTEST_VARDIR/tmp/proc.MYD
---remove_file $MYSQLTEST_VARDIR/tmp/proc.MYI
 
 flush table mysql.proc;
 flush privileges;

@@ -1212,7 +1212,10 @@ sp_drop_routine(THD *thd, int type, sp_name *name)
   thd->clear_current_stmt_binlog_row_based();
 
   if (!(table= open_proc_table_for_update(thd)))
-    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+  {
+    ret= SP_OPEN_TABLE_FAILED;
+    goto restore_state_and_return;
+  }
   if ((ret= db_find_routine_aux(thd, type, name, table)) == SP_OK)
   {
     if (table->file->ha_delete_row(table->record[0]))
@@ -1227,6 +1230,8 @@ sp_drop_routine(THD *thd, int type, sp_name *name)
   }
 
   close_thread_tables(thd);
+
+restore_state_and_return:
   /* Restore the state of binlog format */
   thd->current_stmt_binlog_row_based= save_binlog_row_based;
   DBUG_RETURN(ret);
@@ -1271,7 +1276,10 @@ sp_update_routine(THD *thd, int type, sp_name *name, st_sp_chistics *chistics)
   thd->clear_current_stmt_binlog_row_based();
 
   if (!(table= open_proc_table_for_update(thd)))
-    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+  {
+    ret= SP_OPEN_TABLE_FAILED;
+    goto restore_state_and_return;
+  }
   if ((ret= db_find_routine_aux(thd, type, name, table)) == SP_OK)
   {
     store_record(table,record[1]);
@@ -1302,6 +1310,8 @@ sp_update_routine(THD *thd, int type, sp_name *name, st_sp_chistics *chistics)
   }
 
   close_thread_tables(thd);
+
+restore_state_and_return:
   /* Restore the state of binlog format */
   thd->current_stmt_binlog_row_based= save_binlog_row_based;
   DBUG_RETURN(ret);

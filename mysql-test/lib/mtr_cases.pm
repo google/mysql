@@ -1013,11 +1013,6 @@ sub collect_one_test_case {
       push(@{$tinfo->{$k}}, "--plugin-load=$plugin_list");
     }
   }
-  else
-  {
-    push(@{$tinfo->{'master_opt'}}, "--loose-skip-innodb");
-    push(@{$tinfo->{'slave_opt'}}, "--loose-skip-innodb");
-  }
 
   if ( $tinfo->{'need_binlog'} )
   {

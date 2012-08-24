@@ -494,6 +494,7 @@ protected:
 */
 #define TMP_TABLE_FORCE_MYISAM          (ULL(1) << 32)
 #define OPTION_PROFILING                (ULL(1) << 33)
+#define OPTION_EXPLICIT_COMMIT          (ULL(1) << 34)    // THD, intern
 
 
 

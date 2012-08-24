@@ -23,6 +23,8 @@
 
 set names 'utf8';
 
+begin;
+
 delete from help_topic;
 delete from help_category;
 delete from help_keyword;
@@ -2019,3 +2021,4 @@ insert into help_relation (help_topic_id,help_keyword_id) values (467,448);
 insert into help_relation (help_topic_id,help_keyword_id) values (200,449);
 insert into help_relation (help_topic_id,help_keyword_id) values (467,450);
 
+commit;

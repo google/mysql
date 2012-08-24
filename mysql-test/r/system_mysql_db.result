@@ -50,7 +50,7 @@ db	CREATE TABLE `db` (
   `Trigger_priv` enum('N','Y') CHARACTER SET utf8 NOT NULL DEFAULT 'N',
   PRIMARY KEY (`Host`,`Db`,`User`),
   KEY `User` (`User`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Database privileges'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Database privileges'
 show create table host;
 Table	Create Table
 host	CREATE TABLE `host` (
@@ -75,7 +75,7 @@ host	CREATE TABLE `host` (
   `Execute_priv` enum('N','Y') CHARACTER SET utf8 NOT NULL DEFAULT 'N',
   `Trigger_priv` enum('N','Y') CHARACTER SET utf8 NOT NULL DEFAULT 'N',
   PRIMARY KEY (`Host`,`Db`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Host privileges;  Merged with database privileges'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Host privileges;  Merged with database privileges'
 show create table user;
 Table	Create Table
 user	CREATE TABLE `user` (
@@ -119,7 +119,7 @@ user	CREATE TABLE `user` (
   `max_connections` int(11) unsigned NOT NULL DEFAULT '0',
   `max_user_connections` int(11) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`Host`,`User`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Users and global privileges'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Users and global privileges'
 show create table func;
 Table	Create Table
 func	CREATE TABLE `func` (
@@ -128,7 +128,7 @@ func	CREATE TABLE `func` (
   `dl` char(128) COLLATE utf8_bin NOT NULL DEFAULT '',
   `type` enum('function','aggregate') CHARACTER SET utf8 NOT NULL,
   PRIMARY KEY (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='User defined functions'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='User defined functions'
 show create table tables_priv;
 Table	Create Table
 tables_priv	CREATE TABLE `tables_priv` (
@@ -142,7 +142,7 @@ tables_priv	CREATE TABLE `tables_priv` (
   `Column_priv` set('Select','Insert','Update','References') CHARACTER SET utf8 NOT NULL DEFAULT '',
   PRIMARY KEY (`Host`,`Db`,`User`,`Table_name`),
   KEY `Grantor` (`Grantor`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Table privileges'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Table privileges'
 show create table columns_priv;
 Table	Create Table
 columns_priv	CREATE TABLE `columns_priv` (
@@ -154,7 +154,7 @@ columns_priv	CREATE TABLE `columns_priv` (
   `Timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `Column_priv` set('Select','Insert','Update','References') CHARACTER SET utf8 NOT NULL DEFAULT '',
   PRIMARY KEY (`Host`,`Db`,`User`,`Table_name`,`Column_name`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Column privileges'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Column privileges'
 show create table procs_priv;
 Table	Create Table
 procs_priv	CREATE TABLE `procs_priv` (
@@ -168,7 +168,7 @@ procs_priv	CREATE TABLE `procs_priv` (
   `Timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`Host`,`Db`,`User`,`Routine_name`,`Routine_type`),
   KEY `Grantor` (`Grantor`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Procedure privileges'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Procedure privileges'
 show create table servers;
 Table	Create Table
 servers	CREATE TABLE `servers` (
@@ -182,7 +182,7 @@ servers	CREATE TABLE `servers` (
   `Wrapper` char(64) NOT NULL DEFAULT '',
   `Owner` char(64) NOT NULL DEFAULT '',
   PRIMARY KEY (`Server_name`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='MySQL Foreign Servers table'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='MySQL Foreign Servers table'
 show create table proc;
 Table	Create Table
 proc	CREATE TABLE `proc` (
@@ -207,7 +207,7 @@ proc	CREATE TABLE `proc` (
   `db_collation` char(32) CHARACTER SET utf8 COLLATE utf8_bin DEFAULT NULL,
   `body_utf8` longblob,
   PRIMARY KEY (`db`,`name`,`type`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Stored Procedures'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Stored Procedures'
 show create table event;
 Table	Create Table
 event	CREATE TABLE `event` (
@@ -234,7 +234,7 @@ event	CREATE TABLE `event` (
   `db_collation` char(32) CHARACTER SET utf8 COLLATE utf8_bin DEFAULT NULL,
   `body_utf8` longblob,
   PRIMARY KEY (`db`,`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Events'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Events'
 show create table general_log;
 Table	Create Table
 general_log	CREATE TABLE `general_log` (

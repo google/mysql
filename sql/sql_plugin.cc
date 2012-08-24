@@ -1218,10 +1218,11 @@ int plugin_init(int *argc, char **argv, int flags)
       if (register_builtin(plugin, &tmp, &plugin_ptr))
         goto err_unlock;
 
-      /* only initialize MyISAM and CSV at this stage */
+      /* only initialize MyISAM, CSV and InnoDB at this stage */
       if (!(is_myisam=
             !my_strcasecmp(&my_charset_latin1, plugin->name, "MyISAM")) &&
-          my_strcasecmp(&my_charset_latin1, plugin->name, "CSV"))
+          my_strcasecmp(&my_charset_latin1, plugin->name, "CSV") &&
+          my_strcasecmp(&my_charset_latin1, plugin->name, "InnoDB"))
         continue;
 
       if (plugin_ptr->state == PLUGIN_IS_UNINITIALIZED &&

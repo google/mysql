@@ -26,7 +26,9 @@ DELETE FROM test.regular_tbl WHERE id = del_count;
 SET del_count = del_count - 2;
 END WHILE;
 END|
+BEGIN;
 CALL test.proc_norm();
+COMMIT;
 DROP PROCEDURE test.proc_norm;
 DROP TABLE test.regular_tbl;
 include/rpl_end.inc

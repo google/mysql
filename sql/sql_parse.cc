@@ -179,8 +179,10 @@ bool end_active_trans(THD *thd)
     if (!thd->locked_tables)
       thd->options&= ~OPTION_TABLE_LOCK;
     thd->server_status&= ~SERVER_STATUS_IN_TRANS;
+    thd->options|= OPTION_EXPLICIT_COMMIT;
     if (ha_commit(thd))
       error=1;
+    thd->options&= ~OPTION_EXPLICIT_COMMIT;
   }
   thd->options&= ~(OPTION_BEGIN | OPTION_KEEP_LOG);
   thd->transaction.all.modified_non_trans_table= FALSE;
@@ -2137,6 +2139,7 @@ mysql_execute_command(THD *thd)
 {
   int res= FALSE;
   bool need_start_waiting= FALSE; // have protection against global read lock
+  bool ddl_needs_endtrans= FALSE;
   int  up_result= 0;
   LEX  *lex= thd->lex;
   /* first SELECT_LEX (have special meaning for many of non-SELECTcommands) */
@@ -3746,6 +3749,7 @@ end_with_restore_list:
       res= -1;
       break;
     }
+    ddl_needs_endtrans= TRUE;
     char *alias;
     if (!(alias=thd->strmake(lex->name.str, lex->name.length)) ||
         check_db_name(&lex->name))
@@ -3783,6 +3787,7 @@ end_with_restore_list:
       res= -1;
       break;
     }
+    ddl_needs_endtrans= TRUE;
     if (check_db_name(&lex->name))
     {
       my_error(ER_WRONG_DB_NAME, MYF(0), lex->name.str);
@@ -3824,6 +3829,7 @@ end_with_restore_list:
       res= 1;
       break;
     }
+    ddl_needs_endtrans= TRUE;
 #ifdef HAVE_REPLICATION
     if (thd->slave_thread && 
        (!rpl_filter->db_ok(db->str) ||
@@ -3928,21 +3934,34 @@ end_with_restore_list:
     if (res)
       break;
 
-    switch (lex->sql_command) {
-    case SQLCOM_CREATE_EVENT:
+    /*
+      Let's commit the transaction first - MySQL manual specifies
+      that a DDL issues an implicit commit, and it doesn't say "successful
+      DDL", so that an implicit commit is a property of any successfully
+      parsed DDL statement.
+    */
+    if (end_active_trans(thd))
+      res= TRUE;
+    else
     {
-      bool if_not_exists= (lex->create_info.options &
-                           HA_LEX_CREATE_IF_NOT_EXISTS);
-      res= Events::create_event(thd, lex->event_parse_data, if_not_exists);
-      break;
-    }
-    case SQLCOM_ALTER_EVENT:
-      res= Events::update_event(thd, lex->event_parse_data,
-                                lex->spname ? &lex->spname->m_db : NULL,
-                                lex->spname ? &lex->spname->m_name : NULL);
-      break;
-    default:
-      DBUG_ASSERT(0);
+      ddl_needs_endtrans = TRUE;
+
+      switch (lex->sql_command) {
+      case SQLCOM_CREATE_EVENT:
+      {
+        bool if_not_exists= (lex->create_info.options &
+                             HA_LEX_CREATE_IF_NOT_EXISTS);
+        res= Events::create_event(thd, lex->event_parse_data, if_not_exists);
+        break;
+      }
+      case SQLCOM_ALTER_EVENT:
+        res= Events::update_event(thd, lex->event_parse_data,
+                                  lex->spname ? &lex->spname->m_db : NULL,
+                                  lex->spname ? &lex->spname->m_name : NULL);
+        break;
+      default:
+        DBUG_ASSERT(0);
+      }
     }
     DBUG_PRINT("info",("DDL error code=%d", res));
     if (!res)
@@ -3962,10 +3981,22 @@ end_with_restore_list:
                                    lex->spname->m_name);
     break;
   case SQLCOM_DROP_EVENT:
-    if (!(res= Events::drop_event(thd,
-                                  lex->spname->m_db, lex->spname->m_name,
-                                  lex->drop_if_exists)))
-      my_ok(thd);
+    /*
+      Let's commit the transaction first - MySQL manual specifies
+      that a DDL issues an implicit commit, and it doesn't say "successful
+      DDL", so that an implicit commit is a property of any successfully
+      parsed DDL statement.
+    */
+    if (end_active_trans(thd))
+      res= TRUE;
+    else
+    {
+      ddl_needs_endtrans = TRUE;
+      if (!(res= Events::drop_event(thd,
+                                    lex->spname->m_db, lex->spname->m_name,
+                                    lex->drop_if_exists)))
+        my_ok(thd);
+    }
     break;
 #else
     my_error(ER_NOT_SUPPORTED_YET,MYF(0),"embedded server");
@@ -3992,6 +4023,7 @@ end_with_restore_list:
       break;
     if (end_active_trans(thd))
       goto error;
+    ddl_needs_endtrans= TRUE;
     /* Conditionally writes to binlog */
     if (!(res= mysql_create_user(thd, lex->users_list)))
       my_ok(thd);
@@ -4004,6 +4036,7 @@ end_with_restore_list:
       break;
     if (end_active_trans(thd))
       goto error;
+    ddl_needs_endtrans= TRUE;
     /* Conditionally writes to binlog */
     if (!(res= mysql_drop_user(thd, lex->users_list)))
       my_ok(thd);
@@ -4016,6 +4049,7 @@ end_with_restore_list:
       break;
     if (end_active_trans(thd))
       goto error;
+    ddl_needs_endtrans= TRUE;
     /* Conditionally writes to binlog */
     if (!(res= mysql_rename_user(thd, lex->users_list)))
       my_ok(thd);
@@ -4025,6 +4059,7 @@ end_with_restore_list:
   {
     if (end_active_trans(thd))
       goto error;
+    ddl_needs_endtrans= TRUE;
     if (check_access(thd, UPDATE_ACL, "mysql", 0, 1, 1, 0) &&
         check_global_access(thd,CREATE_USER_ACL))
       break;
@@ -4042,6 +4077,7 @@ end_with_restore_list:
   {
     if (end_active_trans(thd))
       goto error;
+    ddl_needs_endtrans= TRUE;
 
     if (check_access(thd, lex->grant | lex->grant_tot_col | GRANT_ACL,
 		     first_table ?  first_table->db : select_lex->db,
@@ -4050,7 +4086,7 @@ end_with_restore_list:
                      first_table ? (bool) first_table->schema_table :
                      select_lex->db ?
                      is_schema_db(select_lex->db) : 0))
-      goto error;
+      goto rollback_and_error;
 
     /* Replicate current user as grantor */
     thd->binlog_invoker();
@@ -4063,7 +4099,7 @@ end_with_restore_list:
       while ((tmp_user= user_list++))
       {
         if (!(user= get_current_user(thd, tmp_user)))
-          goto error;
+          goto rollback_and_error;
         if (specialflag & SPECIAL_NO_RESOLVE &&
             hostname_requires_resolving(user->host.str))
           push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
@@ -4082,7 +4118,7 @@ end_with_restore_list:
           {
             my_message(ER_PASSWORD_NOT_ALLOWED,
                        ER(ER_PASSWORD_NOT_ALLOWED), MYF(0));
-            goto error;
+            goto rollback_and_error;
           }
         }
       }
@@ -4097,7 +4133,7 @@ end_with_restore_list:
 		   : lex->grant;
         if (check_grant_routine(thd, grants | GRANT_ACL, all_tables,
                                 lex->type == TYPE_ENUM_PROCEDURE, 0))
-	  goto error;
+	  goto rollback_and_error;
         /* Conditionally writes to binlog */
         res= mysql_routine_grant(thd, all_tables,
                                  lex->type == TYPE_ENUM_PROCEDURE, 
@@ -4110,7 +4146,7 @@ end_with_restore_list:
       {
 	if (check_grant(thd,(lex->grant | lex->grant_tot_col | GRANT_ACL),
                         all_tables, 0, UINT_MAX, 0))
-	  goto error;
+	  goto rollback_and_error;
         /* Conditionally writes to binlog */
         res= mysql_table_grant(thd, all_tables, lex->users_list,
 			       lex->columns, lex->grant,
@@ -4123,7 +4159,7 @@ end_with_restore_list:
       {
 	my_message(ER_ILLEGAL_GRANT_FOR_TABLE, ER(ER_ILLEGAL_GRANT_FOR_TABLE),
                    MYF(0));
-        goto error;
+        goto rollback_and_error;
       }
       else
 	/* Conditionally writes to binlog */
@@ -4138,7 +4174,7 @@ end_with_restore_list:
 	  while ((tmp_user=str_list++))
           {
             if (!(user= get_current_user(thd, tmp_user)))
-              goto error;
+              goto rollback_and_error;
 	    reset_mqh(user, 0);
           }
 	}
@@ -4382,6 +4418,10 @@ end_with_restore_list:
     char *name;
     int sp_result= SP_INTERNAL_ERROR;
 
+    if (end_active_trans(thd))
+      goto create_sp_error;
+    ddl_needs_endtrans= TRUE;
+
     DBUG_ASSERT(lex->sphead != 0);
     DBUG_ASSERT(lex->sphead->m_db.str); /* Must be initialized in the parser */
     /*
@@ -4408,9 +4448,6 @@ end_with_restore_list:
     if (check_access(thd, CREATE_PROC_ACL, lex->sphead->m_db.str, 0, 0, 0,
                      is_schema_db(lex->sphead->m_db.str,
                                   lex->sphead->m_db.length)))
-      goto create_sp_error;
-
-    if (end_active_trans(thd))
       goto create_sp_error;
 
     name= lex->sphead->name(&namelen);
@@ -4505,7 +4542,7 @@ end_with_restore_list:
     */
 create_sp_error:
     if (sp_result != SP_OK )
-      goto error;
+      goto rollback_and_error;
     my_ok(thd);
     break; /* break super switch */
   } /* end case group bracket */
@@ -4616,6 +4653,10 @@ create_sp_error:
       sp_head *sp;
       st_sp_chistics chistics;
 
+      if (end_active_trans(thd))
+        goto error;
+      ddl_needs_endtrans= TRUE;
+
       memcpy(&chistics, &lex->sp_chistics, sizeof(chistics));
       if (lex->sql_command == SQLCOM_ALTER_PROCEDURE)
         sp= sp_find_routine(thd, TYPE_ENUM_PROCEDURE, lex->spname,
@@ -4641,8 +4682,6 @@ create_sp_error:
                                  lex->sql_command == SQLCOM_ALTER_PROCEDURE, 0))
 	  goto error;
 
-        if (end_active_trans(thd)) 
-          goto error;
 	memcpy(&lex->sp_chistics, &chistics, sizeof(lex->sp_chistics));
         if ((sp->m_type == TYPE_ENUM_FUNCTION) &&
             !trust_function_creators &&  mysql_bin_log.is_open() &&
@@ -4682,11 +4721,11 @@ create_sp_error:
       case SP_KEY_NOT_FOUND:
 	my_error(ER_SP_DOES_NOT_EXIST, MYF(0),
                  SP_COM_STRING(lex), lex->spname->m_qname.str);
-	goto error;
+        goto rollback_and_error;
       default:
 	my_error(ER_SP_CANT_ALTER, MYF(0),
                  SP_COM_STRING(lex), lex->spname->m_qname.str);
-	goto error;
+        goto rollback_and_error;
       }
       break;
     }
@@ -4696,6 +4735,10 @@ create_sp_error:
       int sp_result;
       int type= (lex->sql_command == SQLCOM_DROP_PROCEDURE ?
                  TYPE_ENUM_PROCEDURE : TYPE_ENUM_FUNCTION);
+
+      if (end_active_trans(thd))
+        goto error;
+      ddl_needs_endtrans= TRUE;
 
       sp_result= sp_routine_exists_in_table(thd, type, lex->spname);
       mysql_reset_errors(thd, 0);
@@ -4708,8 +4751,6 @@ create_sp_error:
                                  lex->sql_command == SQLCOM_DROP_PROCEDURE, 0))
           goto error;
 
-        if (end_active_trans(thd)) 
-          goto error;
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
 	if (sp_automatic_privileges && !opt_noacl &&
 	    sp_revoke_privileges(thd, db, name, 
@@ -4774,11 +4815,11 @@ create_sp_error:
 	}
 	my_error(ER_SP_DOES_NOT_EXIST, MYF(0),
                  SP_COM_STRING(lex), lex->spname->m_qname.str);
-	goto error;
+	goto rollback_and_error;
       default:
 	my_error(ER_SP_DROP_FAILED, MYF(0),
                  SP_COM_STRING(lex), lex->spname->m_qname.str);
-	goto error;
+	goto rollback_and_error;
       }
       break;
     }
@@ -5191,7 +5232,28 @@ create_sp_error:
   if (!(sql_command_flags[lex->sql_command] & CF_HAS_ROW_COUNT))
     thd->row_count_func= -1;
 
+  if (ddl_needs_endtrans)
+  {
+    if (res || thd->is_error())
+      goto rollback_and_error;
+    close_thread_tables(thd);
+    end_trans(thd, COMMIT);
+  }
+
   goto finish;
+
+rollback_and_error:
+  if (ddl_needs_endtrans)
+  {
+    close_thread_tables(thd);
+    end_trans(thd, ROLLBACK);
+    // Reload all privileges because in case of error any changes may or may not
+    // be saved depending on the storage engine of mysql.* tables.
+    sql_print_information("Reloading all permissions because of failed DDL statement");
+    int not_used= 0;
+    reload_acl_and_cache(NULL, REFRESH_GRANT, NULL, &not_used);
+    thd->store_globals();
+  }
 
 error:
   res= TRUE;

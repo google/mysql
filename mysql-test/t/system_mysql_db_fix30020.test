@@ -42,7 +42,7 @@ CREATE TABLE db (
   PRIMARY KEY Host (Host,Db,User),
   KEY User (User)
 )
-engine=MyISAM;
+engine=InnoDB;
 --enable_warnings
 
 INSERT INTO db VALUES ('%','test',   '','Y','Y','Y','Y','Y','Y');
@@ -60,7 +60,7 @@ CREATE TABLE host (
   Drop_priv enum('N','Y') DEFAULT 'N' NOT NULL,
   PRIMARY KEY Host (Host,Db)
 )
-engine=MyISAM;
+engine=InnoDB;
 --enable_warnings
 
 --disable_warnings
@@ -79,7 +79,7 @@ CREATE TABLE user (
   Process_priv enum('N','Y') DEFAULT 'N' NOT NULL,
   PRIMARY KEY Host (Host,User)
 )
-engine=MyISAM;
+engine=InnoDB;
 --enable_warnings
 
 INSERT INTO user VALUES ('localhost','root','','Y','Y','Y','Y','Y','Y','Y','Y','Y');

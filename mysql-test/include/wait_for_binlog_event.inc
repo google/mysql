@@ -27,7 +27,10 @@ while (`SELECT INSTR("$_last_event","$wait_binlog_event") = 0`)
   while (`SELECT "$_event" != "No such row"`)
   {
     inc $_event_pos;
-    let $_last_event= $_event;
+    if (`SELECT INSTR("$_last_event","$wait_binlog_event") = 0`)
+    {
+      let $_last_event= $_event;
+    }
     let $_event= query_get_value(SHOW BINLOG EVENTS, Info, $_event_pos);
   }
 }

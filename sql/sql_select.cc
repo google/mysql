@@ -12645,7 +12645,8 @@ end_update(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
     restore_record(table,record[1]);
     update_tmptable_sum_func(join->sum_funcs,table);
     if ((error=table->file->ha_update_row(table->record[1],
-                                          table->record[0])))
+                                          table->record[0])) &&
+        error != HA_ERR_RECORD_IS_THE_SAME)
     {
       table->file->print_error(error,MYF(0));	/* purecov: inspected */
       DBUG_RETURN(NESTED_LOOP_ERROR);            /* purecov: inspected */
@@ -12723,7 +12724,8 @@ end_unique_update(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
     restore_record(table,record[1]);
     update_tmptable_sum_func(join->sum_funcs,table);
     if ((error=table->file->ha_update_row(table->record[1],
-                                          table->record[0])))
+                                          table->record[0])) &&
+        error != HA_ERR_RECORD_IS_THE_SAME)
     {
       table->file->print_error(error,MYF(0));	/* purecov: inspected */
       DBUG_RETURN(NESTED_LOOP_ERROR);            /* purecov: inspected */

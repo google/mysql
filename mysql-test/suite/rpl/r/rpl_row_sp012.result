@@ -7,7 +7,7 @@ grant usage on *.* to user1@localhost;
 flush privileges;
 SELECT CURRENT_USER();
 CURRENT_USER()
-root@localhost
+root@127.0.0.1
 SELECT USER();
 USER()
 root@localhost
@@ -31,7 +31,7 @@ CURRENT_USER()	USER()
 user1@localhost	user1@localhost
 CALL test.p2();
 CURRENT_USER()	USER()
-root@localhost	user1@localhost
+root@127.0.0.1	user1@localhost
 
 <********  Slave user1 p3 & p2 calls *******>
 ---------------------------------------------
@@ -46,7 +46,7 @@ CURRENT_USER()	USER()
 user1@localhost	user1@localhost
 CALL test.p2();
 CURRENT_USER()	USER()
-root@localhost	user1@localhost
+root@127.0.0.1	user1@localhost
 DROP PROCEDURE IF EXISTS test.p1;
 DROP PROCEDURE IF EXISTS test.p3;
 DROP PROCEDURE IF EXISTS test.p2;

@@ -397,15 +397,6 @@ Events::create_event(THD *thd, Event_parse_data *parse_data,
   bool save_binlog_row_based, event_already_exists;
   DBUG_ENTER("Events::create_event");
 
-  /*
-    Let's commit the transaction first - MySQL manual specifies
-    that a DDL issues an implicit commit, and it doesn't say "successful
-    DDL", so that an implicit commit is a property of any successfully
-    parsed DDL statement.
-  */
-  if (end_active_trans(thd))
-    DBUG_RETURN(TRUE);
-
   if (check_if_system_tables_error())
     DBUG_RETURN(TRUE);
 
@@ -529,13 +520,6 @@ Events::update_event(THD *thd, Event_parse_data *parse_data,
 
   DBUG_ENTER("Events::update_event");
 
-  /*
-    For consistency, implicit COMMIT should be the first thing in the
-    execution chain.
-  */
-  if (end_active_trans(thd))
-    DBUG_RETURN(TRUE);
-
   if (check_if_system_tables_error())
     DBUG_RETURN(TRUE);
 
@@ -655,20 +639,6 @@ Events::drop_event(THD *thd, LEX_STRING dbname, LEX_STRING name, bool if_exists)
   int ret;
   bool save_binlog_row_based;
   DBUG_ENTER("Events::drop_event");
-
-  /*
-    In MySQL, DDL must always commit: since mysql.* tables are
-    non-transactional, we must modify them outside a transaction
-    to not break atomicity.
-    But the second and more important reason to commit here
-    regardless whether we're actually changing mysql.event table
-    or not is replication: end_active_trans syncs the binary log,
-    and unless we run DDL in it's own transaction it may simply
-    never appear on the slave in case the outside transaction
-    rolls back.
-  */
-  if (end_active_trans(thd))
-    DBUG_RETURN(TRUE);
 
   if (check_if_system_tables_error())
     DBUG_RETURN(TRUE);

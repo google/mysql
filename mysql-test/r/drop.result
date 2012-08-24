@@ -100,10 +100,11 @@ drop database mysql_test;
 # --
 DROP DATABASE IF EXISTS mysql_test;
 CREATE DATABASE mysql_test;
-DROP TABLE mysql.proc;
+ALTER TABLE mysql.proc RENAME mysql.proc_bak;
 DROP DATABASE mysql_test;
 Warnings:
 Error	1146	Table 'mysql.proc' doesn't exist
+ALTER TABLE mysql.proc_bak RENAME mysql.proc;
 
 # --
 # -- End of Bug#29958.

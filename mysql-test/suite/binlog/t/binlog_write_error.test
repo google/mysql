@@ -67,6 +67,7 @@ source include/binlog_inject_error.inc;
 let $query= CREATE PROCEDURE p1(OUT rows INT) SELECT count(*) INTO rows FROM t1;
 source include/binlog_inject_error.inc;
 
+CREATE PROCEDURE p1(OUT rows INT) SELECT count(*) INTO rows FROM t1;
 let $query= DROP PROCEDURE p1;
 source include/binlog_inject_error.inc;
 
@@ -76,17 +77,23 @@ source include/binlog_inject_error.inc;
 let $query= CREATE FUNCTION f1() RETURNS INT return 1;
 source include/binlog_inject_error.inc;
 
+CREATE FUNCTION f1() RETURNS INT return 1;
 let $query= DROP FUNCTION f1;
 source include/binlog_inject_error.inc;
 
 let $query= CREATE USER user1;
 source include/binlog_inject_error.inc;
 
+CREATE USER user1;
 let $query= REVOKE ALL PRIVILEGES, GRANT OPTION FROM user1;
 source include/binlog_inject_error.inc;
 
 let $query= DROP USER user1;
 source include/binlog_inject_error.inc;
+
+DROP USER user1;
+CREATE USER user1;
+DROP USER user1;
 
 --echo #
 --echo # Cleanup

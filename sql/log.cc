@@ -4914,6 +4914,24 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
      */
     if (my_b_tell(cache) > 0)
     {
+      enum_sql_command sql_cmd= thd->lex->sql_command;
+      bool is_autocommit_ddl= !(sql_cmd == SQLCOM_CREATE_TABLE ||
+                                sql_cmd == SQLCOM_UPDATE ||
+                                sql_cmd == SQLCOM_INSERT ||
+                                sql_cmd == SQLCOM_INSERT_SELECT ||
+                                sql_cmd == SQLCOM_DELETE ||
+                                sql_cmd == SQLCOM_TRUNCATE ||
+                                sql_cmd == SQLCOM_LOAD ||
+                                sql_cmd == SQLCOM_REPLACE ||
+                                sql_cmd == SQLCOM_REPLACE_SELECT ||
+                                sql_cmd == SQLCOM_ROLLBACK ||
+                                sql_cmd == SQLCOM_COMMIT ||
+                                sql_cmd == SQLCOM_BEGIN ||
+                                sql_cmd == SQLCOM_DELETE_MULTI ||
+                                sql_cmd == SQLCOM_UPDATE_MULTI ||
+                                sql_cmd == SQLCOM_END) &&
+                              !(thd->options & OPTION_EXPLICIT_COMMIT);
+
       /*
         Log "BEGIN" at the beginning of every transaction.  Here, a
         transaction is either a BEGIN..COMMIT block or a single
@@ -4929,7 +4947,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
         in wrong positions being shown to the user, MASTER_POS_WAIT
         undue waiting etc.
       */
-      if (qinfo.write(&log_file))
+      if (!is_autocommit_ddl && qinfo.write(&log_file))
         goto err;
 
       DBUG_EXECUTE_IF("crash_before_writing_xid",
@@ -4944,7 +4962,7 @@ bool MYSQL_BIN_LOG::write(THD *thd, IO_CACHE *cache, Log_event *commit_event,
       if ((write_error= write_cache(cache, false, false)))
         goto err;
 
-      if (commit_event && commit_event->write(&log_file))
+      if (!is_autocommit_ddl && commit_event && commit_event->write(&log_file))
         goto err;
 
       if (incident && write_incident(thd, FALSE))

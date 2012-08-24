@@ -888,7 +888,7 @@ c
 SELECT * FROM t2;
 s
 @
-root@localhost
+root@127.0.0.1
 DROP TRIGGER trg1;
 Warnings:
 Warning	1454	No definer attribute for trigger 'test'.'trg1'. The trigger will be activated under the authorization of the invoker, which may have insufficient privileges. Please recreate the trigger.

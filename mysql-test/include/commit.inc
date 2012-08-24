@@ -409,7 +409,7 @@ flush status;
 --echo # 1. Read-only statement: SELECT
 --echo #
 select * from t1;
-call p_verify_status_increment(1, 0, 1, 0);
+call p_verify_status_increment(2, 0, 2, 0);
 commit;
 call p_verify_status_increment(1, 0, 1, 0);
 
@@ -538,7 +538,7 @@ begin
   return 2;
 end|
 delimiter ;|
-call p_verify_status_increment(0, 0, 0, 0);
+call p_verify_status_increment(4, 4, 4, 4);
 
 --echo # 16. A function changes non-trans-table.
 --echo #
@@ -547,9 +547,9 @@ call p_verify_status_increment(0, 0, 0, 0);
 --echo # the binary log. 
 --echo #
 select f1();
-call p_verify_status_increment(0, 0, 1, 0);
+call p_verify_status_increment(1, 0, 1, 0);
 commit;
-call p_verify_status_increment(0, 0, 1, 0);
+call p_verify_status_increment(1, 0, 1, 0);
 
 --echo # 17. Read-only statement, a function changes non-trans-table.
 --echo #
@@ -731,7 +731,7 @@ call p_verify_status_increment(1, 0, 1, 0);
 truncate table t3;
 call p_verify_status_increment(4, 4, 4, 4);
 create view v1 as select * from t2;
-call p_verify_status_increment(1, 0, 1, 0);
+call p_verify_status_increment(2, 0, 2, 0);
 check table t1;
 call p_verify_status_increment(3, 0, 3, 0);
 --echo # Sic: after this bug is fixed, CHECK leaves no pending transaction
@@ -742,7 +742,7 @@ call p_verify_status_increment(6, 0, 6, 0);
 commit;
 call p_verify_status_increment(0, 0, 0, 0);
 drop view v1;
-call p_verify_status_increment(0, 0, 0, 0);
+call p_verify_status_increment(1, 0, 1, 0);
 
 --echo #
 --echo # Cleanup

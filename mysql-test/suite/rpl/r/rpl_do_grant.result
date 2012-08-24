@@ -188,8 +188,8 @@ Grants for user49119@localhost
 GRANT USAGE ON *.* TO 'user49119'@'localhost'
 GRANT EXECUTE ON PROCEDURE `test`.`p1` TO 'user49119'@'localhost'
 SHOW GRANTS FOR CURRENT_USER;
-Grants for root@localhost
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
+Grants for root@127.0.0.1
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION
 ##############################################################
 ##############################################################
 ### Showing grants for both users: root and user49119 (master)
@@ -198,12 +198,11 @@ Grants for user49119@localhost
 GRANT USAGE ON *.* TO 'user49119'@'localhost'
 GRANT EXECUTE ON PROCEDURE `test`.`p1` TO 'user49119'@'localhost'
 SHOW GRANTS FOR CURRENT_USER;
-Grants for root@localhost
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
+Grants for root@127.0.0.1
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION
 ##############################################################
 ## This statement will make the revoke fail because root has no
-## execute grant. However, it will still revoke the grant for
-## user49119.
+## execute grant.
 REVOKE EXECUTE ON PROCEDURE p1 FROM 'user49119'@'localhost', 'root'@'localhost';
 ERROR 42000: There is no such grant defined for user 'root' on host 'localhost' on routine 'p1'
 ##############################################################
@@ -212,9 +211,10 @@ ERROR 42000: There is no such grant defined for user 'root' on host 'localhost' 
 SHOW GRANTS FOR 'user49119'@'localhost';
 Grants for user49119@localhost
 GRANT USAGE ON *.* TO 'user49119'@'localhost'
+GRANT EXECUTE ON PROCEDURE `test`.`p1` TO 'user49119'@'localhost'
 SHOW GRANTS FOR CURRENT_USER;
-Grants for root@localhost
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
+Grants for root@127.0.0.1
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION
 ##############################################################
 #############################################################
 ### Showing grants for both users: root and user49119 (slave)
@@ -222,9 +222,10 @@ GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
 SHOW GRANTS FOR 'user49119'@'localhost';
 Grants for user49119@localhost
 GRANT USAGE ON *.* TO 'user49119'@'localhost'
+GRANT EXECUTE ON PROCEDURE `test`.`p1` TO 'user49119'@'localhost'
 SHOW GRANTS FOR CURRENT_USER;
-Grants for root@localhost
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
+Grants for root@127.0.0.1
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION
 ##############################################################
 DROP TABLE t1;
 DROP PROCEDURE p1;
@@ -248,14 +249,14 @@ Grantor
 root@localhost
 SELECT Grantor FROM mysql.tables_priv WHERE User='user_bug27606';
 Grantor
-root@localhost
+root@127.0.0.1
 REVOKE SELECT ON mysql.user FROM user_bug27606@localhost;
 SELECT Grantor FROM mysql.tables_priv WHERE User='user_bug27606';
 Grantor
 root@localhost
 SELECT Grantor FROM mysql.tables_priv WHERE User='user_bug27606';
 Grantor
-root@localhost
+root@127.0.0.1
 DROP USER user_bug27606@localhost;
 "End of test"
 include/rpl_end.inc

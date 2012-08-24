@@ -814,7 +814,8 @@ Event_db_repository::update_event(THD *thd, Event_parse_data *parse_data,
     table->field[ET_FIELD_NAME]->store(new_name->str, new_name->length, scs);
   }
 
-  if ((ret= table->file->ha_update_row(table->record[1], table->record[0])))
+  if ((ret= table->file->ha_update_row(table->record[1], table->record[0])) &&
+      ret != HA_ERR_RECORD_IS_THE_SAME)
   {
     table->file->print_error(ret, MYF(0));
     goto end;
@@ -1106,7 +1107,8 @@ update_timing_fields_for_event(THD *thd,
     fields[ET_FIELD_STATUS]->store(status, TRUE);
   }
 
-  if ((ret= table->file->ha_update_row(table->record[1], table->record[0])))
+  if ((ret= table->file->ha_update_row(table->record[1], table->record[0])) &&
+      ret != HA_ERR_RECORD_IS_THE_SAME)
   {
     table->file->print_error(ret, MYF(0));
     goto end;

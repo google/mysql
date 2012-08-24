@@ -25,7 +25,7 @@
 # On windows you should do 'mysql --force mysql < mysql_fix_privilege_tables.sql'
 
 set sql_mode='';
-set storage_engine=MyISAM;
+set storage_engine=InnoDB;
 
 ALTER TABLE user add File_priv enum('N','Y') COLLATE utf8_general_ci NOT NULL;
 
@@ -65,7 +65,7 @@ ALTER TABLE tables_priv
   MODIFY User char(16) NOT NULL default '',
   MODIFY Table_name char(64) NOT NULL default '',
   MODIFY Grantor char(77) NOT NULL default '',
-  ENGINE=MyISAM,
+  ENGINE=InnoDB,
   CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
 
 ALTER TABLE tables_priv
@@ -93,7 +93,7 @@ ALTER TABLE columns_priv
   MODIFY User char(16) NOT NULL default '',
   MODIFY Table_name char(64) NOT NULL default '',
   MODIFY Column_name char(64) NOT NULL default '',
-  ENGINE=MyISAM,
+  ENGINE=InnoDB,
   CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin,
   COMMENT='Column privileges';
 
@@ -162,7 +162,7 @@ alter table func comment='User defined functions';
 ALTER TABLE user
   MODIFY Host char(60) NOT NULL default '',
   MODIFY User char(16) NOT NULL default '',
-  ENGINE=MyISAM, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
+  ENGINE=InnoDB, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
 ALTER TABLE user
   MODIFY Password char(41) character set latin1 collate latin1_bin NOT NULL default '',
   MODIFY Select_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL,
@@ -192,7 +192,7 @@ ALTER TABLE db
   MODIFY Host char(60) NOT NULL default '',
   MODIFY Db char(64) NOT NULL default '',
   MODIFY User char(16) NOT NULL default '',
-  ENGINE=MyISAM, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
+  ENGINE=InnoDB, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
 ALTER TABLE db
   MODIFY  Select_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL,
   MODIFY  Insert_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL,
@@ -210,7 +210,7 @@ ALTER TABLE db
 ALTER TABLE host
   MODIFY Host char(60) NOT NULL default '',
   MODIFY Db char(64) NOT NULL default '',
-  ENGINE=MyISAM, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
+  ENGINE=InnoDB, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
 ALTER TABLE host
   MODIFY Select_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL,
   MODIFY Insert_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL,
@@ -226,7 +226,7 @@ ALTER TABLE host
   MODIFY Lock_tables_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 
 ALTER TABLE func
-  ENGINE=MyISAM, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
+  ENGINE=InnoDB, CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
 ALTER TABLE func
   MODIFY type enum ('function','aggregate') COLLATE utf8_general_ci NOT NULL;
 
@@ -362,7 +362,7 @@ UPDATE user LEFT JOIN db USING (Host,User) SET Create_user_priv='Y'
 #
 
 ALTER TABLE procs_priv
-  ENGINE=MyISAM,
+  ENGINE=InnoDB,
   CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin;
 
 ALTER TABLE procs_priv

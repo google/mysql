@@ -2665,7 +2665,8 @@ row_sel_field_store_in_mysql_format(
 		      || !(templ->mysql_col_len % templ->mbmaxlen));
 		ut_ad(len * templ->mbmaxlen >= templ->mysql_col_len);
 
-		if (templ->mbminlen != templ->mbmaxlen) {
+		if (templ->mbminlen != templ->mbmaxlen &&
+		    templ->mysql_col_len > len) {
 			/* Pad with spaces. This undoes the stripping
 			done in row0mysql.ic, function
 			row_mysql_store_col_in_innobase_format(). */

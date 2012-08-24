@@ -2926,7 +2926,6 @@ sub mysql_install_db {
   mtr_add_arg($args, "--bootstrap");
   mtr_add_arg($args, "--basedir=%s", $install_basedir);
   mtr_add_arg($args, "--datadir=%s", $install_datadir);
-  mtr_add_arg($args, "--loose-skip-innodb");
   mtr_add_arg($args, "--loose-skip-falcon");
   mtr_add_arg($args, "--loose-skip-ndbcluster");
   mtr_add_arg($args, "--tmpdir=%s", "$opt_vardir/tmp/");
@@ -2972,6 +2971,8 @@ sub mysql_install_db {
     my $sql_dir= dirname($path_sql);
     # Use the mysql database for system tables
     mtr_tofile($bootstrap_sql_file, "use mysql\n");
+
+    mtr_tofile($bootstrap_sql_file, "set \@\@autocommit= 0;\n");
 
     # Add the offical mysql system tables
     # for a production system
@@ -3024,6 +3025,9 @@ sub mysql_install_db {
   # Add procedures for checking server is restored after testcase
   mtr_tofile($bootstrap_sql_file,
              sql_to_bootstrap(mtr_grab_file("include/mtr_check.sql")));
+
+  # Commit everything
+  mtr_tofile($bootstrap_sql_file, "COMMIT;\n");
 
   # Log bootstrap command
   my $path_bootstrap_log= "$opt_vardir/log/bootstrap.log";

@@ -1570,7 +1570,7 @@ my_tz_init(THD *org_thd, const char *default_tzname, my_bool bootstrap)
   Tz_names_entry *tmp_tzname;
   my_bool return_val= 1;
   char db[]= "mysql";
-  int res;
+  int res, res2;
   DBUG_ENTER("my_tz_init");
 
   /*
@@ -1669,11 +1669,13 @@ my_tz_init(THD *org_thd, const char *default_tzname, my_bool bootstrap)
 
   table= tz_tables[0].table;
   /*
-    It is OK to ignore ha_index_init()/ha_index_end() return values since
-    mysql.time_zone* tables are MyISAM and these operations always succeed
-    for MyISAM.
+    TODO: Probably we should do something useful with failures in
+    ha_index_init()/ha_index_end(). If mysql.time_zone* tables are MyISAM
+    then these operations always succeed. But for other engines that may
+    not always be true.
   */
-  (void)table->file->ha_index_init(0, 1);
+  res2= table->file->ha_index_init(0, 1);
+  DBUG_ASSERT(!res2);
   table->use_all_columns();
 
   tz_leapcnt= 0;
@@ -1686,7 +1688,8 @@ my_tz_init(THD *org_thd, const char *default_tzname, my_bool bootstrap)
     {
       sql_print_error("Fatal error: While loading mysql.time_zone_leap_second"
                       " table: too much leaps");
-      table->file->ha_index_end();
+      res2= table->file->ha_index_end();
+      DBUG_ASSERT(!res2);
       goto end_with_close;
     }
 
@@ -1703,7 +1706,8 @@ my_tz_init(THD *org_thd, const char *default_tzname, my_bool bootstrap)
     res= table->file->index_next(table->record[0]);
   }
 
-  (void)table->file->ha_index_end();
+  res2= table->file->ha_index_end();
+  DBUG_ASSERT(!res2);
 
   if (res != HA_ERR_END_OF_FILE)
   {
@@ -1750,6 +1754,7 @@ end_with_cleanup:
   if (return_val)
     my_tz_free();
 end:
+  close_thread_tables(thd);
   delete thd;
   if (org_thd)
     org_thd->store_globals();			/* purecov: inspected */

@@ -1003,7 +1003,7 @@ master-bin.000001	#	Query	#	#	use `test`; INSERT INTO t1(c1) VALUES (11), (12)
 master-bin.000001	#	Intvar	#	#	INSERT_ID=1
 master-bin.000001	#	Query	#	#	use `test`; INSERT INTO t2(c2) VALUES (13), (14)
 master-bin.000001	#	Xid	#	#	COMMIT /* XID */
-master-bin.000001	#	Query	#	#	use `test`; CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v15` AS SELECT c1, c2 FROM t1, t2
+master-bin.000001	#	Query	#	#	use `test`; CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`127.0.0.1` SQL SECURITY DEFINER VIEW `v15` AS SELECT c1, c2 FROM t1, t2
 master-bin.000001	#	Query	#	#	BEGIN
 master-bin.000001	#	Intvar	#	#	INSERT_ID=3
 master-bin.000001	#	Query	#	#	use `test`; INSERT INTO v15(c1) VALUES (15),(16)

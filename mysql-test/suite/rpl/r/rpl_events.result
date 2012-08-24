@@ -216,15 +216,15 @@ ABC
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_1';
 EVENT_SCHEMA	EVENT_NAME	DEFINER
-test	event44331_1	root@localhost
+test	event44331_1	root@127.0.0.1
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_2';
 EVENT_SCHEMA	EVENT_NAME	DEFINER
-test	event44331_2	root@localhost
+test	event44331_2	root@127.0.0.1
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_3';
 EVENT_SCHEMA	EVENT_NAME	DEFINER
-test	event44331_3	root@localhost
+test	event44331_3	root@127.0.0.1
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_4';
 EVENT_SCHEMA	EVENT_NAME	DEFINER
@@ -233,15 +233,15 @@ test	event44331_4	user44331@%
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_1';
 EVENT_SCHEMA	EVENT_NAME	DEFINER
-test	event44331_1	root@localhost
+test	event44331_1	root@127.0.0.1
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_2';
 EVENT_SCHEMA	EVENT_NAME	DEFINER
-test	event44331_2	root@localhost
+test	event44331_2	root@127.0.0.1
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_3';
 EVENT_SCHEMA	EVENT_NAME	DEFINER
-test	event44331_3	root@localhost
+test	event44331_3	root@127.0.0.1
 select EVENT_SCHEMA, EVENT_NAME, DEFINER from information_schema.events
 where EVENT_NAME='event44331_4';
 EVENT_SCHEMA	EVENT_NAME	DEFINER

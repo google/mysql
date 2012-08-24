@@ -300,8 +300,7 @@ SHOW GRANTS FOR CURRENT_USER;
 -- connection master
 
 -- echo ## This statement will make the revoke fail because root has no
--- echo ## execute grant. However, it will still revoke the grant for
--- echo ## user49119.
+-- echo ## execute grant.
 -- error ER_NONEXISTING_PROC_GRANT
 REVOKE EXECUTE ON PROCEDURE p1 FROM 'user49119'@'localhost', 'root'@'localhost';
 

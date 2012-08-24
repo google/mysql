@@ -1983,21 +1983,22 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
       }
     }
 
-    /* 
-      Okay, got values for all arguments. Close tables that might be used by 
-      arguments evaluation. If arguments evaluation required prelocking mode, 
-      we'll leave it here.
-    */
-    if (!thd->in_sub_stmt)
-    {
-      thd->lex->unit.cleanup();
-      close_thread_tables(thd);            
-      thd->rollback_item_tree_changes();
-    }
-
     DBUG_PRINT("info",(" %.*s: eval args done", (int) m_name.length, 
                        m_name.str));
   }
+
+  /*
+    Okay, got values for all arguments. Close tables that might be used by
+    arguments evaluation or preparing function call. If arguments evaluation
+    required prelocking mode, we'll leave it here.
+  */
+  if (!thd->in_sub_stmt)
+  {
+    thd->lex->unit.cleanup();
+    close_thread_tables(thd);
+    thd->rollback_item_tree_changes();
+  }
+
   if (!(m_flags & LOG_SLOW_STATEMENTS) && thd->enable_slow_log)
   {
     DBUG_PRINT("info", ("Disabling slow log for the execution"));
