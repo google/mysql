@@ -2,7 +2,11 @@
 *.la
 *.lo
 *.o
+.cproject
 .deps
+.metadata
+.project
+.settings
 Makefile
 Makefile.in
 aclocal.m4
