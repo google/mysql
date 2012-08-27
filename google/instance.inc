@@ -65,7 +65,8 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
 
 if [[ -n "${GDB}" ]]
 then
-  if [[ -a ${INSTANCE_DIR}/mysql.sock ]]
+  ${BIN_DIR}/client/mysqladmin ping -S ${INSTANCE_DIR}/mysql.sock &> /dev/null
+  if [[ "$?" == "0" ]]
   then
     gdb --eval-command="handle SIGUSR1 nostop" \
       ${BIN_DIR}/sql/mysqld $(cat ${INSTANCE_DIR}/mysql.pid)
