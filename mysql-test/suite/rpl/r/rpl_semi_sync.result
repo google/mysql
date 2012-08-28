@@ -543,4 +543,5 @@ Variable_name	Value
 Rpl_semi_sync_clients	1
 set global rpl_semi_sync_timeout= 1000;
 set global rpl_semi_sync_always_on= 0;
+drop table if exists t1;
 include/rpl_end.inc

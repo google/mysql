@@ -274,4 +274,8 @@ show status like 'Rpl_semi_sync_clients';
 
 set global rpl_semi_sync_timeout= 1000;
 set global rpl_semi_sync_always_on= 0;
+
+--disable_warnings
+drop table if exists t1;
+--enable_warnings
 --source include/rpl_end.inc
