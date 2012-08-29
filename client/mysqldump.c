@@ -4229,8 +4229,10 @@ static int init_dumping(char *database, int init_func(char*))
       check_io(md_result_file);
     }
   }
-  if (extended_insert)
+  if (extended_insert) {
+    dynstr_free(&extended_row);
     init_dynamic_string_checked(&extended_row, "", 1024, 1024);
+  }
   return 0;
 } /* init_dumping */
 
