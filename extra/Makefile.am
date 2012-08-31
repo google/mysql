@@ -14,7 +14,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 INCLUDES =		-I$(top_builddir)/include -I$(top_srcdir)/include \
-			-I$(top_srcdir)/sql
+			-I$(top_srcdir)/sql -I$(top_srcdir)/zlib -I$(top_srcdir)
 LDADD =			@CLIENT_EXTRA_LDFLAGS@ ../mysys/libmysys.a \
 			../dbug/libdbug.a ../strings/libmystrings.a \
 			$(ZLIB_LIBS)

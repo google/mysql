@@ -63,7 +63,6 @@ dbug/user.t
 depcomp
 extra/charset2html
 extra/comp_err
-extra/innochecksum
 extra/my_print_defaults
 extra/mysql_waitpid
 extra/perror
