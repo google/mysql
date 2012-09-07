@@ -33,7 +33,9 @@ status   : OK
 mysql.host
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK
-mysql.mapped_user                                  OK
+mysql.mapped_user
+note     : Table does not support optimize, doing recreate + analyze instead
+status   : OK
 mysql.ndb_binlog_index
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK
@@ -104,7 +106,9 @@ status   : OK
 mysql.host
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK
-mysql.mapped_user                                  OK
+mysql.mapped_user
+note     : Table does not support optimize, doing recreate + analyze instead
+status   : OK
 mysql.ndb_binlog_index
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK

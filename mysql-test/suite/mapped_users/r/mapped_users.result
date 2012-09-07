@@ -10,7 +10,7 @@ mapped_user	CREATE TABLE `mapped_user` (
   `Password` char(41) CHARACTER SET latin1 COLLATE latin1_bin NOT NULL DEFAULT '',
   `PasswordChanged` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`User`,`Password`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Mapped users'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Mapped users'
 show variables like "mapped_users";
 Variable_name	Value
 mapped_users	ON

@@ -41,18 +41,7 @@ ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
 delete from mysql.mapped_user where User='mapfoo2';
 create mapped user mapfoo2 identified by 'bar' role rolefoo;
 ERROR HY000: Operation CREATE MAPPED USER failed for 'mapfoo2'@'%'
-select user(), current_user();
-user()	current_user()
-mapfoo2@localhost	rolefoo@localhost
-select * from t1;
-i
-1
-select * from t2;
-ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
-select User, Role from mysql.mapped_user order by 1, 2;
-User	Role
-mapfoo	rolefoo
-drop mapped user mapfoo2;
+ERROR 28000: Access denied for user 'mapfoo2'@'localhost' (using password: YES)
 select User, Role from mysql.mapped_user order by 1, 2;
 User	Role
 mapfoo	rolefoo

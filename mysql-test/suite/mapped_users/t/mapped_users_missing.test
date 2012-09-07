@@ -51,18 +51,15 @@ delete from mysql.mapped_user where User='mapfoo2';
 --error 1396
 create mapped user mapfoo2 identified by 'bar' role rolefoo;
 
-# Confirm mapfoo2 still works
+# Confirm mapfoo2 doesn't work ("create mapped user" automatically reloads all
+# permissions).
+--disable_query_log
+--error 1045
 connect (foo2_conn, localhost, mapfoo2, bar,);
-select user(), current_user();
-select * from t1;
---error 1142
-select * from t2;
+--enable_query_log
 
 # Make the memory cache match the disk data
 connection default;
-disconnect foo2_conn;
-select User, Role from mysql.mapped_user order by 1, 2;
-drop mapped user mapfoo2;
 select User, Role from mysql.mapped_user order by 1, 2;
 
 # And try to create the user again. This works.
