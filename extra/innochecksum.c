@@ -31,12 +31,8 @@
 
 #define _XOPEN_SOURCE 600 /* needed to include getopt.h on some platforms and get posix_fadvise */
 
-typedef unsigned long int ulint;
-typedef unsigned char uchar;
 typedef unsigned int uint;
-typedef unsigned int uint32;
 typedef unsigned long ulong;
-typedef unsigned int ib_uint32_t;
 
 #include <stdio.h>
 #include <stdlib.h>
