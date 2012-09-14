@@ -1216,7 +1216,7 @@ int plugin_init(int *argc, char **argv, int flags)
   bool is_myisam;
   struct st_mysql_plugin **builtins;
   struct st_mysql_plugin *plugin;
-  struct st_plugin_int tmp, *plugin_ptr, **reap, *googlestats_ptr= NULL;
+  struct st_plugin_int tmp, *plugin_ptr, **reap;
   MEM_ROOT tmp_root;
   bool reaped_mandatory_plugin= FALSE;
   DBUG_ENTER("plugin_init");
@@ -1328,14 +1328,6 @@ int plugin_init(int *argc, char **argv, int flags)
   for (i= 0; i < plugin_array.elements; i++)
   {
     plugin_ptr= *dynamic_element(&plugin_array, i, struct st_plugin_int **);
-    if (!my_strcasecmp(&my_charset_latin1,
-                       plugin_ptr->plugin->name, "GoogleStats"))
-    {
-      /* We save this until the end, because it requires InnoDB
-       * be loaded first (for CommittedStatsVersions). */
-      googlestats_ptr= plugin_ptr;
-      continue;
-    }
     if (plugin_ptr->state == PLUGIN_IS_UNINITIALIZED)
     {
       if (plugin_initialize(plugin_ptr))
@@ -1343,15 +1335,6 @@ int plugin_init(int *argc, char **argv, int flags)
         plugin_ptr->state= PLUGIN_IS_DYING;
         *(reap++)= plugin_ptr;
       }
-    }
-  }
-  /* If we have GoogleStats, we load it last. */
-  if (googlestats_ptr && googlestats_ptr->state == PLUGIN_IS_UNINITIALIZED)
-  {
-    if (plugin_initialize(googlestats_ptr))
-    {
-      googlestats_ptr->state= PLUGIN_IS_DYING;
-      *(reap++)= googlestats_ptr;
     }
   }
 
