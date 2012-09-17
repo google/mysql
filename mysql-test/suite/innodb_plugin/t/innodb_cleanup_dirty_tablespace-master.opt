@@ -1,0 +1,1 @@
+--innodb_file_per_table --innodb_cleanup_dirty_tablespace --innodb_supw_dirty_tablespace

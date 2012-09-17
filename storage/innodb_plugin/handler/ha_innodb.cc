@@ -171,6 +171,8 @@ static my_bool	innobase_rollback_on_timeout		= FALSE;
 static my_bool	innobase_create_status_file		= FALSE;
 static my_bool	innobase_stats_on_metadata		= TRUE;
 
+static my_bool	innobase_supw_dirty_tablespace		= FALSE;
+static my_bool	innobase_cleanup_dirty_tablespace	= FALSE;
 
 static char*	internal_innobase_data_file_path	= NULL;
 
@@ -2265,6 +2267,9 @@ innobase_change_buffering_inited_ok:
 	srv_innodb_status = (ibool) innobase_create_status_file;
 
 	srv_print_verbose_log = mysqld_embedded ? 0 : 1;
+
+	srv_supw_dirty_tablespace = (ibool) innobase_supw_dirty_tablespace;
+	srv_cleanup_dirty_tablespace = (ibool) innobase_cleanup_dirty_tablespace;
 
 	/* Store the default charset-collation number of this MySQL
 	installation */
@@ -11010,6 +11015,19 @@ static MYSQL_SYSVAR_BOOL(stats_on_metadata, innobase_stats_on_metadata,
   "Enable statistics gathering for metadata commands such as SHOW TABLE STATUS (on by default)",
   NULL, NULL, TRUE);
 
+static MYSQL_SYSVAR_BOOL(supw_dirty_tablespace, innobase_supw_dirty_tablespace,
+  PLUGIN_VAR_NOCMDARG,
+  "Do not warn when InnoDB cannot recover dirty tablespace",
+  NULL, NULL, FALSE);
+
+static MYSQL_SYSVAR_BOOL(cleanup_dirty_tablespace,
+  innobase_cleanup_dirty_tablespace,
+  PLUGIN_VAR_NOCMDARG,
+  "Delete dirty tablespace if InnoDB cannot recover it. This option is "
+  "dangerous, only enable if you know this is the behavior you want. "
+  "You probably want to combine this with --innodb_supw_dirty_tablespace.",
+  NULL, NULL, FALSE);
+
 static MYSQL_SYSVAR_ULONGLONG(stats_sample_pages, srv_stats_sample_pages,
   PLUGIN_VAR_RQCMDARG,
   "The number of index pages to sample when calculating statistics (default 8)",
@@ -11234,6 +11252,8 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(open_files),
   MYSQL_SYSVAR(rollback_on_timeout),
   MYSQL_SYSVAR(stats_on_metadata),
+  MYSQL_SYSVAR(supw_dirty_tablespace),
+  MYSQL_SYSVAR(cleanup_dirty_tablespace),
   MYSQL_SYSVAR(stats_sample_pages),
   MYSQL_SYSVAR(adaptive_hash_index),
   MYSQL_SYSVAR(stats_method),

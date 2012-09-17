@@ -228,6 +228,9 @@ extern ibool	srv_priority_boost;
 extern	ulint	srv_mem_pool_size;
 extern	ulint	srv_lock_table_size;
 
+extern	ibool	srv_supw_dirty_tablespace;
+extern	ibool	srv_cleanup_dirty_tablespace;
+
 #ifdef UNIV_DEBUG
 extern	ibool	srv_print_thread_releases;
 extern	ibool	srv_print_lock_waits;

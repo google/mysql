@@ -1,0 +1,23 @@
+--source include/have_innodb.inc
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+--enable_warnings
+SET SQL_WARNINGS=1;
+
+let $MYSQLD_DATADIR= `SELECT @@datadir`;
+
+create table t1 (a int) engine="innodb";
+
+--list_files $MYSQLD_DATADIR/test t1*
+
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--shutdown_server 10
+--source include/wait_until_disconnected.inc
+
+--remove_file $MYSQLD_DATADIR/test/t1.ibd
+
+--enable_reconnect
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--source include/wait_until_connected_again.inc
+
+--list_files $MYSQLD_DATADIR/test t1*

@@ -48,6 +48,7 @@ Created 10/25/1995 Heikki Tuuri
 #else /* !UNIV_HOTBACKUP */
 static ulint srv_data_read, srv_data_written;
 #endif /* !UNIV_HOTBACKUP */
+ibool srv_supw_dirty_tablespace, srv_cleanup_dirty_tablespace;
 
 /*
 		IMPLEMENTATION OF THE TABLESPACE MEMORY CACHE
@@ -3003,6 +3004,37 @@ func_exit:
 	return(success);
 }
 
+/*******************************************************************//**
+Deletes the .frm file associated with the given name. This function
+should only be called if we are missing the .ibd file for this table.
+This is enabled only if the --innodb_cleanup_dirty_tables flag is set.
+*/
+UNIV_INTERN
+void
+fil_cleanup_dirty_tablespace(const char* name) {
+	ulint	namelen		= strlen(name);
+	ulint	dirlen		= strlen(fil_path_to_mysql_datadir);
+	char*	filename	= mem_alloc(namelen + dirlen + sizeof "/.frm");
+
+	sprintf(filename, "%s/%s.frm", fil_path_to_mysql_datadir, name);
+	srv_normalize_path_for_win(filename);
+
+	ut_print_timestamp(stderr);
+
+	if(!os_file_delete(filename)) {
+		fputs("  InnoDB: Error trying to clean up dirty tablespace.\n"
+		      "Could not remove .frm file for table ", stderr);
+		ut_print_filename(stderr, filename);
+		fputs("\nInnoDB: Does this table exist?\n", stderr);
+	} else {
+		fputs(" InnoDB: Successfully cleaned tablespace for table ", stderr);
+		ut_print_filename(stderr, filename);
+		fputs("\n", stderr);
+	}
+
+	mem_free(filename);
+}
+
 /********************************************************************//**
 Tries to open a single-table tablespace and optionally checks the space id is
 right in it. If does not succeed, prints an error message to the .err log. This
@@ -3050,7 +3082,7 @@ fil_open_single_table_tablespace(
 
 	file = os_file_create_simple_no_error_handling(
 		filepath, OS_FILE_OPEN, OS_FILE_READ_ONLY, &success);
-	if (!success) {
+	if (!success && !srv_supw_dirty_tablespace) {
 		/* The following call prints an error message */
 		os_file_get_last_error(TRUE);
 
@@ -3071,7 +3103,12 @@ fil_open_single_table_tablespace(
 		      "InnoDB: Please refer to\n"
 		      "InnoDB: " REFMAN "innodb-troubleshooting-datadict.html\n"
 		      "InnoDB: for how to resolve the issue.\n", stderr);
+	}
 
+	if (!success) {
+		if (srv_cleanup_dirty_tablespace) {
+			fil_cleanup_dirty_tablespace(name);
+		}
 		mem_free(filepath);
 
 		return(FALSE);
