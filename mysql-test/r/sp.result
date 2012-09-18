@@ -134,6 +134,7 @@ id	data	@z
 mixset	666	19
 delete from t1|
 drop procedure mixset|
+set max_join_size = DEFAULT|
 drop procedure if exists zip|
 create procedure zip(x char(16), y int)
 begin

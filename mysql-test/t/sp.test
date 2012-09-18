@@ -200,6 +200,8 @@ select id,data,@z from t1|
 delete from t1|
 drop procedure mixset|
 
+set max_join_size = DEFAULT|
+
 
 # Multiple CALL statements, one with OUT parameter.
 --disable_warnings
