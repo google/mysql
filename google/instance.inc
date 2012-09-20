@@ -11,6 +11,18 @@ source google/env.inc
 [[ -a build/client/mysql ]] || die "mysql is missing"
 BIN_DIR=$(readlink -f build/)
 
+read -a cmd <<< "${BIN_DIR}/sql/mysqld \
+  --no-defaults \
+  --datadir=${INSTANCE_DIR}/datadir \
+  --tmpdir=${INSTANCE_DIR}/tmp/ \
+  --language=${BIN_DIR}/sql/share/english \
+  --character-sets-dir=${BIN_DIR}/sql/share/charsets \
+  --sock=${INSTANCE_DIR}/mysql.sock \
+  --port=${PORT} \
+  --server_id=${ID} \
+  --pid-file=${INSTANCE_DIR}/mysql.pid \
+  ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
+
 if [[ ! -d ${INSTANCE_DIR} ]]
 then
   mkdir -p ${INSTANCE_DIR}/datadir/mysql ${INSTANCE_DIR}/tmp
@@ -19,13 +31,7 @@ then
   ( echo "use mysql;"; \
     cat ${SRC_DIR}/scripts/mysql_system_tables.sql \
     ${SRC_DIR}/scripts/mysql_system_tables_data.sql ) | \
-  ${BIN_DIR}/sql/mysqld \
-    --no-defaults \
-    --bootstrap \
-    --datadir=${INSTANCE_DIR}/datadir \
-    --tmpdir=${INSTANCE_DIR}/tmp/ \
-    --language=${BIN_DIR}/sql/share/english \
-    --character-sets-dir=${BIN_DIR}/sql/share/charsets \
+  ${cmd[*]} --bootstrap \
     &> ${INSTANCE_DIR}/mysql.err
 fi
 
@@ -50,18 +56,6 @@ fi
 echo ">>>>>> Starting ${NAME}..."
 echo ">>>>>> Connect: ${BIN_DIR}/client/mysql -u root -S ${INSTANCE_DIR}/mysql.sock"
 echo ">>>>>> Shutdown: ${BIN_DIR}/client/mysqladmin -u root -S ${INSTANCE_DIR}/mysql.sock shutdown"
-
-read -a cmd <<< "${BIN_DIR}/sql/mysqld \
-  --no-defaults \
-  --datadir=${INSTANCE_DIR}/datadir \
-  --tmpdir=${INSTANCE_DIR}/tmp/ \
-  --language=${BIN_DIR}/sql/share/english \
-  --character-sets-dir=${BIN_DIR}/sql/share/charsets \
-  --sock=${INSTANCE_DIR}/mysql.sock \
-  --port=${PORT} \
-  --server_id=${ID} \
-  --pid-file=${INSTANCE_DIR}/mysql.pid \
-  ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
 
 if [[ -n "${GDB}" ]]
 then
