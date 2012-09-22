@@ -321,7 +321,7 @@ private:
   static const ulong trace_net_wait;
   static const ulong trace_function;
 
-  static const char  sync_header[3];          /**< three byte packet header */
+  static const unsigned char  sync_header[3]; /**< three byte packet header */
 
   void lock();
   void assert_lock_owner();

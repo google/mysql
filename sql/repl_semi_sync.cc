@@ -29,7 +29,7 @@ const ulong Repl_semi_sync::trace_detail=   0x0010;
 const ulong Repl_semi_sync::trace_net_wait= 0x0020;
 const ulong Repl_semi_sync::trace_function= 0x0040;
 
-const char  Repl_semi_sync::sync_header[3]=
+const unsigned char Repl_semi_sync::sync_header[3]=
   {0, Repl_semi_sync::packet_magic_num, 0};
 
 Repl_semi_sync semi_sync_replicator;
@@ -1100,7 +1100,8 @@ void Repl_semi_sync::reserve_sync_header(String *packet, THD *thd,
       Set the magic number and the sync status. By default, no sync
       is required.
     */
-    packet->append(sync_header, sizeof(sync_header));
+    packet->append(reinterpret_cast<const char*>(sync_header),
+                   sizeof(sync_header));
   }
   function_exit(who, 0);
 }
