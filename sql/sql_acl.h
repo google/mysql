@@ -223,6 +223,7 @@ int acl_getroot(THD *thd, USER_RESOURCES *mqh, const char *passwd,
                 uint passwd_len);
 bool acl_getroot_no_password(Security_context *sctx, char *user, char *host,
                              char *ip, char *db);
+bool acl_update_user_access(THD* thd);
 bool acl_check_host(const char *host, const char *ip);
 int check_change_password(THD *thd, const char *host, const char *user,
                            char *password, uint password_len);

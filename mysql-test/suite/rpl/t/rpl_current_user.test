@@ -54,6 +54,9 @@ REVOKE ALL PRIVILEGES, GRANT OPTION FROM CURRENT_USER();
 --source include/rpl_sync.inc
 let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
 source include/diff_tables.inc;
+connection master;
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
+connection conn1;
 
 --echo 
 --echo # Verify 'GRANT ... ON TABLE ...' statement
@@ -96,6 +99,9 @@ REVOKE ALL PRIVILEGES ON *.* FROM CURRENT_USER();
 --source include/rpl_sync.inc
 let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
 source include/diff_tables.inc;
+connection master;
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
+connection conn1;
 
 --echo 
 --echo # Verify 'GRANT ...' statement in the procedure
@@ -118,11 +124,12 @@ source include/diff_tables.inc;
 --echo 
 --echo # Verify 'RENAME USER ...' statement
 RENAME USER CURRENT_USER TO 'bug48321_2'@'localhost';
+disconnect conn1;
+
+connection master;
 --source include/rpl_sync.inc
 let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
 source include/diff_tables.inc;
-
-disconnect conn1;
 
 --echo 
 --echo # Verify 'DROP USER ...' statement
@@ -131,13 +138,15 @@ GRANT CREATE USER ON *.* TO 'bug48321_2'@'localhost';
 connect (conn1, 127.0.0.1, 'bug48321_2'@'localhost',,);
 connection conn1;
 DROP USER CURRENT_USER();
+disconnect conn1;
+
+connection master;
 --source include/rpl_sync.inc
 let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
 source include/diff_tables.inc;
 
 --echo 
 --echo # Verify 'ALTER EVENT...' statement
-connection master;
 CREATE EVENT e1 ON SCHEDULE EVERY 1 DAY DO SELECT * FROM t1;
 
 --echo # Explicitly assign CURRENT_USER() to definer

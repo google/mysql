@@ -31,6 +31,27 @@ set password for root@"localhost" = password('');
 # Give slave time to connect (will retry every second)
 sleep 2;
 
+# Reconnect internal connections -- they will be dropped after root password
+# change
+disconnect server_1;
+disconnect server_2;
+disconnect master1;
+disconnect slave;
+disconnect default;
+--let $rpl_connection_name= server_1
+--let $rpl_server_number= 1
+--source include/rpl_connect.inc
+--let $rpl_connection_name= server_2
+--let $rpl_server_number= 2
+--source include/rpl_connect.inc
+--let $rpl_connection_name= master1
+--let $rpl_server_number= 1
+--source include/rpl_connect.inc
+--let $rpl_connection_name= slave
+--let $rpl_server_number= 2
+--source include/rpl_connect.inc
+connect (default, localhost, root,,);
+
 create table t3(n int);
 insert into t3 values(1),(2);
 sync_slave_with_master;

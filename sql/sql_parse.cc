@@ -997,6 +997,9 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   DBUG_ENTER("dispatch_command");
   DBUG_PRINT("info",("packet: '%*.s'; command: %d", packet_length, packet, command));
 
+  if (acl_update_user_access(thd))
+    goto skip_cmd_execution;
+
   thd->command=command;
   /*
     Commands which always take a long time are logged into
@@ -1672,6 +1675,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     break;
   }
 
+skip_cmd_execution:
   /* report error issued during command execution */
   if (thd->killed_errno())
   {

@@ -19,6 +19,9 @@ STOP SLAVE;
 SET PASSWORD FOR root@"localhost" = PASSWORD('foo');
 START SLAVE;
 SET PASSWORD FOR root@"localhost" = PASSWORD('');
+include/rpl_connect.inc [creating server_1]
+include/rpl_connect.inc [creating server_2]
+include/rpl_connect.inc [creating slave]
 CREATE TABLE t3(n INT);
 INSERT INTO t3 VALUES(1),(2);
 SELECT * FROM t3 ORDER BY n;

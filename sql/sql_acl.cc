@@ -171,6 +171,7 @@ static uchar* acl_entry_get_key(acl_entry *entry, size_t *length,
 #define IP_ADDR_STRLEN (3+1+3+1+3+1+3)
 #define ACL_KEY_LENGTH (IP_ADDR_STRLEN+1+NAME_LEN+1+USERNAME_LENGTH+1)
 
+static volatile uint64_t acl_version = 0;
 static DYNAMIC_ARRAY acl_hosts,acl_users,acl_dbs;
 static MEM_ROOT mem, memex;
 static bool initialized=0;
@@ -184,8 +185,6 @@ static int acl_compare(ACL_ACCESS *a,ACL_ACCESS *b);
 static ulong get_sort(uint count,...);
 static void init_check_host(void);
 static void rebuild_check_host(void);
-static ACL_USER *find_acl_user(const char *host, const char *user,
-                               my_bool exact);
 static bool update_user_table(THD *thd, TABLE *table,
                               const char *host, const char *user,
 			      const char *new_password, uint new_password_len);
@@ -625,6 +624,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 
   initialized=1;
   return_val= FALSE;
+  ++acl_version;
 
 end:
   thd->variables.sql_mode= old_sql_mode;
@@ -841,6 +841,141 @@ static int acl_compare(ACL_ACCESS *a,ACL_ACCESS *b)
 }
 
 
+static ACL_USER *find_user_low(THD *thd,
+                               const char *user,
+                               const char *host, const char *ip,
+                               const char *passwd_salt, uint passwd_salt_len,
+                               bool do_check_passwd, bool is_raw_passwd,
+                               bool allow_anonymous, bool exact_host_match,
+                               int *res)
+{
+  ACL_USER *acl_user= 0;
+  DBUG_ENTER("find_user");
+
+  for (uint i=0 ; i < acl_users.elements ; i++)
+  {
+    ACL_USER *acl_user_tmp= dynamic_element(&acl_users,i,ACL_USER*);
+    if (!acl_user_tmp->user && !allow_anonymous && user && user[0])
+      continue;
+    else if (acl_user_tmp->user &&
+             (!user || (user && strcmp(user, acl_user_tmp->user))))
+    {
+      continue;
+    }
+    else if (exact_host_match &&
+             my_strcasecmp(system_charset_info, host,
+                           acl_user_tmp->host.hostname ?
+                           acl_user_tmp->host.hostname : ""))
+    {
+      continue;
+    }
+    else if (!exact_host_match &&
+             !compare_hostname(&acl_user_tmp->host, host, ip))
+    {
+      continue;
+    }
+
+    if (!do_check_passwd)
+    {
+      acl_user= acl_user_tmp;
+      *res= 0;
+      break;
+    }
+
+    /* Assume password does not match. */
+    *res= 3;
+
+    /* check password: it should be empty or valid */
+    if (!is_raw_passwd)
+    {
+      if (passwd_salt_len == acl_user_tmp->salt_len &&
+          !memcmp(passwd_salt, acl_user_tmp->salt, passwd_salt_len))
+      {
+        acl_user= acl_user_tmp;
+        *res= 0;
+      }
+    }
+    else if (passwd_salt_len == acl_user_tmp->salt_len)
+    {
+      if (acl_user_tmp->salt_len == 0 ||
+          (acl_user_tmp->salt_len == SCRAMBLE_LENGTH ?
+          check_scramble(passwd_salt, thd->scramble, acl_user_tmp->salt) :
+          check_scramble_323(passwd_salt, thd->scramble,
+                             (ulong *) acl_user_tmp->salt)) == 0)
+      {
+        acl_user= acl_user_tmp;
+        *res= 0;
+      }
+    }
+    else if (passwd_salt_len == SCRAMBLE_LENGTH &&
+             acl_user_tmp->salt_len == SCRAMBLE_LENGTH_323)
+      *res= -1;
+    else if (passwd_salt_len == SCRAMBLE_LENGTH_323 &&
+             acl_user_tmp->salt_len == SCRAMBLE_LENGTH)
+      *res= 2;
+
+    /* linear search complete: */
+    DBUG_PRINT("info", ("acl_getroot search complete with result %d", *res));
+    break;
+  }
+
+  DBUG_RETURN(acl_user);
+}
+
+static ACL_USER *find_user_passwd(THD *thd, const char *user,
+                                  const char *host, const char *ip,
+                                  const char *passwd, uint passwd_len,
+                                  int *res)
+{
+  return find_user_low(thd, user, host, ip, passwd, passwd_len,
+                       true, true, true, false, res);
+}
+
+static ACL_USER *find_user_salt(THD *thd, const char *user,
+                                const char *host, const char *ip,
+                                const uint8 *salt, uint salt_len,
+                                int *res)
+{
+  return find_user_low(thd, user, host, ip, (const char*)salt, salt_len,
+                       true, false, false, false, res);
+}
+
+static ACL_USER *find_user_no_passwd(const char *user,
+                                     const char *host, const char *ip)
+{
+  int res= 0;
+  return find_user_low(NULL, user, host, ip, NULL, 0,
+                       false, false, false, false, &res);
+}
+
+static ACL_USER *find_user_exact_host(const char *user, const char *host)
+{
+  int res= 0;
+  return find_user_low(NULL, user, host, NULL, NULL, 0,
+                       false, false, false, true, &res);
+}
+
+static void find_db_access(Security_context *sctx,
+                           char *user, char *host, char *ip, char *db)
+{
+  for (uint i=0 ; i < acl_dbs.elements ; i++)
+  {
+    ACL_DB *acl_db= dynamic_element(&acl_dbs, i, ACL_DB*);
+    if (!acl_db->user || (user && !strcmp(user, acl_db->user)))
+    {
+      if (compare_hostname(&acl_db->host, host, ip))
+      {
+        if (!acl_db->db || (db && !wild_compare(db, acl_db->db, 0)))
+        {
+          sctx->db_access= acl_db->access;
+          break;
+        }
+      }
+    }
+  }
+}
+
+
 /*
   Seek ACL entry for a user, check password, SSL cypher, and if
   everything is OK, update THD user data and USER_RESOURCES struct.
@@ -868,8 +1003,9 @@ static int acl_compare(ACL_ACCESS *a,ACL_ACCESS *b)
   RETURN VALUE
     0  success: thd->priv_user, thd->priv_host, thd->master_access, mqh are
        updated
-    1  user not found or authentication failure
+    1  user not found
     2  user found, has long (4.1.1) salt, but passwd is in old (3.23) format.
+    3  user found and authentication failure
    -1  user found, has short (3.23) salt, but passwd is in new (4.1.1) format.
 */
 
@@ -894,43 +1030,9 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
 
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
-  /*
-    Find acl entry in user database. Note, that find_acl_user is not the same,
-    because it doesn't take into account the case when user is not empty,
-    but acl_user->user is empty
-  */
+  acl_user= find_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
+                             passwd, passwd_len, &res);
 
-  for (uint i=0 ; i < acl_users.elements ; i++)
-  {
-    ACL_USER *acl_user_tmp= dynamic_element(&acl_users,i,ACL_USER*);
-    if (!acl_user_tmp->user || !strcmp(sctx->user, acl_user_tmp->user))
-    {
-      if (compare_hostname(&acl_user_tmp->host, sctx->host, sctx->ip))
-      {
-        /* check password: it should be empty or valid */
-        if (passwd_len == acl_user_tmp->salt_len)
-        {
-          if (acl_user_tmp->salt_len == 0 ||
-              (acl_user_tmp->salt_len == SCRAMBLE_LENGTH ?
-              check_scramble(passwd, thd->scramble, acl_user_tmp->salt) :
-              check_scramble_323(passwd, thd->scramble,
-                                 (ulong *) acl_user_tmp->salt)) == 0)
-          {
-            acl_user= acl_user_tmp;
-            res= 0;
-          }
-        }
-        else if (passwd_len == SCRAMBLE_LENGTH &&
-                 acl_user_tmp->salt_len == SCRAMBLE_LENGTH_323)
-          res= -1;
-        else if (passwd_len == SCRAMBLE_LENGTH_323 &&
-                 acl_user_tmp->salt_len == SCRAMBLE_LENGTH)
-          res= 2;
-        /* linear search complete: */
-        break;
-      }
-    }
-  }
   /*
     This was moved to separate tree because of heavy HAVE_OPENSSL case.
     If acl_user is not null, res is 0.
@@ -1064,6 +1166,8 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     }
     sctx->master_access= user_access;
     sctx->priv_user= acl_user->user ? sctx->user : (char *) "";
+    sctx->salt_len= acl_user->salt_len;
+    memcpy(sctx->salt, acl_user->salt, acl_user->salt_len);
     *mqh= acl_user->user_resource;
 
     if (acl_user->host.hostname)
@@ -1097,7 +1201,6 @@ bool acl_getroot_no_password(Security_context *sctx, char *user, char *host,
                              char *ip, char *db)
 {
   int res= 1;
-  uint i;
   ACL_USER *acl_user= 0;
   DBUG_ENTER("acl_getroot_no_password");
 
@@ -1131,39 +1234,12 @@ bool acl_getroot_no_password(Security_context *sctx, char *user, char *host,
      a stored procedure; user is set to what is actually a
      priv_user, which can be ''.
   */
-  for (i=0 ; i < acl_users.elements ; i++)
-  {
-    ACL_USER *acl_user_tmp= dynamic_element(&acl_users,i,ACL_USER*);
-    if ((!acl_user_tmp->user && !user[0]) ||
-        (acl_user_tmp->user && strcmp(user, acl_user_tmp->user) == 0))
-    {
-      if (compare_hostname(&acl_user_tmp->host, host, ip))
-      {
-        acl_user= acl_user_tmp;
-        res= 0;
-        break;
-      }
-    }
-  }
+  acl_user= find_user_no_passwd(user, host, ip);
 
   if (acl_user)
   {
-    for (i=0 ; i < acl_dbs.elements ; i++)
-    {
-      ACL_DB *acl_db= dynamic_element(&acl_dbs, i, ACL_DB*);
-      if (!acl_db->user ||
-	  (user && user[0] && !strcmp(user, acl_db->user)))
-      {
-	if (compare_hostname(&acl_db->host, host, ip))
-	{
-	  if (!acl_db->db || (db && !wild_compare(db, acl_db->db, 0)))
-	  {
-	    sctx->db_access= acl_db->access;
-	    break;
-	  }
-	}
-      }
-    }
+    res= 0;
+    find_db_access(sctx, user, host, ip, db);
     sctx->master_access= acl_user->access;
     sctx->priv_user= acl_user->user ? user : (char *) "";
 
@@ -1172,8 +1248,54 @@ bool acl_getroot_no_password(Security_context *sctx, char *user, char *host,
     else
       *sctx->priv_host= 0;
   }
+  sctx->access_ver = acl_version;
   VOID(pthread_mutex_unlock(&acl_cache->lock));
   DBUG_RETURN(res);
+}
+
+bool acl_update_user_access(THD *thd)
+{
+  ACL_USER *acl_user= 0;
+  Security_context *sctx= thd->security_ctx;
+  DBUG_ENTER("acl_update_user_access");
+
+  if (sctx->access_ver == acl_version || !sctx->user)
+    DBUG_RETURN(FALSE);
+
+  if (!initialized)
+  {
+    /*
+      here if mysqld's been started with --skip-grant-tables option.
+    */
+    sctx->skip_grants();
+    DBUG_RETURN(FALSE);
+  }
+
+  VOID(pthread_mutex_lock(&acl_cache->lock));
+
+  int res= 1;
+  acl_user= find_user_salt(thd,
+                           sctx->priv_user[0]? sctx->user: sctx->priv_user,
+                           sctx->host, sctx->ip,
+                           sctx->salt, sctx->salt_len, &res);
+  if (!acl_user)
+    goto unlock_and_reset_user;
+
+  sctx->master_access= acl_user->access;
+  sctx->db_access= 0;
+  if (thd->db)
+    find_db_access(sctx, acl_user->user, sctx->host, sctx->ip, thd->db);
+
+  sctx->access_ver = acl_version;
+  VOID(pthread_mutex_unlock(&acl_cache->lock));
+  DBUG_RETURN(FALSE);
+
+unlock_and_reset_user:
+  VOID(pthread_mutex_unlock(&acl_cache->lock));
+
+  sctx->master_access= sctx->db_access= 0;
+  thd->killed= THD::KILL_CONNECTION;
+  DBUG_RETURN(TRUE);
 }
 
 static uchar* check_get_key(ACL_USER *buff, size_t *length,
@@ -1184,14 +1306,47 @@ static uchar* check_get_key(ACL_USER *buff, size_t *length,
 }
 
 
-static void acl_update_user(const char *user, const char *host,
-			    const char *password, uint password_len,
-			    enum SSL_type ssl_type,
-			    const char *ssl_cipher,
-			    const char *x509_issuer,
-			    const char *x509_subject,
-			    USER_RESOURCES  *mqh,
-			    ulong privileges)
+static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
+{
+  THD *tmp_thd;
+
+  VOID(pthread_mutex_lock(&LOCK_thread_count));
+  I_List_iterator<THD> it(threads);
+  while ((tmp_thd= it++))
+  {
+    VOID(pthread_mutex_lock(&tmp_thd->LOCK_thd_data));
+
+    Security_context *sctx= tmp_thd->security_ctx;
+    bool user_match= (!sctx->user && !acl_user->user) ||
+                     (sctx->user && acl_user->user &&
+                       !strcmp(sctx->user, acl_user->user));
+    if (user_match &&
+        compare_hostname(&acl_user->host, sctx->host, sctx->ip))
+    {
+      if (thd == tmp_thd)
+      {
+        sctx->salt_len= acl_user->salt_len;
+        memcpy(sctx->salt, acl_user->salt, sctx->salt_len);
+      }
+      else
+      {
+        tmp_thd->awake(THD::KILL_CONNECTION);
+      }
+    }
+
+    VOID(pthread_mutex_unlock(&tmp_thd->LOCK_thd_data));
+  }
+  VOID(pthread_mutex_unlock(&LOCK_thread_count));
+}
+
+static void acl_update_user(THD *thd, const char *user, const char *host,
+                            const char *password, uint password_len,
+                            enum SSL_type ssl_type,
+                            const char *ssl_cipher,
+                            const char *x509_issuer,
+                            const char *x509_subject,
+                            USER_RESOURCES  *mqh,
+                            ulong privileges)
 {
   safe_mutex_assert_owner(&acl_cache->lock);
 
@@ -1199,35 +1354,46 @@ static void acl_update_user(const char *user, const char *host,
   {
     ACL_USER *acl_user=dynamic_element(&acl_users,i,ACL_USER*);
     if ((!acl_user->user && !user[0]) ||
-	(acl_user->user && !strcmp(user,acl_user->user)))
+        (acl_user->user && !strcmp(user,acl_user->user)))
     {
       if ((!acl_user->host.hostname && !host[0]) ||
-	  (acl_user->host.hostname &&
-	  !my_strcasecmp(system_charset_info, host, acl_user->host.hostname)))
+          (acl_user->host.hostname &&
+          !my_strcasecmp(system_charset_info, host, acl_user->host.hostname)))
       {
-	acl_user->access=privileges;
-	if (mqh->specified_limits & USER_RESOURCES::QUERIES_PER_HOUR)
-	  acl_user->user_resource.questions=mqh->questions;
-	if (mqh->specified_limits & USER_RESOURCES::UPDATES_PER_HOUR)
-	  acl_user->user_resource.updates=mqh->updates;
-	if (mqh->specified_limits & USER_RESOURCES::CONNECTIONS_PER_HOUR)
-	  acl_user->user_resource.conn_per_hour= mqh->conn_per_hour;
-	if (mqh->specified_limits & USER_RESOURCES::USER_CONNECTIONS)
-	  acl_user->user_resource.user_conn= mqh->user_conn;
-	if (ssl_type != SSL_TYPE_NOT_SPECIFIED)
-	{
-	  acl_user->ssl_type= ssl_type;
-	  acl_user->ssl_cipher= (ssl_cipher ? strdup_root(&mem,ssl_cipher) :
-				 0);
-	  acl_user->x509_issuer= (x509_issuer ? strdup_root(&mem,x509_issuer) :
-				  0);
-	  acl_user->x509_subject= (x509_subject ?
-				   strdup_root(&mem,x509_subject) : 0);
-	}
-	if (password)
-	  set_user_salt(acl_user, password, password_len);
+        acl_user->access=privileges;
+        if (mqh->specified_limits & USER_RESOURCES::QUERIES_PER_HOUR)
+          acl_user->user_resource.questions=mqh->questions;
+        if (mqh->specified_limits & USER_RESOURCES::UPDATES_PER_HOUR)
+          acl_user->user_resource.updates=mqh->updates;
+        if (mqh->specified_limits & USER_RESOURCES::CONNECTIONS_PER_HOUR)
+          acl_user->user_resource.conn_per_hour= mqh->conn_per_hour;
+        if (mqh->specified_limits & USER_RESOURCES::USER_CONNECTIONS)
+          acl_user->user_resource.user_conn= mqh->user_conn;
+        if (ssl_type != SSL_TYPE_NOT_SPECIFIED)
+        {
+          acl_user->ssl_type= ssl_type;
+          acl_user->ssl_cipher= (ssl_cipher ? strdup_root(&mem,ssl_cipher) :
+                                 0);
+          acl_user->x509_issuer= (x509_issuer ? strdup_root(&mem,x509_issuer) :
+                                  0);
+          acl_user->x509_subject= (x509_subject ?
+                                   strdup_root(&mem,x509_subject) : 0);
+        }
+        if (password)
+        {
+          uint8 was_salt[SCRAMBLE_LENGTH+1];
+          uint8 was_salt_len = acl_user->salt_len;
+          memcpy(was_salt, acl_user->salt, was_salt_len);
+          set_user_salt(acl_user, password, password_len);
+          if (was_salt_len != acl_user->salt_len ||
+              memcmp(was_salt, acl_user->salt, was_salt_len))
+          {
+            acl_kill_user_threads(thd, acl_user);
+          }
+        }
         /* search complete: */
-	break;
+        ++acl_version;
+        break;
       }
     }
   }
@@ -1270,6 +1436,7 @@ static void acl_insert_user(const char *user, const char *host,
 
   /* Rebuild 'acl_check_hosts' since 'acl_users' has been modified */
   rebuild_check_host();
+  ++acl_version;
 }
 
 
@@ -1296,6 +1463,7 @@ static void acl_update_db(const char *user, const char *host, const char *db,
 	    acl_db->access=privileges;
 	  else
 	    delete_dynamic_element(&acl_dbs,i);
+          ++acl_version;
 	}
       }
     }
@@ -1330,6 +1498,7 @@ static void acl_insert_db(const char *user, const char *host, const char *db,
   VOID(push_dynamic(&acl_dbs,(uchar*) &acl_db));
   my_qsort((uchar*) dynamic_element(&acl_dbs,0,ACL_DB*),acl_dbs.elements,
 	   sizeof(ACL_DB),(qsort_cmp) acl_compare);
+  ++acl_version;
 }
 
 
@@ -1639,7 +1808,7 @@ bool change_password(THD *thd, const char *host, const char *user,
 
   VOID(pthread_mutex_lock(&acl_cache->lock));
   ACL_USER *acl_user;
-  if (!(acl_user= find_acl_user(host, user, TRUE)))
+  if (!(acl_user= find_user_exact_host(user, host)))
   {
     VOID(pthread_mutex_unlock(&acl_cache->lock));
     my_message(ER_PASSWORD_NO_MATCH, ER(ER_PASSWORD_NO_MATCH), MYF(0));
@@ -1647,6 +1816,7 @@ bool change_password(THD *thd, const char *host, const char *user,
   }
   /* update loaded acl entry: */
   set_user_salt(acl_user, new_password, new_password_len);
+  acl_kill_user_threads(thd, acl_user);
 
   if (update_user_table(thd, table,
 			acl_user->host.hostname ? acl_user->host.hostname : "",
@@ -1704,45 +1874,9 @@ bool is_acl_user(const char *host, const char *user)
     return TRUE;
 
   VOID(pthread_mutex_lock(&acl_cache->lock));
-  res= find_acl_user(host, user, TRUE) != NULL;
+  res= find_user_exact_host(user, host) != NULL;
   VOID(pthread_mutex_unlock(&acl_cache->lock));
   return res;
-}
-
-
-/*
-  Find first entry that matches the current user
-*/
-
-static ACL_USER *
-find_acl_user(const char *host, const char *user, my_bool exact)
-{
-  DBUG_ENTER("find_acl_user");
-  DBUG_PRINT("enter",("host: '%s'  user: '%s'",host,user));
-
-  safe_mutex_assert_owner(&acl_cache->lock);
-
-  for (uint i=0 ; i < acl_users.elements ; i++)
-  {
-    ACL_USER *acl_user=dynamic_element(&acl_users,i,ACL_USER*);
-    DBUG_PRINT("info",("strcmp('%s','%s'), compare_hostname('%s','%s'),",
-                       user, acl_user->user ? acl_user->user : "",
-                       host,
-                       acl_user->host.hostname ? acl_user->host.hostname :
-                       ""));
-    if ((!acl_user->user && !user[0]) ||
-	(acl_user->user && !strcmp(user,acl_user->user)))
-    {
-      if (exact ? !my_strcasecmp(system_charset_info, host,
-                                 acl_user->host.hostname ?
-				 acl_user->host.hostname : "") :
-          compare_hostname(&acl_user->host,host,host))
-      {
-	DBUG_RETURN(acl_user);
-      }
-    }
-  }
-  DBUG_RETURN(0);
 }
 
 
@@ -2109,7 +2243,7 @@ end:
   {
     acl_cache->clear(1);			// Clear privilege cache
     if (old_row_exists)
-      acl_update_user(combo.user.str, combo.host.str,
+      acl_update_user(thd, combo.user.str, combo.host.str,
                       combo.password.str, password_len,
 		      lex->ssl_type,
 		      lex->ssl_cipher,
@@ -2153,7 +2287,7 @@ static int replace_db_table(TABLE *table, const char *db,
   }
 
   /* Check if there is such a user in user table in memory? */
-  if (!find_acl_user(combo.host.str,combo.user.str, FALSE))
+  if (!find_user_no_passwd(combo.user.str, combo.host.str, combo.host.str))
   {
     my_message(ER_PASSWORD_NO_MATCH, ER(ER_PASSWORD_NO_MATCH), MYF(0));
     DBUG_RETURN(-1);
@@ -2750,7 +2884,7 @@ static int replace_table_table(THD *thd, GRANT_TABLE *grant_table,
     The following should always succeed as new users are created before
     this function is called!
   */
-  if (!find_acl_user(combo.host.str,combo.user.str, FALSE))
+  if (!find_user_no_passwd(combo.user.str, combo.host.str, combo.host.str))
   {
     my_message(ER_PASSWORD_NO_MATCH, ER(ER_PASSWORD_NO_MATCH),
                MYF(0));	/* purecov: deadcode */
@@ -4604,7 +4738,7 @@ bool mysql_show_grants(THD *thd,LEX_USER *lex_user)
   rw_rdlock(&LOCK_grant);
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
-  acl_user= find_acl_user(lex_user->host.str, lex_user->user.str, TRUE);
+  acl_user= find_user_exact_host(lex_user->user.str, lex_user->host.str);
   if (!acl_user)
   {
     VOID(pthread_mutex_unlock(&acl_cache->lock));
@@ -5063,7 +5197,7 @@ void get_mqh(const char *user, const char *host, USER_CONN *uc)
 
   pthread_mutex_lock(&acl_cache->lock);
 
-  if (initialized && (acl_user= find_acl_user(host,user, FALSE)))
+  if (initialized && (acl_user= find_user_no_passwd(user, host, host)))
     uc->user_resources= acl_user->user_resource;
   else
     bzero((char*) &uc->user_resources, sizeof(uc->user_resources));
@@ -5499,6 +5633,7 @@ static int handle_grant_struct(uint struct_no, bool drop,
     {
       switch ( struct_no ) {
       case 0:
+        acl_kill_user_threads(NULL, acl_user);
         delete_dynamic_element(&acl_users, idx);
         break;
 
@@ -5532,6 +5667,7 @@ static int handle_grant_struct(uint struct_no, bool drop,
     {
       switch ( struct_no ) {
       case 0:
+        acl_kill_user_threads(NULL, acl_user);
         acl_user->user= strdup_root(&mem, user_to->user.str);
         acl_user->host.hostname= strdup_root(&mem, user_to->host.str);
         break;
@@ -5589,6 +5725,8 @@ static int handle_grant_struct(uint struct_no, bool drop,
 #ifdef EXTRA_DEBUG
   DBUG_PRINT("loop",("scan struct: %u  result %d", struct_no, result));
 #endif
+
+  ++acl_version;
 
   DBUG_RETURN(result);
 }
@@ -6048,7 +6186,7 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
       result= -1;
       continue;
     }  
-    if (!find_acl_user(lex_user->host.str, lex_user->user.str, TRUE))
+    if (!find_user_exact_host(lex_user->user.str, lex_user->host.str))
     {
       result= -1;
       continue;
@@ -6366,13 +6504,17 @@ bool sp_grant_privileges(THD *thd, const char *sp_db, const char *sp_name,
 
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
-  if ((au= find_acl_user(combo->host.str=(char*)sctx->host_or_ip,combo->user.str,FALSE)))
-    goto found_acl;
-  if ((au= find_acl_user(combo->host.str=(char*)sctx->host, combo->user.str,FALSE)))
-    goto found_acl;
-  if ((au= find_acl_user(combo->host.str=(char*)sctx->ip, combo->user.str,FALSE)))
-    goto found_acl;
-  if((au= find_acl_user(combo->host.str=(char*)"%", combo->user.str, FALSE)))
+  combo->host.str= (char*)sctx->host_or_ip;
+  if ((au= find_user_no_passwd(combo->user.str, combo->host.str, combo->host.str)))
+     goto found_acl;
+  combo->host.str= (char*)sctx->host;
+  if ((au= find_user_no_passwd(combo->user.str, combo->host.str, combo->host.str)))
+     goto found_acl;
+  combo->host.str= (char*)sctx->ip;
+  if ((au= find_user_no_passwd(combo->user.str, combo->host.str, combo->host.str)))
+     goto found_acl;
+  combo->host.str= (char*)"%";
+  if((au= find_user_no_passwd(combo->user.str, combo->host.str, combo->host.str)))
     goto found_acl;
 
   VOID(pthread_mutex_unlock(&acl_cache->lock));

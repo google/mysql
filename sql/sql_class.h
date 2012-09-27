@@ -799,6 +799,11 @@ public:
   const char *host_or_ip;
   ulong master_access;                 /* Global privileges from mysql.user */
   ulong db_access;                     /* Privileges for current db */
+  uint64_t access_ver;                 /* Version of privileges remembered in
+                                          master_access and db_access */
+  uint8 salt[SCRAMBLE_LENGTH+1];       // scrambled password used
+                                       // for authentication
+  uint8 salt_len;
 
   void init();
   void destroy();

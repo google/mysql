@@ -487,6 +487,10 @@ table_name	column_name
 t1	a
 select ROUTINE_NAME from information_schema.ROUTINES;
 ROUTINE_NAME
+add_suppression
+check_testcase
+check_warnings
+force_restart
 sel2
 sub1
 delete from mysql.user where user='mysqltest_1';

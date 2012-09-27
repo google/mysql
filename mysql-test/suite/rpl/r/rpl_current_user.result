@@ -24,6 +24,7 @@ ERROR HY000: String '01234567890123456789012345678901234567890123456789012345678
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM CURRENT_USER();
 include/rpl_sync.inc
 include/diff_tables.inc [server_1:v_user, server_2:v_user, server_3:v_user]
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
 
 # Verify 'GRANT ... ON TABLE ...' statement
 GRANT CREATE, INSERT, SELECT ON TABLE test.t1 TO CURRENT_USER();
@@ -54,6 +55,7 @@ include/diff_tables.inc [server_1:v_procs_priv, server_2:v_procs_priv, server_3:
 REVOKE ALL PRIVILEGES ON *.* FROM CURRENT_USER();
 include/rpl_sync.inc
 include/diff_tables.inc [server_1:v_user, server_2:v_user, server_3:v_user]
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
 
 # Verify 'GRANT ...' statement in the procedure
 CREATE PROCEDURE my_grant()

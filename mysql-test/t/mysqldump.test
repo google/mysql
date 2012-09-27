@@ -1438,6 +1438,8 @@ flush privileges;
 --exec $MYSQL < $MYSQLTEST_VARDIR/tmp/bug21527.sql
 
 # Do as a user
+disconnect user1;
+connect (user1,localhost,myDB_User,,mysqldump_myDB,$MASTER_MYPORT,$MASTER_MYSOCK);
 connection user1;
 use mysqldump_myDB;
 
