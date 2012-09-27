@@ -3848,6 +3848,8 @@ void Security_context::destroy()
 
 void Security_context::skip_grants()
 {
+  /* init access_ver to prevent valgrind warning in acl_update_user_access */
+  access_ver= 0;
   /* privileges for the user are unknown everything is allowed */
   host_or_ip= (char *)"";
   master_access= ~NO_ACCESS;

@@ -1108,6 +1108,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
 {
   NET *net= &thd->net;
   bool error= 0;
+  bool thread_is_accounted= false;
   DBUG_ENTER("dispatch_command");
   DBUG_PRINT("info", ("command: %d", command));
 
@@ -1127,6 +1128,11 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
                                                com_statement_info[command].
                                                m_key);
   thd->set_command(command);
+
+#ifndef NO_EMBEDDED_ACCESS_CHECKS
+  if (acl_update_user_access(thd))
+    goto skip_cmd_execution;
+#endif
 
   /*
     Commands which always take a long time are logged into
@@ -1150,6 +1156,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     thd->set_query_id(get_query_id());
   }
   inc_thread_running();
+  thread_is_accounted= true;
 
   if (!(server_command_flags[command] & CF_SKIP_QUESTIONS))
     statistic_increment(thd->status_var.questions, &LOCK_status);
@@ -1731,6 +1738,9 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   thd->protocol->end_statement();
   query_cache_end_of_result(thd);
 
+#ifndef NO_EMBEDDED_ACCESS_CHECKS
+skip_cmd_execution:
+#endif
   if (!thd->is_error() && !thd->killed_errno())
     mysql_audit_general(thd, MYSQL_AUDIT_GENERAL_RESULT, 0, 0);
 
@@ -1753,7 +1763,8 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   thd->m_statement_psi= NULL;
 
   thd->set_time();
-  dec_thread_running();
+  if (thread_is_accounted)
+    dec_thread_running();
   thd->packet.shrink(thd->variables.net_buffer_length);	// Reclaim some memory
   free_root(thd->mem_root,MYF(MY_KEEP_PREALLOC));
 

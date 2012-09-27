@@ -1480,12 +1480,12 @@ drop user mysqluser1@localhost;
 # both privilege tables and in in-memory structures.
 #
 # Switch to connection 'bug36544_con1'.
-# The connection cold be alive but should not be able to
+# The connection would be either dead or it should not be able to
 # access to any of the stored routines.
 call mysqltest1.p1();
-ERROR 42000: execute command denied to user 'mysqluser1'@'localhost' for routine 'mysqltest1.p1'
+Got one of the listed errors
 select mysqltest1.f1();
-ERROR 42000: execute command denied to user 'mysqluser1'@'localhost' for routine 'mysqltest1.f1'
+Got one of the listed errors
 #
 # Switch to connection 'default'.
 #
@@ -1563,13 +1563,13 @@ rename user mysqluser1@localhost to mysqluser10@localhost;
 # The connection cold be alive but should not be able to
 # access to any of the stored routines or tables.
 call mysqltest1.p1();
-ERROR 42000: execute command denied to user 'mysqluser1'@'localhost' for routine 'mysqltest1.p1'
+Got one of the listed errors
 select mysqltest1.f1();
-ERROR 42000: execute command denied to user 'mysqluser1'@'localhost' for routine 'mysqltest1.f1'
+Got one of the listed errors
 select * from mysqltest1.t11;
-ERROR 42000: SELECT command denied to user 'mysqluser1'@'localhost' for table 't11'
+Got one of the listed errors
 select * from mysqltest1.t22;
-ERROR 42000: SELECT command denied to user 'mysqluser1'@'localhost' for table 't22'
+Got one of the listed errors
 #
 # Switch to connection 'default'.
 #

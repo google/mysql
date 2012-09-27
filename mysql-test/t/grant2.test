@@ -465,7 +465,7 @@ disconnect con3root;
 create database TESTDB;
 create table t2(a int);
 create temporary table t1 as select * from mysql.user;
-delete from mysql.user where host='localhost';
+delete from mysql.user where host='localhost' and user!='root';
 INSERT INTO mysql.user (host, user, password) VALUES
 ('%','mysqltest_1',password('password'));
 INSERT INTO mysql.db (host, db, user, select_priv) VALUES
@@ -662,6 +662,8 @@ UPDATE user SET password=@pwd WHERE user=@u AND host=@h;
 SELECT user,host,password,insert_priv FROM user WHERE user=@u AND host=@h;
 
 FLUSH PRIVILEGES;
+disconnect default;
+connect (default, localhost, root, , );
 
 USE test;
 
@@ -1153,6 +1155,390 @@ connection default;
 disconnect conn1;
 drop user user1;
 drop database d1;
+
+#
+# All changes in user-level and database-level permissions should be immediately
+# visible to all active connections.
+#
+
+# Set up
+connection default;
+create user user1;
+create database d1;
+create table d1.t1 (n int);
+insert into d1.t1 values (1);
+
+--echo # Note the Threads_running value which shouldn't change in
+--echo # the following tests.
+show global status like 'Threads_running';
+
+connect (conn1, localhost, user1, , );
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+
+# Let's play with user-level permissions
+connection default;
+grant select on *.* to user1;
+connection conn1;
+select * from d1.t1;
+use d1;
+select * from t1;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (2);
+connection default;
+grant insert on *.* to user1;
+connection conn1;
+insert into t1 values (3);
+select * from t1;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1 where n=1;
+connection default;
+grant delete on *.* to user1;
+connection conn1;
+delete from t1 where n=3;
+select * from t1;
+
+connection default;
+revoke insert on *.* from user1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (4);
+
+connection default;
+insert into d1.t1 values (5);
+select * from d1.t1;
+revoke select on *.* from user1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+delete from t1;
+
+connection default;
+select * from d1.t1;
+insert into d1.t1 values (6);
+revoke delete on *.* from user1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1;
+
+connection default;
+select * from d1.t1;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+
+connection default;
+update mysql.user set Select_priv = 'Y' where User = 'user1';
+flush privileges;
+connection conn1;
+select * from d1.t1;
+connection default;
+update mysql.user set Select_priv = 'N' where User = 'user1';
+flush privileges;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+
+# Now database-level privileges
+connection default;
+grant select on d1.* to user1;
+connection conn1;
+select * from d1.t1;
+use d1;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (7);
+
+connection default;
+grant insert on d1.* to user1;
+connection conn1;
+insert into t1 values (8);
+select * from t1;
+
+connection default;
+update mysql.db set Insert_priv = 'N' where Db = 'd1' and User = 'user1';
+flush privileges;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (9);
+connection default;
+update mysql.db set Insert_priv = 'Y' where Db = 'd1' and User = 'user1';
+flush privileges;
+connection conn1;
+insert into t1 values (10);
+
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1;
+connection default;
+grant delete on d1.* to user1;
+connection conn1;
+delete from t1 where n=6;
+select * from t1;
+
+connection default;
+revoke all on d1.* from user1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (11);
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1;
+
+connection default;
+select Select_priv from mysql.db where Db = 'd1' and User = 'user1';
+insert into mysql.db (Host, Db, User, Select_priv)
+values ('%', 'd1', 'user1', 'Y');
+flush privileges;
+connection conn1;
+select * from t1;
+connection default;
+delete from mysql.db where Db = 'd1' and User = 'user1';
+flush privileges;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+
+connection default;
+select * from d1.t1;
+
+# User identification should change when it's associated with the record with
+# differen host name
+connection conn1;
+select user(), current_user();
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+connection default;
+create user user1@localhost;
+grant all on *.* to user1@localhost;
+connection conn1;
+select user(), current_user();
+select * from t1;
+connection default;
+delete from mysql.user where User = 'user1' and Host = 'localhost';
+flush privileges;
+connection conn1;
+select user(), current_user();
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+
+# When user password is changed all user connections (except current) should be
+# killed in the middle of the query.
+connection default;
+grant all privileges on *.* to user1 with grant option;
+use d1;
+delimiter //;
+create procedure inf_loop()
+sql security invoker
+begin
+  loop_label: loop
+    select * from t1;
+  end loop loop_label;
+end;//
+delimiter ;//
+
+connection conn1;
+select * from t1;
+send call inf_loop();
+connect (conn2, localhost, user1, , );
+set password = password('qwerty');
+select * from d1.t1;
+connection conn1;
+--disable_result_log
+--error ER_QUERY_INTERRUPTED,2006,2013
+reap;
+--enable_result_log
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006, 2013
+select * from d1.t1;
+
+# When user is dropped all user connections should be killed in the middle of
+# the query.
+disconnect conn1;
+connect (conn1, localhost, user1, qwerty, );
+use d1;
+select * from t1;
+send call inf_loop();
+connection default;
+drop user user1;
+connection conn1;
+--disable_result_log
+--error ER_QUERY_INTERRUPTED,2006,2013
+reap;
+--enable_result_log
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006, 2013
+select * from d1.t1;
+
+# When user is renamed all user connections should be killed in the middle of
+# the query.
+connection default;
+create user user1;
+grant all privileges on *.* to user1 with grant option;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+use d1;
+select * from t1;
+send call inf_loop();
+connection default;
+rename user user1 to user2;
+connection conn1;
+--disable_result_log
+--error ER_QUERY_INTERRUPTED,2006,2013
+reap;
+--enable_result_log
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006, 2013
+select * from d1.t1;
+
+# When user password is changed through mysql.user table all user connections
+# should be killed eventually (at the start of the next query).
+connection default;
+rename user user2 to user1;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+select * from d1.t1;
+connection default;
+update mysql.user set Password = password('asdf') where User = 'user1';
+flush privileges;
+connection conn1;
+--error 2013, ER_QUERY_INTERRUPTED
+select * from d1.t1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006, 2013
+select * from d1.t1;
+
+# Idle connections should also be killed when user is dropped.
+disconnect conn1;
+connect (conn1, localhost, user1, asdf, );
+select * from d1.t1;
+connection default;
+drop user user1;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+
+# User connections should be killed even if user was re-created while
+# connection was idle.
+connection default;
+create user user1;
+grant all privileges on *.* to user1 with grant option;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+select * from d1.t1;
+connection default;
+drop user user1;
+create user user1;
+grant all privileges on *.* to user1 with grant option;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+
+# The same as above but with rename of the user to another name and back.
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+select * from d1.t1;
+connection default;
+rename user user1 to user2;
+rename user user2 to user1;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+
+# When user is deleted from mysql.user table all user connections should be
+# killed eventually (at the start of the next query).
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+select * from d1.t1;
+delete from mysql.user where User = 'user1';
+flush privileges;
+--error 2013, ER_QUERY_INTERRUPTED
+select * from d1.t1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006, 2013
+select * from d1.t1;
+
+# If user connection is idle then it will survive manipulations with the user
+# through mysql.user table even if after one of 'flush privileges' execution
+# user didn't exist.
+connection default;
+create user user1;
+grant all privileges on *.* to user1 with grant option;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+select * from d1.t1;
+connection default;
+update mysql.user set User = 'user2' where User = 'user1';
+flush privileges;
+update mysql.user set User = 'user1' where User = 'user2';
+flush privileges;
+connection conn1;
+select * from d1.t1;
+
+# Privilegtes of anonymous user should be automatically updated too.
+connection default;
+--source include/add_anonymous_users.inc
+grant select on *.* to ''@localhost;
+
+disconnect conn1;
+connect (conn1,localhost,test,,test,$MASTER_MYPORT,$MASTER_MYSOCK);
+select * from d1.t1;
+connection default;
+revoke select on *.* from ''@localhost;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+
+connection default;
+--source include/delete_anonymous_users.inc
+
+# User connections shouldn't be affected after manipulations with a user with
+# the same name but different hostname.
+drop user user1;
+create user user1@localhost;
+create user user1@otherhost;
+grant all privileges on *.* to user1@localhost with grant option;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+select * from d1.t1;
+connection default;
+rename user user1@otherhost to user1@thirdhost;
+connection conn1;
+select * from d1.t1;
+connection default;
+rename user user1@thirdhost to user2@localhost;
+connection conn1;
+select * from d1.t1;
+connection default;
+rename user user2@localhost to user1@otherhost;
+connection conn1;
+select * from d1.t1;
+connection default;
+drop user user1@otherhost;
+connection conn1;
+select * from d1.t1;
+
+--echo # Check the Threads_running value after the tests.
+show global status like 'Threads_running';
+
+# clean up
+connection default;
+disconnect conn1;
+disconnect conn2;
+drop database d1;
+drop user user1@localhost;
+
 
 # Wait till we reached the initial number of concurrent sessions
 --source include/wait_until_count_sessions.inc

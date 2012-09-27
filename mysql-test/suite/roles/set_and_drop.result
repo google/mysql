@@ -58,6 +58,7 @@ select * from information_schema.enabled_roles;
 ROLE_NAME
 role1
 flush tables;
+ERROR 42000: Access denied; you need (at least one of) the RELOAD privilege(s) for this operation
 select * from mysql.roles_mapping;
 ERROR 42000: SELECT command denied to user 'foo'@'localhost' for table 'roles_mapping'
 select * from mysqltest1.t1;
@@ -95,6 +96,7 @@ pr1
 pr1
 drop role role1;
 flush tables;
+ERROR 42000: Access denied; you need (at least one of) the RELOAD privilege(s) for this operation
 select * from mysql.roles_mapping;
 ERROR 42000: SELECT command denied to user 'foo'@'localhost' for table 'roles_mapping'
 select * from mysqltest1.t1;

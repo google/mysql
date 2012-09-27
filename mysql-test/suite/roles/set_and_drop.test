@@ -58,6 +58,7 @@ connection foo;
 show grants;
 select * from information_schema.enabled_roles;
 
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
 flush tables;
 --error ER_TABLEACCESS_DENIED_ERROR
 select * from mysql.roles_mapping;
@@ -93,6 +94,7 @@ connection default;
 drop role role1;
 connection foo;
 
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
 flush tables;
 --error ER_TABLEACCESS_DENIED_ERROR
 select * from mysql.roles_mapping;

@@ -133,7 +133,7 @@ trig 1_2-yes
 trig 1_2-yes
 trig 1_2-yes
 
-trigger privilege on db level for drop:
+trigger privilege on db level reloaded:
 ---------------------------------------
 select current_user;
 current_user
@@ -142,12 +142,6 @@ show grants for test_yesprivs@localhost;
 Grants for test_yesprivs@localhost
 GRANT USAGE ON *.* TO 'test_yesprivs'@'localhost' IDENTIFIED BY PASSWORD '*C49735D016A099C0CF104EF9183F374A54CA2576'
 GRANT SELECT, UPDATE, TRIGGER ON `priv_db`.* TO 'test_yesprivs'@'localhost'
-drop trigger trg1_2;
-ERROR 42000: TRIGGER command denied to user 'test_yesprivs'@'localhost' for table 't1'
-
-takes effect after use priv_db:
--------------------------------
-use priv_db;
 drop trigger trg1_2;
 select current_user;
 current_user
@@ -671,33 +665,6 @@ current_user
 test_yesprivs@localhost
 use no_priv_db;
 create trigger trg1_2 before INSERT  on t1 for each row
-set new.f1 = 'trig 1_2-no';
-ERROR 42000: TRIGGER command denied to user 'test_yesprivs'@'localhost' for table 't1'
-select current_user;
-current_user
-test_noprivs@localhost
-use priv_db;
-insert into t1 (f1) values ('insert-no');
-select f1 from t1 order by f1;
-f1
-insert-yes
-trig 1_1-yes
-trig 1_1-yes
-trig 1_1-yes
-trig 1_1-yes
-trig 1_2-yes
-trig 1_2-yes
-use no_priv_db;
-insert into t1 (f1) values ('insert-yes');
-select f1 from t1 order by f1;
-f1
-insert-yes
-insert-yes
-select current_user;
-current_user
-test_yesprivs@localhost
-use no_priv_db;
-create trigger trg1_2 before INSERT  on t1 for each row
 set new.f1 = 'trig 1_2-yes';
 select current_user;
 current_user
@@ -713,12 +680,10 @@ trig 1_1-yes
 trig 1_1-yes
 trig 1_2-yes
 trig 1_2-yes
-trig 1_2-yes
 use no_priv_db;
 insert into t1 (f1) values ('insert-no');
 select f1 from t1 order by f1;
 f1
-insert-yes
 insert-yes
 trig 1_2-yes
 select current_user;
@@ -908,10 +873,6 @@ GRANT TRIGGER ON `priv1_db`.`t1` TO 'test_yesprivs'@'localhost'
 select current_user;
 current_user
 test_yesprivs@localhost
-create trigger trg2_1 before INSERT  on t2 for each row
-set new.f1 = 'trig 2_1-yes';
-ERROR 42000: TRIGGER command denied to user 'test_yesprivs'@'localhost' for table 't2'
-use priv1_db;
 create trigger trg2_1 before INSERT  on t2 for each row
 set new.f1 = 'trig 2_1-yes';
 select current_user;

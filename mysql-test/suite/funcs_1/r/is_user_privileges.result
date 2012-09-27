@@ -845,6 +845,18 @@ GRANTEE	'testuser1'@'localhost'
 TABLE_CATALOG	def
 PRIVILEGE_TYPE	SELECT
 IS_GRANTABLE	YES
+GRANTEE	'testuser2'@'localhost'
+TABLE_CATALOG	def
+PRIVILEGE_TYPE	INSERT
+IS_GRANTABLE	NO
+GRANTEE	'testuser2'@'localhost'
+TABLE_CATALOG	def
+PRIVILEGE_TYPE	UPDATE
+IS_GRANTABLE	NO
+GRANTEE	'testuser3'@'localhost'
+TABLE_CATALOG	def
+PRIVILEGE_TYPE	USAGE
+IS_GRANTABLE	NO
 SELECT * FROM mysql.user
 WHERE user LIKE 'testuser%' ORDER BY host, user;
 Host	localhost
@@ -1509,9 +1521,6 @@ Grants for testuser1@localhost
 GRANT USAGE ON *.* TO 'testuser1'@'localhost'
 GRANT ALL PRIVILEGES ON `db_datadict`.* TO 'testuser1'@'localhost' WITH GRANT OPTION
 GRANT SELECT ON `mysql`.`user` TO 'testuser1'@'localhost'
-CREATE TABLE db_datadict.tb_56 ( c1 TEXT );
-ERROR 42000: CREATE command denied to user 'testuser1'@'localhost' for table 'tb_56'
-USE db_datadict;
 SELECT * FROM information_schema.user_privileges
 WHERE grantee LIKE '''testuser%'''
 ORDER BY grantee, table_catalog, privilege_type;
@@ -1833,10 +1842,12 @@ Grants for testuser1@localhost
 GRANT USAGE ON *.* TO 'testuser1'@'localhost'
 CREATE TABLE db_datadict.tb_58 ( c1 TEXT )
 ENGINE = <other_engine_type>;
+ERROR 42000: CREATE command denied to user 'testuser1'@'localhost' for table 'tb_58'
 USE db_datadict;
 ERROR 42000: Access denied for user 'testuser1'@'localhost' to database 'db_datadict'
 CREATE TABLE db_datadict.tb_59 ( c1 TEXT )
 ENGINE = <other_engine_type>;
+ERROR 42000: CREATE command denied to user 'testuser1'@'localhost' for table 'tb_59'
 # Switch to connection default and close connections testuser1,testuser2,testuser3
 DROP USER 'testuser1'@'localhost';
 DROP USER 'testuser2'@'localhost';

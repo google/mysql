@@ -63,6 +63,9 @@ REVOKE ALL PRIVILEGES, GRANT OPTION FROM CURRENT_USER();
 --source include/rpl_sync.inc
 let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
 source include/diff_tables.inc;
+connection master;
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
+connection conn1;
 
 --echo 
 --echo # Verify 'GRANT ... ON TABLE ...' statement
@@ -105,6 +108,9 @@ REVOKE ALL PRIVILEGES ON *.* FROM CURRENT_USER();
 --source include/rpl_sync.inc
 let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
 source include/diff_tables.inc;
+connection master;
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
+connection conn1;
 
 --echo 
 --echo # Verify 'GRANT ...' statement in the procedure
@@ -122,26 +128,6 @@ CREATE PROCEDURE my_revoke()
 call my_revoke;
 --source include/rpl_sync.inc
 let $diff_tables= server_1:v_tables_priv, server_2:v_tables_priv, server_3:v_tables_priv;
-source include/diff_tables.inc;
-
---echo 
---echo # Verify 'RENAME USER ...' statement
-RENAME USER CURRENT_USER TO 'bug48321_2'@'localhost';
---source include/rpl_sync.inc
-let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
-source include/diff_tables.inc;
-
-disconnect conn1;
-
---echo 
---echo # Verify 'DROP USER ...' statement
-connection master;
-GRANT CREATE USER ON *.* TO 'bug48321_2'@'localhost';
-connect (conn1, 127.0.0.1, 'bug48321_2'@'localhost',,);
-connection conn1;
-DROP USER CURRENT_USER();
---source include/rpl_sync.inc
-let $diff_tables= server_1:v_user, server_2:v_user, server_3:v_user;
 source include/diff_tables.inc;
 
 --echo 
@@ -234,5 +220,6 @@ DROP PROCEDURE my_grant;
 DROP PROCEDURE my_revoke;
 DROP FUNCTION my_user;
 DROP EVENT e1;
+DROP USER 'bug48321_1-01234'@'localhost';
 --source include/rpl_end.inc
 

@@ -151,17 +151,10 @@ let $message= trigger privilege on table level for create:;
         grant TRIGGER on priv1_db.* to test_yesprivs@localhost;
         show grants for test_yesprivs@localhost;
 
-# though granted on db level->create trigger fails (no use db)
+# grant trigger takes effect because permission is reloaded automatically
 
 	connection yes_privs;
         select current_user;
-	--error ER_TABLEACCESS_DENIED_ERROR
-        create trigger trg2_1 before INSERT  on t2 for each row
-                set new.f1 = 'trig 2_1-yes';
-
-# grant trigger takes effect
-
-	use priv1_db;
         create trigger trg2_1 before INSERT  on t2 for each row
                 set new.f1 = 'trig 2_1-yes';
 

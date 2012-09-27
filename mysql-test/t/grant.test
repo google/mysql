@@ -1425,11 +1425,12 @@ drop user mysqluser1@localhost;
 --echo #
 --echo # Switch to connection 'bug36544_con1'.
 --connection bug36544_con1
---echo # The connection cold be alive but should not be able to
+--echo # The connection would be either dead or it should not be able to
 --echo # access to any of the stored routines.
---error ER_PROCACCESS_DENIED_ERROR
+--error ER_QUERY_INTERRUPTED,2006,2013  # = "MySQL server has gone away"
 call mysqltest1.p1();
---error ER_PROCACCESS_DENIED_ERROR
+# Error "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
 select mysqltest1.f1();
 --disconnect bug36544_con1
 
@@ -1500,13 +1501,16 @@ rename user mysqluser1@localhost to mysqluser10@localhost;
 --connection bug36544_con2
 --echo # The connection cold be alive but should not be able to
 --echo # access to any of the stored routines or tables.
---error ER_PROCACCESS_DENIED_ERROR
+--error ER_QUERY_INTERRUPTED,2006,2013  # = "MySQL server has gone away"
 call mysqltest1.p1();
---error ER_PROCACCESS_DENIED_ERROR
+# Error "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
 select mysqltest1.f1();
---error ER_TABLEACCESS_DENIED_ERROR
+# Error "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
 select * from mysqltest1.t11;
---error ER_TABLEACCESS_DENIED_ERROR
+# Error "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
 select * from mysqltest1.t22;
 --disconnect bug36544_con2
 

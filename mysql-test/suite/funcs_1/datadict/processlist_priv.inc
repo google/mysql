@@ -198,8 +198,8 @@ GRANT PROCESS ON *.* TO ddicttestuser1@'localhost' IDENTIFIED BY 'ddictpass';
 --echo ####################################################################################
 --echo 4.1 Existing connection con100 (ddicttestuser1)
 --echo     The user ddicttestuser1 has the PROCESS privilege, but the connection was
---echo     established before PROCESS was granted.
---echo     SHOW/SELECT shows only the processes (1) of the user.
+--echo     established before PROCESS was granted. Still privilege is reloaded
+--echo     automatically. Thus SHOW/SELECT shows all processes/threads.
 --echo ####################################################################################
 connection con100;
 SHOW GRANTS;

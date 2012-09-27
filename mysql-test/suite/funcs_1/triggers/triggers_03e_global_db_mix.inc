@@ -165,25 +165,6 @@ let $message= trigger privilege on db level for create:;
 	connection yes_privs;
         select current_user;
 	use no_priv_db;
-	--error ER_TABLEACCESS_DENIED_ERROR
-        create trigger trg1_2 before INSERT  on t1 for each row
-                set new.f1 = 'trig 1_2-no';
-
-        connection no_privs;
-        select current_user;
-	use priv_db;
-        insert into t1 (f1) values ('insert-no');
-        select f1 from t1 order by f1;
-	use no_priv_db;
-        insert into t1 (f1) values ('insert-yes');
-        select f1 from t1 order by f1;
-
-	--disable_warnings
-        disconnect yes_privs;
-	--enable_warnings
-        connect (yes_privs,localhost,test_yesprivs,PWD,test,$MASTER_MYPORT,$MASTER_MYSOCK);
-        select current_user;
-	use no_priv_db;
         create trigger trg1_2 before INSERT  on t1 for each row
                 set new.f1 = 'trig 1_2-yes';
         --disable_warnings

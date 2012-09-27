@@ -171,18 +171,20 @@ GRANT PROCESS ON *.* TO ddicttestuser1@'localhost' IDENTIFIED BY 'ddictpass';
 ####################################################################################
 4.1 Existing connection con100 (ddicttestuser1)
 The user ddicttestuser1 has the PROCESS privilege, but the connection was
-established before PROCESS was granted.
-SHOW/SELECT shows only the processes (1) of the user.
+established before PROCESS was granted. Still privilege is reloaded
+automatically. Thus SHOW/SELECT shows all processes/threads.
 ####################################################################################
 SHOW GRANTS;
 Grants for ddicttestuser1@localhost
 GRANT PROCESS ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info	Progress
+ID	root	HOST_NAME	information_schema	Sleep	TIME		NULL	TIME_MS
 ID	ddicttestuser1	HOST_NAME	information_schema	Query	TIME	init	SHOW processlist	TIME_MS
 SELECT * FROM information_schema.processlist;
 ID	USER	HOST	DB	COMMAND	TIME	STATE	INFO	TIME_MS	STAGE	MAX_STAGE	PROGRESS	MEMORY_USED	EXAMINED_ROWS	QUERY_ID
 ID	ddicttestuser1	HOST_NAME	information_schema	Query	TIME	Filling schema table	SELECT * FROM information_schema.processlist	TIME_MS	0	0	0.000	MEMORY	ROWS	QUERY_ID
+ID	root	HOST_NAME	information_schema	Sleep	TIME		NULL	TIME_MS	0	0	0.000	MEMORY	ROWS	QUERY_ID
 ####################################################################################
 4.2 New connection con101 (ddicttestuser1 with PROCESS privilege)
 SHOW/SELECT shows all processes/threads.

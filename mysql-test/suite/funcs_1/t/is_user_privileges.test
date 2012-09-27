@@ -228,12 +228,7 @@ eval $my_select2;
 --horizontal_results
 eval $my_show;
 
-# OK, testuser1 has no privs here
---error ER_TABLEACCESS_DENIED_ERROR
-CREATE TABLE db_datadict.tb_56 ( c1 TEXT );
-
-# using 'USE' lets the server read the privileges new, so now the CREATE works
-USE db_datadict;
+# server updates privileges automatically
 --vertical_results
 eval $my_select1;
 eval $my_select2;
@@ -263,16 +258,17 @@ eval $my_select1;
 eval $my_select2;
 --horizontal_results
 eval $my_show;
-# WORKS, as the existing old privileges are used!
+# Doesn't work, because privileges are automatically reloaded
 --replace_result $other_engine_type <other_engine_type>
+--error ER_TABLEACCESS_DENIED_ERROR
 eval
 CREATE TABLE db_datadict.tb_58 ( c1 TEXT )
 ENGINE = $other_engine_type;
 # existing privileges are "read" new when USE is called, user has no privileges
 --error ER_DBACCESS_DENIED_ERROR
 USE db_datadict;
-#FIXME 3.2.16: check that it is correct that this now 'works': --error ER_TABLEACCESS_DENIED_ERROR
 --replace_result $other_engine_type <other_engine_type>
+--error ER_TABLEACCESS_DENIED_ERROR
 eval
 CREATE TABLE db_datadict.tb_59 ( c1 TEXT )
 ENGINE = $other_engine_type;

@@ -253,12 +253,9 @@ TABLE_SCHEMA= "test";
 select * from information_schema.KEY_COLUMN_USAGE where
 TABLE_SCHEMA= "test";
 
-connection user2;
 select table_name from information_schema.TABLES where table_schema like "test%";
 select table_name,column_name from information_schema.COLUMNS where table_schema like "test%";
 select ROUTINE_NAME from information_schema.ROUTINES;
-disconnect user2;
-connection default;
 delete from mysql.user where user='mysqltest_1';
 drop table t1;
 drop procedure sel2;

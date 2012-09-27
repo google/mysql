@@ -124,20 +124,13 @@ let $message= trigger privilege at activation time:;
 	use priv_db;
 	insert into t1 (f1) values ('insert-no');
 	select f1 from t1 order by f1;
-# drop must fail, as no 'use db' executed:
-let $message= trigger privilege on db level for drop:;
+# drop succeed, because permissions are automatically reloaded:
+let $message= trigger privilege on db level reloaded:;
 --source include/show_msg.inc
 	connection yes_privs;
         select current_user;
         show grants for test_yesprivs@localhost;
-        --error ER_TABLEACCESS_DENIED_ERROR
  	drop trigger trg1_2;
-
-# succeed
-let $message= takes effect after use priv_db:;
---source include/show_msg.inc
-        use priv_db;
-        drop trigger trg1_2;
 
 	connection default;
         select current_user;

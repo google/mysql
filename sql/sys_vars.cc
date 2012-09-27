@@ -2431,6 +2431,13 @@ static Sys_var_ulong Sys_query_prealloc_size(
        BLOCK_SIZE(1024), NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
        ON_UPDATE(fix_thd_mem_root));
 
+static Sys_var_mybool Sys_update_connection_privs(
+       "update_connection_privs",
+       "When ON automatically update user-level and db-level privileges "
+       "associated with connection.",
+       READ_ONLY GLOBAL_VAR(opt_update_connection_privs), CMD_LINE(OPT_ARG),
+       DEFAULT(TRUE));
+
 #ifdef HAVE_SMEM
 static Sys_var_mybool Sys_shared_memory(
        "shared_memory", "Enable the shared memory",

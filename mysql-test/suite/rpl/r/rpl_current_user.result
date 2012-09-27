@@ -24,6 +24,7 @@ ERROR HY000: String '01234567890123456789012345678901234567890123456789012345678
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM CURRENT_USER();
 include/rpl_sync.inc
 include/diff_tables.inc [server_1:v_user, server_2:v_user, server_3:v_user]
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
 
 # Verify 'GRANT ... ON TABLE ...' statement
 GRANT CREATE, INSERT, SELECT ON TABLE test.t1 TO CURRENT_USER();
@@ -54,6 +55,7 @@ include/diff_tables.inc [server_1:v_procs_priv, server_2:v_procs_priv, server_3:
 REVOKE ALL PRIVILEGES ON *.* FROM CURRENT_USER();
 include/rpl_sync.inc
 include/diff_tables.inc [server_1:v_user, server_2:v_user, server_3:v_user]
+GRANT ALL PRIVILEGES ON *.* TO 'bug48321_1-01234'@'localhost' WITH GRANT OPTION;
 
 # Verify 'GRANT ...' statement in the procedure
 CREATE PROCEDURE my_grant()
@@ -68,17 +70,6 @@ REVOKE CREATE, INSERT, SELECT ON TABLE t1 FROM CURRENT_USER();
 call my_revoke;
 include/rpl_sync.inc
 include/diff_tables.inc [server_1:v_tables_priv, server_2:v_tables_priv, server_3:v_tables_priv]
-
-# Verify 'RENAME USER ...' statement
-RENAME USER CURRENT_USER TO 'bug48321_2'@'localhost';
-include/rpl_sync.inc
-include/diff_tables.inc [server_1:v_user, server_2:v_user, server_3:v_user]
-
-# Verify 'DROP USER ...' statement
-GRANT CREATE USER ON *.* TO 'bug48321_2'@'localhost';
-DROP USER CURRENT_USER();
-include/rpl_sync.inc
-include/diff_tables.inc [server_1:v_user, server_2:v_user, server_3:v_user]
 
 # Verify 'ALTER EVENT...' statement
 CREATE EVENT e1 ON SCHEDULE EVERY 1 DAY DO SELECT * FROM t1;
@@ -183,4 +174,5 @@ DROP PROCEDURE my_grant;
 DROP PROCEDURE my_revoke;
 DROP FUNCTION my_user;
 DROP EVENT e1;
+DROP USER 'bug48321_1-01234'@'localhost';
 include/rpl_end.inc

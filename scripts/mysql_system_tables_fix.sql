@@ -663,9 +663,6 @@ alter table servers      modify Username     char(80)                   not null
 alter table procs_priv   modify Grantor      char(141) COLLATE utf8_bin not null default '';
 alter table tables_priv  modify Grantor      char(141) COLLATE utf8_bin not null default '';
 
-# Activate the new, possible modified privilege tables
-# This should not be needed, but gives us some extra testing that the above
-# changes was correct
 
 set @have_innodb= (select count(engine) from information_schema.engines where engine='INNODB' and support != 'NO');
 SET @innodb_index_stats_fk= (select count(*) from information_schema.referential_constraints where constraint_schema='mysql' and table_name = 'innodb_index_stats' and referenced_table_name = 'innodb_table_stats' and constraint_name = 'innodb_index_stats_ibfk_1');
@@ -673,6 +670,4 @@ SET @str=IF(@innodb_index_stats_fk > 0 and @have_innodb > 0, "ALTER TABLE mysql.
 PREPARE stmt FROM @str;
 EXECUTE stmt;
 DROP PREPARE stmt; 
-
-flush privileges;
 

@@ -735,6 +735,7 @@ bool ROLE_GRANT_PAIR::init(MEM_ROOT *mem, char *username,
 /* Flag to mark that on_node was already called for this role */
 #define ROLE_OPENED             (1L << 3)
 
+static volatile uint64_t acl_version = 0;
 static DYNAMIC_ARRAY acl_hosts, acl_users, acl_dbs, acl_proxy_users;
 static HASH acl_roles;
 /*
@@ -1490,6 +1491,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 
   initialized=1;
   return_val= FALSE;
+  ++acl_version;
 
 end:
   thd->variables.sql_mode= old_sql_mode;
@@ -1755,6 +1757,27 @@ static int acl_compare(ACL_ACCESS *a,ACL_ACCESS *b)
 }
 
 
+static void find_db_access(Security_context *sctx, const char *user,
+                           const char *host, const char *ip, const char *db)
+{
+  for (uint i=0 ; i < acl_dbs.elements ; i++)
+  {
+    ACL_DB *acl_db= dynamic_element(&acl_dbs, i, ACL_DB*);
+    if (!acl_db->user || (user && !strcmp(user, acl_db->user)))
+    {
+      if (compare_hostname(&acl_db->host, host, ip))
+      {
+        if (!acl_db->db || (db && !wild_compare(db, acl_db->db, 0)))
+        {
+          sctx->db_access= acl_db->access;
+          break;
+        }
+      }
+    }
+  }
+}
+
+
 /*
   Gets user credentials without authentication and resource limit checks.
 
@@ -1775,7 +1798,6 @@ bool acl_getroot(Security_context *sctx, char *user, char *host,
                  char *ip, char *db)
 {
   int res= 1;
-  uint i;
   ACL_USER *acl_user= 0;
   DBUG_ENTER("acl_getroot");
 
@@ -1808,22 +1830,7 @@ bool acl_getroot(Security_context *sctx, char *user, char *host,
     if (acl_user)
     {
       res= 0;
-      for (i=0 ; i < acl_dbs.elements ; i++)
-      {
-        ACL_DB *acl_db= dynamic_element(&acl_dbs, i, ACL_DB*);
-        if (!acl_db->user ||
-            (user && user[0] && !strcmp(user, acl_db->user)))
-        {
-          if (compare_hostname(&acl_db->host, host, ip))
-          {
-            if (!acl_db->db || (db && !wild_compare(db, acl_db->db, 0)))
-            {
-              sctx->db_access= acl_db->access;
-              break;
-            }
-          }
-        }
-      }
+      find_db_access(sctx, user, host, ip, db);
       sctx->master_access= acl_user->access;
 
       if (acl_user->user.str)
@@ -1839,22 +1846,7 @@ bool acl_getroot(Security_context *sctx, char *user, char *host,
     if (acl_role)
     {
       res= 0;
-      for (i=0 ; i < acl_dbs.elements ; i++)
-      {
-        ACL_DB *acl_db= dynamic_element(&acl_dbs, i, ACL_DB*);
-        if (!acl_db->user ||
-            (user && user[0] && !strcmp(user, acl_db->user)))
-        {
-          if (compare_hostname(&acl_db->host, "", ""))
-          {
-            if (!acl_db->db || (db && !wild_compare(db, acl_db->db, 0)))
-            {
-              sctx->db_access= acl_db->access;
-              break;
-            }
-          }
-        }
-      }
+      find_db_access(sctx, user, "", "", db);
       sctx->master_access= acl_role->access;
 
       if (acl_role->user.str)
@@ -1862,9 +1854,111 @@ bool acl_getroot(Security_context *sctx, char *user, char *host,
       sctx->priv_host[0]= 0;
     }
   }
+  sctx->access_ver = acl_version;
 
   mysql_mutex_unlock(&acl_cache->lock);
   DBUG_RETURN(res);
+}
+
+bool acl_update_user_access(THD *thd)
+{
+  ACL_USER *acl_user= 0;
+  Security_context *sctx= thd->security_ctx;
+  DBUG_ENTER("acl_update_user_access");
+
+  if (!opt_update_connection_privs || sctx->access_ver == acl_version || !sctx->user)
+    DBUG_RETURN(FALSE);
+
+  if (!initialized)
+  {
+    /*
+      here if mysqld's been started with --skip-grant-tables option.
+    */
+    sctx->skip_grants();
+    DBUG_RETURN(FALSE);
+  }
+
+  mysql_mutex_lock(&acl_cache->lock);
+
+  acl_user= find_user_wild(sctx->host, sctx->priv_user, sctx->ip);
+  /*
+     TODO(pivanof): It would be great for all plugins to have a function
+     answering a question: "Did something change for user such that this
+     connection should be killed?" Without that we can only answer that question
+     for password-checking plugins. And we should be careful to bypass the cases
+     when user was allowed to be logged in anonymously, or was proxied to use
+     another user's privileges, or (the worst case) authenticated using
+     combination of both (used anonymous record in mysql.user and then proxied
+     to use another user's privileges).
+  */
+  if (acl_user && !strcmp(sctx->user, sctx->priv_user) && !sctx->proxy_user[0] &&
+       (acl_user->plugin.str == native_password_plugin_name.str ||
+          acl_user->plugin.str == old_password_plugin_name.str) &&
+       (acl_user->salt_len != sctx->salt_len ||
+          memcmp(acl_user->salt, sctx->salt,
+                 acl_user->salt_len * sizeof(acl_user->salt[0]))))
+  {
+    acl_user= NULL;
+  }
+  if (!acl_user)
+    goto unlock_and_reset_user;
+
+  sctx->master_access= acl_user->access;
+  if (acl_user->host.hostname)
+    strmake(sctx->priv_host, acl_user->host.hostname, MAX_HOSTNAME - 1);
+  else
+    *sctx->priv_host= 0;
+  sctx->db_access= 0;
+  if (thd->db)
+    find_db_access(sctx, acl_user->user.str, sctx->host, sctx->ip, thd->db);
+
+  sctx->access_ver= acl_version;
+  mysql_mutex_unlock(&acl_cache->lock);
+  DBUG_RETURN(FALSE);
+
+unlock_and_reset_user:
+  mysql_mutex_unlock(&acl_cache->lock);
+
+  sctx->master_access= sctx->db_access= 0;
+  thd->killed= KILL_CONNECTION;
+  DBUG_RETURN(TRUE);
+}
+
+static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
+{
+  THD *tmp_thd;
+
+  if (!opt_update_connection_privs)
+    return;
+
+  mysql_mutex_lock(&LOCK_thread_count);
+  I_List_iterator<THD> it(threads);
+  while ((tmp_thd= it++))
+  {
+    mysql_mutex_lock(&tmp_thd->LOCK_thd_data);
+
+    Security_context *sctx= tmp_thd->security_ctx;
+    bool user_match= (!sctx->user && !acl_user->user.str) ||
+                     (sctx->user && acl_user->user.str &&
+                       !strcmp(sctx->user, safe_str(acl_user->user.str)));
+    if (user_match &&
+        compare_hostname(&acl_user->host, sctx->host, sctx->ip))
+    {
+      if (thd == tmp_thd)
+      {
+        sctx->salt_len= acl_user->salt_len;
+        memcpy(sctx->salt, acl_user->salt,
+               acl_user->salt_len * sizeof(acl_user->salt[0]));
+      }
+      else
+      {
+        tmp_thd->awake(KILL_CONNECTION);
+      }
+    }
+
+    mysql_mutex_unlock(&tmp_thd->LOCK_thd_data);
+  }
+  mysql_mutex_unlock(&LOCK_thread_count);
 }
 
 int acl_check_setrole(THD *thd, char *rolename, ulonglong *access)
@@ -1977,7 +2071,7 @@ static void acl_update_role(const char *rolename, ulong privileges)
 }
 
 
-static void acl_update_user(const char *user, const char *host,
+static void acl_update_user(THD *thd, const char *user, const char *host,
 			    const char *password, uint password_len,
 			    enum SSL_type ssl_type,
 			    const char *ssl_cipher,
@@ -2009,7 +2103,17 @@ static void acl_update_user(const char *user, const char *host,
         {
           acl_user->auth_string.str= strmake_root(&acl_memroot, password, password_len);
           acl_user->auth_string.length= password_len;
+          uint8 was_salt[SCRAMBLE_LENGTH+1];
+          uint8 was_salt_len= acl_user->salt_len;
+          memcpy(was_salt, acl_user->salt,
+                 was_salt_len * sizeof(acl_user->salt[0]));
           set_user_salt(acl_user, password, password_len);
+          if (was_salt_len != acl_user->salt_len ||
+              memcmp(was_salt, acl_user->salt,
+                     was_salt_len * sizeof(acl_user->salt[0])))
+          {
+            acl_kill_user_threads(thd, acl_user);
+          }
           set_user_plugin(acl_user, password_len);
         }
       acl_user->access=privileges;
@@ -2032,6 +2136,7 @@ static void acl_update_user(const char *user, const char *host,
                                  strdup_root(&acl_memroot,x509_subject) : 0);
       }
       /* search complete: */
+      ++acl_version;
       break;
     }
   }
@@ -2116,6 +2221,8 @@ static void acl_insert_user(const char *user, const char *host,
     and old pointers to ACL_USER elements are no longer valid
   */
   rebuild_role_grants();
+
+  ++acl_version;
 }
 
 
@@ -2146,6 +2253,7 @@ static void acl_update_db(const char *user, const char *host, const char *db,
           }
 	  else
 	    delete_dynamic_element(&acl_dbs,i);
+          ++acl_version;
 	}
       }
     }
@@ -2180,6 +2288,7 @@ static void acl_insert_db(const char *user, const char *host, const char *db,
   (void) push_dynamic(&acl_dbs,(uchar*) &acl_db);
   my_qsort((uchar*) dynamic_element(&acl_dbs,0,ACL_DB*),acl_dbs.elements,
 	   sizeof(ACL_DB),(qsort_cmp) acl_compare);
+  ++acl_version;
 }
 
 
@@ -2654,6 +2763,7 @@ bool change_password(THD *thd, const char *host, const char *user,
     acl_user->auth_string.length= new_password_len;
     set_user_salt(acl_user, new_password, new_password_len);
     set_user_plugin(acl_user, new_password_len);
+    acl_kill_user_threads(thd, acl_user);
   }
   else
     push_warning(thd, Sql_condition::WARN_LEVEL_NOTE,
@@ -3275,7 +3385,7 @@ end:
       if (handle_as_role)
         acl_update_role(combo.user.str, rights);
       else
-        acl_update_user(combo.user.str, combo.host.str,
+        acl_update_user(thd, combo.user.str, combo.host.str,
                         combo.password.str, combo.password.length,
                         lex->ssl_type,
                         lex->ssl_cipher,
@@ -8913,6 +9023,7 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
       switch ( struct_no ) {
       case USER_ACL:
         free_acl_user(dynamic_element(&acl_users, idx, ACL_USER*));
+        acl_kill_user_threads(NULL, acl_user);
         delete_dynamic_element(&acl_users, idx);
         break;
 
@@ -8954,6 +9065,7 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
     {
       switch ( struct_no ) {
       case USER_ACL:
+        acl_kill_user_threads(NULL, acl_user);
         acl_user->user.str= strdup_root(&acl_memroot, user_to->user.str);
         acl_user->user.length= user_to->user.length;
         acl_user->host.hostname= strdup_root(&acl_memroot, user_to->host.str);
@@ -9048,6 +9160,8 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
 #ifdef EXTRA_DEBUG
   DBUG_PRINT("loop",("scan struct: %u  result %d", struct_no, result));
 #endif
+
+  ++acl_version;
 
   DBUG_RETURN(result);
 }
@@ -12274,6 +12388,8 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
       acl_user= acl_proxy_user->copy(thd->mem_root);
       mysql_mutex_unlock(&acl_cache->lock);
     }
+
+    sctx->access_ver= acl_version;
 #endif
 
     sctx->master_access= acl_user->access;
@@ -12286,6 +12402,10 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
       strmake_buf(sctx->priv_host, acl_user->host.hostname);
     else
       *sctx->priv_host= 0;
+
+    sctx->salt_len= mpvio.acl_user->salt_len;
+    memcpy(sctx->salt, mpvio.acl_user->salt,
+           mpvio.acl_user->salt_len * sizeof(mpvio.acl_user->salt[0]));
 
     /*
       OK. Let's check the SSL. Historically it was checked after the password,

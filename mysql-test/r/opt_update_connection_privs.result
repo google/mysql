@@ -1,0 +1,146 @@
+create user user1;
+create database d1;
+create table d1.t1 (n int);
+insert into d1.t1 values (1);
+select * from d1.t1;
+ERROR 42000: SELECT command denied to user 'user1'@'localhost' for table 't1'
+use d1;
+ERROR 42000: Access denied for user 'user1'@'%' to database 'd1'
+grant select on *.* to user1;
+select * from d1.t1;
+ERROR 42000: SELECT command denied to user 'user1'@'localhost' for table 't1'
+use d1;
+ERROR 42000: Access denied for user 'user1'@'%' to database 'd1'
+use d1;
+select * from t1;
+n
+1
+insert into t1 values (2);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+grant insert on *.* to user1;
+insert into t1 values (3);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+use d1;
+insert into t1 values (4);
+select * from t1;
+n
+1
+4
+revoke insert on *.* from user1;
+insert into t1 values (5);
+select * from t1;
+n
+1
+4
+5
+use d1;
+insert into t1 values (6);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+revoke select on *.* from user1;
+select * from d1.t1;
+ERROR 42000: SELECT command denied to user 'user1'@'localhost' for table 't1'
+use d1;
+ERROR 42000: Access denied for user 'user1'@'%' to database 'd1'
+grant select on d1.* to user1;
+select * from d1.t1;
+n
+1
+4
+5
+use d1;
+select * from t1;
+n
+1
+4
+5
+insert into t1 values (7);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+grant insert on d1.* to user1;
+insert into t1 values (8);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+use d1;
+insert into t1 values (9);
+select * from t1;
+n
+1
+4
+5
+9
+update mysql.db set Insert_priv = 'N' where Db = 'd1' and User = 'user1';
+flush privileges;
+insert into t1 values (10);
+use d1;
+insert into t1 values (11);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+select * from t1;
+n
+1
+4
+5
+9
+10
+revoke all on d1.* from user1;
+select * from t1;
+n
+1
+4
+5
+9
+10
+use d1;
+ERROR 42000: Access denied for user 'user1'@'%' to database 'd1'
+select * from t1;
+n
+1
+4
+5
+9
+10
+use test;
+select * from d1.t1;
+ERROR 42000: SELECT command denied to user 'user1'@'localhost' for table 't1'
+grant all privileges on *.* to user1 with grant option;
+use d1;
+select * from t1;
+n
+1
+4
+5
+9
+10
+set password = password('qwerty');
+select * from d1.t1;
+n
+1
+4
+5
+9
+10
+select * from d1.t1;
+n
+1
+4
+5
+9
+10
+connect(localhost,user1,,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'user1'@'localhost' (using password: NO)
+use d1;
+select * from t1;
+n
+1
+4
+5
+9
+10
+drop user user1;
+select * from d1.t1;
+n
+1
+4
+5
+9
+10
+connect(localhost,user1,qwerty,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'user1'@'localhost' (using password: YES)
+drop database d1;

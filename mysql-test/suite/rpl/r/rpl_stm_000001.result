@@ -20,6 +20,10 @@ stop slave;
 set password for root@"localhost" = password('foo');
 start slave;
 set password for root@"localhost" = password('');
+include/rpl_connect.inc [creating server_1]
+include/rpl_connect.inc [creating server_2]
+include/rpl_connect.inc [creating master1]
+include/rpl_connect.inc [creating slave]
 create table t3(n int);
 insert into t3 values(1),(2);
 select * from t3;

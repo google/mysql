@@ -27,13 +27,12 @@ INSERT INTO t1 VALUES (1);
 SELECT * FROM t1;
 n
 1
+==== Restart slave without privileges =====
+include/stop_slave.inc
 ==== Delete new replication user ====
 [on master]
 DROP USER rpl@127.0.0.1;
 FLUSH PRIVILEGES;
-[on slave]
-==== Restart slave without privileges =====
-include/stop_slave.inc
 START SLAVE;
 include/wait_for_slave_sql_to_start.inc
 include/wait_for_slave_io_to_stop.inc
@@ -45,4 +44,6 @@ CHANGE MASTER TO MASTER_USER = 'root', MASTER_PASSWORD = '';
 include/rpl_reset.inc
 [on master]
 DROP TABLE t1;
+[on slave]
+DROP USER rpl@127.0.0.1;
 include/rpl_end.inc

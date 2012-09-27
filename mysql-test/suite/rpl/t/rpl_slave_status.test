@@ -51,18 +51,17 @@ INSERT INTO t1 VALUES (1);
 sync_slave_with_master;
 SELECT * FROM t1;
 
+--echo ==== Restart slave without privileges =====
+# (slave.err will contain access denied error for this START SLAVE command)
+source include/stop_slave.inc;
+
 --echo ==== Delete new replication user ====
 --echo [on master]
 connection master;
 DROP USER rpl@127.0.0.1;
 FLUSH PRIVILEGES;
 
---echo [on slave]
-sync_slave_with_master;
-
---echo ==== Restart slave without privileges =====
-# (slave.err will contain access denied error for this START SLAVE command)
-source include/stop_slave.inc;
+connection slave;
 START SLAVE;
 source include/wait_for_slave_sql_to_start.inc;
 source include/wait_for_slave_io_to_stop.inc;
@@ -84,5 +83,9 @@ CHANGE MASTER TO MASTER_USER = 'root', MASTER_PASSWORD = '';
 --echo [on master]
 connection master;
 DROP TABLE t1;
+
+--echo [on slave]
+connection slave;
+DROP USER rpl@127.0.0.1;
 
 --source include/rpl_end.inc
