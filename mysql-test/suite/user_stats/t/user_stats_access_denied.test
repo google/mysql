@@ -167,6 +167,7 @@ sleep 1;
 select user, denied_connections from information_schema.user_statistics where user = 'test';
 
 # clean up
+connection default;
 drop user test@localhost;
 drop user test@127.0.0.1;
 flush privileges;
