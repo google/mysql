@@ -3750,6 +3750,7 @@ int set_var_password::update(THD *thd)
 #endif
 }
 
+#ifdef HAVE_REPLICATION
 /*****************************************************************************
   Functions to handle SET FAILOVER
 *****************************************************************************/
@@ -3764,6 +3765,7 @@ int set_var_failover::update(THD *thd)
   set_failover(thd, in_failover);
   return 0;
 }
+#endif
 
 /****************************************************************************
  Functions to handle table_type

@@ -204,6 +204,7 @@ bool begin_trans(THD *thd)
     thd->locked_tables=0;			// Will be automatically closed
     close_thread_tables(thd);			// Free tables
   }
+#ifdef HAVE_REPLICATION
   if (!rpl_allow_implicit_commit && thd->slave_thread &&
       thd->options & OPTION_BEGIN)
   {
@@ -233,6 +234,7 @@ bool begin_trans(THD *thd)
     my_error(ER_IMPLICIT_COMMIT_ON_SLAVE_THREAD, MYF(0));
     return 1;
   }
+#endif
   if (end_active_trans(thd))
     error= -1;
   else

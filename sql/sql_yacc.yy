@@ -12303,7 +12303,12 @@ option_value:
           }
         | FAILOVER_SYM EQ ulong_num
           {
+#ifdef HAVE_REPLICATION
             Lex->var_list.push_back(new set_var_failover($3));
+#else
+            my_parse_error(ER(ER_SYNTAX_ERROR));
+            MYSQL_YYABORT;
+#endif
           }
         ;
 

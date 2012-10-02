@@ -1392,6 +1392,7 @@ public:
 };
 
 
+#ifdef HAVE_REPLICATION
 /* For SET FAILOVER */
 
 class set_var_failover: public set_var_base
@@ -1404,7 +1405,7 @@ public:
   int check(THD *thd);
   int update(THD *thd);
 };
-
+#endif
 
 extern "C"
 {
