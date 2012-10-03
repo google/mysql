@@ -5494,7 +5494,11 @@ void init_audit_log_tables(const char* comma_list)
                 0, 0))
   {
     sql_print_error("Initializing audit log tables failed.");
+#ifndef EMBEDDED_LIBRARY
     unireg_abort(1);
+#else
+    return;
+#endif
   }
   is_audit_hashtable_inited= true;
 
