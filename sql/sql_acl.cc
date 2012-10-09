@@ -1129,6 +1129,124 @@ static int acl_compare(ACL_ACCESS *a,ACL_ACCESS *b)
 }
 
 
+/**
+  Seek ACL entry for a mapped_user.
+
+  Caller must lock acl_cache_lock. Returns an entry for which the user name
+  matches and the password matches. Both user name and password must be
+  non-empty.
+
+  @param       thd         thread handle. If all checks are OK,
+                           thd->security_ctx->priv_user/master_access are
+                           updated. thd->security_ctx->host/ip/user are used
+                           for checks.
+  @param       passwd_salt scrambled & crypted password, received from client
+                           (to check) or the salt saved in mapped_user table.
+                           In former case thd->scramble or thd->scramble_323 is
+                           used to decrypt passwd, so they must contain
+                           original random string,
+  @param       passwd_salt_len  length of passwd (must be one of 0, 8,
+                           SCRAMBLE_LENGTH_323, SCRAMBLE_LENGTH) or length of
+                           salt in passwd_salt
+  @param       is_raw_passwd  whether password or salt is passed in passwd_salt
+                           (TRUE - password, FALSE - salt)
+  @param[out]  res         pointer to result value to be returned from
+                           acl_getroot 'thd' and 'mqh' are updated on success
+
+  @return
+    *res returns same values as returned by acl_getroot.
+    When *res == 0, this returns the entry from acl_mapped_users that should be
+    used to provide privileges for this connection. Otherwise returns NULL.
+*/
+
+static ACL_MAPPED_USER *find_mapped_user_low(THD *thd,
+                                             const char *passwd_salt,
+                                             uint passwd_salt_len,
+                                             bool is_raw_passwd,
+                                             int *res)
+{
+  /*
+    Find matching entry from mapped_user. If found, map it to an entry in user.
+  */
+  ACL_MAPPED_USER *acl_mapped_user= 0;
+  Security_context *sctx= thd->security_ctx;
+
+  DBUG_ENTER("find_mapped_user");
+
+  for (uint i= 0; i < acl_mapped_users.elements; i++)
+  {
+    ACL_MAPPED_USER *acl_mapped_user_tmp=
+        dynamic_element(&acl_mapped_users, i, ACL_MAPPED_USER *);
+    DBUG_ASSERT(acl_mapped_user_tmp->user);
+    DBUG_PRINT("info", ("find_mapped_user compare with %s",
+                        acl_mapped_user_tmp->user));
+    if (!strcmp(sctx->user, acl_mapped_user_tmp->user))
+    {
+      /* Assume password does not match. */
+      *res= 3;
+
+      /* check password: it should be empty or valid. */
+      if (!is_raw_passwd)
+      {
+        if (passwd_salt_len == acl_mapped_user_tmp->salt_len &&
+            !memcmp(passwd_salt, acl_mapped_user_tmp->salt, passwd_salt_len))
+        {
+          acl_mapped_user= acl_mapped_user_tmp;
+          *res= 0;
+        }
+      }
+      else if (passwd_salt_len == acl_mapped_user_tmp->salt_len)
+      {
+        if (acl_mapped_user_tmp->salt_len == 0 ||
+            (acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH ?
+             check_scramble(passwd_salt, thd->scramble,
+                            acl_mapped_user_tmp->salt) :
+             check_scramble_323(passwd_salt, thd->scramble,
+                                (ulong *) acl_mapped_user_tmp->salt)) == 0)
+        {
+          acl_mapped_user= acl_mapped_user_tmp;
+          break;                                /* Password matches. */
+        }
+      }
+      else if (passwd_salt_len == SCRAMBLE_LENGTH &&
+               acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH_323)
+      {
+        DBUG_PRINT("info", ("password length mismatch"));
+        *res= -1;
+      }
+      else if (passwd_salt_len == SCRAMBLE_LENGTH_323 &&
+               acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH)
+      {
+        DBUG_PRINT("info", ("password length mismatch"));
+        *res= 2;
+      }
+
+      /*
+        Don't break as there can be multiple entries per user to support
+        multiple passwords.
+      */
+    }
+  }
+
+  DBUG_RETURN(acl_mapped_user);
+}
+
+static ACL_MAPPED_USER *find_mapped_user_passwd(THD *thd,
+                                                const char *passwd,
+                                                uint passwd_len,
+                                                int *res)
+{
+  return find_mapped_user_low(thd, passwd, passwd_len, true, res);
+}
+
+static ACL_MAPPED_USER *find_mapped_user_salt(THD *thd,
+                                              const uint8 *salt,
+                                              uint salt_len,
+                                              int *res)
+{
+  return find_mapped_user_low(thd, (const char*)salt, salt_len, false, res);
+}
+
 static ACL_USER *find_user_low(THD *thd,
                                const char *user,
                                const char *host, const char *ip,
@@ -1291,118 +1409,6 @@ static void find_db_access(Security_context *sctx,
 }
 
 
-/**
-  Seek ACL entry for a mapped_user.
-
-  Caller must lock acl_cache_lock. Returns an entry for which the user name
-  matches and the password matches. Both user name and password must be
-  non-empty.
-
-  @param       thd         thread handle. If all checks are OK,
-                           thd->security_ctx->priv_user/master_access are
-                           updated. thd->security_ctx->host/ip/user are used
-                           for checks.
-  @param       passwd      scrambled & crypted password, received from client
-                           (to check): thd->scramble or thd->scramble_323 is
-                           used to decrypt passwd, so they must contain
-                           original random string,
-  @param       passwd_len  length of passwd, must be one of 0, 8,
-                           SCRAMBLE_LENGTH_323, SCRAMBLE_LENGTH
-  @param[out]  res         pointer to result value to be returned from
-                           acl_getroot 'thd' and 'mqh' are updated on success
-
-  @return
-    *res returns same values as returned by acl_getroot.
-    When *res == 0, this returns the entry from acl_users that should be
-    used to provide privileges for this connection. Otherwise returns NULL.
-*/
-
-ACL_USER *find_mapped_user(THD *thd, const char *passwd, uint passwd_len,
-                           int *res)
-{
-  /*
-    Find matching entry from mapped_user. If found, map it to an entry in user.
-  */
-  ACL_MAPPED_USER *acl_mapped_user= 0;
-  ACL_USER *acl_user= 0;
-  Security_context *sctx= thd->security_ctx;
-
-  DBUG_ENTER("find_mapped_user");
-
-  for (uint i= 0; i < acl_mapped_users.elements; i++)
-  {
-    ACL_MAPPED_USER *acl_mapped_user_tmp=
-        dynamic_element(&acl_mapped_users, i, ACL_MAPPED_USER *);
-    DBUG_ASSERT(acl_mapped_user_tmp->user);
-    DBUG_PRINT("info", ("find_mapped_user compare with %s",
-                        acl_mapped_user_tmp->user));
-    if (!strcmp(sctx->user, acl_mapped_user_tmp->user))
-    {
-      /* Assume password does not match. */
-      *res= 3;
-
-      /* check password: it should be empty or valid. */
-      if (passwd_len == acl_mapped_user_tmp->salt_len)
-      {
-        if (acl_mapped_user_tmp->salt_len == 0 ||
-            (acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH ?
-             check_scramble(passwd, thd->scramble, acl_mapped_user_tmp->salt) :
-             check_scramble_323(passwd, thd->scramble,
-                                (ulong *) acl_mapped_user_tmp->salt)) == 0)
-        {
-          acl_mapped_user= acl_mapped_user_tmp;
-          break;                                /* Password matches. */
-        }
-      }
-      else if (passwd_len == SCRAMBLE_LENGTH &&
-               acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH_323)
-      {
-        DBUG_PRINT("info", ("password length mismatch"));
-        *res= -1;
-      }
-      else if (passwd_len == SCRAMBLE_LENGTH_323 &&
-               acl_mapped_user_tmp->salt_len == SCRAMBLE_LENGTH)
-      {
-        DBUG_PRINT("info", ("password length mismatch"));
-        *res= 2;
-      }
-
-      /*
-        Don't break as there can be multiple entries per user to support
-        multiple passwords.
-      */
-    }
-  }
-
-  if (!acl_mapped_user)
-  {
-    DBUG_PRINT("info", ("find_mapped_user no match with result %d", *res));
-    DBUG_RETURN(NULL);
-  }
-
-  DBUG_PRINT("info", ("find_mapped_user search for role"));
-
-  /* Find entry from mysql.user to which this entry maps. */
-  for (uint i= 0; i < acl_users.elements; i++)
-  {
-    ACL_USER *acl_user_tmp= dynamic_element(&acl_users, i, ACL_USER *);
-    DBUG_ASSERT(acl_user_tmp->user);
-    if (!strcmp(acl_mapped_user->role, acl_user_tmp->user))
-    {
-      if (compare_hostname(&acl_user_tmp->host, sctx->host, sctx->ip))
-      {
-        acl_user= acl_user_tmp;
-        *res= 0;
-        DBUG_PRINT("info", ("find_mapped_user found role"));
-        break;
-      }
-    }
-  }
-
-  DBUG_RETURN(acl_user);
-}
-
-
 /*
   Seek ACL entry for a user, check password, SSL cypher, and if
   everything is OK, update THD user data and USER_RESOURCES struct.
@@ -1443,6 +1449,7 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
   int res= 1;
   bool mapped_user= false;
   ACL_USER *acl_user= 0;
+  ACL_MAPPED_USER *acl_mapped_user= 0;
   Security_context *sctx= thd->security_ctx;
   DBUG_ENTER("acl_getroot");
   DBUG_PRINT("enter", ("search for %s", sctx->user));
@@ -1475,13 +1482,17 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
   }
 
   sctx->uses_role= false;
-  if (res != 0)
+  if (!acl_user)
   {
-    acl_user= find_mapped_user(thd, passwd, passwd_len, &res);
-    if (acl_user)
-    {
-      mapped_user= true;
-      sctx->uses_role= true;
+    acl_mapped_user= find_mapped_user_passwd(thd, passwd, passwd_len, &res);
+    if (acl_mapped_user) {
+      acl_user= find_user_no_passwd(acl_mapped_user->role, sctx->host, sctx->ip);
+      if (acl_user)
+      {
+        res= 0;
+        mapped_user= true;
+        sctx->uses_role= true;
+      }
     }
   }
 
@@ -1643,6 +1654,8 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
       }
       else
         sctx->priv_user= (char *) "";
+      sctx->salt_len= acl_mapped_user->salt_len;
+      memcpy(sctx->salt, acl_mapped_user->salt, acl_mapped_user->salt_len);
     }
     *mqh= acl_user->user_resource;
 
@@ -1764,6 +1777,19 @@ bool acl_update_user_access(THD *thd)
                              sctx->host, sctx->ip,
                              sctx->salt, sctx->salt_len, &res);
   }
+  if (res == 3)
+    goto unlock_and_reset_user;
+
+  if (!acl_user)
+  {
+    ACL_MAPPED_USER *acl_mapped_user= find_mapped_user_salt(
+                                        thd, sctx->salt, sctx->salt_len, &res);
+    if (acl_mapped_user)
+    {
+      acl_user= find_user_no_passwd(acl_mapped_user->role, sctx->host, sctx->ip);
+    }
+  }
+
   if (!acl_user)
     goto unlock_and_reset_user;
 
@@ -1904,7 +1930,7 @@ static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
     bool user_match= (!sctx->user && !acl_user->user) ||
                      (sctx->user && acl_user->user &&
                        !strcmp(sctx->user, acl_user->user));
-    if (user_match &&
+    if (!sctx->uses_role && user_match &&
         compare_hostname(&acl_user->host, sctx->host, sctx->ip))
     {
       if (thd == tmp_thd)
@@ -1917,6 +1943,35 @@ static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
       {
         tmp_thd->awake(THD::KILL_CONNECTION);
       }
+    }
+    // !thd means user is deleted
+    else if (!thd && sctx->uses_role && acl_user->user
+            && !strcmp(sctx->priv_user, acl_user->user))
+    {
+      tmp_thd->awake(THD::KILL_CONNECTION);
+    }
+
+    VOID(pthread_mutex_unlock(&tmp_thd->LOCK_thd_data));
+  }
+  VOID(pthread_mutex_unlock(&LOCK_thread_count));
+}
+
+static void acl_kill_mapped_user_threads(ACL_MAPPED_USER *acl_mapped_user)
+{
+  THD *tmp_thd;
+
+  VOID(pthread_mutex_lock(&LOCK_thread_count));
+  I_List_iterator<THD> it(threads);
+  while ((tmp_thd= it++))
+  {
+    VOID(pthread_mutex_lock(&tmp_thd->LOCK_thd_data));
+
+    Security_context *sctx= tmp_thd->security_ctx;
+    if (sctx->uses_role && !strcmp(sctx->user, acl_mapped_user->user) &&
+	sctx->salt_len == acl_mapped_user->salt_len &&
+	!memcmp(sctx->salt, acl_mapped_user->salt, sctx->salt_len))
+    {
+      tmp_thd->awake(THD::KILL_CONNECTION);
     }
 
     VOID(pthread_mutex_unlock(&tmp_thd->LOCK_thd_data));
@@ -6526,6 +6581,7 @@ static int handle_grant_struct(enum StructGrant struct_id, bool drop,
 	break;
 
       case MAPPED_USER_STRUCT:
+        acl_kill_mapped_user_threads(acl_mapped_user);
         delete_dynamic_element(&acl_mapped_users, idx);
         break;
       }

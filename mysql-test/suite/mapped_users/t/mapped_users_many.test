@@ -229,6 +229,85 @@ select count(*) from t1;
 connection default;
 disconnect ddd_conn;
 
+# Check that automatic user permissions update works with mapped users with the
+# same name but different passwords.
+
+create mapped user user1 identified by 'foo1' role 'rolefoo';
+create mapped user user1 identified by 'foo2' role 'rolefoo2';
+
+connect (conn_foo, localhost, user1, foo1, );
+select count(*) from t1;
+--error 1142
+select count(*) from t2;
+--error 1142
+insert into t1 values (2);
+--error 1142
+insert into t2 values (2);
+connect (conn_foo2, localhost, user1, foo2, );
+select count(*) from t2;
+# not allowed
+--error 1142
+select count(*) from t1;
+--error 1142
+insert into t1 values (3);
+--error 1142
+insert into t2 values (3);
+
+connection default;
+grant insert on test.t1 to rolefoo2@localhost;
+grant insert on test.t2 to rolefoo@localhost;
+connection conn_foo;
+insert into t2 values (4);
+--error 1142
+insert into t1 values (4);
+connection conn_foo2;
+insert into t1 values (5);
+--error 1142
+insert into t2 values (5);
+connection default;
+select * from t1;
+select * from t2;
+
+# Automatic connection drops should respect password difference too.
+
+rename user rolefoo@localhost to rolefoo_copy@localhost;
+connection conn_foo;
+--error 2006  # = "MySQL server has gone away
+select * from t1;
+connection conn_foo2;
+select * from t2;
+
+connection default;
+rename user rolefoo_copy@localhost to rolefoo@localhost;
+disconnect conn_foo;
+connect (conn_foo, localhost, user1, foo1, );
+select * from t1;
+connection default;
+rename user rolefoo2@localhost to rolefoo2_copy@localhost;
+connection conn_foo2;
+--error 2006  # = "MySQL server has gone away
+select * from t2;
+connection conn_foo;
+select * from t1;
+
+connection default;
+rename user rolefoo2_copy@localhost to rolefoo2@localhost;
+disconnect conn_foo2;
+connect (conn_foo2, localhost, user1, foo2, );
+select * from t2;
+connection default;
+drop mapped user user1;
+connection conn_foo;
+--error 2006  # = "MySQL server has gone away
+select * from t1;
+connection conn_foo2;
+--error 2006  # = "MySQL server has gone away
+select * from t2;
+
+connection default;
+disconnect conn_foo;
+disconnect conn_foo2;
+
 # cleanup
 connection default;
 drop user rolefoo@localhost;
