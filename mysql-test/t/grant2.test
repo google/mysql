@@ -844,7 +844,7 @@ connection conn1;
 --error ER_QUERY_INTERRUPTED
 reap;
 --enable_result_log
---error 2006  # = "MySQL server has gone away
+--error 2006, 2013  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # When user is dropped all user connections should be killed in the middle of
@@ -861,7 +861,7 @@ connection conn1;
 --error ER_QUERY_INTERRUPTED
 reap;
 --enable_result_log
---error 2006  # = "MySQL server has gone away
+--error 2006, 2013  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # When user is renamed all user connections should be killed in the middle of
@@ -881,7 +881,7 @@ connection conn1;
 --error ER_QUERY_INTERRUPTED
 reap;
 --enable_result_log
---error 2006  # = "MySQL server has gone away
+--error 2006, 2013  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # When user password is changed through mysql.user table all user connections
@@ -897,7 +897,7 @@ flush privileges;
 connection conn1;
 --error ER_QUERY_INTERRUPTED
 select * from d1.t1;
---error 2006  # = "MySQL server has gone away
+--error 2006, 2013  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # Idle connections should also be killed when user is dropped.
@@ -907,7 +907,7 @@ select * from d1.t1;
 connection default;
 drop user user1;
 connection conn1;
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # User connections should be killed even if user was re-created while
@@ -923,7 +923,7 @@ drop user user1;
 create user user1;
 grant all privileges on *.* to user1 with grant option;
 connection conn1;
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # The same as above but with rename of the user to another name and back.
@@ -934,7 +934,7 @@ connection default;
 rename user user1 to user2;
 rename user user2 to user1;
 connection conn1;
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # When user is deleted from mysql.user table all user connections should be
@@ -946,7 +946,7 @@ delete from mysql.user where User = 'user1';
 flush privileges;
 --error ER_QUERY_INTERRUPTED
 select * from d1.t1;
---error 2006  # = "MySQL server has gone away
+--error 2006, 2013  # = "MySQL server has gone away"
 select * from d1.t1;
 
 # If user connection is idle then it will survive manipulations with the user

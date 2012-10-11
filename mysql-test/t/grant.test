@@ -1435,9 +1435,9 @@ drop user mysqluser1@localhost;
 --connection bug36544_con1
 --echo # The connection would be either dead or it should not be able to
 --echo # access to any of the stored routines.
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 call mysqltest1.p1();
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 select mysqltest1.f1();
 --disconnect bug36544_con1
 
@@ -1508,13 +1508,13 @@ rename user mysqluser1@localhost to mysqluser10@localhost;
 --connection bug36544_con2
 --echo # The connection cold be alive but should not be able to
 --echo # access to any of the stored routines or tables.
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 call mysqltest1.p1();
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 select mysqltest1.f1();
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 select * from mysqltest1.t11;
---error 2006  # = "MySQL server has gone away
+--error 2006  # = "MySQL server has gone away"
 select * from mysqltest1.t22;
 --disconnect bug36544_con2
 

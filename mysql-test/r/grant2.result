@@ -610,7 +610,7 @@ n
 8
 10
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 use d1;
 select * from t1;
 n
@@ -619,7 +619,7 @@ n
 call inf_loop();
 drop user user1;
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 create user user1;
 grant all privileges on *.* to user1 with grant option;
 use d1;
@@ -630,7 +630,7 @@ n
 call inf_loop();
 rename user user1 to user2;
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 rename user user2 to user1;
 select * from d1.t1;
 n
@@ -641,7 +641,7 @@ flush privileges;
 select * from d1.t1;
 ERROR 70100: Query execution was interrupted
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from d1.t1;
 n
 8
@@ -677,7 +677,7 @@ flush privileges;
 select * from d1.t1;
 ERROR 70100: Query execution was interrupted
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 create user user1;
 grant all privileges on *.* to user1 with grant option;
 select * from d1.t1;
