@@ -11,28 +11,11 @@ source google/env.inc
 [[ -a build/client/mysql ]] || die "mysql is missing"
 BIN_DIR=$(readlink -f build/)
 
-read -a cmd <<< "${BIN_DIR}/sql/mysqld \
-  --no-defaults \
-  --datadir=${INSTANCE_DIR}/datadir \
-  --tmpdir=${INSTANCE_DIR}/tmp/ \
-  --language=${BIN_DIR}/sql/share/english \
-  --character-sets-dir=${BIN_DIR}/sql/share/charsets \
-  --sock=${INSTANCE_DIR}/mysql.sock \
-  --port=${PORT} \
-  --server_id=${ID} \
-  --pid-file=${INSTANCE_DIR}/mysql.pid \
-  ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
-
+NEEDS_BOOTSTRAP=
 if [[ ! -d ${INSTANCE_DIR} ]]
 then
   mkdir -p ${INSTANCE_DIR}/datadir/mysql ${INSTANCE_DIR}/tmp
-
-  echo ">>>>>> Bootstraping ${NAME}..."
-  ( echo "use mysql;"; \
-    cat ${SRC_DIR}/scripts/mysql_system_tables.sql \
-    ${SRC_DIR}/scripts/mysql_system_tables_data.sql ) | \
-  ${cmd[*]} --bootstrap \
-    &> ${INSTANCE_DIR}/mysql.err
+  NEEDS_BOOTSTRAP=yes
 fi
 
 if [[ -a ${INSTANCE_DIR}/mysql.port ]]
@@ -51,6 +34,28 @@ else
   LAST_ID=$(echo 0 $(find instance/ -name mysql.id | xargs cat) | fmt -1 | sort -n | tail -n1)
   ID=$((${LAST_ID} + 1))
   echo ${ID} > ${INSTANCE_DIR}/mysql.id
+fi
+
+read -a cmd <<< "${BIN_DIR}/sql/mysqld \
+  --no-defaults \
+  --datadir=${INSTANCE_DIR}/datadir \
+  --tmpdir=${INSTANCE_DIR}/tmp/ \
+  --language=${BIN_DIR}/sql/share/english \
+  --character-sets-dir=${BIN_DIR}/sql/share/charsets \
+  --sock=${INSTANCE_DIR}/mysql.sock \
+  --port=${PORT} \
+  --server_id=${ID} \
+  --pid-file=${INSTANCE_DIR}/mysql.pid \
+  ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
+
+if [[ ! -z ${NEEDS_BOOTSTRAP} ]]
+then
+  echo ">>>>>> Bootstraping ${NAME}..."
+  ( echo "use mysql;"; \
+    cat ${SRC_DIR}/scripts/mysql_system_tables.sql \
+    ${SRC_DIR}/scripts/mysql_system_tables_data.sql ) | \
+  ${cmd[*]} --bootstrap \
+    &> ${INSTANCE_DIR}/mysql.err
 fi
 
 echo ">>>>>> Starting ${NAME}..."
