@@ -290,7 +290,7 @@ typedef struct st_log_info
 class Log_event;
 class Rows_log_event;
 
-enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN };
+enum enum_log_type { LOG_UNKNOWN, LOG_NORMAL, LOG_BIN, LOG_AUDIT };
 enum enum_log_state { LOG_OPENED, LOG_CLOSED, LOG_TO_BE_OPENED };
 
 /*
@@ -344,7 +344,7 @@ public:
 class MYSQL_QUERY_LOG: public MYSQL_LOG
 {
 public:
-  MYSQL_QUERY_LOG() : last_time(0) {}
+  MYSQL_QUERY_LOG() : last_time(0), record_same_date(FALSE) {}
   void reopen_file();
   bool write(time_t event_time, const char *user_host,
              uint user_host_len, int thread_id,
@@ -374,9 +374,21 @@ public:
                 generate_name(log_name, ".log", 0, buf),
                 LOG_NORMAL, 0, WRITE_CACHE);
   }
+  bool open_audit_log(const char *log_name)
+  {
+    char buf[FN_REFLEN];
+    record_same_date = TRUE;
+    return open(
+#ifdef HAVE_PSI_INTERFACE
+                key_file_query_log,
+#endif
+                generate_name(log_name, "-audit.log", 0, buf),
+                LOG_AUDIT, 0, WRITE_CACHE);
+  }
 
 private:
   time_t last_time;
+  bool record_same_date;
 };
 
 /*
@@ -830,6 +842,11 @@ public:
                            const char *command_type, uint command_type_len,
                            const char *sql_text, uint sql_text_len,
                            CHARSET_INFO *client_cs)= 0;
+  virtual bool log_audit(THD *thd, my_hrtime_t event_time, const char *user_host,
+                         uint user_host_len, int thread_id,
+                         const char *command_type, uint command_type_len,
+                         const char *sql_text, uint sql_text_len,
+                         CHARSET_INFO *client_cs)=0;
   virtual ~Log_event_handler() {}
 };
 
@@ -859,6 +876,11 @@ public:
                            const char *command_type, uint command_type_len,
                            const char *sql_text, uint sql_text_len,
                            CHARSET_INFO *client_cs);
+  virtual bool log_audit(THD *thd, my_hrtime_t event_time, const char *user_host,
+                         uint user_host_len, int thread_id,
+                         const char *command_type, uint command_type_len,
+                         const char *sql_text, uint sql_text_len,
+                         CHARSET_INFO *client_cs);
 
   int activate_log(THD *thd, uint log_type);
 };
@@ -867,11 +889,13 @@ public:
 /* type of the log table */
 #define QUERY_LOG_SLOW 1
 #define QUERY_LOG_GENERAL 2
+#define QUERY_LOG_AUDIT 3
 
 class Log_to_file_event_handler: public Log_event_handler
 {
   MYSQL_QUERY_LOG mysql_log;
   MYSQL_QUERY_LOG mysql_slow_log;
+  MYSQL_QUERY_LOG mysql_audit_log;
   bool is_initialized;
 public:
   Log_to_file_event_handler(): is_initialized(FALSE)
@@ -891,14 +915,20 @@ public:
                            const char *command_type, uint command_type_len,
                            const char *sql_text, uint sql_text_len,
                            CHARSET_INFO *client_cs);
+  virtual bool log_audit(THD *thd, my_hrtime_t event_time, const char *user_host,
+                         uint user_host_len, int thread_id,
+                         const char *command_type, uint command_type_len,
+                         const char *sql_text, uint sql_text_len,
+                         CHARSET_INFO *client_cs);
   void flush();
   void init_pthread_objects();
   MYSQL_QUERY_LOG *get_mysql_slow_log() { return &mysql_slow_log; }
   MYSQL_QUERY_LOG *get_mysql_log() { return &mysql_log; }
+  MYSQL_QUERY_LOG *get_mysql_audit_log() { return &mysql_audit_log; }
 };
 
 
-/* Class which manages slow, general and error log event handlers */
+/* Class which manages slow, general, audit and error log event handlers */
 class LOGGER
 {
   mysql_rwlock_t LOCK_logger;
@@ -913,6 +943,7 @@ class LOGGER
   Log_event_handler *error_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
   Log_event_handler *slow_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
   Log_event_handler *general_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
+  Log_event_handler *audit_log_handler_list[MAX_LOG_HANDLERS_NUM + 1];
 
 public:
 
@@ -938,6 +969,7 @@ public:
   bool flush_logs(THD *thd);
   bool flush_slow_log();
   bool flush_general_log();
+  bool flush_audit_log();
   /* Perform basic logger cleanup. this will leave e.g. error log open. */
   void cleanup_base();
   /* Free memory. Nothing could be logged after this function is called */
@@ -950,14 +982,20 @@ public:
                          const char *format, va_list args);
   bool general_log_write(THD *thd, enum enum_server_command command,
                          const char *query, uint query_length);
+  bool audit_log_print(THD *thd, enum enum_server_command command,
+                       const char *format, va_list args);
+  bool audit_log_write(THD *thd, enum enum_server_command command,
+                       const char *query, uint query_length);
 
   /* we use this function to setup all enabled log event handlers */
   int set_handlers(ulonglong error_log_printer,
                    ulonglong slow_log_printer,
-                   ulonglong general_log_printer);
+                   ulonglong general_log_printer,
+                   ulonglong audit_log_printer);
   void init_error_log(ulonglong error_log_printer);
   void init_slow_log(ulonglong slow_log_printer);
   void init_general_log(ulonglong general_log_printer);
+  void init_audit_log(ulonglong audit_log_printer);
   void deactivate_log_handler(THD* thd, uint log_type);
   bool activate_log_handler(THD* thd, uint log_type);
   MYSQL_QUERY_LOG *get_slow_log_file_handler() const
@@ -970,6 +1008,12 @@ public:
   { 
     if (file_log_handler)
       return file_log_handler->get_mysql_log();
+    return NULL;
+  }
+  MYSQL_QUERY_LOG *get_audit_log_file_handler() const
+  {
+    if (file_log_handler)
+      return file_log_handler->get_mysql_audit_log();
     return NULL;
   }
 };
@@ -1004,6 +1048,13 @@ bool general_log_print(THD *thd, enum enum_server_command command,
 
 bool general_log_write(THD *thd, enum enum_server_command command,
                        const char *query, uint query_length);
+
+bool audit_log_print(THD *thd, enum enum_server_command command,
+                     const char *format, ...);
+
+bool audit_log_write(THD *thd, enum enum_server_command command,
+                     const char *query, uint query_length);
+extern void write_audit_record(LEX *lex, THD *thd);
 
 void sql_perror(const char *message);
 bool flush_error_log();

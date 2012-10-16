@@ -12,6 +12,8 @@ left join t1 on variable_name=test_name where test_name is null;
 there should be *no* variables listed below:
 allow_delayed_write
 allow_xa
+audit_log_connections
+audit_log_super
 block_user_access
 deprecated_engines
 reserved_super_connections

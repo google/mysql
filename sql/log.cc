@@ -67,6 +67,37 @@ LOGGER logger;
 
 MYSQL_BIN_LOG mysql_bin_log(&sync_binlog_period);
 
+/*
+  Set true if logging is to be enabled for all tables, whereby all
+  checks against individual tables are disabled.
+*/
+static bool audit_log_all_tables;
+
+/*
+  Pointer to a copy of the parameter given to --audit_log_tables with
+  comma-separated-tablenames replaced with null-separated-tablenames.  The
+  audit_log_tables hash table makes references into this.
+*/
+static char *audit_log_table_list= NULL;
+
+/*
+   Keep track of the state of our audit_log hash table;
+*/
+static bool is_audit_hashtable_inited= FALSE;
+
+/*
+   Tables that we want to force a log of queries on
+*/
+static HASH audit_log_tables;
+
+/*
+  A flag array of SQL commands that should be filtered.
+  If an element is marked TRUE, then the SQL command will be skipped.
+  If an element is marked FALSE (the default), then the SQL command will
+  be logged.
+*/
+static bool audit_stmt_filter[SQLCOM_END + 1];
+
 static bool test_if_number(const char *str,
 			   ulong *res, bool allow_wildcards);
 static int binlog_init(void *p);
@@ -520,6 +551,8 @@ bool LOGGER::is_log_table_enabled(uint log_table_type)
     return (table_log_handler != NULL) && opt_slow_log;
   case QUERY_LOG_GENERAL:
     return (table_log_handler != NULL) && opt_log ;
+  case QUERY_LOG_AUDIT:
+    return (table_log_handler != NULL) && opt_audit_log;
   default:
     DBUG_ASSERT(0);
     return FALSE;                             /* make compiler happy */
@@ -758,6 +791,22 @@ err:
   DBUG_RETURN(result);
 }
 
+bool Log_to_csv_event_handler::
+  log_audit(THD *thd, my_hrtime_t event_time, const char *user_host,
+            uint user_host_len, int thread_id,
+            const char *command_type, uint command_type_len,
+            const char *sql_text, uint sql_text_len,
+            CHARSET_INFO *client_cs)
+{
+  /*
+    Filler function at the moment, due to the fact that log_audit is a
+    virtual function in Log_event_handler, and thus must be
+    implemented to avoid errors.
+  */
+  sql_print_warning("Logging the audit log to CSV was attempted. "
+                    "This is not a supported operation.");
+  return false;
+}
 
 /*
   Log a query to the slow log table
@@ -999,6 +1048,7 @@ void Log_to_file_event_handler::init_pthread_objects()
 {
   mysql_log.init_pthread_objects();
   mysql_slow_log.init_pthread_objects();
+  mysql_audit_log.init_pthread_objects();
 }
 
 
@@ -1043,6 +1093,26 @@ bool Log_to_file_event_handler::
   return retval;
 }
 
+/**
+   Wrapper around MYSQL_LOG::write() for audit log.
+*/
+
+bool Log_to_file_event_handler::
+  log_audit(THD *thd, my_hrtime_t event_time, const char *user_host,
+            uint user_host_len, int thread_id,
+            const char *command_type, uint command_type_len,
+            const char *sql_text, uint sql_text_len,
+            CHARSET_INFO *client_cs)
+{
+  Silence_log_table_errors error_handler;
+  thd->push_internal_handler(&error_handler);
+  bool retval= mysql_audit_log.write(hrtime_to_time(event_time), user_host,
+                               user_host_len,
+                               thread_id, command_type, command_type_len,
+                               sql_text, sql_text_len);
+  thd->pop_internal_handler();
+  return retval;
+}
 
 bool Log_to_file_event_handler::init()
 {
@@ -1053,6 +1123,9 @@ bool Log_to_file_event_handler::init()
 
     if (opt_log)
       mysql_log.open_query_log(opt_logname);
+
+    if (opt_audit_log)
+      mysql_audit_log.open_audit_log(opt_audit_logname);
 
     is_initialized= TRUE;
   }
@@ -1065,6 +1138,7 @@ void Log_to_file_event_handler::cleanup()
 {
   mysql_log.cleanup();
   mysql_slow_log.cleanup();
+  mysql_audit_log.cleanup();
 }
 
 void Log_to_file_event_handler::flush()
@@ -1074,6 +1148,8 @@ void Log_to_file_event_handler::flush()
     mysql_log.reopen_file();
   if (opt_slow_log)
     mysql_slow_log.reopen_file();
+  if (opt_audit_log)
+    mysql_audit_log.reopen_file();
 }
 
 /*
@@ -1105,6 +1181,34 @@ bool LOGGER::error_log_print(enum loglevel level, const char *format,
   return error;
 }
 
+const uchar *audit_log_tables_get_key(const char *table,
+                                      size_t *length,
+                                      my_bool not_used __attribute__((unused)))
+{
+  *length= strlen(table);
+  return (uchar*) table;
+}
+
+void init_audit_logging(void)
+{
+  // Default to turning off audit logging.
+  audit_log_all_tables= false;
+  /*
+    Initialise statement filters to open logging for all.  These are
+    selectively turned off by command line options.
+  */
+  for (int x= 0; x <= SQLCOM_END; x++)
+    audit_stmt_filter[x]= false;
+}
+
+void free_audit_logging(void)
+{
+  if (is_audit_hashtable_inited)
+    my_hash_free(&audit_log_tables);
+  if (audit_log_table_list)
+    free(audit_log_table_list);
+}
+
 
 void LOGGER::cleanup_base()
 {
@@ -1118,6 +1222,7 @@ void LOGGER::cleanup_base()
   }
   if (file_log_handler)
     file_log_handler->cleanup();
+  free_audit_logging();
 }
 
 
@@ -1141,6 +1246,13 @@ void LOGGER::init_base()
 {
   DBUG_ASSERT(inited == 0);
   inited= 1;
+
+  /*
+    Here we initialize all of our audit log settings to the "off" position.
+    logging, but will turn off audit logging itself.  This works
+    because we have not yet checked the command line options.
+  */
+  init_audit_logging();
 
   /*
     Here we create file log handler. We don't do it for the table log handler
@@ -1226,6 +1338,30 @@ bool LOGGER::flush_general_log()
   /* Reopen general log file */
   if (opt_log)
     file_log_handler->get_mysql_log()->reopen_file();
+
+  /* End of log flush */
+  logger.unlock();
+
+  return 0;
+}
+
+
+/**
+  Close and reopen the audit log (with locks).
+
+  @returns FALSE.
+*/
+bool LOGGER::flush_audit_log()
+{
+  /*
+    Now we lock logger, as nobody should be able to use logging routines while
+    log tables are closed
+  */
+  logger.lock_exclusive();
+
+  /* Reopen general log file */
+  if (opt_audit_log)
+    file_log_handler->get_mysql_audit_log()->reopen_file();
 
   /* End of log flush */
   logger.unlock();
@@ -1367,6 +1503,61 @@ bool LOGGER::general_log_print(THD *thd, enum enum_server_command command,
   return general_log_write(thd, command, message_buff, message_buff_len);
 }
 
+bool LOGGER::audit_log_write(THD *thd, enum enum_server_command command,
+                               const char *query, uint query_length)
+{
+  bool error= FALSE;
+  Log_event_handler **current_handler= audit_log_handler_list;
+  char user_host_buff[MAX_USER_HOST_SIZE + 1];
+  Security_context *sctx= thd->security_ctx;
+  uint user_host_len= 0;
+  my_hrtime_t current_time;
+
+  DBUG_ASSERT(thd);
+
+  lock_shared();
+  if (!opt_audit_log)
+  {
+    unlock();
+    return 0;
+  }
+  user_host_len= strxnmov(user_host_buff, MAX_USER_HOST_SIZE,
+                          sctx->priv_user, "[",
+                          sctx->user ? sctx->user : "", "] @ ",
+                          sctx->host ? sctx->host : "", " [",
+                          sctx->ip ? sctx->ip : "", "]", NullS) -
+                                                          user_host_buff;
+
+  current_time= my_hrtime();
+  while (*current_handler)
+    error|= (*current_handler++)->
+      log_audit(thd, current_time, user_host_buff,
+                user_host_len, thd->thread_id,
+                command_name[(uint) command].str,
+                command_name[(uint) command].length,
+                query, query_length,
+                thd->variables.character_set_client) || error;
+  unlock();
+
+  return error;
+}
+
+bool LOGGER::audit_log_print(THD *thd, enum enum_server_command command,
+                             const char *format, va_list args)
+{
+  uint message_buff_len= 0;
+  char message_buff[MAX_LOG_BUFFER_SIZE];
+
+  /* prepare message */
+  if (format)
+    message_buff_len= my_vsnprintf(message_buff, sizeof(message_buff),
+                                   format, args);
+  else
+    message_buff[0]= '\0';
+
+  return audit_log_write(thd, command, message_buff, message_buff_len);
+}
+
 void LOGGER::init_error_log(ulonglong error_log_printer)
 {
   if (error_log_printer & LOG_NONE)
@@ -1440,6 +1631,30 @@ void LOGGER::init_general_log(ulonglong general_log_printer)
   }
 }
 
+void LOGGER::init_audit_log(ulonglong audit_log_printer)
+{
+  if (audit_log_printer & LOG_NONE)
+  {
+    audit_log_handler_list[0]= 0;
+    return;
+  }
+
+  switch (audit_log_printer) {
+  case LOG_FILE:
+    audit_log_handler_list[0]= file_log_handler;
+    audit_log_handler_list[1]= 0;
+    break;
+  case LOG_TABLE:
+    audit_log_handler_list[0]= table_log_handler;
+    audit_log_handler_list[1]= 0;
+    break;
+  case LOG_TABLE|LOG_FILE:
+    audit_log_handler_list[0]= file_log_handler;
+    audit_log_handler_list[1]= table_log_handler;
+    audit_log_handler_list[2]= 0;
+    break;
+  }
+}
 
 bool LOGGER::activate_log_handler(THD* thd, uint log_type)
 {
@@ -1485,6 +1700,25 @@ bool LOGGER::activate_log_handler(THD* thd, uint log_type)
       }
     }
     break;
+  case QUERY_LOG_AUDIT:
+    if (!opt_audit_log)
+    {
+      file_log= file_log_handler->get_mysql_audit_log();
+
+      file_log->open_audit_log(opt_audit_logname);
+      if (table_log_handler->activate_log(thd, QUERY_LOG_AUDIT))
+      {
+        /* Error printed by open table in activate_log() */
+        res= TRUE;
+        file_log->close(0);
+      }
+      else
+      {
+        init_audit_log(log_output_options);
+        opt_audit_log= TRUE;
+      }
+    }
+    break;
   default:
     DBUG_ASSERT(0);
   }
@@ -1508,6 +1742,10 @@ void LOGGER::deactivate_log_handler(THD *thd, uint log_type)
     tmp_opt= &opt_log;
     file_log= file_log_handler->get_mysql_log();
     break;
+  case QUERY_LOG_AUDIT:
+    tmp_opt= &opt_audit_log;
+    file_log= file_log_handler->get_mysql_audit_log();
+    break;
   default:
     MY_ASSERT_UNREACHABLE();
   }
@@ -1530,18 +1768,21 @@ bool Log_to_csv_event_handler::init()
 
 int LOGGER::set_handlers(ulonglong error_log_printer,
                          ulonglong slow_log_printer,
-                         ulonglong general_log_printer)
+                         ulonglong general_log_printer,
+                         ulonglong audit_log_printer)
 {
   /* error log table is not supported yet */
   DBUG_ASSERT(error_log_printer < LOG_TABLE);
 
   lock_exclusive();
 
-  if ((slow_log_printer & LOG_TABLE || general_log_printer & LOG_TABLE) &&
+  if ((slow_log_printer & LOG_TABLE || general_log_printer & LOG_TABLE
+       || audit_log_printer & LOG_TABLE) &&
       !is_log_tables_initialized)
   {
     slow_log_printer= (slow_log_printer & ~LOG_TABLE) | LOG_FILE;
     general_log_printer= (general_log_printer & ~LOG_TABLE) | LOG_FILE;
+    audit_log_printer= (audit_log_printer & ~LOG_TABLE) | LOG_FILE;
 
     sql_print_error("Failed to initialize log tables. "
                     "Falling back to the old-fashioned logs");
@@ -1550,6 +1791,7 @@ int LOGGER::set_handlers(ulonglong error_log_printer,
   init_error_log(error_log_printer);
   init_slow_log(slow_log_printer);
   init_general_log(general_log_printer);
+  init_audit_log(audit_log_printer);
 
   unlock();
 
@@ -2520,7 +2762,7 @@ bool MYSQL_LOG::open(
                         ((log_type == LOG_BIN) ? MY_WAIT_IF_FULL : 0))))
     goto err;
 
-  if (log_type == LOG_NORMAL)
+  if (log_type == LOG_NORMAL || log_type == LOG_AUDIT)
   {
     char *end;
     int len=my_snprintf(buff, sizeof(buff), "%s, Version: %s (%s). "
@@ -2642,7 +2884,7 @@ void MYSQL_LOG::cleanup()
 int MYSQL_LOG::generate_new_name(char *new_name, const char *log_name)
 {
   fn_format(new_name, log_name, mysql_data_home, "", 4);
-  if (log_type == LOG_BIN)
+  if (log_type == LOG_BIN || log_type == LOG_AUDIT)
   {
     if (!fn_ext(log_name)[0])
     {
@@ -2750,7 +2992,7 @@ bool MYSQL_QUERY_LOG::write(time_t event_time, const char *user_host,
     DBUG_EXECUTE_IF("reset_log_last_time", last_time= 0;);
 
     /* Note that my_b_write() assumes it knows the length for this */
-      if (event_time != last_time)
+      if (record_same_date || event_time != last_time)
       {
         last_time= event_time;
 
@@ -2859,7 +3101,7 @@ bool MYSQL_QUERY_LOG::write(THD *thd, time_t current_time,
 
     if (!(specialflag & SPECIAL_SHORT_LOG_FORMAT))
     {
-      if (current_time != last_time)
+      if (record_same_date || current_time != last_time)
       {
         last_time= current_time;
         struct tm start;
@@ -6047,6 +6289,24 @@ bool general_log_write(THD *thd, enum enum_server_command command,
   return FALSE;
 }
 
+bool audit_log_print(THD *thd, enum enum_server_command command,
+                     const char *format, ...)
+{
+  va_list args;
+  uint error= 0;
+
+  va_start(args, format);
+  error= logger.audit_log_print(thd, command, format, args);
+  va_end(args);
+
+  return error;
+}
+
+bool audit_log_write(THD *thd, enum enum_server_command command,
+                       const char *query, uint query_length)
+{
+  return logger.audit_log_write(thd, command, query, query_length);
+}
 
 static void
 binlog_checkpoint_callback(void *cookie)
@@ -7855,6 +8115,402 @@ void MYSQL_BIN_LOG::signal_update()
   signal_cnt++;
   mysql_cond_broadcast(&update_cond);
   DBUG_VOID_RETURN;
+}
+
+void init_audit_log_tables(const char* comma_list)
+{
+  if (my_hash_init(&audit_log_tables, system_charset_info, 5,
+                0, 0, (my_hash_get_key) audit_log_tables_get_key,
+                0, 0))
+  {
+    sql_print_error("Initializing audit log tables failed.");
+#ifndef EMBEDDED_LIBRARY
+    unireg_abort(1);
+#else
+    return;
+#endif
+  }
+  is_audit_hashtable_inited= TRUE;
+  if (comma_list == NULL || strlen(comma_list) == 0)
+    return;
+
+  if (!strcasecmp(comma_list, "alltables"))
+  {
+    audit_log_all_tables= true;
+  }
+  else
+  {
+    audit_log_all_tables= false;
+    audit_log_table_list= strdup(comma_list);
+    char *p= audit_log_table_list;
+    char *q;
+    while ((q= strchr(p, ',')))
+    {
+      *q= 0;
+      my_hash_insert(&audit_log_tables, (uchar *) p);
+      p= q + 1;
+    }
+    if (strlen(p) > 0)
+    {
+      my_hash_insert(&audit_log_tables, (uchar *) p);
+    }
+  }
+}
+
+/*
+  Determine whether or not a statement should be logged.
+
+  @param[in]  thd       the connection object for this query
+  @param[in]  command   the command
+
+  @return  whether or not 'command' should be logged.
+    @retval true   NOT logged
+    @retval false  logged
+*/
+
+static bool audit_log_block_stmt(THD *thd, enum enum_sql_command command)
+{
+  if (command < 0 || command >= SQLCOM_END)
+    return true;
+  return audit_stmt_filter[command];
+}
+
+/**
+   Adds a comma separator when the string is not empty.
+
+   @param[in,out]  str   string to which we append a comma
+
+   @return Status of the append operation
+     @retval TRUE    append fails (out of memory)
+     @retval FALSE   OK
+*/
+
+static bool separate_with_comma(String &str)
+{
+  if (!str.is_empty())
+  {
+    return str.append(',');
+  }
+  else
+  {
+    return false;
+  }
+}
+
+/**
+   Finds the first table in lex.select_lex which returns true.
+
+   Traverses the list of of lex.select_lex tables calling visit_table for
+   each one that has a table_name. Stops a traversal and returns true
+   as soon as the first call to visit_table returns true. Returns false
+   if evaluation went all the way to the end (that is it computes a
+   boolean OR of all visit calls with short-circuiting).
+
+   @param[in]  table   the list of tables to check
+
+   @return whether visit_table is true for any of our tables
+     @retval true   we have successfully visited a table
+     @retval false  none of the tables were visited successfully.
+*/
+
+class TableVisitingAlgorithm
+{
+public:
+  virtual ~TableVisitingAlgorithm() {}
+  virtual bool visit_table(const TABLE_LIST& table)= 0;
+  bool visit(THD* thd)
+  {
+    for (TABLE_LIST *table= (TABLE_LIST*) thd->lex->select_lex.table_list.first;
+         table;
+         table= table->next_global)
+    {
+      if (NULL != table->table_name)
+      {
+        /*
+          add_table_to_list may guarantee table_name != NULL, but I
+          can't tell easily.
+        */
+        if (visit_table(*table))
+        {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+};
+
+class AuditComputer : public TableVisitingAlgorithm
+{
+public:
+  virtual ~AuditComputer() {}
+  /**
+     Check if #table is part of our audit list.
+
+     @param[in]  table   the table to check
+
+     @return Operation status
+       @retval  true   #table is part of our audit list
+       @retval  false  #table is not part of our audit list
+  */
+  bool visit_table(const TABLE_LIST& table)
+  {
+    return my_hash_search(&audit_log_tables, (uchar *) table.table_name,
+                          strlen(table.table_name));
+  }
+};
+
+class AliasCollector : public TableVisitingAlgorithm
+{
+public:
+  String aliases_;
+  virtual ~AliasCollector() {}
+  /**
+     Collect all affected tables along with their aliases (if any)
+     into a string.
+
+     #aliases_ will contain the current collection of table aliases as a string.
+
+     @param[in]  table   the table to add to the collection
+
+     @return Operation status
+       @retval  true   out of memory ERROR
+       @retval  false  OK
+  */
+
+  bool visit_table(const TABLE_LIST& table)
+  {
+    if (separate_with_comma(aliases_) ||
+        aliases_.append(table.table_name))
+    {
+      return true;
+    }
+    if (table.alias != NULL && strcmp(table.alias, table.table_name))
+    {
+      if (aliases_.append(' ') ||
+          aliases_.append(table.alias))
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+static const char* null_safe(const char *data)
+{
+  return data ? data : "null";
+}
+
+
+/**
+  Determine whether a statement executed by a SUPER user should be logged.
+
+  @param[in]  command   the command
+
+  @return  whether or not 'command' should be logged.
+    @retval true   NOT logged
+    @retval false  logged
+*/
+
+static bool is_super_loggable(enum enum_sql_command command)
+{
+  return (is_update_query(command) ||
+          command == SQLCOM_GRANT ||
+          command == SQLCOM_CREATE_DB ||
+          command == SQLCOM_ALTER_DB ||
+          command == SQLCOM_REPAIR ||
+          command == SQLCOM_REVOKE ||
+          command == SQLCOM_REVOKE_ALL ||
+          command == SQLCOM_OPTIMIZE ||
+          command == SQLCOM_CHECK ||
+          command == SQLCOM_ANALYZE ||
+          command == SQLCOM_RENAME_TABLE ||
+          command == SQLCOM_PURGE ||
+          command == SQLCOM_DROP_USER ||
+          command == SQLCOM_CREATE_USER ||
+          command == SQLCOM_RENAME_USER ||
+          command == SQLCOM_EXECUTE);
+}
+
+
+
+/**
+   Write query information to the audit log.
+
+   @param[in]  lex   the lex object for this query
+   @param[in]  thd   the thread object for this connection
+*/
+void write_audit_record(LEX *lex, THD *thd)
+{
+  if (thd->main_security_ctx.user == NULL)
+  {
+    /*
+      thd->user is NULL on the slave doing replication, in such a
+      case the audit record has already been created on the master.
+    */
+    return;
+  }
+
+  /* For SUPER logging, log the full SQL. */
+  if (opt_audit_log && opt_audit_log_super &&
+      (thd->security_ctx->master_access & SUPER_ACL) &&
+      is_super_loggable(lex->sql_command))
+  {
+    audit_log_print(thd, COM_QUERY, "%s@%s (%d): SUPER %s",
+                    null_safe(thd->main_security_ctx.user),
+                    null_safe(thd->main_security_ctx.host_or_ip),
+                    lex->sql_command,
+                    thd->query());
+  }
+
+  if (!(opt_audit_log && my_hash_inited(&audit_log_tables)))
+  {
+    return;
+  }
+
+  /*
+    Check whether this particular statement should be logged,
+    according to anything the user might have put on --audit_log_filter.
+  */
+  if (audit_log_block_stmt(thd, lex->sql_command))
+    return;
+
+  if (!audit_log_all_tables)
+  {
+    AuditComputer audit_computer;
+    if (!audit_computer.visit(thd))
+    {
+      /*
+        AuditComputer returned false, which means none of the tables in
+        the query are monitored, hence there is nothing to audit.
+      */
+      return;
+    }
+  }
+
+  AliasCollector alias_collector;
+  if (alias_collector.visit(thd))
+  {
+    /* Aborts on an out of memory condition. */
+    return;
+  }
+
+  char *detail= NULL;
+  int count= -1;
+  /*
+    All switch cases populate detail with information about the query
+    and must set count to a value != -1 if they succeed. If so, detail
+    contains specific information about the query and must be freed
+    before leaving this function.
+  */
+  switch (lex->sql_command)
+  {
+  case SQLCOM_SELECT:
+    count= asprintf(&detail,
+                    "SELECT FROM [%s] [Sent %llu Rows]",
+                    alias_collector.aliases_.c_ptr_safe(),
+                    thd->get_sent_row_count());
+    break;
+  case SQLCOM_UPDATE:
+    /*
+       TODO: Fix these and following with row counts after stats functionality
+       has been ported.
+    */
+    count= asprintf(&detail,
+                    "UPDATE [%s]",
+                    alias_collector.aliases_.c_ptr_safe());
+    break;
+  case SQLCOM_INSERT:
+  case SQLCOM_INSERT_SELECT:
+  case SQLCOM_REPLACE:
+  case SQLCOM_REPLACE_SELECT:
+    count= asprintf(&detail,
+                    "INSERT INTO [%s]",
+                    alias_collector.aliases_.c_ptr_safe());
+    break;
+  case SQLCOM_DELETE:
+    count= asprintf(&detail,
+                    "DELETE FROM [%s]",
+                    alias_collector.aliases_.c_ptr_safe());
+    break;
+  default:
+    /*
+      Logs the raw text of the query in case it is not one of the
+      known ones above. This seems to be safe as there is no case
+      other SQL text would contain sensitive information.
+    */
+    count= asprintf(&detail,
+                    "%s",
+                    thd->query());
+    break;
+  }
+  if (count != -1)
+  {
+    /*
+      Some of the null_safe's below are unnecessary, they are only to
+      make this code safer. I never want the code to abort when a
+      NULL is printed.
+    */
+    audit_log_print(thd, COM_QUERY, "%s@%s (%d): %s",
+                    null_safe(thd->main_security_ctx.user),
+                    null_safe(thd->main_security_ctx.host_or_ip),
+                    lex->sql_command,
+                    null_safe(detail));
+    if (detail)
+    {
+      free(detail);
+    }
+  }
+  else
+  {
+    audit_log_print(thd, COM_QUERY, "Unable to build detail");
+  }
+}
+
+void init_audit_log_filter(const char *comma_list)
+{
+  if (comma_list == NULL || *comma_list == '\0')
+    return;
+  char *buf= strdup(comma_list);
+  char *p= buf;
+  while (*p != '\0')
+  {
+    char *q= strchr(p, ',');
+    if (q != NULL)
+      *q= '\0';
+
+    /*
+      User supplied option of SQL statements that should not be
+      logged.  By default all statements are logged.
+    */
+    if (!strcasecmp(p, "select"))
+      audit_stmt_filter[SQLCOM_SELECT]= true;
+    else if (!strcasecmp(p, "insert"))
+    {
+      audit_stmt_filter[SQLCOM_INSERT]= true;
+      audit_stmt_filter[SQLCOM_INSERT_SELECT]= true;
+      audit_stmt_filter[SQLCOM_REPLACE]= true;
+      audit_stmt_filter[SQLCOM_REPLACE_SELECT]= true;
+    }
+    else if (!strcasecmp(p, "delete"))
+    {
+      audit_stmt_filter[SQLCOM_DELETE]= true;
+      audit_stmt_filter[SQLCOM_DELETE_MULTI]= true;
+    }
+    else if (!strcasecmp(p, "update"))
+      audit_stmt_filter[SQLCOM_UPDATE]= true;
+    else
+    {
+      sql_print_error("Unrecognised option '%s' to --audit_log_filter", p);
+    }
+
+    // This means we've reached the last item in the list.
+    if (q == NULL)
+      break;
+    p= q + 1;
+  }
+  free(buf);
 }
 
 #ifdef _WIN32

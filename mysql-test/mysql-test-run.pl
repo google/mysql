@@ -163,6 +163,7 @@ my $path_config_file;           # The generated config file, var/my.cnf
 our $opt_vs_config = $ENV{'MTR_VS_CONFIG'};
 
 my @DEFAULT_SUITES= qw(
+    audit_log-
     main-
     binlog-
     csv-

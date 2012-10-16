@@ -12285,6 +12285,13 @@ static void login_failed_error(THD *thd)
                     thd->main_security_ctx.user,
                     thd->main_security_ctx.host_or_ip,
                     thd->password ? ER(ER_YES) : ER(ER_NO));
+  if (opt_audit_log_connections)
+  {
+    audit_log_print(thd, COM_CONNECT, ER(access_denied_error_code(thd->password)),
+                    thd->main_security_ctx.user,
+                    thd->main_security_ctx.host_or_ip,
+                    thd->password ? ER(ER_YES) : ER(ER_NO));
+  }
   status_var_increment(thd->status_var.access_denied_errors);
   /*
     Log access denied messages to the error log when log-warnings = 2
@@ -13493,15 +13500,30 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
   {
     if (strcmp(sctx->priv_user, sctx->user))
     {
+      if (opt_audit_log_connections)
+      {
+        audit_log_print(thd, command, (char*) "%s@%s as %s on %s",
+                        sctx->user, sctx->host_or_ip,
+                        sctx->priv_user[0] ? sctx->priv_user : "anonymous",
+                        safe_str(mpvio.db.str));
+      }
       general_log_print(thd, command, "%s@%s as %s on %s",
                         sctx->user, sctx->host_or_ip,
                         sctx->priv_user[0] ? sctx->priv_user : "anonymous",
                         safe_str(mpvio.db.str));
     }
     else
+    {
+      if (opt_audit_log_connections)
+      {
+        audit_log_print(thd, command, (char*) "%s@%s on %s",
+                        sctx->user, sctx->host_or_ip,
+                        safe_str(mpvio.db.str));
+      }
       general_log_print(thd, command, (char*) "%s@%s on %s",
                         sctx->user, sctx->host_or_ip,
                         safe_str(mpvio.db.str));
+    }
   }
 
   if (res > CR_OK && mpvio.status != MPVIO_EXT::SUCCESS)

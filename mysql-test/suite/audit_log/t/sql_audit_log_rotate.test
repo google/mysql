@@ -1,0 +1,22 @@
+let $MYSQLD_DATADIR= `select @@datadir`;
+
+# Server starts with this file.
+--file_exists $MYSQLD_DATADIR/auditlog.000001
+
+# This should not exist yet.
+--error 1
+--file_exists $MYSQLD_DATADIR/auditlog.000002
+
+# Trigger the rotation.
+FLUSH LOGS;
+
+--file_exists $MYSQLD_DATADIR/auditlog.000002
+
+# This should not exist yet.
+--error 1
+--file_exists $MYSQLD_DATADIR/auditlog.000003
+
+# Trigger the rotation.
+FLUSH AUDIT LOGS;
+
+--file_exists $MYSQLD_DATADIR/auditlog.000003

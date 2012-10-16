@@ -379,6 +379,9 @@ bool opt_enable_fulltext_index_creation= true;
 bool opt_bin_log, opt_bin_log_used=0, opt_ignore_builtin_innodb= 0;
 my_bool opt_log, opt_slow_log, debug_assert_if_crashed_table= 0, opt_help= 0;
 static my_bool opt_abort;
+my_bool opt_audit_log, opt_audit_log_super, opt_audit_log_connections;
+char *opt_audit_log_filter;
+char *opt_audit_log_tables;
 ulonglong log_output_options;
 my_bool opt_userstat_running;
 my_bool opt_log_queries_not_using_indexes= 0;
@@ -767,7 +770,7 @@ ulong master_retry_count=0;
 char *master_info_file;
 char *relay_log_info_file, *report_user, *report_password, *report_host;
 char *opt_relay_logname = 0, *opt_relaylog_index_name=0;
-char *opt_logname, *opt_slow_logname, *opt_bin_logname;
+char *opt_logname, *opt_slow_logname, *opt_bin_logname, *opt_audit_logname;
 char *opt_deprecated_engines;
 my_bool opt_require_super_for_mysql_schema_ddl = 0;
 
@@ -3416,7 +3419,8 @@ pthread_handler_t signal_hand(void *arg __attribute__((unused)))
 #endif
       /* switch to the old log message processing */
       logger.set_handlers(LOG_FILE, opt_slow_log ? LOG_FILE:LOG_NONE,
-                          opt_log ? LOG_FILE:LOG_NONE);
+                          opt_log ? LOG_FILE:LOG_NONE,
+                           LOG_FILE);
       DBUG_PRINT("info",("Got signal: %d  abort_loop: %d",sig,abort_loop));
       if (!abort_loop)
       {
@@ -3454,13 +3458,15 @@ pthread_handler_t signal_hand(void *arg __attribute__((unused)))
       {
         logger.set_handlers(LOG_FILE,
                             opt_slow_log ? LOG_TABLE : LOG_NONE,
-                            opt_log ? LOG_TABLE : LOG_NONE);
+                            opt_log ? LOG_TABLE : LOG_NONE,
+                            LOG_FILE);
       }
       else
       {
         logger.set_handlers(LOG_FILE,
                             opt_slow_log ? log_output_options : LOG_NONE,
-                            opt_log ? log_output_options : LOG_NONE);
+                            opt_log ? log_output_options : LOG_NONE,
+                            LOG_FILE);
       }
       break;
 #ifdef USE_ONE_SIGNAL_HAND
@@ -4359,10 +4365,18 @@ static int init_common_variables_part2()
                       "--log-slow-queries option, log tables are used. "
                       "To enable logging to files use the --log-output=file option.");
 
+  if (opt_audit_log && opt_audit_logname && *opt_audit_logname &&
+      !(log_output_options & (LOG_FILE | LOG_NONE)))
+    sql_print_warning("Although a path was specified for the "
+                      "--log-audit option, log tables are used. "
+                      "To enable logging to files use the --log-output=file option.");
+
   if (!opt_logname || !*opt_logname)
     make_default_log_name(&opt_logname, ".log", false);
   if (!opt_slow_logname || !*opt_slow_logname)
     make_default_log_name(&opt_slow_logname, "-slow.log", false);
+  if (!opt_audit_logname || !*opt_audit_logname)
+    make_default_log_name(&opt_audit_logname, "-audit.log", false);
 
 #if defined(ENABLED_DEBUG_SYNC)
   /* Initialize the debug sync facility. See debug_sync.cc. */
@@ -4944,7 +4958,7 @@ a file name for --log-bin-index option", opt_binlog_index_name);
       sql_print_warning("There were other values specified to "
                         "log-output besides NONE. Disabling slow "
                         "and general logs anyway.");
-    logger.set_handlers(LOG_FILE, LOG_NONE, LOG_NONE);
+    logger.set_handlers(LOG_FILE, LOG_NONE, LOG_NONE, LOG_FILE);
   }
   else
   {
@@ -4960,7 +4974,7 @@ a file name for --log-bin-index option", opt_binlog_index_name);
     }
 
     logger.set_handlers(LOG_FILE, opt_slow_log ? log_output_options:LOG_NONE,
-                        opt_log ? log_output_options:LOG_NONE);
+                        opt_log ? log_output_options:LOG_NONE, LOG_FILE);
   }
 
   /*
@@ -7245,6 +7259,22 @@ struct my_option my_long_options[]=
   "Log slow statements executed by slave thread to the slow log if it is open.",
   &opt_log_slow_slave_statements, &opt_log_slow_slave_statements,
   0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"audit-log", OPT_AUDIT_LOG,
+   "Log logins, queries against specified tables, and startup.",
+   &opt_audit_logname, &opt_audit_logname, 0, GET_STR_ALLOC, OPT_ARG,
+   0, 0, 0, 0, 0, 0},
+  {"audit-log-tables", OPT_AUDIT_LOG_TABLES,
+   "Log queries that use these tables to the audit log (comma separated). "
+   "Alternatively use 'alltables' if logging all tables is desired.",
+   &opt_audit_log_tables, &opt_audit_log_tables, 0, GET_STR, REQUIRED_ARG,
+   0, 0, 0, 0, 0, 0},
+  {"audit-log-filter", OPT_AUDIT_LOG_FILTER,
+   "Filter certain statements from appearing in the audit log. "
+   "by default everything will be logged.  Statements can be filtered "
+   "by specifying a comma separated list here "
+   "e.g. select,insert,delete,update.",
+   &opt_audit_log_filter, &opt_audit_log_filter, 0, GET_STR, REQUIRED_ARG,
+   0, 0, 0, 0, 0, 0},
   {"log-tc", 0,
    "Path to transaction coordinator log (used for transactions that affect "
    "more than one storage engine, when binary log is disabled).",
@@ -8467,13 +8497,13 @@ static int mysql_init_variables(void)
   /*  We can only test for sub paths if my_symlink.c is using realpath */
   myisam_test_invalid_symlink= test_if_data_home_dir;
 #endif
-  opt_log= opt_slow_log= 0;
+  opt_log= opt_slow_log= opt_audit_log= opt_audit_log_super= 0;
   opt_bin_log= opt_bin_log_used= 0;
   opt_disable_networking= opt_skip_show_db=0;
   opt_enable_fulltext_index_creation= true;
   opt_skip_name_resolve= 0;
   opt_ignore_builtin_innodb= 0;
-  opt_logname= opt_binlog_index_name= opt_slow_logname= 0;
+  opt_logname= opt_binlog_index_name= opt_slow_logname= opt_audit_logname= 0;
   opt_log_basename= 0;
   opt_tc_log_file= (char *)"tc.log";      // no hostname in tc_log file name !
   opt_secure_auth= 0;
@@ -8778,6 +8808,7 @@ mysqld_get_one_option(int optid,
 
     make_default_log_name(&opt_logname, ".log", false);
     make_default_log_name(&opt_slow_logname, "-slow.log", false);
+    make_default_log_name(&opt_audit_logname, "-audit", false);
     make_default_log_name(&opt_bin_logname, "-bin", true);
     make_default_log_name(&opt_binlog_index_name, "-bin.index", true);
     make_default_log_name(&opt_relay_logname, "-relay-bin", true);
@@ -8793,6 +8824,15 @@ mysqld_get_one_option(int optid,
       return 1;                                 // out of memory error
     break;
   }
+  case (int) OPT_AUDIT_LOG:
+    opt_audit_log= MY_TEST(argument != disabled_my_option);
+    break;
+  case OPT_AUDIT_LOG_FILTER:
+    init_audit_log_filter(argument);
+    break;
+  case OPT_AUDIT_LOG_TABLES:
+    init_audit_log_tables(argument);
+    break;
 #ifdef HAVE_REPLICATION
   case (int)OPT_REPLICATE_IGNORE_DB:
   {
@@ -9406,7 +9446,7 @@ void set_server_version(void)
   if (!strstr(MYSQL_SERVER_SUFFIX_STR, "-debug"))
     end= strmov(end, "-debug");
 #endif
-  if (opt_log || opt_slow_log || opt_bin_log)
+  if (opt_log || opt_slow_log || opt_bin_log || opt_audit_log)
     strmov(end, "-log");                        // This may slow down system
 }
 

@@ -1624,6 +1624,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       break;
     }
     DBUG_PRINT("quit",("Got shutdown command for level %u", level));
+    audit_log_print(thd, command, NullS);
     general_log_print(thd, command, NullS);
     my_eof(thd);
     kill_mysql();
@@ -6532,6 +6533,7 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
 
       query_cache_abort(&thd->query_cache_tls);
     }
+    write_audit_record(lex, thd);
     THD_STAGE_INFO(thd, stage_freeing_items);
     sp_cache_enforce_limit(thd->sp_proc_cache, stored_program_cache_size);
     sp_cache_enforce_limit(thd->sp_func_cache, stored_program_cache_size);

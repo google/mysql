@@ -81,6 +81,7 @@ extern MY_BITMAP temp_pool;
 extern bool opt_large_files, server_id_supplied;
 extern bool opt_update_log, opt_bin_log, opt_error_log;
 extern my_bool opt_log, opt_slow_log, opt_bootstrap;
+extern my_bool opt_audit_log, opt_audit_log_connections, opt_audit_log_super;
 extern my_bool opt_backup_history_log;
 extern my_bool opt_backup_progress_log;
 extern ulonglong log_output_options;
@@ -145,7 +146,23 @@ extern uint test_flags,select_errors,ha_open_options;
 extern uint protocol_version, mysqld_port, dropping_tables;
 extern ulong delay_key_write_options;
 extern char *opt_logname, *opt_slow_logname, *opt_bin_logname, 
-            *opt_relay_logname;
+            *opt_relay_logname, *opt_audit_logname;
+/*
+  If --audit_log_tables=xxx,yyy we log the query to the log if table
+  xxx or yyy is one of the tables opened.
+ */
+extern char *opt_audit_log_tables;
+
+/*
+  A list of statement types that are not logged
+  e.g. this line will prevent the logging of all insert and select
+  statements: --opt_audit_log_filter=insert,select
+ */
+extern char *opt_audit_log_filter;
+
+extern void init_audit_log_tables(const char *comma_list);
+extern void init_audit_log_filter(const char *comma_list);
+
 extern char *opt_backup_history_logname, *opt_backup_progress_logname,
             *opt_backup_settings_name;
 extern my_bool opt_allow_delayed_write;
@@ -622,6 +639,9 @@ enum options_mysqld
   OPT_SKIP_RESOLVE,
   OPT_SKIP_STACK_TRACE,
   OPT_SKIP_SYMLINKS,
+  OPT_AUDIT_LOG,
+  OPT_AUDIT_LOG_FILTER,
+  OPT_AUDIT_LOG_TABLES,
   OPT_SSL_CA,
   OPT_SSL_CAPATH,
   OPT_SSL_CERT,

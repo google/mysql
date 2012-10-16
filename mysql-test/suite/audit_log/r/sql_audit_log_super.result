@@ -1,0 +1,43 @@
+use test;
+create table log_test (col1 int, col2 int);
+create table log_test2 (col1 int, col2 int);
+insert into log_test values (1, 2);
+insert into log_test values (3, 4);
+insert into log_test2 values (5, 6);
+insert into log_test2 values (7, 8);
+select * from log_test;
+col1	col2
+1	2
+3	4
+select * from log_test limit 2;
+col1	col2
+1	2
+3	4
+select * from log_test where col1=1;
+col1	col2
+1	2
+select * from log_test where col1=0;
+col1	col2
+insert into log_test select * from log_test2;
+delete from log_test where col1=1;
+update log_test set col1=2 where col1=3;
+delete from log_test2 where col1=5;
+select * from log_test2;
+col1	col2
+7	8
+update log_test2 set col2=12 where col2=8;
+drop table log_test;
+drop table log_test2;
+root@localhost (1): SUPER create table log_test (col1 int, col2 int)
+root@localhost (1): SUPER create table log_test2 (col1 int, col2 int)
+root@localhost (5): SUPER insert into log_test values (1, 2)
+root@localhost (5): SUPER insert into log_test values (3, 4)
+root@localhost (5): SUPER insert into log_test2 values (5, 6)
+root@localhost (5): SUPER insert into log_test2 values (7, 8)
+root@localhost (6): SUPER insert into log_test select * from log_test2
+root@localhost (7): SUPER delete from log_test where col1=1
+root@localhost (4): SUPER update log_test set col1=2 where col1=3
+root@localhost (7): SUPER delete from log_test2 where col1=5
+root@localhost (4): SUPER update log_test2 set col2=12 where col2=8
+root@localhost (9): SUPER drop table log_test
+root@localhost (9): SUPER drop table log_test2

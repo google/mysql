@@ -1017,6 +1017,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  ASCII_SYM                     /* MYSQL-FUNC */
 %token  ASENSITIVE_SYM                /* FUTURE-USE */
 %token  AT_SYM                        /* SQL-2003-R */
+%token  AUDIT
 %token  AUTHORS_SYM
 %token  AUTOEXTEND_SIZE_SYM
 %token  AUTO_INC
@@ -12883,6 +12884,8 @@ flush_option:
           { Lex->type|= REFRESH_ERROR_LOG; }
         | ENGINE_SYM LOGS_SYM
           { Lex->type|= REFRESH_ENGINE_LOG; } 
+        | AUDIT LOGS_SYM
+          { Lex->type|= REFRESH_AUDIT_LOG; }
         | GENERAL LOGS_SYM
           { Lex->type|= REFRESH_GENERAL_LOG; }
         | SLOW LOGS_SYM

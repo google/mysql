@@ -1,0 +1,1 @@
+--source suite/audit_log/include/sql_audit_log.inc

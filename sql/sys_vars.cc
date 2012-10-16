@@ -4298,6 +4298,32 @@ static Sys_var_charptr Sys_slow_log_path(
        IN_FS_CHARSET, DEFAULT(0), NO_MUTEX_GUARD, NOT_IN_BINLOG,
        ON_CHECK(check_log_path), ON_UPDATE(fix_slow_log_file));
 
+static void reopen_audit_log(char* name)
+{
+  logger.get_audit_log_file_handler()->close(0);
+  logger.get_audit_log_file_handler()->open_audit_log(name);
+}
+static bool fix_audit_log_file(sys_var *self, THD *thd, enum_var_type type)
+{
+  return fix_log(&opt_audit_logname, opt_log_basename, "-audit.log",
+                 opt_audit_log, reopen_audit_log);
+}
+static Sys_var_charptr Sys_audit_log_path(
+       "audit_log_file", "Audit log file path",
+       PREALLOCATED GLOBAL_VAR(opt_audit_logname), CMD_LINE(REQUIRED_ARG),
+       IN_FS_CHARSET, DEFAULT(0), NO_MUTEX_GUARD, NOT_IN_BINLOG,
+       ON_CHECK(check_log_path), ON_UPDATE(fix_audit_log_file));
+static Sys_var_mybool Sys_audit_log_connections(
+       "audit_log_connections",
+       "Log [failed] connections to the server.",
+       GLOBAL_VAR(opt_audit_log_connections),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+static Sys_var_mybool Sys_audit_log_super(
+       "audit_log_super",
+       "Log commands executed by users with SUPER privileges.",
+       GLOBAL_VAR(opt_audit_log_super),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+
 static Sys_var_have Sys_have_compress(
        "have_compress", "have_compress",
        READ_ONLY GLOBAL_VAR(have_compress), NO_CMD_LINE);
@@ -4404,6 +4430,7 @@ static bool fix_log_output(sys_var *self, THD *thd, enum_var_type type)
   logger.lock_exclusive();
   logger.init_slow_log(log_output_options);
   logger.init_general_log(log_output_options);
+  logger.init_audit_log(log_output_options);
   logger.unlock();
   return false;
 }

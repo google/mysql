@@ -115,6 +115,7 @@ bool reload_acl_and_cache(THD *thd, unsigned long long options,
     options|= REFRESH_RELAY_LOG;
     options|= REFRESH_SLOW_LOG;
     options|= REFRESH_GENERAL_LOG;
+    options|= REFRESH_AUDIT_LOG;
     options|= REFRESH_ENGINE_LOG;
     options|= REFRESH_ERROR_LOG;
   }
@@ -135,6 +136,9 @@ bool reload_acl_and_cache(THD *thd, unsigned long long options,
 
   if ((options & REFRESH_GENERAL_LOG) && opt_log)
     logger.flush_general_log();
+
+  if ((options & REFRESH_AUDIT_LOG) && opt_audit_log)
+    logger.flush_audit_log();
 
   if (options & REFRESH_ENGINE_LOG)
     if (ha_flush_logs(NULL))
@@ -586,4 +590,3 @@ static void disable_checkpoints(THD *thd)
       ha_checkpoint_state(1);                   // Disable checkpoints
   }
 }
-

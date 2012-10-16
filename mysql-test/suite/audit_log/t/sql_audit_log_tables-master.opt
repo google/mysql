@@ -1,0 +1,1 @@
+--audit-log=auditlog --audit-log-tables=log_test2
