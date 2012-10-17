@@ -905,9 +905,30 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
     {
       if (ev_type != TABLE_MAP_EVENT)
       {
-        Rows_log_event *e= (Rows_log_event*) ev;
+        ulong table_id;
+        bool is_end_of_stmt;
+        switch (ev_type) {
+        case WRITE_ROWS_EVENT:
+        case DELETE_ROWS_EVENT:
+        case UPDATE_ROWS_EVENT: {
+          Rows_log_event *e= (Rows_log_event*) ev;
+          table_id= e->get_table_id();
+          is_end_of_stmt= e->get_flags(Rows_log_event::STMT_END_F) != 0;
+          break;
+        }
+        case PRE_GA_WRITE_ROWS_EVENT:
+        case PRE_GA_DELETE_ROWS_EVENT:
+        case PRE_GA_UPDATE_ROWS_EVENT: {
+          Old_rows_log_event *e= (Old_rows_log_event*) ev;
+          table_id= e->get_table_id();
+          is_end_of_stmt= e->get_flags(Old_rows_log_event::STMT_END_F) != 0;
+          break;
+        }
+        default:
+          break;
+        }
         Table_map_log_event *ignored_map= 
-          print_event_info->m_table_map_ignored.get_table(e->get_table_id());
+          print_event_info->m_table_map_ignored.get_table(table_id);
         bool skip_event= (ignored_map != NULL);
 
         /* 
@@ -915,7 +936,7 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
              i) destroy/free ignored maps
             ii) if skip event, flush cache now
          */
-        if (e->get_flags(Rows_log_event::STMT_END_F))
+        if (is_end_of_stmt)
         {
           /* 
             Now is safe to clear ignored map (clear_tables will also
