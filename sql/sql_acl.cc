@@ -889,7 +889,8 @@ static ACL_USER *find_user_low(THD *thd,
     if (!is_raw_passwd)
     {
       if (passwd_salt_len == acl_user_tmp->salt_len &&
-          !memcmp(passwd_salt, acl_user_tmp->salt, passwd_salt_len))
+          !memcmp(passwd_salt, acl_user_tmp->salt,
+                  acl_user_tmp->salt_len * sizeof(acl_user_tmp->salt[0])))
       {
         acl_user= acl_user_tmp;
         *res= 0;
@@ -1167,7 +1168,8 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     sctx->master_access= user_access;
     sctx->priv_user= acl_user->user ? sctx->user : (char *) "";
     sctx->salt_len= acl_user->salt_len;
-    memcpy(sctx->salt, acl_user->salt, acl_user->salt_len);
+    memcpy(sctx->salt, acl_user->salt,
+           acl_user->salt_len * sizeof(acl_user->salt[0]));
     *mqh= acl_user->user_resource;
 
     if (acl_user->host.hostname)
@@ -1326,7 +1328,8 @@ static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
       if (thd == tmp_thd)
       {
         sctx->salt_len= acl_user->salt_len;
-        memcpy(sctx->salt, acl_user->salt, sctx->salt_len);
+        memcpy(sctx->salt, acl_user->salt,
+               acl_user->salt_len * sizeof(acl_user->salt[0]));
       }
       else
       {
@@ -1382,11 +1385,13 @@ static void acl_update_user(THD *thd, const char *user, const char *host,
         if (password)
         {
           uint8 was_salt[SCRAMBLE_LENGTH+1];
-          uint8 was_salt_len = acl_user->salt_len;
-          memcpy(was_salt, acl_user->salt, was_salt_len);
+          uint8 was_salt_len= acl_user->salt_len;
+          memcpy(was_salt, acl_user->salt,
+                 was_salt_len * sizeof(acl_user->salt[0]));
           set_user_salt(acl_user, password, password_len);
           if (was_salt_len != acl_user->salt_len ||
-              memcmp(was_salt, acl_user->salt, was_salt_len))
+              memcmp(was_salt, acl_user->salt,
+                     was_salt_len * sizeof(acl_user->salt[0])))
           {
             acl_kill_user_threads(thd, acl_user);
           }
