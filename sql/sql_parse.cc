@@ -1568,7 +1568,6 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       error = TRUE;
       break;
     }
-#endif
   case COM_BINLOG_DUMP2:
     {
       ushort flags;
@@ -1670,6 +1669,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       error= TRUE;
       break;
     }
+#endif  /* EMBEDDED_LIBRARY */
   case COM_REFRESH:
   {
     int not_used;
