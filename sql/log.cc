@@ -6067,6 +6067,7 @@ bool MYSQL_BIN_LOG::prepare_for_reset_logs(THD *thd)
   thd->proc_info= "Waiting for all Binlog Dump threads to exit.";
   thd->mysys_var->current_cond= &COND_no_dump_thd;
 
+#ifdef HAVE_REPLICATION
   /* Wait for all dump threads to exit. */
   while (dump_thd_count)
   {
@@ -6098,14 +6099,17 @@ bool MYSQL_BIN_LOG::prepare_for_reset_logs(THD *thd)
       goto err1;
     }
   }
+#endif /* HAVE_REPLICATION */
 
   thd->exit_cond(old_msg);
 
   return false;
 
+#ifdef HAVE_REPLICATION
 err1:
   resetting_logs= false;
   pthread_cond_broadcast(&COND_no_reset_thd);
+#endif
 err2:
   thd->exit_cond(old_msg);
 
