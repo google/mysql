@@ -20,6 +20,8 @@
 #include "my_static.h"
 #include "mysys_err.h"
 
+my_bool opt_checksum_temp_files= FALSE;
+
 	/*
 	  Remove an open tempfile so that it doesn't survive
 	  if we crash;	If the operating system doesn't support
@@ -95,13 +97,15 @@ my_bool real_open_cached_file(IO_CACHE *cache)
   {
     error=0;
     cache_remove_open_tmp(cache, name_buff);
-    /* use checksumming for this temp file */
-    cache->direct_read = &chksum_read;
-    cache->direct_pread = &chksum_pread;
-    cache->direct_write = &chksum_write;
-    cache->direct_pwrite = &chksum_pwrite;
-    cache->direct_seek = &chksum_seek;
-    cache->direct_tell = &chksum_tell;
+    if (opt_checksum_temp_files) {
+      /* use checksumming for this temp file */
+      cache->direct_read = &chksum_read;
+      cache->direct_pread = &chksum_pread;
+      cache->direct_write = &chksum_write;
+      cache->direct_pwrite = &chksum_pwrite;
+      cache->direct_seek = &chksum_seek;
+      cache->direct_tell = &chksum_tell;
+    }
   }
   DBUG_RETURN(error);
 }

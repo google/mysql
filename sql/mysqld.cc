@@ -798,7 +798,12 @@ static char *opt_audit_log_tables;
  */
 static char *opt_audit_log_filter;
 
-
+/*
+  If --checksum_temp_files, enable checksum_io wrappers on temporary
+  files.
+  Defined in mysys/mf_cache.c.
+*/
+extern my_bool opt_checksum_temp_files;
 
 int orig_argc;
 char **orig_argv;
@@ -6205,7 +6210,8 @@ enum options_mysqld
   OPT_RPL_SEMI_SYNC_TIMEOUT,
   OPT_RPL_SEMI_SYNC_TRACE,
   OPT_RPL_EVENT_BUFFER_SIZE,
-  OPT_MYSQL_REPL_PORT
+  OPT_MYSQL_REPL_PORT,
+  OPT_CHECKSUM_TEMP_FILES
 };
 
 
@@ -6306,6 +6312,9 @@ struct my_option my_long_options[] =
   {"character-sets-dir", OPT_CHARSETS_DIR,
    "Directory where character sets are.", &charsets_dir,
    &charsets_dir, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"checksum-temp-files", OPT_CHECKSUM_TEMP_FILES, "Checksum temporary files for integrity",
+   &opt_checksum_temp_files, &opt_checksum_temp_files, 0, GET_BOOL, NO_ARG,
+   0, 0, 0, 0, 0, 0},
   {"chroot", 'r', "Chroot mysqld daemon during startup.",
    &mysqld_chroot, &mysqld_chroot, 0, GET_STR, REQUIRED_ARG,
    0, 0, 0, 0, 0, 0},
