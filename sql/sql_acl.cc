@@ -1960,6 +1960,9 @@ static void acl_kill_mapped_user_threads(ACL_MAPPED_USER *acl_mapped_user)
 {
   THD *tmp_thd;
 
+  if (!opt_update_connection_privs)
+    return;
+
   VOID(pthread_mutex_lock(&LOCK_thread_count));
   I_List_iterator<THD> it(threads);
   while ((tmp_thd= it++))
