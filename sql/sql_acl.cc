@@ -1261,7 +1261,7 @@ bool acl_update_user_access(THD *thd)
   Security_context *sctx= thd->security_ctx;
   DBUG_ENTER("acl_update_user_access");
 
-  if (sctx->access_ver == acl_version || !sctx->user)
+  if (!opt_update_connection_privs || sctx->access_ver == acl_version || !sctx->user)
     DBUG_RETURN(FALSE);
 
   if (!initialized)
@@ -1311,6 +1311,9 @@ static uchar* check_get_key(ACL_USER *buff, size_t *length,
 static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
 {
   THD *tmp_thd;
+
+  if (!opt_update_connection_privs)
+    return;
 
   VOID(pthread_mutex_lock(&LOCK_thread_count));
   I_List_iterator<THD> it(threads);

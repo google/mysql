@@ -1,0 +1,151 @@
+# Grant tests not performed with embedded server
+-- source include/not_embedded.inc
+
+# Save the initial number of concurrent sessions
+--source include/count_sessions.inc
+
+#
+# Check that with --skip-update-connection-privs MySQL doesn't update
+# user-level and db-level permissions indeed.
+#
+
+
+# Set up
+connection default;
+create user user1;
+create database d1;
+create table d1.t1 (n int);
+insert into d1.t1 values (1);
+
+connect (conn1, localhost, user1, , );
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+
+# Let's play with user-level permissions
+connection default;
+grant select on *.* to user1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+use d1;
+select * from t1;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (2);
+connection default;
+grant insert on *.* to user1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (3);
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+use d1;
+insert into t1 values (4);
+select * from t1;
+
+connection default;
+revoke insert on *.* from user1;
+connection conn1;
+insert into t1 values (5);
+select * from t1;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+use d1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (6);
+
+connection default;
+revoke select on *.* from user1;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+
+# Now database-level privileges
+connection default;
+grant select on d1.* to user1;
+connection conn1;
+select * from d1.t1;
+use d1;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (7);
+
+connection default;
+grant insert on d1.* to user1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (8);
+use d1;
+insert into t1 values (9);
+select * from t1;
+
+connection default;
+update mysql.db set Insert_priv = 'N' where Db = 'd1' and User = 'user1';
+flush privileges;
+connection conn1;
+insert into t1 values (10);
+use d1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (11);
+select * from t1;
+
+connection default;
+revoke all on d1.* from user1;
+connection conn1;
+select * from t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+# d1 is still considered current and old privileges on it are still active.
+# Thus the following statement succeeds.
+select * from t1;
+use test;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+
+# Change of user password shouldn't change anything in this case
+connection default;
+grant all privileges on *.* to user1 with grant option;
+disconnect conn1;
+connect (conn1, localhost, user1, , );
+use d1;
+select * from t1;
+connect (conn2, localhost, user1, , );
+set password = password('qwerty');
+select * from d1.t1;
+connection conn1;
+select * from d1.t1;
+disconnect conn1;
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (conn1, localhost, user1, , );
+
+# When user is dropped it doesn't change anything either.
+connect (conn1, localhost, user1, qwerty, );
+use d1;
+select * from t1;
+connection default;
+drop user user1;
+connection conn1;
+select * from d1.t1;
+disconnect conn1;
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (conn1, localhost, user1, qwerty, );
+
+# clean up
+connection default;
+disconnect conn2;
+drop database d1;
+
+
+# Wait till we reached the initial number of concurrent sessions
+--source include/wait_until_count_sessions.inc

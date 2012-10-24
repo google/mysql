@@ -680,6 +680,8 @@ SHOW_COMP_OPTION have_geometry, have_rtree_keys;
 SHOW_COMP_OPTION have_crypt, have_compress;
 SHOW_COMP_OPTION have_community_features;
 
+my_bool opt_update_connection_privs;
+
 /* Thread specific variables */
 
 pthread_key(MEM_ROOT**,THR_MALLOC);
@@ -5666,7 +5668,8 @@ enum options_mysqld
   OPT_IGNORE_BUILTIN_INNODB,
   OPT_BINLOG_DIRECT_NON_TRANS_UPDATE,
   OPT_DEFAULT_CHARACTER_SET_OLD,
-  OPT_MAX_LONG_DATA_SIZE
+  OPT_MAX_LONG_DATA_SIZE,
+  OPT_UPDATE_CONNECTION_PRIVS
 };
 
 
@@ -7141,6 +7144,11 @@ thread is in the relay logs.",
    &global_system_variables.binlog_direct_non_trans_update,
    &max_system_variables.binlog_direct_non_trans_update,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"update-connection-privs", OPT_UPDATE_CONNECTION_PRIVS,
+   "When ON automatically update user-level and db-level privileges "
+   "associated with connection.",
+   &opt_update_connection_privs, &opt_update_connection_privs,
+   0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -7758,6 +7766,7 @@ static int mysql_init_variables(void)
   bzero((uchar*) &mysql_tmpdir_list, sizeof(mysql_tmpdir_list));
   bzero((char *) &global_status_var, sizeof(global_status_var));
   opt_large_pages= 0;
+  opt_update_connection_privs= 1;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */

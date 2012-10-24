@@ -511,6 +511,9 @@ static sys_var_long_ptr	sys_query_cache_size(&vars, "query_cache_size",
 					     &query_cache_size,
 					     fix_query_cache_size);
 
+static sys_var_bool_ptr sys_update_connection_privs(&vars, "update_connection_privs",
+                                                    &opt_update_connection_privs);
+
 static sys_var_thd_ulong	sys_range_alloc_block_size(&vars, "range_alloc_block_size",
 						   &SV::range_alloc_block_size);
 static sys_var_thd_ulong	sys_query_alloc_block_size(&vars, "query_alloc_block_size",

@@ -2016,6 +2016,8 @@ extern uint opt_large_page_size;
 extern char *opt_logname, *opt_slow_logname;
 extern const char *log_output_str;
 
+extern my_bool opt_update_connection_privs;
+
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;
 extern TABLE_LIST general_log, slow_log;
