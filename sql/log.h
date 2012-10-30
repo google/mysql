@@ -207,7 +207,7 @@ public:
 class MYSQL_QUERY_LOG: public MYSQL_LOG
 {
 public:
-  MYSQL_QUERY_LOG() : last_time(0) {}
+  MYSQL_QUERY_LOG() : last_time(0), record_same_date(FALSE) {}
   void reopen_file();
   bool write(time_t event_time, const char *user_host,
              uint user_host_len, int thread_id,
@@ -232,12 +232,14 @@ public:
   bool open_audit_log(const char *log_name)
   {
     char buf[FN_REFLEN];
+    record_same_date = TRUE;
     return open(generate_name(log_name, "-audit.log", 0, buf),
                 LOG_AUDIT, 0, WRITE_CACHE);
   }
 
 private:
   time_t last_time;
+  bool record_same_date;
 };
 
 class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG

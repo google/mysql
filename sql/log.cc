@@ -2418,7 +2418,7 @@ bool MYSQL_QUERY_LOG::write(time_t event_time, const char *user_host,
     DBUG_EXECUTE_IF("reset_log_last_time", last_time= 0;);
 
     /* Note that my_b_write() assumes it knows the length for this */
-      if (event_time != last_time)
+      if (record_same_date || event_time != last_time)
       {
         last_time= event_time;
 
@@ -2528,7 +2528,7 @@ bool MYSQL_QUERY_LOG::write(THD *thd, time_t current_time,
 
     if (!(specialflag & SPECIAL_SHORT_LOG_FORMAT))
     {
-      if (current_time != last_time)
+      if (record_same_date || current_time != last_time)
       {
         last_time= current_time;
         struct tm start;
