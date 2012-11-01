@@ -663,6 +663,13 @@ public:
   /* Number of ranges in the last checked tree->key */
   uint n_ranges;
   uint8 first_null_comp; /* first null component if any, 0 - otherwise */
+
+  uint32 quick_key_depth;
+
+  /* Number of times get_quick_keys can be invoked on a single query. This was
+   * experimentally determined on 2012-11-01. This is an effective cap of about
+   * 500M of memory for integer types. */
+  enum { MAX_QUICK_KEY_DEPTH = 8000000 };
 };
 
 class TABLE_READ_PLAN;
@@ -2257,6 +2264,7 @@ int SQL_SELECT::test_quick_select(THD *thd, key_map keys_to_use,
     param.imerge_cost_buff_size= 0;
     param.using_real_indexes= TRUE;
     param.remove_jump_scans= TRUE;
+    param.quick_key_depth= 0;
 
     thd->no_errors=1;				// Don't warn about NULL
     init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0);
@@ -2333,6 +2341,7 @@ int SQL_SELECT::test_quick_select(THD *thd, key_map keys_to_use,
           read_time= (double) HA_POS_ERROR;
           goto free_mem;
         }
+
         /*
           If the tree can't be used for range scans, proceed anyway, as we
           can construct a group-min-max quick select
@@ -7877,6 +7886,12 @@ get_quick_keys(PARAM *param,QUICK_RANGE_SELECT *quick,KEY_PART *key,
   uint flag;
   int min_part= key_tree->part-1, // # of keypart values in min_key buffer
       max_part= key_tree->part-1; // # of keypart values in max_key buffer
+
+  /* Bottom out of the recursion if we go too far. get_quick_keys() can quickly
+   * run out of memory otherwise. */
+  if (++param->quick_key_depth > PARAM::MAX_QUICK_KEY_DEPTH) {
+    return 1;
+  }
 
   if (key_tree->left != &null_element)
   {
