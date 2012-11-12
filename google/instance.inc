@@ -65,7 +65,7 @@ read -a cmd <<< "${BIN_DIR}/sql/mysqld \
   --httpd-socket=${INSTANCE_DIR}/http.sock \
   --server_id=${ID} \
   --pid-file=${INSTANCE_DIR}/mysql.pid \
-  ${MYSQLD_DEFAULT_ARGS} ${MYSQLD_EXTRA_ARGS}"
+  ${MYSQLD_EXTRA_ARGS}"
 
 if [[ ! -z ${NEEDS_BOOTSTRAP} ]]
 then
@@ -90,7 +90,7 @@ then
     gdb --eval-command="handle SIGUSR1 nostop" \
       ${BIN_DIR}/sql/mysqld $(cat ${INSTANCE_DIR}/mysql.pid)
   else
-    gdb --eval-command="handle SIGUSR1 nostop" --args ${cmd[*]}
+    gdb --eval-command="handle SIGUSR1 nostop" --args ${cmd[*]} ${MYSQLD_DEFAULT_ARGS}
   fi
 else
   ${BIN_DIR}/client/mysqladmin ping -S ${INSTANCE_DIR}/mysql.sock &> /dev/null
@@ -99,7 +99,7 @@ else
     echo "${NAME} is already started."
   else
     set -x
-    ${cmd[*]} &>> ${INSTANCE_DIR}/mysql.err &
+    ${cmd[*]} ${MYSQLD_DEFAULT_ARGS} &>> ${INSTANCE_DIR}/mysql.err &
     set +x
   fi
 fi
