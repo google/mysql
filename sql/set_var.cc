@@ -527,9 +527,11 @@ static sys_var_long_ptr	sys_query_cache_size(&vars, "query_cache_size",
 					     fix_query_cache_size);
 static sys_var_bool_ptr sys_rpl_allow_implicit_commit(
   &vars, "rpl_allow_implicit_commit", &rpl_allow_implicit_commit);
+#ifdef HAVE_REPLICATION
 static sys_var_bool_ptr sys_rpl_crash_on_binlog_io_error(
   &vars, "rpl_crash_on_binlog_io_error",
   &rpl_crash_on_binlog_io_error);
+#endif
 
 static sys_var_bool_ptr sys_update_connection_privs(&vars, "update_connection_privs",
                                                     &opt_update_connection_privs);
@@ -3704,6 +3706,7 @@ int set_var_user::update(THD *thd)
 }
 
 
+#ifdef HAVE_REPLICATION
 /*****************************************************************************
   Functions to handle SET PASSWORD
 *****************************************************************************/
@@ -4401,6 +4404,7 @@ check_net_buffer_length(THD *thd,  set_var *var)
   }
   return 0;
 }
+#endif
 
 /****************************************************************************
   Used templates

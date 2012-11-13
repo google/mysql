@@ -7389,11 +7389,13 @@ thread is in the relay logs.",
    "associated with connection.",
    &opt_update_connection_privs, &opt_update_connection_privs,
    0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+#ifdef HAVE_REPLICATION
   {"rpl_crash_on_binlog_io_error", OPT_RPL_CRASH_ON_BINLOG_IO_ERROR,
    "When ON, if the binlog dump thread encounters an I/O error, truncation, "
    "or bogus event while reading the active binlog the processes will crash.",
    &rpl_crash_on_binlog_io_error,
    0, 0, GET_BOOL, NO_ARG, 1, 0, 1, 0, 1, 0},
+#endif
   {"allow-delayed-write", OPT_ALLOW_DELAYED_WRITE,
    "Allow use of delayed insert and replace", &opt_allow_delayed_write,
    &opt_allow_delayed_write, 0, GET_BOOL, NO_ARG, 1, 0, 1, 0, 0, 0},
