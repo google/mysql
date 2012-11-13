@@ -997,8 +997,10 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   DBUG_ENTER("dispatch_command");
   DBUG_PRINT("info",("packet: '%*.s'; command: %d", packet_length, packet, command));
 
+#ifndef NO_EMBEDDED_ACCESS_CHECKS
   if (acl_update_user_access(thd))
     goto skip_cmd_execution;
+#endif
 
   thd->command=command;
   /*
@@ -1675,7 +1677,9 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     break;
   }
 
+#ifndef NO_EMBEDDED_ACCESS_CHECKS
 skip_cmd_execution:
+#endif
   /* report error issued during command execution */
   if (thd->killed_errno())
   {
