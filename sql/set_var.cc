@@ -134,11 +134,13 @@ static void fix_query_cache_min_res_unit(THD *thd, enum_var_type type);
 static void fix_myisam_max_sort_file_size(THD *thd, enum_var_type type);
 static void fix_max_binlog_size(THD *thd, enum_var_type type);
 static void fix_rpl_hierarchical_cache_frequency(THD *thd, enum_var_type type);
+#ifdef HAVE_REPLICATION
 static void fix_rpl_semi_sync_always_on(THD *thd, enum_var_type type);
 static void fix_rpl_semi_sync_timeout(THD *thd, enum_var_type type);
 static void fix_rpl_semi_sync_trace_level(THD *thd, enum_var_type type);
 static void fix_rpl_semi_sync_enabled(THD *thd, enum_var_type type);
 static void fix_rpl_semi_sync_slave_enabled(THD *thd, enum_var_type type);
+#endif
 static void fix_max_relay_log_size(THD *thd, enum_var_type type);
 static void fix_max_connections(THD *thd, enum_var_type type);
 static int check_max_delayed_threads(THD *thd, set_var *var);
@@ -555,6 +557,7 @@ static sys_var_const            sys_rpl_event_checksums(&vars,
                                                         &rpl_event_checksums);
 static sys_var_long_ptr	sys_rpl_recovery_rank(&vars, "rpl_recovery_rank",
 					      &rpl_recovery_rank);
+#ifdef HAVE_REPLICATION
 static sys_var_bool_ptr
 sys_rpl_semi_sync_always_on(&vars, "rpl_semi_sync_always_on",
                             &rpl_semi_sync_always_on,
@@ -575,6 +578,8 @@ static sys_var_long_ptr
 sys_rpl_semi_sync_trace_level(&vars, "rpl_semi_sync_trace_level",
                               &rpl_semi_sync_trace_level,
                               fix_rpl_semi_sync_trace_level);
+#endif  /* HAVE_REPLICATION */
+
 static sys_var_long_ptr	sys_query_cache_size(&vars, "query_cache_size",
 					     &query_cache_size,
 					     fix_query_cache_size);
@@ -1500,6 +1505,7 @@ static void fix_rpl_hierarchical_cache_frequency(THD *thd, enum_var_type type)
   DBUG_VOID_RETURN;
 }
 
+#ifdef HAVE_REPLICATION
 static void fix_rpl_semi_sync_always_on(THD *thd, enum_var_type type)
 {
   DBUG_ENTER("fix_rpl_semi_sync_always_on");
@@ -1565,7 +1571,7 @@ static void fix_rpl_semi_sync_slave_enabled(THD *thd, enum_var_type type)
 
   DBUG_VOID_RETURN;
 }
-
+#endif  /* HAVE_REPLICATION */
 
 static void fix_max_relay_log_size(THD *thd, enum_var_type type)
 {

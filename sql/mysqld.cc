@@ -3317,9 +3317,11 @@ static int init_common_variables(const char *conf_file_name, int argc,
   DBUG_PRINT("info",("%s  Ver %s for %s on %s\n",my_progname,
                      server_version, SYSTEM_TYPE,MACHINE_TYPE));
 
+#ifdef HAVE_REPLICATION
   /* Must be called after set_options() and MY_INIT(). */
   if (semi_sync_replicator.init_object() != 0)
     return 1;
+#endif
 
 #ifdef HAVE_LARGE_PAGES
   /* Initialize large page size */
@@ -7632,6 +7634,7 @@ thread is in the relay logs.",
    "Enable checksums on events written to the bin log.",
    &rpl_event_checksums,
    0, 0, GET_BOOL, NO_ARG, 0, 0, 1, 0, 1, 0},
+#ifdef HAVE_REPLICATION
   {"rpl_event_buffer_size", OPT_RPL_EVENT_BUFFER_SIZE,
    "The fixed event buffer during replication: actual event can exceed it; "
    "avoids need to malloc/free memory for events smaller than this",
@@ -7670,6 +7673,7 @@ thread is in the relay logs.",
    0, GET_ULONG, REQUIRED_ARG,
    32,  /* By default, we trace the network waiting time. */
    0, ~0L, 0, 1, 0},
+#endif  /* HAVE_REPLICATION */
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 

@@ -1231,6 +1231,7 @@ int ha_commit_trans(THD *thd, bool all)
       }
     DBUG_EXECUTE_IF("crash_commit_after", DBUG_SUICIDE(););
 
+#ifdef HAVE_REPLICATION
     /* Trigger semi-sync wait if it is enabled and needed. */
     if (!error &&
         (all ||
@@ -1242,6 +1243,7 @@ int ha_commit_trans(THD *thd, bool all)
         goto end;
       }
     }
+#endif
 end:
     if (rw_trans)
       start_waiting_global_read_lock(thd);

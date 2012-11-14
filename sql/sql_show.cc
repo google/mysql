@@ -5563,8 +5563,10 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
   if (option_type == OPT_GLOBAL)
     calc_sum_of_all_status(&tmp);
 
+#ifdef HAVE_REPLICATION
   // This is always done to show immediately whether semi-sync is up or down.
   semi_sync_replicator.set_export_stats();
+#endif
 
   res= show_status_array(thd, wild,
                          (SHOW_VAR *)all_status_vars.buffer,

@@ -3555,7 +3555,9 @@ bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
   LOG_INFO linfo;
   bool error=0;
   const char* save_name;
+#ifdef HAVE_REPLICATION
   bool do_semi_sync_reset_master= false;
+#endif
   DBUG_ENTER("reset_logs");
 
   // If called from init_slave() it is just to purge relay logs so no
@@ -3582,6 +3584,7 @@ bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
   safe_mutex_assert_owner(&LOCK_log);
   safe_mutex_assert_owner(&LOCK_index);
 
+#ifdef HAVE_REPLICATION
   if (log_type == LOG_BIN)
   {
     do_semi_sync_reset_master= true;
@@ -3592,6 +3595,7 @@ bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
       goto err;
     }
   }
+#endif
 
   /* Save variables so that we can reopen the log */
   save_name=name;
@@ -3685,10 +3689,12 @@ bool MYSQL_BIN_LOG::reset_logs(THD *thd, bool need_lock)
   my_free((uchar*) save_name, MYF(0));
 
 err:
+#ifdef HAVE_REPLICATION
   if (do_semi_sync_reset_master)
   {
     semi_sync_replicator.reset_master_complete();
   }
+#endif
 
   if (need_lock) {
     pthread_mutex_unlock(&LOCK_index);
@@ -5078,7 +5084,9 @@ ulonglong MYSQL_BIN_LOG::get_group_id_to_use(THD *thd)
 bool MYSQL_BIN_LOG::write(Log_event *event_info)
 {
   THD *thd= event_info->thd;
+#ifdef HAVE_REPLICATION
   bool reported_binlog_offset= false;
+#endif
   bool error= 1;
   DBUG_ENTER("MYSQL_BIN_LOG::write(Log_event *)");
 
@@ -5304,6 +5312,7 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
                                     log_file_name, my_b_safe_tell(&log_file));
       }
 
+#ifdef HAVE_REPLICATION
       if (opt_using_transactions &&
           !(thd->options & (OPTION_NOT_AUTOCOMMIT | OPTION_BEGIN)))
       {
@@ -5331,6 +5340,7 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
           reported_binlog_offset= true;
         }
       }
+#endif
 
       signal_update();
       if ((error= rotate_and_purge(RP_LOCK_LOG_IS_ALREADY_LOCKED)))
