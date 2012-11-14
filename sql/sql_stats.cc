@@ -330,7 +330,11 @@ void init_global_user_stats(void)
                 (hash_free_key) free_user_stats, 0))
   {
     sql_print_error("Initializing global_user_stats failed.");
+#ifndef EMBEDDED_LIBRARY
     unireg_abort(1);
+#else
+    return;
+#endif
   }
   global_user_stats_version++;
 }
@@ -756,7 +760,11 @@ int reset_global_user_stats(HASH *stats_hash, int *stats_version)
     USER_STATS **entryp= (USER_STATS **) dynamic_array_ptr(&delete_items, i);
     my_bool r= hash_delete(stats_hash, (uchar *) *entryp);
     if (r)
+#ifndef EMBEDDED_LIBRARY
       unireg_abort(1);
+#else
+      return 1;
+#endif
   }
   delete_dynamic(&delete_items);
   (*stats_version)++;
