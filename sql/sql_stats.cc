@@ -82,7 +82,11 @@ void init_global_table_stats(void)
                 0, 0, (hash_get_key) get_key_table_stats,
                 (hash_free_key) free_table_stats, 0)) {
     sql_print_error("Initializing global_table_stats failed.");
+#ifndef EMBEDDED_LIBRARY
     unireg_abort(1);
+#else
+    return;
+#endif
   }
   global_table_stats_version++;
 }
