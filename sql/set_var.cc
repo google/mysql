@@ -1044,6 +1044,7 @@ static sys_var_readonly         sys_myisam_mmap_size(&vars, "myisam_mmap_size",
                                                      OPT_GLOBAL,
                                                      SHOW_LONGLONG,
                                                      get_myisam_mmap_size);
+#ifndef EMBEDDED_LIBRARY
 static sys_var_const sys_var_httpd(&vars, "httpd",
                                    OPT_GLOBAL, SHOW_BOOL,
                                    (uchar*) &httpd);
@@ -1059,7 +1060,7 @@ static sys_var_bool_ptr sys_var_httpd_trust_clients(&vars,
 static sys_var_const sys_var_httpd_socket(&vars, "httpd_socket",
                                           OPT_GLOBAL, SHOW_CHAR_PTR,
                                           (uchar*) &httpd_unix_port);
-
+#endif
 
 bool sys_var::check(THD *thd, set_var *var)
 {

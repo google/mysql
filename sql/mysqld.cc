@@ -813,8 +813,10 @@ char **orig_argv;
 static my_socket unix_sock;
 static my_socket ip_socks[MAX_MYSQLD_PORTS];
 static my_socket repl_sock;
+#ifndef EMBEDDED_LIBRARY
 extern my_socket httpd_sock;
 extern my_socket httpd_unix_sock;
+#endif
 struct rand_struct sql_rand; ///< used by sql_class.cc:THD::THD()
 
 #ifndef EMBEDDED_LIBRARY
@@ -1051,11 +1053,13 @@ static void close_connections(void)
 #ifdef HAVE_SYS_UN_H
   shutdown_socket(unix_sock);
   (void) unlink(mysqld_unix_port);
+#ifndef EMBEDDED_LIBRARY
   if (httpd_unix_sock != INVALID_SOCKET)
   {
     shutdown_socket(httpd_unix_sock);
     (void) unlink(httpd_unix_port);
   }
+#endif
 #endif
   end_thr_alarm(0);			 // Abort old alarms.
 
@@ -1189,6 +1193,7 @@ static void close_server_sock()
   }
   close_server_sock_helper(repl_sock, "TCP/IP replication");
   close_server_sock_helper(unix_sock, "unix/IP");
+#ifndef EMBEDDED_LIBRARY
   if (httpd && httpd_sock != INVALID_SOCKET)
     close_server_sock_helper(httpd_sock, "TCP/IP HTTP");
   if (httpd_unix_sock != INVALID_SOCKET)
@@ -1196,6 +1201,7 @@ static void close_server_sock()
     close_server_sock_helper(httpd_unix_sock, "unix/IP");
     VOID(unlink(httpd_unix_port));
   }
+#endif
 
   VOID(unlink(mysqld_unix_port));
   DBUG_VOID_RETURN;
@@ -1666,6 +1672,7 @@ static void set_ports()
       mysqld_unix_port= env;			/* purecov: inspected */
   }
 }
+#endif  /* !EMBEDDED_LIBRARY */
 
 static int get_bind_addr(ulong *bind_addr, char *argument)
 {
@@ -1699,6 +1706,7 @@ static int get_bind_addr(ulong *bind_addr, char *argument)
   return 0;
 }
 
+#ifndef EMBEDDED_LIBRARY
 /* Change to run as another user if started with --user */
 
 static struct passwd *check_user(const char *user)
@@ -2075,7 +2083,9 @@ static void network_init(void)
   if (!opt_bootstrap)
   {
     unix_socket_init(&unix_sock, mysqld_unix_port);
+#ifndef EMBEDDED_LIBRARY
     unix_socket_init(&httpd_unix_sock, httpd_unix_port);
+#endif
   }
 #endif
   DBUG_PRINT("info",("server started"));
@@ -4883,6 +4893,7 @@ we force server id to 2, but this MySQL server will not act as a slave.");
   my_str_malloc= &my_str_malloc_mysqld;
   my_str_free= &my_str_free_mysqld;
 
+#ifndef EMBEDDED_LIBRARY
   if (!opt_disable_networking && httpd)
   {
     socket_init(&httpd_sock, httpd_bind_addr, httpd_port);
@@ -4893,6 +4904,7 @@ we force server id to 2, but this MySQL server will not act as a slave.");
       create_httpd_thread();
     }
   }
+#endif
 
   /*
     init signals & alarm
@@ -6279,10 +6291,12 @@ enum options_mysqld
   OPT_RPL_EVENT_BUFFER_SIZE,
   OPT_MYSQL_REPL_PORT,
   OPT_CHECKSUM_TEMP_FILES,
+#ifndef EMBEDDED_LIBRARY
   OPT_HTTPD_BIND_ADDRESS,
   OPT_HTTPD_PORT,
   OPT_HTTPD,
   OPT_HTTPD_TRUST_CLIENTS
+#endif
 };
 
 
@@ -6496,6 +6510,7 @@ struct my_option my_long_options[] =
    "Disable with --skip-large-pages.", &opt_large_pages, &opt_large_pages,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
+#ifndef EMBEDDED_LIBRARY
   {"httpd-bind-address", OPT_HTTPD_BIND_ADDRESS,
    "IP address to bind to for the HTTP server.",
    &httpd_bind_addr_str, &httpd_bind_addr_str, 0, GET_STR,
@@ -6512,6 +6527,7 @@ struct my_option my_long_options[] =
   {"httpd-socket", OPT_SOCKET, "Socket file to listen for the HTTP server.",
    &httpd_unix_port, &httpd_unix_port, 0, GET_STR,
    REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+#endif
   {"ignore-builtin-innodb", OPT_IGNORE_BUILTIN_INNODB ,
    "Disable initialization of builtin InnoDB plugin.",
    0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
@@ -8589,7 +8605,9 @@ static int mysql_init_variables(void)
   errmesg= 0;
   limit_tmp_disk_space= 0;
   mysqld_unix_port= opt_mysql_tmpdir= my_bind_addr_str= NullS;
+#ifndef EMBEDDED_LIBRARY
   httpd_bind_addr_str= NullS;
+#endif
   bzero((uchar*) &mysql_tmpdir_list, sizeof(mysql_tmpdir_list));
   bzero((char *) &global_status_var, sizeof(global_status_var));
   opt_large_pages= 0;
@@ -8635,8 +8653,10 @@ static int mysql_init_variables(void)
     ip_socks[i]= INVALID_SOCKET;
   }
   repl_sock= INVALID_SOCKET;
+#ifndef EMBEDDED_LIBRARY
   httpd_sock= INVALID_SOCKET;
   httpd_unix_sock= INVALID_SOCKET;
+#endif
   mysql_home_ptr= mysql_home;
   pidfile_name_ptr= pidfile_name;
   log_error_file_ptr= log_error_file;
@@ -9155,11 +9175,13 @@ mysqld_get_one_option(int optid,
     if (error)
       return error;
     break;
+#ifndef EMBEDDED_LIBRARY
   case (int) OPT_HTTPD_BIND_ADDRESS:
     error= get_bind_addr(&httpd_bind_addr, argument);
     if (error)
       return error;
     break;
+#endif
   case (int) OPT_PID_FILE:
     strmake(pidfile_name, argument, sizeof(pidfile_name)-1);
     break;
