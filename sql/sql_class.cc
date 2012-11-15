@@ -988,7 +988,9 @@ void THD::cleanup(void)
 #endif /* defined(ENABLED_DEBUG_SYNC) */
 
   mysql_ha_cleanup(this);
+#ifdef HAVE_REPLICATION
   sqllog_cleanup();
+#endif
   delete_dynamic(&user_var_events);
   hash_free(&user_vars);
   close_temporary_tables(this);
@@ -4198,6 +4200,7 @@ bool Discrete_intervals_list::append(Discrete_interval *new_interval)
 }
 
 
+#ifdef HAVE_REPLICATION
 /**
   SQL log related functions.
 */
@@ -4644,5 +4647,5 @@ int THD::sqllog_commit()
   }
   return (unlikely(error)) ? HA_ERR_SQL_LOG_TXN : 0;
 }
-
+#endif /* HAVE_REPLICATION */
 #endif /* !defined(MYSQL_CLIENT) */

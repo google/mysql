@@ -2688,6 +2688,7 @@ int MYSQL_SQL_LOG::new_file()
   return result;
 }
 
+#ifdef HAVE_REPLICATION
 /**
   Checks if a field in a record is SQL NULL.
 
@@ -3299,6 +3300,7 @@ bool sqllog_delete_row(THD *thd, TABLE *table, const uchar *buf, String *obj)
   DBUG_PRINT("info", ("Delete sql: %s", obj->c_ptr_quick()));
   DBUG_RETURN(error);
 }
+#endif  /* HAVE_REPLICATION */
 
 /**
   @todo
@@ -6005,8 +6007,10 @@ bool MYSQL_BIN_LOG::write(Log_event *event_info)
       
     }
 
+#ifdef HAVE_REPLICATION
     /* Add sqllog entry for DDL statement */
     error= mysql_sql_log.log_ddl(thd);
+#endif
 
 err:
     if (error)

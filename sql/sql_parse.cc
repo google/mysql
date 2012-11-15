@@ -3050,6 +3050,7 @@ mysql_execute_command(THD *thd)
                                        lex->ignore,
                                        select_tables)))
         {
+#ifdef HAVE_REPLICATION
           /*
             The table creation is optimistically logged before the
             handle_select() function so that the "CREATE TABLE ... SELECT FROM
@@ -3067,6 +3068,7 @@ mysql_execute_command(THD *thd)
                                        thd->query_length())))
               res= thd->sqllog_commit();
           }
+#endif  /* HAVE_REPLICATION */
           /*
             CREATE from SELECT give its SELECT_LEX for SELECT,
             and item_list belong to SELECT
@@ -3101,6 +3103,7 @@ mysql_execute_command(THD *thd)
       }
       if (!res)
       {
+#ifdef HAVE_REPLICATION
         if (opt_sql_log_ddl && mysql_sql_log.should_log(thd) &&
             (!opt_sql_log_database ||
              strstr(create_table->db, opt_sql_log_database)))
@@ -3112,7 +3115,7 @@ mysql_execute_command(THD *thd)
                                      thd->query_length())))
             res|= thd->sqllog_commit();
         }
-
+#endif
         if (!res)
           my_ok(thd);
       }

@@ -1236,12 +1236,14 @@ int ha_commit_trans(THD *thd, bool all)
         sqllog entries to disk directly in handler::log_write_row,
         handler::log_delete_row and handler::log_update_row functions.
       */
+#ifdef HAVE_REPLICATION
       if (is_real_trans)
       {
         if (!error)
           error= thd->sqllog_commit();
         /* If error, sqllog_rollback will be called in ha_rollback_trans(). */
       }
+#endif
 
       if (error || (is_real_trans && xid &&
                     (error= !(cookie= tc_log->log_xid(thd, xid)))))
@@ -1311,6 +1313,7 @@ int ha_commit_one_phase(THD *thd, bool all)
 #ifdef USING_TRANSACTIONS
   if (ha_info)
   {
+#ifdef HAVE_REPLICATION
     if (is_real_trans)
     {
       /*
@@ -1326,6 +1329,7 @@ int ha_commit_one_phase(THD *thd, bool all)
         DBUG_RETURN(error);
       }
     }
+#endif
     for (; ha_info; ha_info= ha_info_next)
     {
       int err;
@@ -1425,12 +1429,14 @@ int ha_rollback_trans(THD *thd, bool all)
   if (is_real_trans)
     thd->transaction.cleanup();
 
+#ifdef HAVE_REPLICATION
   /*
     Remove any statements associated with this transaction that we
     were intending to log.  We don't need to worry about errors,
     just delete any statements we previously stored.
   */
   thd->sqllog_rollback();
+#endif
 
   thd->diff_rollback_trans++;
 #endif /* USING_TRANSACTIONS */
@@ -2241,7 +2247,9 @@ int handler::ha_open(TABLE *table_arg, const char *name, int mode,
     cached_table_flags= table_flags();
   }
   rows_read= rows_changed= 0;
+#ifdef HAVE_REPLICATION
   log_deleted_rows= true;
+#endif
   DBUG_RETURN(error);
 }
 
@@ -4833,8 +4841,10 @@ int handler::ha_write_row(uchar *buf)
 
   if (unlikely(error= write_row(buf)))
     DBUG_RETURN(error);
+#ifdef HAVE_REPLICATION
   if (unlikely(error= log_write_row(table, buf)))
     DBUG_RETURN(error);
+#endif
   if (unlikely(error= binlog_log_row(table, 0, buf, log_func)))
     DBUG_RETURN(error); /* purecov: inspected */
   DBUG_RETURN(0);
@@ -4856,8 +4866,10 @@ int handler::ha_update_row(const uchar *old_data, uchar *new_data)
 
   if (unlikely(error= update_row(old_data, new_data)))
     return error;
+#ifdef HAVE_REPLICATION
   if (unlikely(error= log_update_row(table, old_data, new_data)))
     return error;
+#endif
   if (unlikely(error= binlog_log_row(table, old_data, new_data, log_func)))
     return error;
   return 0;
@@ -4872,13 +4884,16 @@ int handler::ha_delete_row(const uchar *buf)
 
   if (unlikely(error= delete_row(buf)))
     return error;
+#ifdef HAVE_REPLICATION
   if (unlikely(error= log_delete_row(table, buf)))
     return error;
+#endif
   if (unlikely(error= binlog_log_row(table, buf, 0, log_func)))
     return error;
   return 0;
 }
 
+#ifdef HAVE_REPLICATION
 /**
   The function to log an insertion operation made to the underlying storage
   engine. This function is called each time a row is inserted.
@@ -5030,6 +5045,7 @@ int handler::log_delete_row(TABLE *table, const uchar *buf)
   }
   return 0;
 }
+#endif  /* HAVE_REPLICATION */
 
 /** @brief
   use_hidden_primary_key() is called in case of an update/delete when
