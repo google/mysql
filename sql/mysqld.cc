@@ -6447,7 +6447,7 @@ each time the SQL thread starts.",
    "If an IO Cache grows to greater than this size (in bytes), it will kill "
    "the query responsible.",
    &io_cache_max_size, &io_cache_max_size, 0,
-   GET_INT, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+   GET_ULONG, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"language", 'L',
    "Client error messages in given language. May be given as a full path.",
    &language_ptr, &language_ptr, 0, GET_STR, REQUIRED_ARG,

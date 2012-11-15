@@ -71,7 +71,7 @@ static void my_aiowait(my_aio_result *result);
 #define IO_ROUND_UP(X) (((X)+IO_SIZE-1) & ~(IO_SIZE-1))
 #define IO_ROUND_DN(X) ( (X)            & ~(IO_SIZE-1))
 
-uint64 io_cache_max_size;
+ulong io_cache_max_size;
 /*
   Setup internal pointers inside IO_CACHE
 
