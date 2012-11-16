@@ -2538,7 +2538,7 @@ void test_d2b2d(const char *str, int p, int s, const char *orig, int ex)
   sprintf(s1, "'%s'", str);
   end= strend(str);
   string2decimal(str, &a, &end);
-  res=decimal2bin(&a, buf, p, s);
+  res=decimal2bin(&a, (uchar*) buf, p, s);
   printf("%-31s {%2d, %2d} => res=%d size=%-2d ", s1, p, s, res, size);
   if (full)
   {
@@ -2546,7 +2546,7 @@ void test_d2b2d(const char *str, int p, int s, const char *orig, int ex)
     for (i=0; i < size; i++)
       printf("%02x", ((uchar *)buf)[i]);
   }
-  res=bin2decimal(buf, &a, p, s);
+  res=bin2decimal((uchar*) buf, &a, p, s);
   printf(" => res=%d ", res);
   print_decimal(&a, orig, res, ex);
   printf("\n");

@@ -1885,6 +1885,9 @@ void close_file(IO_CACHE* info)
 
 int main(int argc, char** argv)
 {
+  /* Fix the "unused argument" error message that is not relevant here. */
+  (void) argc;
+
   IO_CACHE sra_cache; /* SEQ_READ_APPEND */
   MY_STAT status;
   const char* fname="/tmp/iocache.test";
@@ -1892,16 +1895,16 @@ int main(int argc, char** argv)
   char llstr_buf[22];
   int max_block,total_bytes=0;
   int i,num_loops=100,error=0;
-  char *p;
-  char* block, *block_end;
+  uchar *p;
+  uchar* block, *block_end;
   MY_INIT(argv[0]);
   max_block = cache_size*3;
-  if (!(block=(char*)my_malloc(max_block,MYF(MY_WME))))
+  if (!(block=(uchar*)my_malloc(max_block,MYF(MY_WME))))
     die("Not enough memory to allocate test block");
   block_end = block + max_block;
   for (p = block,i=0; p < block_end;i++)
   {
-    *p++ = (char)i;
+    *p++ = (uchar)i;
   }
   if (my_stat(fname,&status, MYF(0)) &&
       my_delete(fname,MYF(MY_WME)))
@@ -1911,7 +1914,7 @@ int main(int argc, char** argv)
   open_file(fname,&sra_cache, cache_size);
   for (i = 0; i < num_loops; i++)
   {
-    char buf[4];
+    uchar buf[4];
     int block_size = abs(rand() % max_block);
     int4store(buf, block_size);
     if (my_b_append(&sra_cache,buf,4) ||

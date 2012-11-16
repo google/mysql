@@ -794,6 +794,7 @@ static void *test_thread(void *arg)
   return 0;
 }
 
+#if 0 /* this function is not used anywhere and causes a compilation to fail */
 #ifdef USE_ONE_SIGNAL_HAND
 static sig_handler print_signal_warning(int sig)
 {
@@ -806,6 +807,7 @@ static sig_handler print_signal_warning(int sig)
     alarm(2);					/* reschedule alarm */
 }
 #endif /* USE_ONE_SIGNAL_HAND */
+#endif /* 0 */
 
 
 static void *signal_hand(void *arg __attribute__((unused)))

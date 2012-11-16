@@ -76,9 +76,11 @@ uctypedump: uctypedump.c
 	$(LINK) $(INCLUDES) $(srcdir)/uctypedump.c
 
 test_decimal$(EXEEXT): decimal.c $(pkglib_LIBRARIES)
-	$(CP) $(srcdir)/decimal.c ./test_decimal.c
-	$(LINK) $(FLAGS) -DMAIN  ./test_decimal.c $(LDADD) $(pkglib_LIBRARIES)
-	$(RM) -f ./test_decimal.c
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(pkglib_LIBRARIES)
+
+test_vsnprintf$(EXEEXT): my_vsnprintf.c $(LIBRARIES)
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(pkglib_LIBRARIES)
+
 
 # Don't update the files from bitkeeper
 %::SCCS/s.%

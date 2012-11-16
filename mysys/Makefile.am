@@ -21,7 +21,7 @@ INCLUDES =		@ZLIB_INCLUDES@ -I$(top_builddir)/include \
 pkglib_LIBRARIES =	libmysys.a
 LDADD =			libmysys.a $(top_builddir)/strings/libmystrings.a $(top_builddir)/dbug/libdbug.a
 noinst_HEADERS =	mysys_priv.h my_static.h my_handler_errors.h
-libmysys_a_SOURCES =    my_init.c my_getwd.c mf_getdate.c my_mmap.c \
+libmysys_a_SOURCES = 	my_init.c my_getwd.c mf_getdate.c my_mmap.c \
 			mf_path.c mf_loadpath.c my_file.c \
 			my_open.c my_create.c my_dup.c my_seek.c my_read.c \
 			my_pread.c my_write.c my_getpagesize.c \
@@ -45,7 +45,7 @@ libmysys_a_SOURCES =    my_init.c my_getwd.c mf_getdate.c my_mmap.c \
 			my_quick.c my_lockmem.c my_static.c \
 			my_sync.c my_getopt.c my_mkdir.c \
 			default_modify.c default.c \
-                        my_compress.c checksum.c \
+			my_compress.c checksum.c \
 			my_net.c my_sleep.c \
 			charset.c charset-def.c my_bitmap.c my_bit.c md5.c \
 			rijndael.c my_aes.c sha1.c \
@@ -88,50 +88,30 @@ FLAGS=$(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS) @NOINST_LDFLAGS@
 # which automaticly removes the object files you use to compile a final program
 #
 
-test_bitmap$(EXEEXT): my_bitmap.c $(LIBRARIES)
-	$(LINK) $(FLAGS) -DMAIN  ./my_bitmap.c $(LDADD) $(LIBS)
+test_memmem$(EXEEXT): my_memmem.c $(LIBRARIES)
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
 test_priority_queue$(EXEEXT): queues.c $(LIBRARIES)
-	$(LINK) $(FLAGS) -DMAIN  ./queues.c $(LDADD) $(LIBS)
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
 test_thr_alarm$(EXEEXT): thr_alarm.c $(LIBRARIES)
-	$(CP) $(srcdir)/thr_alarm.c ./test_thr_alarm.c
-	$(LINK) $(FLAGS) -DMAIN  ./test_thr_alarm.c $(LDADD) $(LIBS)
-	$(RM) -f ./test_thr_alarm.c
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
 test_thr_lock$(EXEEXT): thr_lock.c $(LIBRARIES)
-	$(CP) $(srcdir)/thr_lock.c test_thr_lock.c
-	$(LINK) $(FLAGS) -DMAIN  ./test_thr_lock.c $(LDADD) $(LIBS)
-	$(RM) -f ./test_thr_lock.c
-
-test_vsnprintf$(EXEEXT): my_vsnprintf.c $(LIBRARIES)
-	$(CP) $(srcdir)/my_vsnprintf.c test_vsnprintf.c
-	$(LINK) $(FLAGS) -DMAIN ./test_vsnprintf.c $(LDADD) $(LIBS)
-	$(RM) -f test_vsnprintf.c
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
 test_io_cache$(EXEEXT): mf_iocache.c $(LIBRARIES)
-	$(CP) $(srcdir)/mf_iocache.c test_io_cache.c
-	$(LINK) $(FLAGS) -DMAIN ./test_io_cache.c $(LDADD) $(LIBS)
-	$(RM) -f test_io_cache.c
-
-test_dir$(EXEEXT): test_dir.c $(LIBRARIES)
-	$(LINK) $(FLAGS) -DMAIN $(srcdir)/test_dir.c $(LDADD) $(LIBS)
-
-test_charset$(EXEEXT): test_charset.c $(LIBRARIES)
-	$(LINK) $(FLAGS) -DMAIN $(srcdir)/test_charset.c $(LDADD) $(LIBS)
-
-testhash$(EXEEXT): testhash.c $(LIBRARIES)
-	$(LINK) $(FLAGS) -DMAIN $(srcdir)/testhash.c $(LDADD) $(LIBS)
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
 test_gethwaddr$(EXEEXT): my_gethwaddr.c $(LIBRARIES)
-	$(CP) $(srcdir)/my_gethwaddr.c ./test_gethwaddr.c
-	$(LINK) $(FLAGS) -DMAIN  ./test_gethwaddr.c $(LDADD) $(LIBS)
-	$(RM) -f ./test_gethwaddr.c
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
 test_base64$(EXEEXT): base64.c $(LIBRARIES)
-	$(CP) $(srcdir)/base64.c ./test_base64.c
-	$(LINK) $(FLAGS) -DMAIN  ./test_base64.c $(LDADD) $(LIBS)
-	$(RM) -f ./test_base64.c
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
+
+.PHONY: tests
+
+tests: test_base64 test_gethwaddr test_io_cache test_memmem test_priority_queue test_thr_alarm test_thr_lock
 
 # Don't update the files from bitkeeper
 %::SCCS/s.%

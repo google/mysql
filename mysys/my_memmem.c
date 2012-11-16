@@ -51,6 +51,10 @@ void *my_memmem(const void *haystack, size_t haystacklen,
 #include <assert.h>
 
 int main(int argc, char *argv[]) {
+  /* Fix the "unused argument" error messages that are not relevant here. */
+  (void) argc;
+  (void) argv;
+
   char haystack[10], needle[3];
 
   memmove(haystack, "0123456789", 10);
