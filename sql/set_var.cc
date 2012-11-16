@@ -3706,7 +3706,6 @@ int set_var_user::update(THD *thd)
 }
 
 
-#ifdef HAVE_REPLICATION
 /*****************************************************************************
   Functions to handle SET PASSWORD
 *****************************************************************************/
@@ -4404,7 +4403,6 @@ check_net_buffer_length(THD *thd,  set_var *var)
   }
   return 0;
 }
-#endif
 
 /****************************************************************************
   Used templates
