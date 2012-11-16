@@ -5356,10 +5356,12 @@ err:
 
   pthread_mutex_unlock(&LOCK_log);
 
+#ifdef HAVE_REPLICATION
   /* Trigger semi-sync wait if it is enabled and needed. */
   if (reported_binlog_offset &&
       semi_sync_replicator.commit_trx(thd))
     error= 1;
+#endif
 
   DBUG_RETURN(error);
 }
