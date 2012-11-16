@@ -78,6 +78,7 @@ sqlsources = derror.cc field.cc field_conv.cc strfunc.cc filesort.cc \
         repl_hier_cache.cc \
 	debug_sync.cc \
 	sql_tablespace.cc \
+        sql_stats.cc \
 	rpl_injector.cc my_user.c partition_info.cc \
 	sql_servers.cc event_parse_data.cc
 
