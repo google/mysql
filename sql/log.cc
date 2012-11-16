@@ -5944,10 +5944,12 @@ DBUG_skip_commit:
                                     log_file_name, my_b_safe_tell(&log_file));
       }
 
+#ifdef HAVE_REPLICATION
       if (semi_sync_replicator.report_binlog_offset(thd,
                                                     log_file_name,
                                                     log_file.pos_in_file))
         goto err;
+#endif
 
       signal_update();
     }
