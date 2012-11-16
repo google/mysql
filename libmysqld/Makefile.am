@@ -35,6 +35,7 @@ INCLUDES=		-I$(top_builddir)/include -I$(top_srcdir)/include \
 			-I$(top_srcdir)/sql/examples \
 			-I$(top_srcdir)/regex \
 			$(openssl_includes) @ZLIB_INCLUDES@ \
+                        $(LZO_INCLUDES) \
 			@condition_dependent_plugin_includes@
 
 noinst_LIBRARIES =	libmysqld_int.a
@@ -100,6 +101,7 @@ INC_LIB=	$(top_builddir)/regex/libregex.a \
 		$(top_builddir)/strings/libmystrings.a \
 		$(top_builddir)/dbug/libdbug.a \
 		$(top_builddir)/vio/libvio.a \
+                $(top_builddir)/lzo-2.03/src/.libs/liblzo2.a \
                 @NDB_SCI_LIBS@ \
 		@mysql_plugin_libs@ \
 		$(yassl_inc_libs)
