@@ -3876,6 +3876,7 @@ end_with_restore_list:
 	goto error;
       }
 
+#ifdef HAVE_REPLICATION
       if (opt_no_local_infile_if_repl && might_write_binlog())
       {
         /*
@@ -3897,6 +3898,7 @@ end_with_restore_list:
                  "no-local-infile-if-repl");
         goto error;
       }
+#endif
     }
 
     if (check_one_table_access(thd, privilege, all_tables))
