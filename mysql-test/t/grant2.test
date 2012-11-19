@@ -669,6 +669,121 @@ USE test;
 
 --echo End of 5.1 tests
 
+# Check that permissions of different levels are merged properly
+
+create user user1;
+create database d1;
+create table d1.t1 (n int);
+insert into d1.t1 values (1);
+grant update on d1.* to user1;
+grant select on d1.t1 to user1;
+connect (conn1, localhost, user1, , );
+select * from d1.t1;
+update d1.t1 set n = 2;
+update d1.t1 set n = 3 where n = 2;
+
+connection default;
+revoke update on d1.* from user1;
+grant update on *.* to user1;
+connection conn1;
+select * from d1.t1;
+update d1.t1 set n = 4;
+update d1.t1 set n = 5 where n = 4;
+
+connection default;
+revoke select on d1.t1 from user1;
+grant select on d1.* to user1;
+connection conn1;
+select * from d1.t1;
+update d1.t1 set n = 6;
+update d1.t1 set n = 7 where n = 6;
+
+connection default;
+revoke update on *.* from user1;
+grant update on d1.t1 to user1;
+connection conn1;
+select * from d1.t1;
+update d1.t1 set n = 8;
+update d1.t1 set n = 9 where n = 8;
+
+connection default;
+revoke select on d1.* from user1;
+grant select on *.* to user1;
+connection conn1;
+select * from d1.t1;
+update d1.t1 set n = 10;
+update d1.t1 set n = 11 where n = 10;
+
+connection default;
+revoke update on d1.t1 from user1;
+grant update on d1.* to user1;
+connection conn1;
+select * from d1.t1;
+update d1.t1 set n = 12;
+update d1.t1 set n = 13 where n = 12;
+
+connection default;
+revoke select on *.* from user1;
+revoke update on d1.* from user1;
+
+insert into d1.t1 values (14);
+grant delete on d1.* to user1;
+grant select on d1.t1 to user1;
+connection conn1;
+select * from d1.t1;
+delete from d1.t1 where n = 14;
+select * from d1.t1;
+
+connection default;
+revoke delete on d1.* from user1;
+grant delete on *.* to user1;
+insert into d1.t1 values (15);
+connection conn1;
+select * from d1.t1;
+delete from d1.t1 where n = 15;
+select * from d1.t1;
+
+connection default;
+revoke select on d1.t1 from user1;
+grant select on d1.* to user1;
+insert into d1.t1 values (16);
+connection conn1;
+select * from d1.t1;
+delete from d1.t1 where n = 16;
+select * from d1.t1;
+
+connection default;
+revoke delete on *.* from user1;
+grant delete on d1.t1 to user1;
+insert into d1.t1 values (17);
+connection conn1;
+select * from d1.t1;
+delete from d1.t1 where n = 17;
+select * from d1.t1;
+
+connection default;
+revoke select on d1.* from user1;
+grant select on *.* to user1;
+insert into d1.t1 values (18);
+connection conn1;
+select * from d1.t1;
+delete from d1.t1 where n = 18;
+select * from d1.t1;
+
+connection default;
+revoke delete on d1.t1 from user1;
+grant delete on d1.* to user1;
+insert into d1.t1 values (19);
+connection conn1;
+select * from d1.t1;
+delete from d1.t1 where n = 19;
+select * from d1.t1;
+
+connection default;
+disconnect conn1;
+drop user user1;
+drop database d1;
+
 #
 # All changes in user-level and database-level permissions should be immediately
 # visible to all active connections.

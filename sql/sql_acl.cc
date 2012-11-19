@@ -4138,11 +4138,15 @@ bool check_grant(THD *thd, ulong want_access, TABLE_LIST *tables,
 
     want_access= orig_want_access;
     want_access&= ~sctx->master_access;
-    if (!want_access)
+    /*
+      If we don't have a global SELECT privilege, we have to get the table
+      specific access rights to be able to handle queries of type
+      UPDATE t1 SET a=1 WHERE b > 0
+    */
+    if (!want_access && (sctx->master_access & SELECT_ACL))
       continue;                                 // ok
 
-    if (!(~table->grant.privilege & want_access) ||
-        table->is_anonymous_derived_table() || table->schema_table)
+    if (table->is_anonymous_derived_table() || table->schema_table)
     {
       /*
         It is subquery in the FROM clause. VIEW set table->derived after
@@ -4164,6 +4168,8 @@ bool check_grant(THD *thd, ulong want_access, TABLE_LIST *tables,
                                          table->get_table_name(), FALSE)))
     {
       want_access &= ~table->grant.privilege;
+      if (!want_access)
+	continue;
       goto err;					// No grants
     }
     if (show_table)
