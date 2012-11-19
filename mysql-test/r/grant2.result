@@ -845,3 +845,119 @@ DROP USER mysqltest_u2@localhost;
 DROP USER mysqltest_u3@localhost;
 DROP USER mysqltest_u4@localhost;
 DROP USER mysqltest_u5@localhost;
+create user user1;
+create database d1;
+create table d1.t1 (n int);
+insert into d1.t1 values (1);
+grant update on d1.* to user1;
+grant select on d1.t1 to user1;
+select * from d1.t1;
+n
+1
+update d1.t1 set n = 2;
+update d1.t1 set n = 3 where n = 2;
+revoke update on d1.* from user1;
+grant update on *.* to user1;
+select * from d1.t1;
+n
+3
+update d1.t1 set n = 4;
+update d1.t1 set n = 5 where n = 4;
+revoke select on d1.t1 from user1;
+grant select on d1.* to user1;
+select * from d1.t1;
+n
+5
+update d1.t1 set n = 6;
+update d1.t1 set n = 7 where n = 6;
+revoke update on *.* from user1;
+grant update on d1.t1 to user1;
+select * from d1.t1;
+n
+7
+update d1.t1 set n = 8;
+update d1.t1 set n = 9 where n = 8;
+revoke select on d1.* from user1;
+grant select on *.* to user1;
+select * from d1.t1;
+n
+9
+update d1.t1 set n = 10;
+update d1.t1 set n = 11 where n = 10;
+revoke update on d1.t1 from user1;
+grant update on d1.* to user1;
+select * from d1.t1;
+n
+11
+update d1.t1 set n = 12;
+update d1.t1 set n = 13 where n = 12;
+revoke select on *.* from user1;
+revoke update on d1.* from user1;
+insert into d1.t1 values (14);
+grant delete on d1.* to user1;
+grant select on d1.t1 to user1;
+select * from d1.t1;
+n
+13
+14
+delete from d1.t1 where n = 14;
+select * from d1.t1;
+n
+13
+revoke delete on d1.* from user1;
+grant delete on *.* to user1;
+insert into d1.t1 values (15);
+select * from d1.t1;
+n
+13
+15
+delete from d1.t1 where n = 15;
+select * from d1.t1;
+n
+13
+revoke select on d1.t1 from user1;
+grant select on d1.* to user1;
+insert into d1.t1 values (16);
+select * from d1.t1;
+n
+13
+16
+delete from d1.t1 where n = 16;
+select * from d1.t1;
+n
+13
+revoke delete on *.* from user1;
+grant delete on d1.t1 to user1;
+insert into d1.t1 values (17);
+select * from d1.t1;
+n
+13
+17
+delete from d1.t1 where n = 17;
+select * from d1.t1;
+n
+13
+revoke select on d1.* from user1;
+grant select on *.* to user1;
+insert into d1.t1 values (18);
+select * from d1.t1;
+n
+13
+18
+delete from d1.t1 where n = 18;
+select * from d1.t1;
+n
+13
+revoke delete on d1.t1 from user1;
+grant delete on d1.* to user1;
+insert into d1.t1 values (19);
+select * from d1.t1;
+n
+13
+19
+delete from d1.t1 where n = 19;
+select * from d1.t1;
+n
+13
+drop user user1;
+drop database d1;
