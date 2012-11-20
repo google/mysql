@@ -189,7 +189,7 @@ i
 4
 rename user rolefoo@localhost to rolefoo_copy@localhost;
 select * from t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from t2;
 i
 1
@@ -201,7 +201,7 @@ i
 5
 rename user rolefoo2@localhost to rolefoo2_copy@localhost;
 select * from t2;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from t1;
 i
 1
@@ -213,9 +213,9 @@ i
 4
 drop mapped user user1;
 select * from t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from t2;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 drop user rolefoo@localhost;
 drop user rolefoo2@localhost;
 drop user rolefoodup@localhost;

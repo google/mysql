@@ -272,7 +272,7 @@ select * from t2;
 
 rename user rolefoo@localhost to rolefoo_copy@localhost;
 connection conn_foo;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013,1317  # = "MySQL server has gone away
 select * from t1;
 connection conn_foo2;
 select * from t2;
@@ -285,7 +285,7 @@ select * from t1;
 connection default;
 rename user rolefoo2@localhost to rolefoo2_copy@localhost;
 connection conn_foo2;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013,1317  # = "MySQL server has gone away
 select * from t2;
 connection conn_foo;
 select * from t1;
@@ -298,10 +298,10 @@ select * from t2;
 connection default;
 drop mapped user user1;
 connection conn_foo;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013,1317  # = "MySQL server has gone away
 select * from t1;
 connection conn_foo2;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013,1317  # = "MySQL server has gone away
 select * from t2;
 
 connection default;

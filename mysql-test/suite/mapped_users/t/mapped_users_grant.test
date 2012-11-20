@@ -266,7 +266,7 @@ connection conn1;
 --error ER_QUERY_INTERRUPTED
 reap;
 --enable_result_log
---error 2006  # = "MySQL server has gone away
+--error 2006,2013  # = "MySQL server has gone away
 select * from t1;
 
 # When role behind the mapped user is dropped all user connections should be
@@ -285,7 +285,7 @@ connection conn1;
 --error ER_QUERY_INTERRUPTED
 reap;
 --enable_result_log
---error 2006  # = "MySQL server has gone away
+--error 2006,2013  # = "MySQL server has gone away
 select * from d1.t1;
 
 # User connections should be killed even if user was re-created while
@@ -401,7 +401,7 @@ create user user1;
 connection conn1;
 --error ER_QUERY_INTERRUPTED
 select * from d1.t1;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013  # = "MySQL server has gone away
 select * from d1.t1;
 
 # The same goes about renaming of real user to the same name as mapped user.
@@ -416,7 +416,7 @@ rename user user2 to user1;
 connection conn1;
 --error ER_QUERY_INTERRUPTED
 select * from d1.t1;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013  # = "MySQL server has gone away
 select * from d1.t1;
 
 # But connection from mapped user will survive if a real user was renamed to the
