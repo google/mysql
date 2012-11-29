@@ -1655,7 +1655,8 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
       else
         sctx->priv_user= (char *) "";
       sctx->salt_len= acl_mapped_user->salt_len;
-      memcpy(sctx->salt, acl_mapped_user->salt, acl_mapped_user->salt_len);
+      memcpy(sctx->salt, acl_mapped_user->salt,
+             acl_mapped_user->salt_len * sizeof(sctx->salt[0]));
     }
     *mqh= acl_user->user_resource;
 
@@ -1972,7 +1973,8 @@ static void acl_kill_mapped_user_threads(ACL_MAPPED_USER *acl_mapped_user)
     Security_context *sctx= tmp_thd->security_ctx;
     if (sctx->uses_role && !strcmp(sctx->user, acl_mapped_user->user) &&
 	sctx->salt_len == acl_mapped_user->salt_len &&
-	!memcmp(sctx->salt, acl_mapped_user->salt, sctx->salt_len))
+	!memcmp(sctx->salt, acl_mapped_user->salt,
+	        sctx->salt_len * sizeof(sctx->salt[0])))
     {
       tmp_thd->awake(THD::KILL_CONNECTION);
     }
