@@ -526,6 +526,7 @@ typedef struct st_io_cache		/* Used when cacheing files */
   size_t (*direct_pwrite)(int, const uchar *, size_t, my_off_t, myf);
   my_off_t (*direct_seek)(File, my_off_t, int, myf);
   my_off_t (*direct_tell)(File, myf);
+  my_bool checksummed;
 } IO_CACHE;
 
 typedef int (*qsort2_cmp)(const void *, const void *, const void *);

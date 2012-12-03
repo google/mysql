@@ -186,6 +186,7 @@ int init_io_cache(IO_CACHE *info, File file, size_t cachesize,
   info->direct_pwrite = &my_pwrite;
   info->direct_seek = &my_seek;
   info->direct_tell = &my_tell;
+  info->checksummed = 0;
 
   if (file >= 0)
   {
@@ -1920,9 +1921,6 @@ void close_file(IO_CACHE* info)
 
 int main(int argc __attribute__((unused)), char** argv)
 {
-  /* Fix the "unused argument" error message that is not relevant here. */
-  (void) argc;
-
   IO_CACHE sra_cache; /* SEQ_READ_APPEND */
   MY_STAT status;
   const char* fname="/tmp/iocache.test";

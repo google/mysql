@@ -60,7 +60,7 @@ size_t my_pread(File Filedes, uchar *Buffer, size_t Count, my_off_t offset,
 #endif
 #ifndef HAVE_PREAD
     pthread_mutex_lock(&my_file_info[Filedes].mutex);
-    readbytes= (uint) -1;
+    readbytes= (size_t) -1;
     error= (lseek(Filedes, offset, MY_SEEK_SET) == (my_off_t) -1 ||
 	    (readbytes= read(Filedes, Buffer, (uint) Count)) != Count);
     pthread_mutex_unlock(&my_file_info[Filedes].mutex);

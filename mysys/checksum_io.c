@@ -28,15 +28,26 @@
 /* don't change this! */
 #define IOCACHE_BLOCK_HEADER_SIZE (IOCACHE_BLOCK_SIZE - IOCACHE_FITTED_BLOCK_SIZE)
 
+typedef my_off_t block_num_t;
+typedef uint16 block_offset_t;
+
 /* Get the (zero-indexed) block number counted from the beginning of the file */
-/* n is the offset from beginning of file */
-#define get_block_num(n) ((n) / IOCACHE_FITTED_BLOCK_SIZE)
+static block_num_t get_block_num(my_off_t offset)
+{
+  return offset / IOCACHE_FITTED_BLOCK_SIZE;
+}
+
 /* Get the byte offset from the beginning of the data section for the block we are in */
-/* n is the offset from beginning of file */
-#define get_block_offset(n) ((n) % IOCACHE_FITTED_BLOCK_SIZE)
+static block_offset_t get_block_offset(my_off_t offset)
+{
+  return offset % IOCACHE_FITTED_BLOCK_SIZE;
+}
+
 /* Get the location of the start of our block */
-/* n is the index of the block in the file (zero-indexed) */
-#define get_block_loc(index) (((my_off_t) index) * IOCACHE_BLOCK_SIZE)
+static my_off_t get_block_loc(block_num_t index)
+{
+  return index * IOCACHE_BLOCK_SIZE;
+}
 
 /*
   When reading this struct to and from disk, read in increments of
@@ -62,14 +73,14 @@ typedef struct chksum_block
 
   @return the corresponding 'real' address
 */
-static size_t chksum_pos_ftor(size_t pos)
+static my_off_t chksum_pos_ftor(my_off_t pos)
 {
-  size_t block_offset= get_block_offset(pos);
-  size_t block_num= get_block_num(pos);
+  block_offset_t block_offset= get_block_offset(pos);
+  block_num_t block_num= get_block_num(pos);
 
   /* We do the last bit to add in the header size. */
-  size_t real_pos= (block_num * IOCACHE_BLOCK_SIZE) + block_offset
-    + (IOCACHE_BLOCK_HEADER_SIZE * (block_offset != 0));
+  my_off_t real_pos= (my_off_t) block_num * IOCACHE_BLOCK_SIZE
+      + block_offset + (IOCACHE_BLOCK_HEADER_SIZE * (block_offset != 0));
 
   return real_pos;
 }
@@ -81,11 +92,11 @@ static size_t chksum_pos_ftor(size_t pos)
 
   @return the corresponding fake address
 */
-static size_t chksum_pos_rtof(size_t pos)
+static my_off_t chksum_pos_rtof(my_off_t pos)
 {
-  size_t block_offset= pos % IOCACHE_BLOCK_SIZE;
-  size_t block_num= pos / IOCACHE_BLOCK_SIZE;
-  size_t fake_pos;
+  block_offset_t block_offset= pos % IOCACHE_BLOCK_SIZE;
+  block_num_t block_num= pos / IOCACHE_BLOCK_SIZE;
+  my_off_t fake_pos;
 
   /*
     if we are given a real pos inside a block header, align to the
@@ -95,7 +106,7 @@ static size_t chksum_pos_rtof(size_t pos)
     block_offset+= IOCACHE_BLOCK_HEADER_SIZE;
 
   /* We do the last bit to account for the header size in the last block */
-  fake_pos= block_num * IOCACHE_FITTED_BLOCK_SIZE + block_offset
+  fake_pos= (my_off_t) block_num * IOCACHE_FITTED_BLOCK_SIZE + block_offset
     - IOCACHE_BLOCK_HEADER_SIZE;
 
   return fake_pos;
@@ -115,21 +126,23 @@ static size_t chksum_pos_rtof(size_t pos)
   @param[in]      count   The total number of bytes that are left copied from
                           Buffer
 
-  @return length written on success, -1 on failure
+  @return length written
 */
-static int insert_into_block(CHKSUM_BLOCK *block,  const uchar *Buffer,
-                      my_off_t start, my_off_t count)
+static block_offset_t insert_into_block(CHKSUM_BLOCK *block,  const uchar *Buffer,
+                                        block_offset_t start, size_t count)
 {
-  int to_write;
+  DBUG_ASSERT(start <= IOCACHE_FITTED_BLOCK_SIZE);
 
-  if (start > IOCACHE_FITTED_BLOCK_SIZE)
-    return -1;
+  /*
+    If we are writing past the end of the block, we must zero the memory in
+    between, or we risk leaking some of our memory contents.
+  */
+  if (start > block->len)
+  {
+      memset(block->data + block->len, 0, start - block->len);
+  }
 
-  if (start + count > IOCACHE_FITTED_BLOCK_SIZE)
-    to_write= IOCACHE_FITTED_BLOCK_SIZE - start;
-  else
-    to_write= count;
-
+  block_offset_t to_write= min(count, IOCACHE_FITTED_BLOCK_SIZE - start);
   if (block->len < start + to_write)
     block->len= start + to_write;
 
@@ -147,65 +160,96 @@ static int insert_into_block(CHKSUM_BLOCK *block,  const uchar *Buffer,
   @param[in] block      The block we are writing to disk
   @param[in] block_num  The block index (zero-indexed)
 
-  @return number of bytes written, or -1 on failure
-  Should only ever return IOCACHE_BLOCK_SIZE
+  @return TRUE on success, FALSE on my_pwrite failure
 */
-static size_t chksum_write_block(int file, CHKSUM_BLOCK *block, int block_num)
+static my_bool chksum_write_block(File file, CHKSUM_BLOCK *block, block_num_t block_num)
 {
-  my_off_t loc;
-  size_t res;
-
-  loc= get_block_loc(block_num);
+  my_off_t block_loc= get_block_loc(block_num);
 
   DBUG_ASSERT(block->len <= IOCACHE_FITTED_BLOCK_SIZE);
-  res= my_pwrite(file, (void *) block, block->len + IOCACHE_BLOCK_HEADER_SIZE,
-                 loc, MYF(0));
+  size_t to_write= block->len + IOCACHE_BLOCK_HEADER_SIZE;
+  size_t res= my_pwrite(file, (void *) block, to_write, block_loc, MYF(0));
 
-  return res;
+  if (res != to_write)
+  {
+    my_printf_error(my_errno,
+                    "chksum_write_block failed due to my_pwrite(fd=%d) returning %llu with errno=%d, "
+                    "while trying to write block %llu, at block_loc %llu\n",
+                    MYF(0),
+                    file, (ulonglong) res, my_errno, block_num, block_loc);
+    return FALSE;
+  }
+  return TRUE;
 }
 
 /*
-  Retrieve the block at the given index, validating its checksum
+  Retrieve the block at the given index, validating its checksum.
+  If the checksum check fails, the server is aborted.
 
-  @param[in]    Filedes   The file we should read from
+  @param[in]    file      The file we should read from
   @param[out]   block     The block we will read our data into
   @param[in]    block_num The index (zero-indexed) of the block we want
 
   @return
-    @retval SUCCESS 0
-    @retval ERROR   MY_FILE_ERROR
+    @retval SUCCESS TRUE
+    @retval ERROR   FALSE
 */
-static size_t get_block_at_index(int Filedes,  CHKSUM_BLOCK *block, int block_num)
+static my_bool get_block_at_index(File file, CHKSUM_BLOCK *block, block_num_t block_num)
 {
-  my_off_t block_loc;
-  ha_checksum chksum;
-  size_t res;
+  my_off_t block_loc= get_block_loc(block_num);
 
-  block_loc= get_block_loc(block_num);
-
-  res= my_pread(Filedes, (void *) block, IOCACHE_BLOCK_SIZE,
-                block_loc, MYF(0));
-
-  if (res == 0)
+  size_t bytes_read= 0;
+  while (bytes_read < IOCACHE_BLOCK_SIZE)
   {
-    /* if we get here it probably means we're writing to an empty file */
-    block->len= 0;
-  }
-  else if (res <= IOCACHE_BLOCK_SIZE && res > 0)
-  {
-    block->len= res - IOCACHE_BLOCK_HEADER_SIZE;
-    chksum= my_checksum(0L, block->data, block->len);
-    if (chksum != block->chksum)
+    size_t res= my_pread(file, (uchar *) block + bytes_read,
+                         IOCACHE_BLOCK_SIZE - bytes_read,
+                         block_loc + bytes_read, MYF(0));
+    if (res == 0)
     {
-      fprintf(stderr, "Block corruption found in IO Cache: checksums do not match\n");
-      fprintf(stderr, "Aborting server...\n");
-      exit(1);
+      /* we reached the end of file */
+      break;
+    }
+    else if (res == MY_FILE_ERROR)
+    {
+      my_printf_error(my_errno,
+                      "get_block_at_index failed in my_pread(fd=%d), errno=%d, "
+                      "while trying to read block %llu, at block_loc %llu\n",
+                      MYF(0),
+                      file, my_errno, block_num, block_loc);
+      return FALSE;
+    }
+    else
+    {
+      bytes_read+= res;
     }
   }
-  else
-    return MY_FILE_ERROR;
 
-  return 0;
+  if (bytes_read == 0)
+  {
+    block->len= 0;
+  }
+  else if (bytes_read >= IOCACHE_BLOCK_HEADER_SIZE)
+  {
+    block->len= bytes_read - IOCACHE_BLOCK_HEADER_SIZE;
+    ha_checksum chksum= my_checksum(0L, block->data, block->len);
+    if (chksum != block->chksum)
+    {
+      goto error;
+    }
+  }
+  else /* bytes_read < IOCACHE_BLOCK_HEADER_SIZE */
+  {
+    goto error;
+  }
+
+  return TRUE;
+
+error:
+  my_message(0,
+             "Block corruption found in IO Cache: checksums do not match\n"
+             "Aborting server...\n",
+             MYF(0));
+  exit(1);
 }
 
 
@@ -221,24 +265,18 @@ static size_t get_block_at_index(int Filedes,  CHKSUM_BLOCK *block, int block_nu
 
   @return
     @retval SUCCESS  number of bytes read
-    @retval ERROR    -1
 */
-static int read_from_block(CHKSUM_BLOCK *block, uchar *Buffer, my_off_t start,
-                    my_off_t count)
+static block_offset_t read_from_block(CHKSUM_BLOCK *block, uchar *Buffer,
+                                      block_offset_t start, size_t count)
 {
-  int to_read;
+  DBUG_ASSERT(start <= IOCACHE_FITTED_BLOCK_SIZE);
 
-  if (start > IOCACHE_FITTED_BLOCK_SIZE)
-    return -1;
+  if (start >= block->len)
+  {
+    return 0;
+  }
 
-  if (start + count > IOCACHE_FITTED_BLOCK_SIZE)
-    to_read= IOCACHE_FITTED_BLOCK_SIZE - start;
-  else
-    to_read= count;
-
-  if (to_read + start > block->len)
-    return -1;
-
+  block_offset_t to_read= min(count, block->len - start);
   memcpy(Buffer, block->data + start, to_read);
 
   return to_read;
@@ -257,7 +295,7 @@ static int read_from_block(CHKSUM_BLOCK *block, uchar *Buffer, my_off_t start,
 */
 my_off_t chksum_tell(File fd, myf MyFlags)
 {
-  size_t real_pos;
+  my_off_t real_pos;
   DBUG_ENTER("chksum_tell");
 
   real_pos= my_tell(fd, MyFlags);
@@ -300,14 +338,7 @@ my_off_t chksum_seek(File fd, my_off_t pos, int whence, myf MyFlags)
   my_off_t retval= MY_FILEPOS_ERROR;
 
   DBUG_ENTER("chksum_seek");
-  DBUG_PRINT("chksum", ("fd: %d, pos: %d, whence: %d", (int) fd, (int) pos, (int) whence));
-
-  /* quick test to make sure the pos translation functions are working. */
-  /* this should be moved to a test suite test case */
-  DBUG_ASSERT(904435 == chksum_pos_ftor(chksum_pos_rtof(904435)));
-  DBUG_ASSERT(8192 == chksum_pos_rtof(chksum_pos_ftor(8192)));
-  DBUG_ASSERT(24576 == chksum_pos_rtof(chksum_pos_ftor(24576)));
-  DBUG_ASSERT(24592 == chksum_pos_rtof(chksum_pos_ftor(24592)));
+  DBUG_PRINT("chksum", ("fd: %d, pos: %llu, whence: %d", (int) fd, pos, (int) whence));
 
   switch (whence)
   {
@@ -320,7 +351,7 @@ my_off_t chksum_seek(File fd, my_off_t pos, int whence, myf MyFlags)
     new_pos= chksum_pos_ftor(chksum_pos_rtof(cur_pos) + pos);
     break;
   case SEEK_END:
-    retval= my_seek(fd, 0, SEEK_END, MYF(0));
+    retval= my_seek(fd, 0, MY_SEEK_END, MYF(0));
     if (retval == MY_FILEPOS_ERROR)
       return retval;
     /* would probably work better to just use my_stat() */
@@ -329,15 +360,14 @@ my_off_t chksum_seek(File fd, my_off_t pos, int whence, myf MyFlags)
       return new_pos;
 
     /* strange handling because we are counting chksum headers backwards */
-    new_pos= new_pos + pos + get_block_num(pos)
-      * IOCACHE_BLOCK_HEADER_SIZE;
+    new_pos= new_pos + pos + get_block_num(pos) * IOCACHE_BLOCK_HEADER_SIZE;
     break;
   default:
     DBUG_PRINT("error", ("chksum_seek didn't recieve a recognized `whence`"));
     DBUG_RETURN(retval);
   }
 
-  retval= my_seek(fd, new_pos, SEEK_SET, MyFlags);
+  retval= my_seek(fd, new_pos, MY_SEEK_SET, MyFlags);
   if (retval != MY_FILEPOS_ERROR)
     retval= chksum_pos_rtof(retval);
   DBUG_RETURN(retval);
@@ -345,10 +375,10 @@ my_off_t chksum_seek(File fd, my_off_t pos, int whence, myf MyFlags)
 
 
 /* Used only by the test suite */
-void test_corrupt_checksum_block(int Filedes)
+static void test_corrupt_checksum_block(File Filedes)
 {
   uchar fake_buffer[IOCACHE_BLOCK_SIZE * 4];
-  bzero(fake_buffer, IOCACHE_BLOCK_SIZE * 4);
+  memset(fake_buffer, 0, IOCACHE_BLOCK_SIZE * 4);
   my_pwrite(Filedes, fake_buffer, IOCACHE_BLOCK_SIZE * 4, 0, MYF(0));
 }
 
@@ -371,20 +401,9 @@ size_t chksum_pread(File Filedes, uchar *Buffer, size_t Count,
   /* cointaining block for the start of our read */
   CHKSUM_BLOCK block;
 
-  /* doesn't count block metadata */
-  size_t bytes_read= 0;
-
-  uint32 block_offset;
-  uint32 block_num;
-
-  int read_size;
-
-  size_t cnt;
-  size_t res;
-
   DBUG_ENTER("chksum_pread");
-  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %d",
-                        (int) Filedes, (void*) Buffer, (int) Count));
+  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %llu",
+                        (int) Filedes, (void *) Buffer, (ulonglong) Count));
 
   DBUG_ASSERT(IOCACHE_BLOCK_SIZE == sizeof(CHKSUM_BLOCK)
               - sizeof(block.len));
@@ -392,30 +411,31 @@ size_t chksum_pread(File Filedes, uchar *Buffer, size_t Count,
   DBUG_EXECUTE_IF("chksum_block_corrupted",
                   test_corrupt_checksum_block(Filedes););
 
-  cnt= Count;
-
-  block_num= get_block_num(offset);
-  block_offset= get_block_offset(offset);
+  /* doesn't count block metadata */
+  size_t bytes_read= 0;
+  size_t cnt= Count;
 
   while (cnt != 0)
   {
-    res= get_block_at_index(Filedes, &block, block_num);
+    block_num_t block_num= get_block_num(offset);
+    block_offset_t block_offset= get_block_offset(offset);
 
-    if (res == MY_FILE_ERROR)
-      DBUG_RETURN(res);
+    my_bool got_block= get_block_at_index(Filedes, &block, block_num);
+    if (!got_block)
+      DBUG_RETURN(MY_FILE_ERROR);
 
+    block_offset_t read_size= read_from_block(&block, Buffer, block_offset, cnt);
+    bytes_read+= read_size;
 
-    read_size= read_from_block(&block, Buffer, block_offset, cnt);
+    /* Check for the end of file */
+    if (read_size == 0 || block.len < IOCACHE_FITTED_BLOCK_SIZE)
+      break;
 
-    if (read_size == -1)
-      DBUG_RETURN(read_size);
+    DBUG_ASSERT(0 < read_size && read_size <= cnt);
 
-
-    block_offset= 0;
     cnt-= read_size;
     Buffer+= read_size;
-    bytes_read+= read_size;
-    block_num++;
+    offset+= read_size;
   }
 
   if (MyFlags & (MY_NABP | MY_FNABP))
@@ -435,7 +455,7 @@ size_t chksum_pread(File Filedes, uchar *Buffer, size_t Count,
   @param[in]  MyFlags    Flags on what to do on error
 
   @return
-    @retval ERROR   -1
+    @retval ERROR    MY_FILE_ERROR
     @retval SUCCESS  0  if flag has bits MY_NABP or MY_FNABP set
     @retval SUCCESS  N  number of bytes read.
 */
@@ -446,8 +466,8 @@ size_t chksum_read(File Filedes, uchar *Buffer, size_t Count, myf MyFlags)
   size_t bytes_read;
 
   DBUG_ENTER("chksum_read");
-  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %d",
-                        (int) Filedes, (void*) Buffer, (int) Count));
+  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %llu",
+                        (int) Filedes, (void *) Buffer, (ulonglong) Count));
 
   offset= chksum_tell(Filedes, MYF(0));
 
@@ -476,61 +496,47 @@ size_t chksum_read(File Filedes, uchar *Buffer, size_t Count, myf MyFlags)
   @param  MyFlags  Flags
 
   @return
-    @retval ERROR     (size_t) -1
+    @retval ERROR     MY_FILE_ERROR
     @retval SUCCESS   Number of bytes read
 */
 size_t chksum_pwrite(File Filedes, const uchar *Buffer, size_t Count,
                      my_off_t offset, myf MyFlags)
 {
-  /* Number of bytes sans checksums. Data only. */
-  size_t total_written= 0;
   /* containing block for the start of our read */
   CHKSUM_BLOCK block;
 
-  uint32 block_num;
-  uint32 block_offset;
-
-  size_t cnt;
-  int written;
-
-  size_t res;
-
   DBUG_ENTER("chksum_pwrite");
-  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %d, offset %d",
-                        (int) Filedes, (void*) Buffer, (int) Count,
-                        (int) offset));
+  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %llu, offset %llu",
+                        (int) Filedes, (void *) Buffer, (ulonglong) Count, offset));
   /*
     Determine whether or not we are writing into the middle of a block, and take
     care of that case so that we can be block-aligned.
   */
 
-  cnt= Count;
-
-  block_num= get_block_num(offset);
-  block_offset= get_block_offset(offset);
+  /* doesn't count block metadata */
+  size_t total_written= 0;
+  size_t cnt= Count;
 
   while (cnt != 0)
   {
-    res= get_block_at_index(Filedes, &block, block_num);
+    block_num_t block_num= get_block_num(offset);
+    block_offset_t block_offset= get_block_offset(offset);
 
-    if (res == MY_FILE_ERROR)
-      DBUG_RETURN(res);
+    my_bool got_block= get_block_at_index(Filedes, &block, block_num);
+    if (!got_block)
+      DBUG_RETURN(MY_FILE_ERROR);
 
-    written= insert_into_block(&block, Buffer, block_offset, cnt);
+    block_offset_t written= insert_into_block(&block, Buffer, block_offset, cnt);
+    my_bool write_successful= chksum_write_block(Filedes, &block, block_num);
 
-    if (written == -1)
-      DBUG_RETURN(written);
+    if (!write_successful)
+      DBUG_RETURN(MY_FILE_ERROR);
 
-    res= chksum_write_block(Filedes, &block, block_num);
-
-    if (res == 0 || res == MY_FILE_ERROR)
-      DBUG_RETURN(res);
-
-    block_offset= 0;
+    DBUG_ASSERT(0 < written && written <= cnt);
     cnt-= written;
     Buffer+= written;
     total_written+= written;
-    block_num++;
+    offset+= written;
   }
 
   if (MyFlags & (MY_NABP | MY_FNABP))
@@ -550,7 +556,7 @@ size_t chksum_pwrite(File Filedes, const uchar *Buffer, size_t Count,
   @param  MyFlags  Flags on what to do on error
 
   @return
-    @retval ERROR   -1
+    @retval ERROR    MY_FILE_ERROR
     @retval SUCCESS  0  if flag has bits MY_NABP or MY_FNABP set
     @retval SUCCESS  N  number of bytes written.
 */
@@ -562,8 +568,8 @@ size_t chksum_write(File Filedes, const uchar *Buffer, size_t Count, myf MyFlags
   my_off_t seek_res;
 
   DBUG_ENTER("chksum_write");
-  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %d",
-                        (int) Filedes,(void*) Buffer, (int) Count));
+  DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %llu",
+                        (int) Filedes,(void *) Buffer, (ulonglong) Count));
   /*
     determine whether or not we have a previously written block that still
     has space for more data. Lines us up with the block boundary
@@ -578,7 +584,7 @@ size_t chksum_write(File Filedes, const uchar *Buffer, size_t Count, myf MyFlags
     seek_res= chksum_seek(Filedes, loc + Count, MY_SEEK_SET, MYF(0));
 
     if (seek_res == MY_FILEPOS_ERROR || seek_res != loc + res)
-      DBUG_RETURN(-1);
+      DBUG_RETURN(MY_FILE_ERROR);
   }
 
   if (MyFlags & (MY_NABP | MY_FNABP))
@@ -592,17 +598,19 @@ size_t chksum_write(File Filedes, const uchar *Buffer, size_t Count, myf MyFlags
 
 #ifdef MAIN
 
-static void die(const char* fmt, ...)
+static const uchar *test_string= (const uchar *) "Li Europan lingues es membres del sam familie.";
+
+static void die(const char *fmt, ...)
 {
   va_list va_args;
   va_start(va_args,fmt);
   fprintf(stderr,"Error:");
-  vfprintf(stderr, fmt,va_args);
+  vfprintf(stderr, fmt, va_args);
   fprintf(stderr,", errno=%d\n", errno);
   exit(1);
 }
 
-static File open_temp_file(const char* name_prefix)
+static File open_temp_file(const char *name_prefix)
 {
   char fname[FN_REFLEN];
   File fd= create_temp_file(fname, NULL, name_prefix, O_CREAT | O_RDWR,  MYF(0));
@@ -614,17 +622,168 @@ static File open_temp_file(const char* name_prefix)
   return fd;
 }
 
-void test_chksum_huge_files()
+static my_bool check_mem_eq(const void *buf, char cmp, size_t count)
 {
+  const char *cbuf = (const char *) buf;
+  for (size_t i = 0; i < count; ++i)
+  {
+    if (cbuf[i] != cmp)
+      return FALSE;
+  }
+  return TRUE;
+}
+
+static void test_pos_translation()
+{
+  fputs("Testing chksum_pos_{ftor,rtof} position translation...\n", stderr);
+
+  my_off_t offsets[]= { 904435, 8192, 24576, 24592 };
+
+  for (size_t i = 0; i < sizeof offsets / sizeof offsets[0]; ++i)
+  {
+    my_off_t off= offsets[i];
+    /*
+      Note that the opposite order of conversions may not always return the
+      same offset: chksum_pos_rtof aligns the real positions pointing inside of
+      the auxiliary data-structures to the next fake position available.
+
+      Here we are guaranteed to always get a real position that points
+      somewhere in the real data.
+    */
+    if (off != chksum_pos_rtof(chksum_pos_ftor(off)))
+      die("bug in chksum_pos_ftor/chksum_pos_rtof position conversion");
+  }
+}
+
+static void test_insert_into_block_clears_empty_ranges()
+{
+  /*
+    Plan: produce the block with the following contents layout:
+      0..len-1:        test_string,
+      len..3*len-1:    zeroes,
+      3*len..4*len-1:  test_string,
+    where len is strlen(test_string), and ensure that the operations that
+    produce/read block work as expected.
+  */
+  fputs("Testing insert_into_block behavior on inserts past the end of the block...\n", stderr);
+
+  uchar block_data[IOCACHE_FITTED_BLOCK_SIZE];
+
+  CHKSUM_BLOCK block;
+  const char filler= 0xa6;
+  memset(&block, filler, sizeof block);
+  block.len= 0;
+
+  const size_t len= strlen((const char *) test_string);
+
+  block_offset_t inserted, read_size;
+
+  inserted= insert_into_block(&block, test_string, 0, len);
+  if (inserted != len)
+    die("insert_into_block failed to insert data into a block");
+
+  inserted= insert_into_block(&block, NULL, 2 * len, 0);
+
+  memset(block_data, filler, sizeof block_data);
+  read_size= read_from_block(&block, block_data, len, len);
+
+  if (inserted != 0 ||
+      read_size != len ||
+      !check_mem_eq(block_data, 0, len) ||
+      !check_mem_eq(block_data + len, filler, sizeof block_data - len))
+    die("insert_into_block failed to pad data in the block correctly");
+
+  /*
+    Insert the test_string contents into the block some distance from the end
+    of the previously inserted data. insert_into_block must handle that
+    correctly and zero the hole.
+  */
+  inserted= insert_into_block(&block, test_string, 3 * len, len);
+  if (inserted != len)
+    die("insert_into_block failed to insert data into a block");
+
+  memset(block_data, filler, sizeof block_data);
+  read_size= read_from_block(&block, block_data, 0, sizeof block_data);
+
+  if (!check_mem_eq(block_data + 2 * len, 0, len))
+    die("insert_into_block failed to zero the hole when inserting data past the end of the block");
+
+  if (read_size != 4 * len ||
+      0 != memcmp(test_string, block_data, len) ||
+      0 != memcmp(test_string, block_data + 3 * len, len) ||
+      !check_mem_eq(block_data + 4 * len, filler, sizeof block_data - 4 * len))
+    die("insert_into_block failed to insert or read_from_block failed to read the data correctly");
+}
+
+static void test_insert_into_block_on_empty_inserts()
+{
+  fputs("Testing insert_into_block behavior on empty inserts...\n", stderr);
+
+  CHKSUM_BLOCK block;
+  block.len= 0;
+
+  uchar buf[sizeof block.data];
+  const size_t len= sizeof buf;
+  memset(buf, 0, len);
+
+  block_offset_t inserted;
+
+  inserted= insert_into_block(&block, buf, 0, len / 2);
+  if (inserted != len / 2 || block.len != len / 2)
+    goto error;
+
+  inserted= insert_into_block(&block, buf, len / 2, 0);
+  if (inserted != 0 || block.len != len / 2)
+    goto error;
+
+  inserted= insert_into_block(&block, buf, len / 4, 0);
+  if (inserted != 0 || block.len != len / 2)
+    goto error;
+
+  inserted= insert_into_block(&block, buf, len / 2, len);
+  if (inserted != len - len / 2 || block.len != len)
+    goto error;
+
+  inserted= insert_into_block(&block, buf, block.len, len);
+  if (inserted != 0 || block.len != len)
+    goto error;
+  return;
+
+error:
+    die("insert_into_block failed to insert data into a block");
+}
+
+static void test_read_from_block_returns_data_if_available()
+{
+  fputs("Testing read_from_block behavior on read request for more data than is available...\n", stderr);
+
+  CHKSUM_BLOCK block;
+  block.len= 0;
+
+  const size_t len= strlen((const char *) test_string);
+
+  block_offset_t inserted= insert_into_block(&block, test_string, 0, len);
+  if (inserted != len)
+    die("insert_into_block failed to insert data into a block");
+
+  uchar *block_data= alloca(2 * len);
+  block_offset_t read_size= read_from_block(&block, block_data, 0, 2 * len);
+
+  if (read_size != len || 0 != memcmp(test_string, block_data, len))
+    die("read_from_block failed to return all the available data from the block");
+}
+
+static void test_chksum_huge_files()
+{
+  fputs("Testing huge checksummed file writing...\n", stderr);
+
   /* this would overflow ints if they are used where they should not */
-  const my_off_t file_size= 0x123456000ULL;
+  const my_off_t file_size= 0x123456789ULL;
 
   File fd= open_temp_file("chksum_write_huge_test.");
 
   uchar buf[4096];
   memset(buf, 0xa6, 4096);
-
-  fputs("Testing huge checksummed file writing...\n", stderr);
 
   my_off_t total_written= 0;
   while (total_written < file_size) {
@@ -645,18 +804,19 @@ void test_chksum_huge_files()
 
     fprintf(stderr, "0x%08llx of 0x%08llx\r", total_written, file_size);
 
-    /* chksum_pos can never be greater than the real_pos, since checksumming
-     * has some overhead.  However this overhead is supposed to be small, so
-     * chksum_pos cannot be much smaller than the real_pos.
-     */
-    if (chksum_pos != total_written || chksum_pos < real_pos/2 || chksum_pos > real_pos)
+    /*
+      chksum_pos can never be greater than the real_pos, since checksumming
+      has some overhead.  However this overhead is supposed to be small, so
+      chksum_pos cannot be much smaller than the real_pos.
+    */
+    if (chksum_pos != total_written || chksum_pos < real_pos / 2 || chksum_pos > real_pos)
     {
       fprintf(stderr, "total_written: 0x%08llx chksum_pos: 0x%08llx, real_pos: 0x%08llx\n",
               total_written, chksum_pos, real_pos);
       die("chksum I/O position has wrapped due to an improper cast/sign extension");
     }
   }
-  chksum_seek(fd, 0, SEEK_SET, MYF(0));
+  chksum_seek(fd, 0, MY_SEEK_SET, MYF(0));
 
   fputs("Testing huge checksummed file reading...\n", stderr);
 
@@ -685,7 +845,7 @@ void test_chksum_huge_files()
 
     fprintf(stderr, "0x%08llx of 0x%08llx\r", total_read, total_written);
 
-    if (chksum_pos != total_read || chksum_pos < real_pos/2 || chksum_pos > real_pos)
+    if (chksum_pos != total_read || chksum_pos < real_pos / 2 || chksum_pos > real_pos)
     {
       fprintf(stderr, "total_read: 0x%08llx chksum_pos: 0x%08llx, real_pos: 0x%08llx\n",
               total_read, chksum_pos, real_pos);
@@ -698,10 +858,14 @@ void test_chksum_huge_files()
   fputs("Huge file checksumming tests passed.\n", stderr);
 }
 
-int main(int argc __attribute__((unused)), char** argv)
+int main(int argc __attribute__((unused)), char **argv)
 {
   MY_INIT(argv[0]);
 
+  test_pos_translation();
+  test_insert_into_block_clears_empty_ranges();
+  test_insert_into_block_on_empty_inserts();
+  test_read_from_block_returns_data_if_available();
   test_chksum_huge_files();
   return 0;
 }

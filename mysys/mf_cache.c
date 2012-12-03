@@ -104,6 +104,7 @@ my_bool real_open_cached_file(IO_CACHE *cache)
       cache->direct_write = &chksum_write;
       cache->direct_pwrite = &chksum_pwrite;
       cache->direct_seek = &chksum_seek;
+      cache->checksummed = 1;
       cache->direct_tell = &chksum_tell;
     }
   }

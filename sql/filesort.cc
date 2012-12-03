@@ -1138,7 +1138,11 @@ uint read_to_buffer(IO_CACHE *fromfile, BUFFPEK *buffpek,
   {
     if (fromfile->direct_pread(fromfile->file,(uchar*) buffpek->base,
 		 (length= rec_length*count),buffpek->file_pos,MYF_RW))
+    {
+      my_printf_error(my_errno, "read_to_buffer(file=%d, checksummed=%c, pos=%llu, length=%u) failed in direct_pread\n", MYF(ME_ERROR),
+               fromfile->file, fromfile->checksummed ? 'T' : 'F', buffpek->file_pos, length);
       return((uint) -1);			/* purecov: inspected */
+    }
     buffpek->key=buffpek->base;
     buffpek->file_pos+= length;			/* New filepos */
     buffpek->count-=	count;
