@@ -455,7 +455,7 @@ Rpl_semi_sync_yes_tx	307
 show status like 'Rpl_semi_sync_timeouts';
 Variable_name	Value
 Rpl_semi_sync_timeouts	3
-set global rpl_semi_sync_timeout= 31536000000;
+set global rpl_semi_sync_timeout= 4294967295;
 insert into t1 values (NULL);
 show processlist;
 Id	User	Host	db	Command	Time	State	Info

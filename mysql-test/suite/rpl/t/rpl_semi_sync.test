@@ -159,8 +159,7 @@ show status like 'Rpl_semi_sync_timeouts';
 connection master;
 # Very large timeouts used to cause overflow and so the wait would return
 # immedidately. Use very large value here to test that issue is fixed.
-# 365 * 24 * 60 * 60 * 1000
-set global rpl_semi_sync_timeout= 31536000000;
+set global rpl_semi_sync_timeout= 4294967295;
 
 connect (con1, localhost, root,,);
 connection con1;
