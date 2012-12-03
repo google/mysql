@@ -62,7 +62,7 @@ typedef struct chksum_block
 
   @return the corresponding 'real' address
 */
-size_t chksum_pos_ftor(size_t pos)
+static size_t chksum_pos_ftor(size_t pos)
 {
   size_t block_offset= get_block_offset(pos);
   size_t block_num= get_block_num(pos);
@@ -81,7 +81,7 @@ size_t chksum_pos_ftor(size_t pos)
 
   @return the corresponding fake address
 */
-size_t chksum_pos_rtof(size_t pos)
+static size_t chksum_pos_rtof(size_t pos)
 {
   size_t block_offset= pos % IOCACHE_BLOCK_SIZE;
   size_t block_num= pos / IOCACHE_BLOCK_SIZE;
@@ -117,7 +117,7 @@ size_t chksum_pos_rtof(size_t pos)
 
   @return length written on success, -1 on failure
 */
-int insert_into_block(CHKSUM_BLOCK *block,  const uchar *Buffer,
+static int insert_into_block(CHKSUM_BLOCK *block,  const uchar *Buffer,
                       my_off_t start, my_off_t count)
 {
   int to_write;
@@ -150,7 +150,7 @@ int insert_into_block(CHKSUM_BLOCK *block,  const uchar *Buffer,
   @return number of bytes written, or -1 on failure
   Should only ever return IOCACHE_BLOCK_SIZE
 */
-size_t chksum_write_block(int file, CHKSUM_BLOCK *block, int block_num)
+static size_t chksum_write_block(int file, CHKSUM_BLOCK *block, int block_num)
 {
   int loc, res;
 
@@ -174,7 +174,7 @@ size_t chksum_write_block(int file, CHKSUM_BLOCK *block, int block_num)
     @retval SUCCESS 0
     @retval ERROR   MY_FILE_ERROR
 */
-size_t get_block_at_index(int Filedes,  CHKSUM_BLOCK *block, int block_num)
+static size_t get_block_at_index(int Filedes,  CHKSUM_BLOCK *block, int block_num)
 {
   int block_loc;
   ha_checksum chksum;
@@ -222,7 +222,7 @@ size_t get_block_at_index(int Filedes,  CHKSUM_BLOCK *block, int block_num)
     @retval SUCCESS  number of bytes read
     @retval ERROR    -1
 */
-int read_from_block(CHKSUM_BLOCK *block, uchar *Buffer, my_off_t start,
+static int read_from_block(CHKSUM_BLOCK *block, uchar *Buffer, my_off_t start,
                     my_off_t count)
 {
   int to_read;
