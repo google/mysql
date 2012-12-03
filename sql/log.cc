@@ -8682,7 +8682,7 @@ int show_binlog_info_for_group_id(THD *thd, ulonglong group_id)
   protocol->store(linfo.log_file_name + dir_len,
                   strlen(linfo.log_file_name + dir_len), &my_charset_bin);
 
-  protocol->store(linfo.pos);
+  protocol->store((unsigned long long) linfo.pos);
   protocol->store(linfo.server_id);
   if (protocol->write())
     return 1;
