@@ -16,6 +16,7 @@ audit_log_connections
 audit_log_super
 block_user_access
 deprecated_engines
+innodb_default_row_format
 repl_port
 reserved_super_connections
 rpl_allow_implicit_commit

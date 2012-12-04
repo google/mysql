@@ -1,0 +1,78 @@
+#
+# The innodb_default_row_format system variable allows new tables
+# to be created using the specified row format. This is intended
+# primarily to allow InnoDB table compression to be enabled by
+# default for all newly created tables, without requiring any
+# user interaction (or even knowledge) about compression.
+#
+
+--source include/have_innodb.inc
+
+--disable_query_log
+# When new tables are created with Barracuda file format, the variable
+# innodb_file_format_max will reflect that as the "highest" file format
+# created. Save the pre-test value so it can be restored after the test
+# to keep mysqltest happy.
+--let $save_innodb_file_format_max = `SELECT @@innodb_file_format_max`
+--enable_query_log
+
+--echo # Clean up before test.
+
+--disable_warnings
+DROP TABLE IF EXISTS specify_compact;
+DROP TABLE IF EXISTS specify_compressed;
+DROP TABLE IF EXISTS no_row_format_clause;
+--enable_warnings
+
+--echo # Test explicitly specifying "COMPACT" format.
+
+CREATE TABLE specify_compact (
+  id INT PRIMARY KEY,
+  msg BLOB
+) ENGINE=InnoDB ROW_FORMAT=COMPACT;
+
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'specify_compact';
+
+SHOW CREATE TABLE specify_compact;
+
+DROP TABLE specify_compact;
+
+--echo # Test explicitly specifying "COMPRESSED" format.
+
+CREATE TABLE specify_compressed (
+  id INT PRIMARY KEY,
+  msg BLOB
+) ENGINE=InnoDB ROW_FORMAT=COMPRESSED;
+
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'specify_compressed';
+
+SHOW CREATE TABLE specify_compressed;
+
+DROP TABLE specify_compressed;
+
+--echo # Test specifying no row format, allowing the implicit default, which
+--echo # should match the setting of innodb_default_row_format (if any).
+
+CREATE TABLE no_row_format_clause (
+  id INT PRIMARY KEY,
+  msg BLOB
+) ENGINE=InnoDB;
+
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'no_row_format_clause';
+
+SHOW CREATE TABLE no_row_format_clause;
+
+DROP TABLE no_row_format_clause;
+
+SHOW WARNINGS;
+
+--disable_query_log
+# Restore the previous value of innodb_file_format_max.
+eval SET GLOBAL innodb_file_format_max = \"$save_innodb_file_format_max\";
+--enable_query_log

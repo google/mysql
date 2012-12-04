@@ -3397,7 +3397,8 @@ ha_innobase::prepare_inplace_alter_table(
 		if (const char* invalid_opt = create_options_are_invalid(
 			    user_thd, altered_table,
 			    ha_alter_info->create_info,
-			    prebuilt->table->space != 0)) {
+			    prebuilt->table->space != 0,
+			    altered_table->s->row_type)) {
 			my_error(ER_ILLEGAL_HA_CREATE_OPTION, MYF(0),
 				 table_type(), invalid_opt);
 			goto err_exit_no_heap;

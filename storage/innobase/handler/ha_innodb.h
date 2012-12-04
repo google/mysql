@@ -516,7 +516,8 @@ create_options_are_invalid(
 	TABLE*		form,		/*!< in: information on table
 					columns and indexes */
 	HA_CREATE_INFO*	create_info,	/*!< in: create info. */
-	bool		use_tablespace)	/*!< in: srv_file_per_table */
+	bool		use_tablespace,	/*!< in: srv_file_per_table */
+	enum row_type	row_format)	/*!< in: effective row format */
 	__attribute__((nonnull, warn_unused_result));
 
 /*********************************************************************//**

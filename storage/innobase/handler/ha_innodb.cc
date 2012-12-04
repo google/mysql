@@ -241,6 +241,37 @@ static TYPELIB innodb_checksum_algorithm_typelib = {
 	NULL
 };
 
+/** Possible values for system variable innodb_default_row_format */
+static const char* innodb_default_row_format_names[] = {
+	"auto", // original DEFAULT behavior -> (key_block_size_specified ? compressed : compact)
+	"compact",
+	"compressed",
+	"dynamic",
+	NullS
+};
+
+/** Default row format for new innodb tables.  See enum below. */
+static ulong innodb_default_row_format = 0;
+
+/** row_type enum values corresponding to the names above for
+the innodb_default_row_format sysvar; needed since typelib enums must start from
+zero. */
+static enum row_type innodb_default_row_format_values[] = {
+	ROW_TYPE_DEFAULT,
+	ROW_TYPE_COMPACT,
+	ROW_TYPE_COMPRESSED,
+	ROW_TYPE_DYNAMIC,
+};
+
+/** Used to define the enumerated type for the innodb_default_row_format system
+variable. */
+static TYPELIB innodb_default_row_format_typelib = {
+	array_elements(innodb_default_row_format_names) - 1,
+	"innodb_default_row_format_typelib",
+	innodb_default_row_format_names,
+        NULL
+};
+
 /* The following counter is used to convey information to InnoDB
 about server activity: in selects it is not sensible to call
 srv_active_wake_master_thread after each fetch or search, we only do
@@ -9282,6 +9313,29 @@ get_row_format_name(
 
 
 /*****************************************************************//**
+Given the info for a CREATE TABLE query, determine the effective
+row_type value, taking into account the innodb-default-row-format
+sysvar if the query doesn't specify one.
+@return Effective row_format for this CREATE TABLE request. */
+static
+enum row_type
+get_row_format_for_create(
+/*=====================*/
+	THD*			thd,		/*!< in: connection thread. */
+	const TABLE*		form,		/*!< in: information on table
+						columns and indexes */
+	const HA_CREATE_INFO*	create_info)	/*!< in: create info. */
+{
+	if (!(create_info->used_fields & HA_CREATE_USED_ROW_FORMAT) &&
+	    (form->s->row_type == ROW_TYPE_DEFAULT)) {
+		return innodb_default_row_format_values[
+			innodb_default_row_format];
+	} else {
+		return form->s->row_type;
+	}
+}
+
+/*****************************************************************//**
 Validates the create options. We may build on this function
 in future. For now, it checks two specifiers:
 KEY_BLOCK_SIZE and ROW_FORMAT
@@ -9295,11 +9349,11 @@ create_options_are_invalid(
 	TABLE*		form,		/*!< in: information on table
 					columns and indexes */
 	HA_CREATE_INFO*	create_info,	/*!< in: create info. */
-	bool		use_tablespace)	/*!< in: srv_file_per_table */
+	bool		use_tablespace,	/*!< in: srv_file_per_table */
+	enum row_type	row_format)	/*!< in: effective row format */
 {
 	ibool	kbs_specified	= FALSE;
 	const char*	ret	= NULL;
-	enum row_type	row_format	= form->s->row_type;
 
 	ut_ad(thd != NULL);
 
@@ -9456,6 +9510,14 @@ ha_innobase::update_create_info(
 	if (prebuilt->table->data_dir_path) {
 		create_info->data_file_name = prebuilt->table->data_dir_path;
 	}
+
+	if (!(create_info->used_fields & HA_CREATE_USED_ROW_FORMAT)
+	    && get_row_type() == ROW_TYPE_COMPRESSED) {
+		create_info->row_type = ROW_TYPE_COMPRESSED;
+		if (!(create_info->used_fields & HA_CREATE_USED_KEY_BLOCK_SIZE)) {
+			create_info->key_block_size = dict_table_zip_size(prebuilt->table) / 1024;
+		}
+	}
 }
 
 /*****************************************************************//**
@@ -9594,7 +9656,8 @@ innobase_table_flags(
 	const char*	fts_doc_id_index_bad = NULL;
 	bool		zip_allowed = true;
 	ulint		zip_ssize = 0;
-	enum row_type	row_format;
+	enum row_type	row_format =
+		get_row_format_for_create(thd, form, create_info);
 	rec_format_t	innodb_row_format = REC_FORMAT_COMPACT;
 	bool		use_data_dir;
 
@@ -9701,8 +9764,6 @@ index_bad:
 				create_info->key_block_size);
 		}
 	}
-
-	row_format = form->s->row_type;
 
 	if (zip_ssize && zip_allowed) {
 		/* if ROW_FORMAT is set to default,
@@ -9862,7 +9923,8 @@ ha_innobase::create(
 
 	/* Validate create options if innodb_strict_mode is set. */
 	if (create_options_are_invalid(
-			thd, form, create_info, use_tablespace)) {
+			thd, form, create_info, use_tablespace,
+			get_row_format_for_create(thd, form, create_info))) {
 		DBUG_RETURN(HA_WRONG_CREATE_OPTION);
 	}
 
@@ -14132,7 +14194,9 @@ ha_innobase::check_if_incompatible_data(
 	}
 
 	/* Specifying KEY_BLOCK_SIZE requests a rebuild of the table. */
-	if (info->used_fields & HA_CREATE_USED_KEY_BLOCK_SIZE) {
+        uint current_key_block_size = dict_table_zip_size(prebuilt->table) / 1024;
+	if (info->used_fields & HA_CREATE_USED_KEY_BLOCK_SIZE
+            && info->key_block_size != current_key_block_size) {
 		return(COMPATIBLE_DATA_NO);
 	}
 
@@ -16807,6 +16871,12 @@ static MYSQL_SYSVAR_ULONG(saved_page_number_debug,
   NULL, innodb_save_page_no, 0, 0, UINT_MAX32, 0);
 #endif /* UNIV_DEBUG */
 
+static MYSQL_SYSVAR_ENUM(default_row_format, innodb_default_row_format,
+  PLUGIN_VAR_RQCMDARG,
+  "Default row format for new tables: "
+  "(AUTO, COMPACT, COMPRESSED, or DYNAMIC)",
+  NULL, NULL, 0, &innodb_default_row_format_typelib);
+
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(additional_mem_pool_size),
   MYSQL_SYSVAR(api_trx_level),
@@ -16964,6 +17034,7 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(fil_make_page_dirty_debug),
   MYSQL_SYSVAR(saved_page_number_debug),
 #endif /* UNIV_DEBUG */
+  MYSQL_SYSVAR(default_row_format),
   NULL
 };
 

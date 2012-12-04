@@ -1,0 +1,61 @@
+# Clean up before test.
+DROP TABLE IF EXISTS specify_compact;
+DROP TABLE IF EXISTS specify_compressed;
+DROP TABLE IF EXISTS no_row_format_clause;
+# Test explicitly specifying "COMPACT" format.
+CREATE TABLE specify_compact (
+id INT PRIMARY KEY,
+msg BLOB
+) ENGINE=InnoDB ROW_FORMAT=COMPACT;
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'specify_compact';
+engine	row_format
+InnoDB	Compact
+SHOW CREATE TABLE specify_compact;
+Table	Create Table
+specify_compact	CREATE TABLE `specify_compact` (
+  `id` int(11) NOT NULL,
+  `msg` blob,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=COMPACT
+DROP TABLE specify_compact;
+# Test explicitly specifying "COMPRESSED" format.
+CREATE TABLE specify_compressed (
+id INT PRIMARY KEY,
+msg BLOB
+) ENGINE=InnoDB ROW_FORMAT=COMPRESSED;
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'specify_compressed';
+engine	row_format
+InnoDB	Compressed
+SHOW CREATE TABLE specify_compressed;
+Table	Create Table
+specify_compressed	CREATE TABLE `specify_compressed` (
+  `id` int(11) NOT NULL,
+  `msg` blob,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8
+DROP TABLE specify_compressed;
+# Test specifying no row format, allowing the implicit default, which
+# should match the setting of innodb_default_row_format (if any).
+CREATE TABLE no_row_format_clause (
+id INT PRIMARY KEY,
+msg BLOB
+) ENGINE=InnoDB;
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'no_row_format_clause';
+engine	row_format
+InnoDB	Compressed
+SHOW CREATE TABLE no_row_format_clause;
+Table	Create Table
+no_row_format_clause	CREATE TABLE `no_row_format_clause` (
+  `id` int(11) NOT NULL,
+  `msg` blob,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8
+DROP TABLE no_row_format_clause;
+SHOW WARNINGS;
+Level	Code	Message

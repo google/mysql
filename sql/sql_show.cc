@@ -1735,13 +1735,19 @@ int store_create_info(THD *thd, TABLE_LIST *table_list, String *packet,
     append_create_options(thd, packet, field->option_list);
   }
 
-  key_info= table->key_info;
+  /*
+    Allow handler::update_create_info to update some fields whose values
+    may only be known by the storage engine at runtime.
+  */
+
   bzero((char*) &create_info, sizeof(create_info));
-  /* Allow update_create_info to update row type, page checksums and options */
   create_info.row_type= share->row_type;
+  create_info.key_block_size= share->key_block_size;
   create_info.page_checksum= share->page_checksum;
   create_info.options= share->db_create_options;
   file->update_create_info(&create_info);
+
+  key_info= table->key_info;
   primary_key= share->primary_key;
 
   for (uint i=0 ; i < share->keys ; i++,key_info++)
@@ -1946,11 +1952,11 @@ int store_create_info(THD *thd, TABLE_LIST *table_list, String *packet,
       packet->append(STRING_WITH_LEN(" TRANSACTIONAL="));
       packet->append(ha_choice_values[(uint) share->transactional], 1);
     }
-    if (table->s->key_block_size)
+    if (create_info.key_block_size)
     {
       char *end;
       packet->append(STRING_WITH_LEN(" KEY_BLOCK_SIZE="));
-      end= longlong10_to_str(table->s->key_block_size, buff, 10);
+      end= longlong10_to_str(create_info.key_block_size, buff, 10);
       packet->append(buff, (uint) (end - buff));
     }
     table->file->append_create_info(packet);
