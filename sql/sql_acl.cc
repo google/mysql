@@ -55,6 +55,27 @@
 
 #include "sql_plugin_compat.h"
 
+/*
+  Identifies tables in the table array. It's used in many places to make it
+  obvious which exact table is referenced, so reader don't have to search
+  through the code to understand what table was opened for example at index 1
+  of the array. These enum values should be used as the array offset:
+    tables[GRANT_USER] = ...
+*/
+enum GrantTable
+{
+  GRANT_USER= 0,
+  GRANT_DB,
+  GRANT_TABLES_PRIV,
+  GRANT_COLUMNS_PRIV,
+  GRANT_PROCS_PRIV,
+  GRANT_HOST,
+  GRANT_PROXIES_PRIV,
+  GRANT_ROLES_MAPPING,
+  GRANT_TABLES_MAX                              // preserve as the last entry.
+};
+
+
 bool mysql_user_table_is_in_short_password_format= false;
 
 static const
@@ -1023,9 +1044,10 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 
   init_sql_alloc(&acl_memroot, ACL_ALLOC_BLOCK_SIZE, 0, MYF(0));
   (void) my_init_dynamic_array(&acl_hosts,sizeof(ACL_HOST), 20, 50, MYF(0));
-  if (tables[0].table) // "host" table may not exist (e.g. in MySQL 5.6.7+)
+  table= tables[GRANT_HOST].table;
+  if (table) // "host" table may not exist (e.g. in MySQL 5.6.7+)
   {
-    if (init_read_record(&read_record_info, thd, table= tables[0].table,
+    if (init_read_record(&read_record_info, thd, table,
                          NULL, 1, 1, FALSE))
       goto end;
     table->use_all_columns();
@@ -1080,8 +1102,8 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   }
   freeze_size(&acl_hosts);
 
-  if (init_read_record(&read_record_info, thd, table=tables[1].table,
-                       NULL, 1, 1, FALSE))
+  table= tables[GRANT_USER].table;
+  if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
     goto end;
   table->use_all_columns();
   (void) my_init_dynamic_array(&acl_users,sizeof(ACL_USER), 50, 100, MYF(0));
@@ -1323,8 +1345,8 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   end_read_record(&read_record_info);
   freeze_size(&acl_users);
 
-  if (init_read_record(&read_record_info, thd, table=tables[2].table,
-                       NULL, 1, 1, FALSE))
+  table= tables[GRANT_DB].table;
+  if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
     goto end;
   table->use_all_columns();
   (void) my_init_dynamic_array(&acl_dbs,sizeof(ACL_DB), 50, 100, MYF(0));
@@ -1391,10 +1413,10 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 
   (void) my_init_dynamic_array(&acl_proxy_users, sizeof(ACL_PROXY_USER),
                                50, 100, MYF(0));
-  if (tables[3].table)
+  table= tables[GRANT_PROXIES_PRIV].table;
+  if (table)
   {
-    if (init_read_record(&read_record_info, thd, table= tables[3].table,
-                         NULL, 1, 1, FALSE))
+    if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
       goto end;
     table->use_all_columns();
     while (!(read_record_info.read_record(&read_record_info)))
@@ -1421,9 +1443,10 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   }
   freeze_size(&acl_proxy_users);
 
-  if (tables[4].table)
+  if (tables[GRANT_ROLES_MAPPING].table)
   {
-    if (init_read_record(&read_record_info, thd, table= tables[4].table,
+    table= tables[GRANT_ROLES_MAPPING].table;
+    if (init_read_record(&read_record_info, thd, table,
                          NULL, 1, 1, FALSE))
       goto end;
     table->use_all_columns();
@@ -1518,7 +1541,7 @@ void acl_free(bool end)
 
 my_bool acl_reload(THD *thd)
 {
-  TABLE_LIST tables[5];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   DYNAMIC_ARRAY old_acl_hosts, old_acl_users, old_acl_dbs, old_acl_proxy_users;
   HASH old_acl_roles, old_acl_roles_mappings;
   MEM_ROOT old_mem;
@@ -1529,28 +1552,34 @@ my_bool acl_reload(THD *thd)
     To avoid deadlocks we should obtain table locks before
     obtaining acl_cache->lock mutex.
   */
-  tables[0].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_HOST].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("host"), "host", TL_READ);
-  tables[1].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("user"), "user", TL_READ);
-  tables[2].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_DB].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("db"), "db", TL_READ);
-  tables[3].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_PROXIES_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("proxies_priv"), 
                            "proxies_priv", TL_READ);
-  tables[4].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_ROLES_MAPPING].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("roles_mapping"),
                            "roles_mapping", TL_READ);
-  tables[0].next_local= tables[0].next_global= tables + 1;
-  tables[1].next_local= tables[1].next_global= tables + 2;
-  tables[2].next_local= tables[2].next_global= tables + 3;
-  tables[3].next_local= tables[3].next_global= tables + 4;
-  tables[0].open_type= tables[1].open_type= tables[2].open_type= 
-  tables[3].open_type= tables[4].open_type= OT_BASE_ONLY;
-  tables[0].open_strategy= tables[3].open_strategy=
-  tables[4].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+  tables[GRANT_HOST].next_local= tables[GRANT_HOST].next_global=
+    &tables[GRANT_USER];
+  tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
+    &tables[GRANT_DB];
+  tables[GRANT_DB].next_local= tables[GRANT_DB].next_global=
+    &tables[GRANT_PROXIES_PRIV];
+  tables[GRANT_PROXIES_PRIV].next_local= tables[GRANT_PROXIES_PRIV].next_global=
+    &tables[GRANT_ROLES_MAPPING];
+  tables[GRANT_HOST].open_type= tables[GRANT_USER].open_type=
+    tables[GRANT_DB].open_type= tables[GRANT_PROXIES_PRIV].open_type=
+    tables[GRANT_ROLES_MAPPING].open_type= OT_BASE_ONLY;
+  tables[GRANT_HOST].open_strategy= tables[GRANT_PROXIES_PRIV].open_strategy=
+    tables[GRANT_ROLES_MAPPING].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
  
-  if (open_and_lock_tables(thd, tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
+  if (open_and_lock_tables(thd, &tables[GRANT_HOST], FALSE,
+                           MYSQL_LOCK_IGNORE_TIMEOUT))
   {
     /*
       Execution might have been interrupted; only print the error message
@@ -1601,6 +1630,7 @@ my_bool acl_reload(THD *thd)
   mysql_mutex_unlock(&acl_cache->lock);
 end:
   close_mysql_tables(thd);
+  delete[] tables;
   DBUG_RETURN(return_val);
 }
 
@@ -5393,23 +5423,27 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
   ulong column_priv= 0;
   List_iterator <LEX_USER> str_list (user_list);
   LEX_USER *Str, *tmp_Str;
-  TABLE_LIST tables[3];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   bool create_new_users=0;
   char *db_name, *table_name;
   Rpl_filter *rpl_filter;
+  bool result= FALSE;
+  Query_tables_list backup;
   DBUG_ENTER("mysql_table_grant");
 
   if (!initialized)
   {
     my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
              "--skip-grant-tables");	/* purecov: inspected */
-    DBUG_RETURN(TRUE);				/* purecov: inspected */
+    result= TRUE;
+    goto end;
   }
   if (rights & ~TABLE_ACLS)
   {
     my_message(ER_ILLEGAL_GRANT_FOR_TABLE, ER(ER_ILLEGAL_GRANT_FOR_TABLE),
                MYF(0));
-    DBUG_RETURN(TRUE);
+    result= TRUE;
+    goto end;
   }
 
   if (!revoke_grant)
@@ -5420,7 +5454,10 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
       List_iterator <LEX_COLUMN> column_iter(columns);
 
       if (open_normal_and_derived_tables(thd, table_list, 0, DT_PREPARE))
-        DBUG_RETURN(TRUE);
+      {
+        result= TRUE;
+        goto end;
+      }
 
       while ((column = column_iter++))
       {
@@ -5435,10 +5472,14 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
         {
           my_error(ER_BAD_FIELD_ERROR, MYF(0),
                    column->column.c_ptr(), table_list->alias);
-          DBUG_RETURN(TRUE);
+          result= TRUE;
+          goto end;
         }
         if (f == (Field *)-1)
-          DBUG_RETURN(TRUE);
+        {
+          result= TRUE;
+          goto end;
+        }
         column_priv|= column->rights;
       }
       close_mysql_tables(thd);
@@ -5450,7 +5491,8 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
         if (!ha_table_exists(thd, table_list->db, table_list->table_name, 0))
         {
           my_error(ER_NO_SUCH_TABLE, MYF(0), table_list->db, table_list->alias);
-          DBUG_RETURN(TRUE);
+          result= TRUE;
+          goto end;
         }
       }
       if (table_list->grant.want_privilege)
@@ -5461,25 +5503,28 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
         my_error(ER_TABLEACCESS_DENIED_ERROR, MYF(0),
                  command, thd->security_ctx->priv_user,
                  thd->security_ctx->host_or_ip, table_list->alias);
-        DBUG_RETURN(-1);
+        result= TRUE;
+        goto end;
       }
     }
   }
 
   /* open the mysql.tables_priv and mysql.columns_priv tables */
 
-  tables[0].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("user"), "user", TL_WRITE);
-  tables[1].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_TABLES_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("tables_priv"),
                            "tables_priv", TL_WRITE);
-  tables[2].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_COLUMNS_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("columns_priv"),
                            "columns_priv", TL_WRITE);
-  tables[0].next_local= tables[0].next_global= tables+1;
+  tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
+    &tables[GRANT_TABLES_PRIV];
   /* Don't open column table if we don't need it ! */
   if (column_priv || (revoke_grant && ((rights & COL_ACLS) || columns.elements)))
-    tables[1].next_local= tables[1].next_global= tables+2;
+    tables[GRANT_TABLES_PRIV].next_local= tables[GRANT_TABLES_PRIV].next_global=
+      &tables[GRANT_COLUMNS_PRIV];
 
 #ifdef HAVE_REPLICATION
   /*
@@ -5493,9 +5538,10 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
       The tables must be marked "updating" so that tables_ok() takes them into
       account in tests.
     */
-    tables[0].updating= tables[1].updating= tables[2].updating= 1;
-    if (!(thd->spcont || rpl_filter->tables_ok(0, tables)))
-      DBUG_RETURN(FALSE);
+    tables[GRANT_USER].updating= tables[GRANT_TABLES_PRIV].updating=
+      tables[GRANT_COLUMNS_PRIV].updating= 1;
+    if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
+      goto end;
   }
 #endif
 
@@ -5503,7 +5549,6 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
     The lock api is depending on the thd->lex variable which needs to be
     re-initialized.
   */
-  Query_tables_list backup;
   thd->lex->reset_n_backup_query_tables_list(&backup);
   /*
     Restore Query_tables_list::sql_command value, which was reset
@@ -5511,18 +5556,20 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
     this value corresponds to the statement being executed.
   */
   thd->lex->sql_command= backup.sql_command;
-  if (open_and_lock_tables(thd, tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
+  if (open_and_lock_tables(thd, &tables[GRANT_USER], FALSE,
+                           MYSQL_LOCK_IGNORE_TIMEOUT))
   {						// Should never happen
     thd->lex->restore_backup_query_tables_list(&backup);
-    DBUG_RETURN(TRUE);				/* purecov: deadcode */
+    result= TRUE;
+    goto end;
   }
 
   if (!revoke_grant)
     create_new_users= test_if_create_new_users(thd);
-  bool result= FALSE;
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
-  MEM_ROOT *old_root= thd->mem_root;
+  MEM_ROOT *old_root;
+  old_root= thd->mem_root;
   thd->mem_root= &grant_memroot;
   grant_version++;
 
@@ -5539,7 +5586,7 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
     if (copy_and_check_auth(Str, tmp_Str, thd->lex))
       error= -1;
     else
-      error=replace_user_table(thd, tables[0].table, *Str,
+      error=replace_user_table(thd, tables[GRANT_USER].table, *Str,
                                0, revoke_grant, create_new_users,
                                MY_TEST(thd->variables.sql_mode &
                                        MODE_NO_AUTO_CREATE_USER));
@@ -5610,16 +5657,17 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
 
     /* update table and columns */
 
-    if (replace_table_table(thd, grant_table, tables[1].table, *Str,
-			    db_name, table_name,
+    if (replace_table_table(thd, grant_table, tables[GRANT_TABLES_PRIV].table,
+                            *Str, db_name, table_name,
 			    rights, column_priv, revoke_grant))
     {
       /* Should only happen if table is crashed */
       result= TRUE;			       /* purecov: deadcode */
     }
-    else if (tables[2].table)
+    else if (tables[GRANT_COLUMNS_PRIV].table)
     {
-      if (replace_column_table(grant_table, tables[2].table, *Str, columns,
+      if (replace_column_table(grant_table, tables[GRANT_COLUMNS_PRIV].table,
+                               *Str, columns,
                                db_name, table_name, rights, revoke_grant))
       {
 	result= TRUE;
@@ -5646,6 +5694,9 @@ int mysql_table_grant(THD *thd, TABLE_LIST *table_list,
   /* Tables are automatically closed */
   thd->lex->restore_backup_query_tables_list(&backup);
   /* Restore the state of binlog format */
+
+end:
+  delete[] tables;
   DBUG_RETURN(result);
 }
 
@@ -5671,7 +5722,7 @@ bool mysql_routine_grant(THD *thd, TABLE_LIST *table_list, bool is_proc,
 {
   List_iterator <LEX_USER> str_list (user_list);
   LEX_USER *Str, *tmp_Str;
-  TABLE_LIST tables[2];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   bool create_new_users=0, result=0;
   char *db_name, *table_name;
   Rpl_filter *rpl_filter;
@@ -5681,28 +5732,34 @@ bool mysql_routine_grant(THD *thd, TABLE_LIST *table_list, bool is_proc,
   {
     my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
              "--skip-grant-tables");
-    DBUG_RETURN(TRUE);
+    result= TRUE;
+    goto end;
   }
   if (rights & ~PROC_ACLS)
   {
     my_message(ER_ILLEGAL_GRANT_FOR_TABLE, ER(ER_ILLEGAL_GRANT_FOR_TABLE),
                MYF(0));
-    DBUG_RETURN(TRUE);
+    result= TRUE;
+    goto end;
   }
 
   if (!revoke_grant)
   {
     if (sp_exist_routines(thd, table_list, is_proc))
-      DBUG_RETURN(TRUE);
+    {
+      result= TRUE;
+      goto end;
+    }
   }
 
   /* open the mysql.user and mysql.procs_priv tables */
 
-  tables[0].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("user"), "user", TL_WRITE);
-  tables[1].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_PROCS_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("procs_priv"), "procs_priv", TL_WRITE);
-  tables[0].next_local= tables[0].next_global= tables+1;
+  tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
+    &tables[GRANT_PROCS_PRIV];
 
 #ifdef HAVE_REPLICATION
   /*
@@ -5716,16 +5773,20 @@ bool mysql_routine_grant(THD *thd, TABLE_LIST *table_list, bool is_proc,
       The tables must be marked "updating" so that tables_ok() takes them into
       account in tests.
     */
-    tables[0].updating= tables[1].updating= 1;
-    if (!(thd->spcont || rpl_filter->tables_ok(0, tables)))
+    tables[GRANT_USER].updating= tables[GRANT_PROCS_PRIV].updating= 1;
+    if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
     {
-      DBUG_RETURN(FALSE);
+      goto end;
     }
   }
 #endif
 
-  if (open_and_lock_tables(thd, tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
-    DBUG_RETURN(TRUE);
+  if (open_and_lock_tables(thd, &tables[GRANT_USER], FALSE,
+                           MYSQL_LOCK_IGNORE_TIMEOUT))
+  {
+    result= TRUE;
+    goto end;
+  }
 
   DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
 
@@ -5733,7 +5794,8 @@ bool mysql_routine_grant(THD *thd, TABLE_LIST *table_list, bool is_proc,
     create_new_users= test_if_create_new_users(thd);
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
-  MEM_ROOT *old_root= thd->mem_root;
+  MEM_ROOT *old_root;
+  old_root= thd->mem_root;
   thd->mem_root= &grant_memroot;
 
   DBUG_PRINT("info",("now time to iterate and add users"));
@@ -5748,7 +5810,7 @@ bool mysql_routine_grant(THD *thd, TABLE_LIST *table_list, bool is_proc,
       continue;
     }
     /* Create user if needed */
-    error=replace_user_table(thd, tables[0].table, *Str,
+    error=replace_user_table(thd, tables[GRANT_USER].table, *Str,
 			     0, revoke_grant, create_new_users,
                              MY_TEST(thd->variables.sql_mode &
                                      MODE_NO_AUTO_CREATE_USER));
@@ -5783,8 +5845,8 @@ bool mysql_routine_grant(THD *thd, TABLE_LIST *table_list, bool is_proc,
       }
     }
 
-    if (replace_routine_table(thd, grant_name, tables[1].table, *Str,
-                              db_name, table_name, is_proc, rights,
+    if (replace_routine_table(thd, grant_name, tables[GRANT_PROCS_PRIV].table,
+                              *Str, db_name, table_name, is_proc, rights,
                               revoke_grant) != 0)
     {
       result= TRUE;
@@ -5807,6 +5869,8 @@ bool mysql_routine_grant(THD *thd, TABLE_LIST *table_list, bool is_proc,
   mysql_rwlock_unlock(&LOCK_grant);
 
   /* Tables are automatically closed */
+end:
+  delete[] tables;
   DBUG_RETURN(result);
 }
 
@@ -6145,15 +6209,17 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   LEX_USER *Str, *tmp_Str, *proxied_user= NULL;
   char tmp_db[SAFE_NAME_LEN+1];
   bool create_new_users=0;
-  TABLE_LIST tables[2];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   Rpl_filter *rpl_filter;
+  int result=0;
   DBUG_ENTER("mysql_grant");
 
   if (!initialized)
   {
     my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
              "--skip-grant-tables");	/* purecov: tested */
-    DBUG_RETURN(TRUE);				/* purecov: tested */
+    result= TRUE;
+    goto end;
   }
 
   if (lower_case_table_names && db)
@@ -6162,7 +6228,8 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     if (end >= tmp_db + sizeof(tmp_db))
     {
       my_error(ER_WRONG_DB_NAME ,MYF(0), db);
-      DBUG_RETURN(TRUE);
+      result= TRUE;
+      goto end;
     }
     my_casedn_str(files_charset_info, tmp_db);
     db=tmp_db;
@@ -6175,20 +6242,26 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   }
 
   /* open the mysql.user and mysql.db or mysql.proxies_priv tables */
-  tables[0].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("user"), "user", TL_WRITE);
+  TABLE_LIST *next_table;
   if (is_proxy)
-
-    tables[1].init_one_table(C_STRING_WITH_LEN("mysql"),
+  {
+    next_table= &tables[GRANT_PROXIES_PRIV];
+    next_table->init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("proxies_priv"),
                              "proxies_priv",
                              TL_WRITE);
+  }
   else
-    tables[1].init_one_table(C_STRING_WITH_LEN("mysql"),
+  {
+    next_table= &tables[GRANT_DB];
+    next_table->init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("db"),
                              "db",
                              TL_WRITE);
-  tables[0].next_local= tables[0].next_global= tables+1;
+  }
+  tables[GRANT_USER].next_local= tables[GRANT_USER].next_global= next_table;
 
 #ifdef HAVE_REPLICATION
   /*
@@ -6202,14 +6275,18 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
       The tables must be marked "updating" so that tables_ok() takes them into
       account in tests.
     */
-    tables[0].updating= tables[1].updating= 1;
-    if (!(thd->spcont || rpl_filter->tables_ok(0, tables)))
-      DBUG_RETURN(FALSE);
+    tables[GRANT_USER].updating= next_table->updating= 1;
+    if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
+      goto end;
   }
 #endif
 
-  if (open_and_lock_tables(thd, tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
-    DBUG_RETURN(TRUE);				/* purecov: deadcode */
+  if (open_and_lock_tables(thd, &tables[GRANT_USER], FALSE,
+                           MYSQL_LOCK_IGNORE_TIMEOUT))
+  {
+    result= TRUE;
+    goto end;
+  }
 
   DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
 
@@ -6224,11 +6301,13 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   if (proxied_user)
   {
     if (!(proxied_user= get_current_user(thd, proxied_user, false)))
-      DBUG_RETURN(TRUE);
+    {
+      result= TRUE;
+      goto end;
+    }
     DBUG_ASSERT(proxied_user->host.length); // not a Role
   }
 
-  int result=0;
   while ((tmp_Str = str_list++))
   {
     if (!(Str= get_current_user(thd, tmp_Str, false)))
@@ -6240,7 +6319,7 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     if (copy_and_check_auth(Str, tmp_Str, thd->lex))
       result= -1;
     else
-    if (replace_user_table(thd, tables[0].table, *Str,
+    if (replace_user_table(thd, tables[GRANT_USER].table, *Str,
                            (!db ? rights : 0), revoke_grant, create_new_users,
                            MY_TEST(thd->variables.sql_mode &
                                    MODE_NO_AUTO_CREATE_USER)))
@@ -6250,7 +6329,7 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
       ulong db_rights= rights & DB_ACLS;
       if (db_rights  == rights)
       {
-	if (replace_db_table(tables[1].table, db, *Str, db_rights,
+	if (replace_db_table(tables[GRANT_DB].table, db, *Str, db_rights,
 			     revoke_grant))
 	  result= -1;
       }
@@ -6262,7 +6341,8 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     }
     else if (is_proxy)
     {
-      if (replace_proxies_priv_table (thd, tables[1].table, Str, proxied_user,
+      if (replace_proxies_priv_table (thd, tables[GRANT_PROXIES_PRIV].table,
+                                    Str, proxied_user,
                                     rights & GRANT_ACL ? TRUE : FALSE,
                                     revoke_grant))
         result= -1;
@@ -6284,6 +6364,8 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   if (!result)
     my_ok(thd);
 
+end:
+  delete[] tables;
   DBUG_RETURN(result);
 }
 
@@ -6365,9 +6447,9 @@ static my_bool grant_load(THD *thd, TABLE_LIST *tables)
                       0,0,0, (my_hash_get_key) get_grant_table, 0,0);
   init_sql_alloc(&grant_memroot, ACL_ALLOC_BLOCK_SIZE, 0, MYF(0));
 
-  t_table= tables[0].table;
-  c_table= tables[1].table;
-  p_table= tables[2].table; // this can be NULL
+  t_table= tables[GRANT_TABLES_PRIV].table;
+  c_table= tables[GRANT_COLUMNS_PRIV].table;
+  p_table= tables[GRANT_PROCS_PRIV].table; // this can be NULL
 
   if (t_table->file->ha_index_init(0, 1))
     goto end_index_init;
@@ -6518,7 +6600,7 @@ my_bool role_propagate_grants_action(void *ptr, void *unused __attribute__((unus
 
 my_bool grant_reload(THD *thd)
 {
-  TABLE_LIST tables[3];
+  TABLE_LIST *tables;
   HASH old_column_priv_hash, old_proc_priv_hash, old_func_priv_hash;
   MEM_ROOT old_mem;
   my_bool return_val= 1;
@@ -6528,25 +6610,31 @@ my_bool grant_reload(THD *thd)
   if (!initialized)
     DBUG_RETURN(0);
 
-  tables[0].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables= new TABLE_LIST[GRANT_TABLES_MAX];
+
+  tables[GRANT_TABLES_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("tables_priv"),
                            "tables_priv", TL_READ);
-  tables[1].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_COLUMNS_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("columns_priv"),
                            "columns_priv", TL_READ);
-  tables[2].init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_PROCS_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("procs_priv"),
                           "procs_priv", TL_READ);
-  tables[0].next_local= tables[0].next_global= tables+1;
-  tables[1].next_local= tables[1].next_global= tables+2;
-  tables[0].open_type= tables[1].open_type= tables[2].open_type= OT_BASE_ONLY;
-  tables[2].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+  tables[GRANT_TABLES_PRIV].next_local= tables[GRANT_TABLES_PRIV].next_global=
+    &tables[GRANT_COLUMNS_PRIV];
+  tables[GRANT_COLUMNS_PRIV].next_local= tables[GRANT_COLUMNS_PRIV].next_global=
+    &tables[GRANT_PROCS_PRIV];
+  tables[GRANT_TABLES_PRIV].open_type= tables[GRANT_COLUMNS_PRIV].open_type=
+    tables[GRANT_PROCS_PRIV].open_type= OT_BASE_ONLY;
+  tables[GRANT_PROCS_PRIV].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
 
   /*
     To avoid deadlocks we should obtain table locks before
     obtaining LOCK_grant rwlock.
   */
-  if (open_and_lock_tables(thd, tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
+  if (open_and_lock_tables(thd, &tables[GRANT_TABLES_PRIV], FALSE,
+                           MYSQL_LOCK_IGNORE_TIMEOUT))
     goto end;
 
   mysql_rwlock_wrlock(&LOCK_grant);
@@ -6587,6 +6675,7 @@ my_bool grant_reload(THD *thd)
   close_mysql_tables(thd);
 
 end:
+  delete[] tables;
   DBUG_RETURN(return_val);
 }
 
@@ -8214,17 +8303,10 @@ void get_mqh(const char *user, const char *host, USER_CONN *uc)
   SYNOPSIS
     open_grant_tables()
     thd                         The current thread.
-    tables (out)                The 7 elements array for the opened tables.
+    tables (out)                The array for the opened tables.
 
   DESCRIPTION
-    Tables are numbered as follows:
-    0 user
-    1 db
-    2 tables_priv
-    3 columns_priv
-    4 procs_priv
-    5 proxies_priv
-    6 roles_mapping
+    Tables are numbered by enum GrantTable.
 
   RETURN
     1           Skip GRANT handling during replication.
@@ -8232,7 +8314,6 @@ void get_mqh(const char *user, const char *host, USER_CONN *uc)
     < 0         Error.
 */
 
-#define GRANT_TABLES 7
 static int open_grant_tables(THD *thd, TABLE_LIST *tables)
 {
   Rpl_filter *rpl_filter;
@@ -8244,35 +8325,41 @@ static int open_grant_tables(THD *thd, TABLE_LIST *tables)
     DBUG_RETURN(-1);
   }
 
-  tables->init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                          C_STRING_WITH_LEN("user"), "user", TL_WRITE);
-  (tables+1)->init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_DB].init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("db"), "db", TL_WRITE);
-  (tables+2)->init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_TABLES_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("tables_priv"),
                              "tables_priv", TL_WRITE);
-  (tables+3)->init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_COLUMNS_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("columns_priv"),
                              "columns_priv", TL_WRITE);
-  (tables+4)->init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_PROCS_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("procs_priv"),
                              "procs_priv", TL_WRITE);
-  (tables+5)->init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_PROXIES_PRIV].init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("proxies_priv"),
                              "proxies_priv", TL_WRITE);
-  (tables+5)->open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
-  (tables+6)->init_one_table(C_STRING_WITH_LEN("mysql"),
+  tables[GRANT_PROXIES_PRIV].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+  tables[GRANT_ROLES_MAPPING].init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("roles_mapping"),
                              "roles_mapping", TL_WRITE);
-  (tables+6)->open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+  tables[GRANT_ROLES_MAPPING].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
 
 
-  tables->next_local= tables->next_global= tables + 1;
-  (tables+1)->next_local= (tables+1)->next_global= tables + 2;
-  (tables+2)->next_local= (tables+2)->next_global= tables + 3;
-  (tables+3)->next_local= (tables+3)->next_global= tables + 4;
-  (tables+4)->next_local= (tables+4)->next_global= tables + 5;
-  (tables+5)->next_local= (tables+5)->next_global= tables + 6;
+  tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
+    &tables[GRANT_DB];
+  tables[GRANT_DB].next_local= tables[GRANT_DB].next_global=
+    &tables[GRANT_TABLES_PRIV];
+  tables[GRANT_TABLES_PRIV].next_local= tables[GRANT_TABLES_PRIV].next_global=
+    &tables[GRANT_COLUMNS_PRIV];
+  tables[GRANT_COLUMNS_PRIV].next_local= tables[GRANT_COLUMNS_PRIV].next_global=
+    &tables[GRANT_PROCS_PRIV];
+  tables[GRANT_PROCS_PRIV].next_local= tables[GRANT_PROCS_PRIV].next_global=
+    &tables[GRANT_PROXIES_PRIV];
+  tables[GRANT_PROXIES_PRIV].next_local= tables[GRANT_PROXIES_PRIV].next_global=
+    &tables[GRANT_ROLES_MAPPING];
 
 #ifdef HAVE_REPLICATION
   /*
@@ -8286,18 +8373,21 @@ static int open_grant_tables(THD *thd, TABLE_LIST *tables)
       The tables must be marked "updating" so that tables_ok() takes them into
       account in tests.
     */
-    tables[0].updating= tables[1].updating= tables[2].updating=
-      tables[3].updating= tables[4].updating= tables[5].updating=
-      tables[6].updating= 1;
-    if (!(thd->spcont || rpl_filter->tables_ok(0, tables)))
+    tables[GRANT_USER].updating= tables[GRANT_DB].updating=
+      tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
+      tables[GRANT_PROCS_PRIV].updating= tables[GRANT_PROXIES_PRIV].updating=
+      tables[GRANT_ROLES_MAPPING].updating= 1;
+    if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
       DBUG_RETURN(1);
-    tables[0].updating= tables[1].updating= tables[2].updating=
-      tables[3].updating= tables[4].updating= tables[5].updating=
-      tables[6].updating= 0;
+    tables[GRANT_USER].updating= tables[GRANT_DB].updating=
+      tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
+      tables[GRANT_PROCS_PRIV].updating= tables[GRANT_PROXIES_PRIV].updating=
+      tables[GRANT_ROLES_MAPPING].updating= 0;
   }
 #endif
 
-  if (open_and_lock_tables(thd, tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
+  if (open_and_lock_tables(thd, &tables[GRANT_USER], FALSE,
+                           MYSQL_LOCK_IGNORE_TIMEOUT))
   {						// This should never happen
     DBUG_RETURN(-1);
   }
@@ -8464,8 +8554,8 @@ static int handle_roles_mappings_table(TABLE *table, bool drop,
 
   SYNOPSIS
     handle_grant_table()
-    tables                      The array with the four open tables.
-    table_no                    The number of the table to handle (0..4).
+    tables                      The array tables opened by open_grant_tables
+    table_id                    Table to handle
     drop                        If user_from is to be dropped.
     user_from                   The the user to be searched/dropped/renamed.
     user_to                     The new name for the user if to be renamed,
@@ -8478,14 +8568,6 @@ static int handle_roles_mappings_table(TABLE *table, bool drop,
     Delete from grant table if drop is true.
     Update in grant table if drop is false and user_to is not NULL.
     Search in grant table if drop is false and user_to is NULL.
-    Tables are numbered as follows:
-    0 user
-    1 db
-    2 tables_priv
-    3 columns_priv
-    4 procs_priv
-    5 proxies_priv
-    6 roles_mapping
 
   RETURN
     > 0         At least one record matched.
@@ -8493,14 +8575,15 @@ static int handle_roles_mappings_table(TABLE *table, bool drop,
     < 0         Error.
 */
 
-static int handle_grant_table(TABLE_LIST *tables, uint table_no, bool drop,
-                              LEX_USER *user_from, LEX_USER *user_to)
+static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
+                              bool drop, LEX_USER *user_from, LEX_USER *user_to)
 {
   int result= 0;
   int error;
-  TABLE *table= tables[table_no].table;
+  TABLE *table= tables[table_id].table;
   Field *host_field= table->field[0];
-  Field *user_field= table->field[table_no && table_no != 5 ? 2 : 1];
+  Field *user_field= table->field[table_id != GRANT_USER &&
+                                  table_id != GRANT_PROXIES_PRIV ? 2 : 1];
   const char *host_str= user_from->host.str;
   const char *user_str= user_from->user.str;
   const char *host;
@@ -8510,14 +8593,14 @@ static int handle_grant_table(TABLE_LIST *tables, uint table_no, bool drop,
   DBUG_ENTER("handle_grant_table");
   THD *thd= current_thd;
 
-  if (table_no == 6)
+  if (table_id == GRANT_ROLES_MAPPING)
   {
     result= handle_roles_mappings_table(table, drop, user_from, user_to);
     DBUG_RETURN(result);
   }
 
   table->use_all_columns();
-  if (! table_no) // mysql.user table
+  if (table_id == GRANT_USER)
   {
     /*
       The 'user' table has an unique index on (host, user).
@@ -8593,7 +8676,7 @@ static int handle_grant_table(TABLE_LIST *tables, uint table_no, bool drop,
         user= safe_str(get_field(thd->mem_root, user_field));
 
 #ifdef EXTRA_DEBUG
-        if (table_no != 5)
+        if (table_id != GRANT_PROXIES_PRIV)
         {
           DBUG_PRINT("loop",("scan fields: '%s'@'%s' '%s' '%s' '%s'",
                              user, host,
@@ -9017,7 +9100,8 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   }
 
   /* Handle db table. */
-  if ((found= handle_grant_table(tables, 1, drop, user_from, user_to)) < 0)
+  if ((found= handle_grant_table(tables, GRANT_DB, drop,
+                                 user_from, user_to)) < 0)
   {
     /* Handle of table failed, don't touch the in-memory array. */
     result= -1;
@@ -9037,7 +9121,8 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   }
 
   /* Handle stored routines table. */
-  if ((found= handle_grant_table(tables, 4, drop, user_from, user_to)) < 0)
+  if ((found= handle_grant_table(tables, GRANT_PROCS_PRIV, drop,
+                                 user_from, user_to)) < 0)
   {
     /* Handle of table failed, don't touch in-memory array. */
     result= -1;
@@ -9065,7 +9150,8 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   }
 
   /* Handle tables table. */
-  if ((found= handle_grant_table(tables, 2, drop, user_from, user_to)) < 0)
+  if ((found= handle_grant_table(tables, GRANT_TABLES_PRIV, drop,
+                                 user_from, user_to)) < 0)
   {
     /* Handle of table failed, don't touch columns and in-memory array. */
     result= -1;
@@ -9081,7 +9167,8 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
     }
 
     /* Handle columns table. */
-    if ((found= handle_grant_table(tables, 3, drop, user_from, user_to)) < 0)
+    if ((found= handle_grant_table(tables, GRANT_COLUMNS_PRIV, drop,
+                                   user_from, user_to)) < 0)
     {
       /* Handle of table failed, don't touch the in-memory array. */
       result= -1;
@@ -9098,9 +9185,10 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   }
 
   /* Handle proxies_priv table. */
-  if (tables[5].table)
+  if (tables[GRANT_PROXIES_PRIV].table)
   {
-    if ((found= handle_grant_table(tables, 5, drop, user_from, user_to)) < 0)
+    if ((found= handle_grant_table(tables, GRANT_PROXIES_PRIV, drop,
+                                   user_from, user_to)) < 0)
     {
       /* Handle of table failed, don't touch the in-memory array. */
       result= -1;
@@ -9117,9 +9205,10 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   }
 
   /* Handle roles_mappings table. */
-  if (tables[6].table)
+  if (tables[GRANT_ROLES_MAPPING].table)
   {
-    if ((found= handle_grant_table(tables, 6, drop, user_from, user_to)) < 0)
+    if ((found= handle_grant_table(tables, GRANT_ROLES_MAPPING, drop,
+                                   user_from, user_to)) < 0)
     {
       /* Handle of table failed, don't touch the in-memory array. */
       result= -1;
@@ -9136,7 +9225,8 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
   }
 
   /* Handle user table. */
-  if ((found= handle_grant_table(tables, 0, drop, user_from, user_to)) < 0)
+  if ((found= handle_grant_table(tables, GRANT_USER, drop,
+                                 user_from, user_to)) < 0)
   {
     /* Handle of table failed, don't touch the in-memory array. */
     result= -1;
@@ -9175,7 +9265,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
   String wrong_users;
   LEX_USER *user_name;
   List_iterator <LEX_USER> user_list(list);
-  TABLE_LIST tables[GRANT_TABLES];
+  TABLE_LIST *tables;
   bool some_users_created= FALSE;
   DBUG_ENTER("mysql_create_user");
   DBUG_PRINT("entry", ("Handle as %s", handle_as_role ? "role" : "user"));
@@ -9183,9 +9273,13 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
   if (handle_as_role && sp_process_definer(thd))
     DBUG_RETURN(TRUE);
 
+  tables= new TABLE_LIST[GRANT_TABLES_MAX];
   /* CREATE USER may be skipped on replication client. */
   if ((result= open_grant_tables(thd, tables)))
-    DBUG_RETURN(result != 1);
+  {
+    result= result != 1;
+    goto end;
+  }
 
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
@@ -9220,7 +9314,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
       Search all in-memory structures and grant tables
       for a mention of the new user/role name.
     */
-    if (handle_grant_data(tables, 0, user_name, NULL))
+    if (handle_grant_data(tables, false, user_name, NULL))
     {
       append_user(thd, &wrong_users, user_name);
 
@@ -9229,7 +9323,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
     }
 
     some_users_created= TRUE;
-    if (replace_user_table(thd, tables[0].table, *user_name, 0, 0, 1, 0))
+    if (replace_user_table(thd, tables[GRANT_USER].table, *user_name, 0, 0, 1, 0))
     {
       append_user(thd, &wrong_users, user_name);
       result= TRUE;
@@ -9250,7 +9344,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
       if (grantee)
         add_role_user_mapping(grantee, role);
 
-      if (replace_roles_mapping_table(tables[6].table,
+      if (replace_roles_mapping_table(tables[GRANT_ROLES_MAPPING].table,
                                       &thd->lex->definer->user,
                                       &thd->lex->definer->host,
                                       &user_name->user, true,
@@ -9279,6 +9373,8 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
     result |= write_bin_log(thd, FALSE, thd->query(), thd->query_length());
 
   mysql_rwlock_unlock(&LOCK_grant);
+end:
+  delete[] tables;
   DBUG_RETURN(result);
 }
 
@@ -9301,7 +9397,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
   String wrong_users;
   LEX_USER *user_name, *tmp_user_name;
   List_iterator <LEX_USER> user_list(list);
-  TABLE_LIST tables[GRANT_TABLES];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   bool some_users_deleted= FALSE;
   ulonglong old_sql_mode= thd->variables.sql_mode;
   DBUG_ENTER("mysql_drop_user");
@@ -9309,7 +9405,10 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 
   /* DROP USER may be skipped on replication client. */
   if ((result= open_grant_tables(thd, tables)))
-    DBUG_RETURN(result != 1);
+  {
+    result= result != 1;
+    goto end;
+  }
 
   thd->variables.sql_mode&= ~MODE_PAD_CHAR_TO_FULL_LENGTH;
 
@@ -9334,7 +9433,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
       continue;
     }
 
-    if (handle_grant_data(tables, 1, user_name, NULL) <= 0)
+    if (handle_grant_data(tables, true, user_name, NULL) <= 0)
     {
       append_user(thd, &wrong_users, user_name);
       result= TRUE;
@@ -9368,6 +9467,8 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 
   mysql_rwlock_unlock(&LOCK_grant);
   thd->variables.sql_mode= old_sql_mode;
+end:
+  delete[] tables;
   DBUG_RETURN(result);
 }
 
@@ -9391,13 +9492,16 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
   LEX_USER *user_from, *tmp_user_from;
   LEX_USER *user_to, *tmp_user_to;
   List_iterator <LEX_USER> user_list(list);
-  TABLE_LIST tables[GRANT_TABLES];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   bool some_users_renamed= FALSE;
   DBUG_ENTER("mysql_rename_user");
 
   /* RENAME USER may be skipped on replication client. */
   if ((result= open_grant_tables(thd, tables)))
-    DBUG_RETURN(result != 1);
+  {
+    result= result != 1;
+    goto end;
+  }
 
   DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
 
@@ -9426,8 +9530,8 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
       Search all in-memory structures and grant tables
       for a mention of the new user name.
     */
-    if (handle_grant_data(tables, 0, user_to, NULL) ||
-        handle_grant_data(tables, 0, user_from, user_to) <= 0)
+    if (handle_grant_data(tables, false, user_to, NULL) ||
+        handle_grant_data(tables, false, user_from, user_to) <= 0)
     {
       /* NOTE TODO renaming roles is not yet implemented */
       append_user(thd, &wrong_users, user_from);
@@ -9455,6 +9559,8 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
     result |= write_bin_log(thd, FALSE, thd->query(), thd->query_length());
 
   mysql_rwlock_unlock(&LOCK_grant);
+end:
+  delete[] tables;
   DBUG_RETURN(result);
 }
 
@@ -9478,19 +9584,22 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
   uint counter, revoked, is_proc;
   int result;
   ACL_DB *acl_db;
-  TABLE_LIST tables[GRANT_TABLES];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
+  LEX_USER *lex_user, *tmp_lex_user;
+  List_iterator <LEX_USER> user_list(list);
   DBUG_ENTER("mysql_revoke_all");
 
   if ((result= open_grant_tables(thd, tables)))
-    DBUG_RETURN(result != 1);
+  {
+    result= result != 1;
+    goto end;
+  }
 
   DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
 
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
 
-  LEX_USER *lex_user, *tmp_lex_user;
-  List_iterator <LEX_USER> user_list(list);
   while ((tmp_lex_user= user_list++))
   {
     if (!(lex_user= get_current_user(thd, tmp_lex_user, false)))
@@ -9507,7 +9616,8 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
       continue;
     }
 
-    if (replace_user_table(thd, tables[0].table, *lex_user, ~(ulong)0, 1, 0, 0))
+    if (replace_user_table(thd, tables[GRANT_USER].table,
+                           *lex_user, ~(ulong)0, 1, 0, 0))
     {
       result= -1;
       continue;
@@ -9533,7 +9643,7 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
 	if (!strcmp(lex_user->user.str, user) &&
             !strcmp(lex_user->host.str, host))
 	{
-	  if (!replace_db_table(tables[1].table, acl_db->db, *lex_user,
+	  if (!replace_db_table(tables[GRANT_DB].table, acl_db->db, *lex_user,
                                 ~(ulong)0, 1))
 	  {
 	    /*
@@ -9563,7 +9673,8 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
 	if (!strcmp(lex_user->user.str,user) &&
             !strcmp(lex_user->host.str, host))
 	{
-	  if (replace_table_table(thd,grant_table,tables[2].table,*lex_user,
+	  if (replace_table_table(thd,grant_table,tables[GRANT_TABLES_PRIV].table,
+	                          *lex_user,
 				  grant_table->db,
 				  grant_table->tname,
 				  ~(ulong)0, 0, 1))
@@ -9578,7 +9689,8 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
 	      continue;
 	    }
 	    List<LEX_COLUMN> columns;
-	    if (!replace_column_table(grant_table,tables[3].table, *lex_user,
+	    if (!replace_column_table(grant_table,tables[GRANT_COLUMNS_PRIV].table,
+	                              *lex_user,
 				      columns,
 				      grant_table->db,
 				      grant_table->tname,
@@ -9607,11 +9719,12 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
 	if (!strcmp(lex_user->user.str,user) &&
             !strcmp(lex_user->host.str, host))
 	{
-	  if (replace_routine_table(thd,grant_proc,tables[4].table,*lex_user,
-				  grant_proc->db,
-				  grant_proc->tname,
-                                  is_proc,
-				  ~(ulong)0, 1) == 0)
+	  if (replace_routine_table(thd,grant_proc,tables[GRANT_PROCS_PRIV].table,
+	                            *lex_user,
+				    grant_proc->db,
+				    grant_proc->tname,
+                                    is_proc,
+				    ~(ulong)0, 1) == 0)
 	  {
 	    revoked= 1;
 	    continue;
@@ -9644,7 +9757,7 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
       ROLE_GRANT_PAIR *pair = find_role_grant_pair(&lex_user->user,
                                                    &lex_user->host,
                                                    &role_grant->user);
-      if (replace_roles_mapping_table(tables[6].table,
+      if (replace_roles_mapping_table(tables[GRANT_ROLES_MAPPING].table,
                                       &lex_user->user,
                                       &lex_user->host,
                                       &role_grant->user, false, pair, true))
@@ -9688,6 +9801,8 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
 
   mysql_rwlock_unlock(&LOCK_grant);
 
+end:
+  delete[] tables;
   DBUG_RETURN(result);
 }
 
@@ -9775,13 +9890,17 @@ bool sp_revoke_privileges(THD *thd, const char *sp_db, const char *sp_name,
 {
   uint counter, revoked;
   int result;
-  TABLE_LIST tables[GRANT_TABLES];
+  TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   HASH *hash= is_proc ? &proc_priv_hash : &func_priv_hash;
   Silence_routine_definer_errors error_handler;
+  bool ret_value;
   DBUG_ENTER("sp_revoke_privileges");
 
   if ((result= open_grant_tables(thd, tables)))
-    DBUG_RETURN(result != 1);
+  {
+    ret_value= result != 1;
+    goto end;
+  }
 
   DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
 
@@ -9805,7 +9924,8 @@ bool sp_revoke_privileges(THD *thd, const char *sp_db, const char *sp_name,
 	lex_user.user.length= strlen(grant_proc->user);
         lex_user.host.str= safe_str(grant_proc->host.hostname);
         lex_user.host.length= strlen(lex_user.host.str);
-	if (replace_routine_table(thd,grant_proc,tables[4].table,lex_user,
+	if (replace_routine_table(thd,grant_proc,tables[GRANT_PROCS_PRIV].table,
+	                          lex_user,
 				  grant_proc->db, grant_proc->tname,
                                   is_proc, ~(ulong)0, 1) == 0)
 	{
@@ -9821,8 +9941,11 @@ bool sp_revoke_privileges(THD *thd, const char *sp_db, const char *sp_name,
   mysql_rwlock_unlock(&LOCK_grant);
 
   thd->pop_internal_handler();
+  ret_value= error_handler.has_errors();
 
-  DBUG_RETURN(error_handler.has_errors());
+end:
+  delete[] tables;
+  DBUG_RETURN(ret_value);
 }
 
 
