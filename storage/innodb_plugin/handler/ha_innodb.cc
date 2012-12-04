@@ -199,6 +199,37 @@ static TYPELIB innodb_stats_method_typelib = {
 	NULL
 };
 
+/** Possible values for system variable innodb_default_row_format */
+static const char* innodb_default_row_format_names[] = {
+	"auto", // original DEFAULT behavior -> (key_block_size_specified ? innodb : compact)
+	"compact",
+	"compressed",
+	"dynamic",
+	NullS
+};
+
+/** Default row format for new innodb tables.  See enum below. */
+static ulong innodb_default_row_format = 0;
+
+/** row_type enum values corresponding to the names above for
+the innodb_default_row_format sysvar; needed since typelib enums must start from
+zero. */
+static enum row_type innodb_default_row_format_values[] = {
+	ROW_TYPE_DEFAULT,
+	ROW_TYPE_COMPACT,
+	ROW_TYPE_COMPRESSED,
+	ROW_TYPE_DYNAMIC,
+};
+
+/** Used to define the enumerated type for the innodb_default_row_format system
+variable. */
+static TYPELIB innodb_default_row_format_typelib = {
+	array_elements(innodb_default_row_format_names) - 1,
+	"innodb_default_row_format_typelib",
+	innodb_default_row_format_names,
+        NULL
+};
+
 /* The following counter is used to convey information to InnoDB
 about server activity: in selects it is not sensible to call
 srv_active_wake_master_thread after each fetch or search, we only do
@@ -6680,6 +6711,31 @@ get_row_format_name(
 
 
 /*****************************************************************//**
+Given the info for a CREATE TABLE query, determine the effective
+row_type value, taking into account the innodb-default-row-format
+sysvar if the query doesn't specify one.
+@return Effective row_format for this CREATE TABLE request. */
+static
+enum row_type
+get_row_format_for_create(
+/*=====================*/
+	THD*		thd,		/*!< in: connection thread. */
+	TABLE*		form,		/*!< in: information on table
+					columns and indexes */
+	HA_CREATE_INFO*	create_info)	/*!< in: create info. */
+{
+	if (!(create_info->used_fields & HA_CREATE_USED_ROW_FORMAT)) {
+		// No ROW_TYPE= clause should imply DEFAULT row type:
+		assert(form->s->row_type == ROW_TYPE_DEFAULT);
+		// ...which is overridden if this sysvar is changed from AUTO:
+		return innodb_default_row_format_values[
+			innodb_default_row_format];
+	} else { // CREATE TABLE has ROW_FORMAT= clause, use that:
+		return form->s->row_type;
+	}
+}
+
+/*****************************************************************//**
 Validates the create options. We may build on this function
 in future. For now, it checks two specifiers:
 KEY_BLOCK_SIZE and ROW_FORMAT
@@ -6692,11 +6748,11 @@ create_options_are_valid(
 	THD*		thd,		/*!< in: connection thread. */
 	TABLE*		form,		/*!< in: information on table
 					columns and indexes */
-	HA_CREATE_INFO*	create_info)	/*!< in: create info. */
+	HA_CREATE_INFO*	create_info,	/*!< in: create info. */
+        enum row_type row_format)	/*!< in: effective row format */
 {
 	ibool	kbs_specified	= FALSE;
 	ibool	ret		= TRUE;
-	enum row_type	row_format	= form->s->row_type;
 
 	ut_ad(thd != NULL);
 
@@ -6830,7 +6886,8 @@ ha_innobase::create(
 	const ulint	file_format = srv_file_format;
 	const char*	stmt;
 	size_t		stmt_len;
-	enum row_type	row_format;
+	enum row_type	row_format =
+		get_row_format_for_create(thd, form, create_info);
 
 	DBUG_ENTER("ha_innobase::create");
 
@@ -6879,7 +6936,7 @@ ha_innobase::create(
 	flags = 0;
 
 	/* Validate create options if innodb_strict_mode is set. */
-	if (!create_options_are_valid(thd, form, create_info)) {
+	if (!create_options_are_valid(thd, form, create_info, row_format)) {
 		DBUG_RETURN(ER_ILLEGAL_HA_CREATE_OPTION);
 	}
 
@@ -6929,8 +6986,6 @@ ha_innobase::create(
 				create_info->key_block_size);
 		}
 	}
-
-	row_format = form->s->row_type;
 
 	if (flags) {
 		/* if ROW_FORMAT is set to default,
@@ -11423,6 +11478,12 @@ static MYSQL_SYSVAR_UINT(compression_level, page_compression_level,
   "(only for testing), 1 is fastest, 9 is best compression, default is 6.",
   NULL, NULL, 6, 0, 9, 0);
 
+static MYSQL_SYSVAR_ENUM(default_row_format, innodb_default_row_format,
+  PLUGIN_VAR_RQCMDARG,
+  "Default row format for new tables: "
+  "(AUTO, COMPACT, COMPRESSED, or DYNAMIC)",
+  NULL, NULL, 0, &innodb_default_row_format_typelib);
+
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(additional_mem_pool_size),
   MYSQL_SYSVAR(autoextend_increment),
@@ -11500,6 +11561,7 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(exit_on_init_failure),
   MYSQL_SYSVAR(log_compressed_pages),
   MYSQL_SYSVAR(compression_level),
+  MYSQL_SYSVAR(default_row_format),
   NULL
 };
 
