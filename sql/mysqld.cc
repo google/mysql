@@ -741,6 +741,7 @@ my_bool master_ssl;
 char *master_ssl_key, *master_ssl_cert;
 char *master_ssl_ca, *master_ssl_capath, *master_ssl_cipher;
 char *opt_logname, *opt_slow_logname;
+char *opt_deprecated_engines;
 
 /* Static variables */
 
@@ -5913,7 +5914,8 @@ enum options_mysqld
   OPT_RESERVED_SUPER_CONNECTIONS,
   OPT_SUPER_TO_SET_TIMESTAMP,
   OPT_RPL_ALLOW_IMPLICIT_COMMIT,
-  OPT_SYSTEM_USER_TABLE
+  OPT_SYSTEM_USER_TABLE,
+  OPT_DEPRECATED_ENGINES
 };
 
 
@@ -6353,6 +6355,10 @@ each time the SQL thread starts.",
    "Syntax: myisam-recover[=option[,option...]], where option can be DEFAULT, BACKUP, FORCE or QUICK.",
    &myisam_recover_options_str, &myisam_recover_options_str, 0,
    GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"deprecated-engines", OPT_DEPRECATED_ENGINES,
+   "Comma-separated list of storage engines to prevent from using with CREATE or ALTER TABLE",
+   &opt_deprecated_engines, &opt_deprecated_engines, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
 #ifdef WITH_NDBCLUSTER_STORAGE_ENGINE
   {"ndb-connectstring", OPT_NDB_CONNECTSTRING,
    "Connect string for ndbcluster.",
@@ -8086,6 +8092,8 @@ static int mysql_init_variables(void)
   slave_exec_mode_options= find_bit_type_or_exit(slave_exec_mode_str,
                                                  &slave_exec_mode_typelib,
                                                  NULL, &error);
+  opt_deprecated_engines= (char*)"";
+
   /* Default mode string must not yield a error. */
   DBUG_ASSERT(!error);
   if (error)

@@ -1146,6 +1146,61 @@ static inline void convert_underscore_to_dash(char *str, int len)
 }
 
 
+// Called by plugin_foreach from within check_deprecated_engines
+static my_bool mark_deprecated_engine_loaded(THD *thd_unused, plugin_ref plugin,
+                                            void *engine_list_ptr)
+{
+  LEX_STRING listed_name = { NULL, 0 };
+  LEX_STRING *engine_name = plugin_name(plugin);
+  while (lex_string_split_on_byte((LEX_STRING *)engine_list_ptr, ',', &listed_name)) {
+    if (!my_strnncoll(&my_charset_latin1,
+                      (uchar *)listed_name.str, listed_name.length,
+                      (uchar *)engine_name->str, engine_name->length))
+    {
+      listed_name.str[0] = '\0';
+    }
+  }
+
+  return FALSE;
+}
+
+// Note: This is called from plugin_init to check that the engines listed in
+//       --deprecated-engines are recognized.
+static my_bool check_deprecated_engines_loaded(MEM_ROOT *tmp_root)
+{
+  DBUG_ENTER("check_deprecated_engines");
+  LEX_STRING engine_list_copy = { strdup_root(tmp_root, opt_deprecated_engines),
+                                  strlen(opt_deprecated_engines) };
+  if (engine_list_copy.str == NULL)
+  {
+    DBUG_RETURN(TRUE);
+  }
+
+  // Note: mark_deprecated_engine_seen will set the first character of matched
+  //       list entries to '\0' in engine_list_copy during this call:
+  plugin_foreach(NULL, mark_deprecated_engine_loaded, MYSQL_STORAGE_ENGINE_PLUGIN,
+                 &engine_list_copy);
+  LEX_STRING engine_name = { NULL, 0 };
+
+  // all recognized engines are now marked; warn if there are unrecognized engines
+  // left:
+  while (lex_string_split_on_byte(&engine_list_copy, ',', &engine_name))
+  {
+    if (engine_name.length == 0 || engine_name.str[0] == '\0')
+    {
+      continue; // empty or matched entry, all is well
+    }
+    // log warning in server log for diagnostics in case of typo:
+    sql_print_warning("Unrecognized storage engine '%.*s' listed in "
+                      "--deprecated-engines=%s; it will be treated as "
+                      "deprecated if it is loaded dynamically.",
+                      (int)engine_name.length,
+                      engine_name.str,
+                      opt_deprecated_engines);
+  }
+  DBUG_RETURN(FALSE);
+}
+
 /*
   The logic is that we first load and initialize all compiled in plugins.
   From there we load up the dynamic types (assuming we have not been told to
@@ -1298,6 +1353,17 @@ int plugin_init(int *argc, char **argv, int flags)
   my_afree(reap);
   if (reaped_mandatory_plugin)
     goto err;
+
+  /*
+    Warn if there are unrecognized entries in --deprecated-engines setting
+    (Only fails due to failed memory allocation; the function returns
+    successfully even if it issues warnings as long as it was able to
+    perform the check.)
+   */
+  if (check_deprecated_engines_loaded(&tmp_root))
+  {
+    goto err;
+  }
 
 end:
   free_root(&tmp_root, MYF(0));

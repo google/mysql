@@ -2018,6 +2018,7 @@ extern uint opt_large_page_size;
 #ifdef MYSQL_SERVER
 extern char *opt_logname, *opt_slow_logname;
 extern const char *log_output_str;
+extern char *opt_deprecated_engines;
 
 extern my_bool opt_update_connection_privs;
 extern my_bool opt_allow_delayed_write;

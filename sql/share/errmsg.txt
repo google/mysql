@@ -6215,3 +6215,5 @@ ER_DEBUG_SYNC_HIT_LIMIT
   ger "Debug Sync Point Hit Limit erreicht"
 ER_IMPLICIT_COMMIT_ON_SLAVE_THREAD
   eng "Replication SQL thread may have skipped events. Another BEGIN encountered while already in a transaction, implying that events were skipped."
+ER_ENGINE_DEPRECATED
+  eng "%s is deprecated by the system administrator. Please use a different storage engine."

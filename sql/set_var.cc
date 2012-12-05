@@ -403,6 +403,8 @@ static sys_var_thd_ulong	sys_max_error_count(&vars, "max_error_count",
 					    &SV::max_error_count);
 static sys_var_thd_ulonglong	sys_max_heap_table_size(&vars, "max_heap_table_size",
 						&SV::max_heap_table_size);
+static sys_var_const_str_ptr    sys_deprecated_engines(&vars, "deprecated_engines",
+                                                       &opt_deprecated_engines);
 static sys_var_thd_ulong sys_pseudo_thread_id(&vars, "pseudo_thread_id",
                                               &SV::pseudo_thread_id,
                                               check_pseudo_thread_id, 0,

@@ -1231,3 +1231,48 @@ uint convert_to_printable(char *to, size_t to_len,
     *t= '\0';
   return t - to;
 }
+
+/****************************************************************************
+  LEX_STRING functions
+****************************************************************************/
+
+/* NOTE: these are for working at a low level, and can't handle character
+ *       sets */
+
+/**
+  Split a string on a character, producing successive components a la strtok()
+
+  Start with piece = { NULL, 0 }; each call will set it to another substring
+  within the given string, returning true if a component was found and false
+  otherwise.  Empty strings are considered to have no components.
+
+  Multiple separator characters in sequence will result in zero-length pieces
+  being returned.
+ */
+bool lex_string_split_on_byte(const LEX_STRING *string, char c, LEX_STRING *piece)
+{
+  if (string->length == 0)
+  {
+    return false;
+  }
+  char *string_end = string->str + string->length;
+  if (piece->str == NULL)
+  {
+    // starting off, search from start of string
+    piece->str = string->str;
+  }
+  else
+  {
+    // continuing, start from end of last piece, if not past end of input string
+    piece->str += piece->length + 1;
+    if (piece->str > string_end)
+    {
+      return false;
+    }
+  }
+  char *piece_end = piece->str;
+  while (piece_end < string_end && *piece_end != c)
+    piece_end++;
+  piece->length = piece_end - piece->str;
+  return true;
+}
