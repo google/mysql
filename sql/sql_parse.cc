@@ -2842,6 +2842,18 @@ case SQLCOM_PREPARE:
     */
     if (!(create_info.used_fields & HA_CREATE_USED_ENGINE))
       create_info.db_type= ha_default_handlerton(thd);
+
+    if (create_info.db_type->flags & HTON_DEPRECATED)
+    {
+        my_error(ER_ENGINE_DEPRECATED, MYF(0),
+          create_table->db,
+          create_table->table_name,
+          ha_resolve_storage_engine_name(create_info.db_type)
+          );
+        res= 1;
+        goto end_with_restore_list;
+    }
+
     /*
       If we are using SET CHARSET without DEFAULT, add an implicit
       DEFAULT to not confuse old users. (This may change).

@@ -1,0 +1,49 @@
+SELECT @@deprecated_engines;
+@@deprecated_engines
+
+CREATE TABLE test0 (x int) ENGINE=InnoDB;
+SELECT @@deprecated_engines;
+@@deprecated_engines
+,innodb,baz,bar
+SET storage_engine=innodb;
+CREATE TABLE test1 (x int);
+ERROR HY000: Create or alter table test.test1 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
+CREATE TABLE test2 (x int) ENGINE=INNODB;
+ERROR HY000: Create or alter table test.test2 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
+CREATE TABLE test3 (x int) ENGINE=MyISAM;
+SET storage_engine=MyISAM;
+CREATE TABLE test4 (x int);
+ALTER TABLE test0 ADD (y int);
+ALTER TABLE test3 ENGINE=InnoDB;
+ERROR HY000: Create or alter table test.test3 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
+ALTER TABLE test3 ADD (y int), ENGINE=InnoDB;
+ERROR HY000: Create or alter table test.test3 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
+SELECT engine FROM information_schema.engines WHERE engine = 'frobnitz';
+engine
+ALTER TABLE test3 ENGINE=frobnitz;
+Warnings:
+Warning	1286	Unknown storage engine 'frobnitz'
+CREATE TABLE test5 (x int) ENGINE=frobnitz;
+Warnings:
+Warning	1286	Unknown storage engine 'frobnitz'
+Warning	1266	Using storage engine MyISAM for table 'test5'
+SHOW CREATE TABLE test0;
+Table	Create Table
+test0	CREATE TABLE `test0` (
+  `x` int(11) DEFAULT NULL,
+  `y` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+SHOW CREATE TABLE test3;
+Table	Create Table
+test3	CREATE TABLE `test3` (
+  `x` int(11) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW TABLES;
+Tables_in_test
+test0
+test3
+test4
+test5
+DROP TABLE test0;
+DROP TABLE test3;
+DROP TABLE test4;

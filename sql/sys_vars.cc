@@ -1355,6 +1355,13 @@ static Sys_var_ulong Sys_metadata_locks_hash_instances(
        VALID_RANGE(1, 1024), DEFAULT(MDL_LOCKS_HASH_PARTITIONS_DEFAULT),
        BLOCK_SIZE(1));
 
+static Sys_var_charptr Sys_deprecated_engines(
+       "deprecated_engines",
+       "Comma-separated list of storage engines to prevent from using "
+       "with CREATE or ALTER TABLE",
+       READ_ONLY GLOBAL_VAR(opt_deprecated_engines), CMD_LINE(REQUIRED_ARG),
+       IN_SYSTEM_CHARSET, DEFAULT(0));
+
 /*
   "pseudo_thread_id" variable used in the test suite to detect 32/64bit
   systems.  If you change it to something else then ulong then fix the tests

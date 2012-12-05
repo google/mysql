@@ -750,6 +750,7 @@ char *master_info_file;
 char *relay_log_info_file, *report_user, *report_password, *report_host;
 char *opt_relay_logname = 0, *opt_relaylog_index_name=0;
 char *opt_logname, *opt_slow_logname, *opt_bin_logname;
+char *opt_deprecated_engines;
 
 /* Static variables */
 
@@ -8180,6 +8181,8 @@ static int mysql_init_variables(void)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */
   key_map_full.set_all();
+
+  opt_deprecated_engines= (char*)"";
 
   /* Character sets */
   system_charset_info= &my_charset_utf8_general_ci;

@@ -574,4 +574,7 @@ static inline bool check_if_only_end_space(CHARSET_INFO *cs,
 int append_query_string(CHARSET_INFO *csinfo, String *to,
                         const char *str, size_t len, bool no_backslash);
 
+bool lex_string_split_on_byte(const LEX_STRING *string, char c,
+                              LEX_STRING *piece);
+
 #endif /* SQL_STRING_INCLUDED */

@@ -209,6 +209,18 @@ bool Sql_cmd_alter_table::execute(THD *thd)
 
   if (thd->is_fatal_error) /* out of memory creating a copy of alter_info */
     DBUG_RETURN(TRUE);
+
+  if ((create_info.used_fields & HA_CREATE_USED_ENGINE) &&
+      create_info.db_type != NULL &&
+      (create_info.db_type->flags & HTON_DEPRECATED))
+  {
+    my_error(ER_ENGINE_DEPRECATED, MYF(0),
+             first_table->db,
+             first_table->table_name,
+             ha_resolve_storage_engine_name(create_info.db_type));
+    DBUG_RETURN(TRUE);
+  }
+
   /*
     We also require DROP priv for ALTER TABLE ... DROP PARTITION, as well
     as for RENAME TO, as being done by SQLCOM_RENAME_TABLE

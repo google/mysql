@@ -1,0 +1,67 @@
+--source include/have_innodb.inc
+--source include/not_embedded.inc
+
+--disable_query_log
+--disable_warnings
+DROP TABLE IF EXISTS test0;
+DROP TABLE IF EXISTS test1;
+DROP TABLE IF EXISTS test2;
+DROP TABLE IF EXISTS test3;
+DROP TABLE IF EXISTS test4;
+DROP TABLE IF EXISTS test5;
+
+call mtr.expect_log_output("Found unrecognized storage engine 'bar' in the list of engines to deprecate", 1);
+call mtr.expect_log_output("Found unrecognized storage engine 'baz' in the list of engines to deprecate", 1);
+--enable_warnings
+--enable_query_log
+
+# set up an innodb table
+SELECT @@deprecated_engines;
+CREATE TABLE test0 (x int) ENGINE=InnoDB;
+
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+shutdown_server 10;
+--exec echo "restart: --deprecated-engines=,innodb,baz,bar" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+--disable_reconnect
+
+SELECT @@deprecated_engines;
+SET storage_engine=innodb;
+--error ER_ENGINE_DEPRECATED
+CREATE TABLE test1 (x int);
+--error ER_ENGINE_DEPRECATED
+CREATE TABLE test2 (x int) ENGINE=INNODB;
+
+CREATE TABLE test3 (x int) ENGINE=MyISAM;
+SET storage_engine=MyISAM;
+CREATE TABLE test4 (x int);
+
+ALTER TABLE test0 ADD (y int);
+--error ER_ENGINE_DEPRECATED
+ALTER TABLE test3 ENGINE=InnoDB;
+--error ER_ENGINE_DEPRECATED
+ALTER TABLE test3 ADD (y int), ENGINE=InnoDB;
+
+# verify that the new code handles unrecognized engines:
+SELECT engine FROM information_schema.engines WHERE engine = 'frobnitz';
+ALTER TABLE test3 ENGINE=frobnitz;
+CREATE TABLE test5 (x int) ENGINE=frobnitz;
+
+SHOW CREATE TABLE test0;
+SHOW CREATE TABLE test3;
+SHOW TABLES;
+
+DROP TABLE test0;
+DROP TABLE test3;
+DROP TABLE test4;
+
+--disable_query_log
+--disable_warnings
+DROP TABLE IF EXISTS test0;
+DROP TABLE IF EXISTS test1;
+DROP TABLE IF EXISTS test2;
+DROP TABLE IF EXISTS test5;
+--enable_query_log
+--enable_warnings
+

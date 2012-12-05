@@ -239,6 +239,7 @@ extern ulong connection_errors_max_connection;
 extern ulong connection_errors_peer_addr;
 extern ulong log_warnings;
 extern my_bool opt_update_connection_privs;
+extern char *opt_deprecated_engines;
 
 /*
   THR_MALLOC is a key which will be used to set/get MEM_ROOT** for a thread,

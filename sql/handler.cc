@@ -476,6 +476,34 @@ int ha_finalize_handlerton(st_plugin_int *plugin)
   DBUG_RETURN(0);
 }
 
+// Called from ha_initialize_handlerton to apply --deprecated-engines value to
+// a newly-loaded storage engine
+static void init_engine_deprecated_flag(st_plugin_int *plugin)
+{
+  handlerton *hton = (handlerton*)plugin->data;
+
+  LEX_STRING deprecated_engine_list = { opt_deprecated_engines, strlen(opt_deprecated_engines) };
+  LEX_STRING listed_name = { NULL, 0 };
+  while (lex_string_split_on_byte(&deprecated_engine_list, ',', &listed_name))
+  {
+    if (!my_strnncoll(&my_charset_latin1,
+                      (uchar *)listed_name.str, listed_name.length,
+                      (uchar *)plugin->name.str, plugin->name.length))
+    {
+      // this engine's plugin->name is in the list, mark as deprecated:
+      DBUG_PRINT("info",
+                 ("init_engine_deprecated_flag: Setting HTON_DEPRECATED=1 on %.*s",
+                  (int)plugin->name.length, plugin->name.str));
+      hton->flags |= HTON_DEPRECATED;
+      return;
+    }
+  }
+  // this engine is not listed in --deprected-engines
+  DBUG_PRINT("info",
+             ("init_engine_deprecated_flag: Setting HTON_DEPRECATED=0 on %.*s",
+              (int)plugin->name.length, plugin->name.str));
+  hton->flags &= ~HTON_DEPRECATED;
+}
 
 int ha_initialize_handlerton(st_plugin_int *plugin)
 {
@@ -618,6 +646,8 @@ int ha_initialize_handlerton(st_plugin_int *plugin)
 
   resolve_sysvar_table_options(hton);
   update_discovery_counters(hton, 1);
+
+  init_engine_deprecated_flag(plugin);
 
   DBUG_RETURN(0);
 
