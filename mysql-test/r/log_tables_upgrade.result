@@ -41,6 +41,7 @@ mysql.proxies_priv                                 OK
 mysql.renamed_general_log                          OK
 mysql.roles_mapping                                OK
 mysql.servers                                      OK
+mysql.system_user                                  OK
 mysql.table_stats                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK

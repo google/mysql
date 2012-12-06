@@ -22,6 +22,7 @@ proxies_priv
 roles_mapping
 servers
 slow_log
+system_user
 table_stats
 tables_priv
 time_zone

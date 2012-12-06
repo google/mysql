@@ -1991,6 +1991,17 @@ public:
   }
 };
 
+class Item_func_is_system_user :public Item_int_func
+{
+public:
+  Item_func_is_system_user() {}
+  const char *func_name() const { return "is_system_user"; }
+  void fix_length_and_dec() { decimals= 0; max_length=1; maybe_null=1; }
+  bool check_vcol_func_processor(uchar *int_arg) { return TRUE;}
+  longlong val_int();
+};
+
+
 /* For type casts */
 
 enum Cast_target

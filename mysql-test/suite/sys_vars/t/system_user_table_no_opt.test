@@ -1,0 +1,72 @@
+# User permissions should be actually checked
+-- source include/not_embedded.inc
+
+# Save the initial number of concurrent sessions
+--source include/count_sessions.inc
+
+
+create database d1;
+create table d1.t1 (n int);
+
+# Check that the is_system_user() function exists and works. During this
+# test, is_system_user() should only return 0, since the system user table
+# is disabled.
+select is_system_user() as should_be_0;
+
+# Check that system_user without command line option doesn't work
+insert into mysql.user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'localhost', 'Y', '', '', '', '');
+flush privileges;
+connect (conn1, localhost, user1, ,);
+select is_system_user() as should_be_0;
+select * from d1.t1;
+connection default;
+insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'localhost', 'N', '', '', '', '');
+flush privileges;
+disconnect conn1;
+connect (conn1, localhost, user1, ,);
+select is_system_user() as should_be_0;
+select * from d1.t1;
+connection default;
+update mysql.system_user set Select_priv = 'Y', Insert_priv = 'Y' where user = 'user1';
+flush privileges;
+connection conn1;
+select is_system_user() as should_be_0;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into d1.t1 values (1);
+select * from d1.t1;
+
+connection default;
+delete from mysql.user where User = 'user1';
+flush privileges;
+connection conn1;
+--error ER_QUERY_INTERRUPTED, 2013
+select * from d1.t1;
+connection default;
+disconnect conn1;
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (conn1, localhost, user1, ,);
+select is_system_user() as should_be_0;
+insert into mysql.user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'localhost', 'Y', '', '', '', '');
+flush privileges;
+connect (conn1, localhost, user1, ,);
+select is_system_user() as should_be_0;
+select * from d1.t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into d1.t1 values (3);
+
+
+# Clean up
+connection default;
+disconnect conn1;
+drop database d1;
+delete from mysql.system_user;
+delete from mysql.user where User = 'user1';
+flush privileges;
+
+
+# Wait till we reached the initial number of concurrent sessions
+--source include/wait_until_count_sessions.inc

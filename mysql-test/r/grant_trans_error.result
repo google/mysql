@@ -37,4 +37,13 @@ FLUSH PRIVILEGES;
 ERROR HY000: Lock wait timeout exceeded; try restarting transaction
 ROLLBACK;
 FLUSH PRIVILEGES;
+#
+# Test error when reading mysql.system_user
+#
+BEGIN;
+INSERT INTO mysql.system_user SELECT * from mysql.user;
+FLUSH PRIVILEGES;
+ERROR HY000: Lock wait timeout exceeded; try restarting transaction
+ROLLBACK;
+FLUSH PRIVILEGES;
 SET GLOBAL innodb_lock_wait_timeout=@save_lock_wait_timeout;

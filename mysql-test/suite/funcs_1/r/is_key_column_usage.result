@@ -128,6 +128,8 @@ def	mysql	Host	def	mysql	roles_mapping	Host
 def	mysql	Host	def	mysql	roles_mapping	User
 def	mysql	Host	def	mysql	roles_mapping	Role
 def	mysql	PRIMARY	def	mysql	servers	Server_name
+def	mysql	PRIMARY	def	mysql	system_user	Host
+def	mysql	PRIMARY	def	mysql	system_user	User
 def	mysql	PRIMARY	def	mysql	table_stats	db_name
 def	mysql	PRIMARY	def	mysql	table_stats	table_name
 def	mysql	PRIMARY	def	mysql	tables_priv	Host

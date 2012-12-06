@@ -1,0 +1,29 @@
+include/master-slave.inc
+[connection master]
+#
+# Create user and check that it's replicated
+#
+# On master
+CREATE USER user1;
+SHOW GRANTS FOR user1;
+Grants for user1@%
+GRANT USAGE ON *.* TO 'user1'@'%'
+# On slave
+SHOW GRANTS FOR user1;
+Grants for user1@%
+GRANT USAGE ON *.* TO 'user1'@'%'
+# Execute GRANT command on master
+GRANT SELECT ON *.* TO user1;
+SHOW GRANTS FOR user1;
+Grants for user1@%
+GRANT SELECT ON *.* TO 'user1'@'%'
+# Check that GRANT is replicated to slave
+SHOW GRANTS FOR user1;
+Grants for user1@%
+GRANT SELECT ON *.* TO 'user1'@'%'
+#
+# Cleanup
+#
+# On master
+drop user user1;
+include/rpl_end.inc

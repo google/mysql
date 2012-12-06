@@ -2503,6 +2503,13 @@ static Sys_var_mybool Sys_super_to_set_timestamp(
        READ_ONLY GLOBAL_VAR(opt_super_to_set_timestamp), CMD_LINE(OPT_ARG),
        DEFAULT(TRUE));
 
+static Sys_var_mybool Sys_system_user_table(
+       "system_user_table",
+       "When ON special table mysql.system_user is used in addition to mysql.user. "
+       "mysql.system_user table can be changed only by users with SUPER privilege.",
+       READ_ONLY GLOBAL_VAR(opt_system_user_table), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 /* 
   thread_concurrency is a no-op on all platforms since
   MySQL 5.1.  It will be removed in the context of

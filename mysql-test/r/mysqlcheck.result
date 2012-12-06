@@ -25,6 +25,7 @@ mysql.procs_priv                                   OK
 mysql.proxies_priv                                 OK
 mysql.roles_mapping                                OK
 mysql.servers                                      OK
+mysql.system_user                                  OK
 mysql.table_stats                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
@@ -96,6 +97,9 @@ status   : OK
 mysql.servers
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK
+mysql.system_user
+note     : Table does not support optimize, doing recreate + analyze instead
+status   : OK
 mysql.table_stats
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK
@@ -140,6 +144,7 @@ mysql.procs_priv                                   OK
 mysql.proxies_priv                                 OK
 mysql.roles_mapping                                OK
 mysql.servers                                      OK
+mysql.system_user                                  OK
 mysql.table_stats                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
@@ -206,6 +211,9 @@ mysql.roles_mapping
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK
 mysql.servers
+note     : Table does not support optimize, doing recreate + analyze instead
+status   : OK
+mysql.system_user
 note     : Table does not support optimize, doing recreate + analyze instead
 status   : OK
 mysql.table_stats

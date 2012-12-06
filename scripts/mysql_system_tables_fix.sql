@@ -616,6 +616,9 @@ ALTER TABLE db MODIFY Trigger_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT
 
 UPDATE user SET Trigger_priv=Super_priv WHERE @hadTriggerPriv = 0;
 
+CREATE TABLE IF NOT EXISTS system_user LIKE user;
+ALTER TABLE system_user comment='System user accounts and their global privileges';
+
 #
 # user.Create_tablespace_priv
 #
@@ -626,7 +629,12 @@ SELECT @hadCreateTablespacePriv :=1 FROM user WHERE Create_tablespace_priv LIKE 
 ALTER TABLE user ADD Create_tablespace_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL AFTER Trigger_priv;
 ALTER TABLE user MODIFY Create_tablespace_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL AFTER Trigger_priv;
 
+ALTER TABLE system_user ADD Create_tablespace_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL AFTER Trigger_priv;
+ALTER TABLE system_user MODIFY Create_tablespace_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL AFTER Trigger_priv;
+
 UPDATE user SET Create_tablespace_priv = Super_priv WHERE @hadCreateTablespacePriv = 0;
+
+UPDATE system_user SET Create_tablespace_priv = Super_priv WHERE @hadCreateTablespacePriv = 0;
 
 ALTER TABLE user ADD plugin char(64) DEFAULT '',  ADD authentication_string TEXT;
 ALTER TABLE user ADD password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
@@ -636,6 +644,14 @@ ALTER TABLE user MODIFY plugin char(64) CHARACTER SET latin1 DEFAULT '' NOT NULL
 --  we want password_expired column to have collation utf8_general_ci.
 ALTER TABLE user MODIFY password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 ALTER TABLE user MODIFY is_role enum('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
+
+ALTER TABLE system_user ADD plugin char(64) DEFAULT '',  ADD authentication_string TEXT;
+ALTER TABLE system_user ADD password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
+ALTER TABLE system_user ADD is_role enum('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
+ALTER TABLE system_user MODIFY plugin char(64) CHARACTER SET latin1 DEFAULT '' NOT NULL;
+ALTER TABLE system_user MODIFY authentication_string TEXT NOT NULL;
+ALTER TABLE system_user MODIFY password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
+ALTER TABLE system_user MODIFY is_role enum('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 
 -- Need to pre-fill mysql.proxies_priv with access for root even when upgrading from
 -- older versions
@@ -650,6 +666,7 @@ UPDATE user SET host=LOWER( host ) WHERE LOWER( host ) <> host;
 
 # MDEV-4332 longer user names
 alter table user         modify User         char(80)  binary not null default '';
+alter table system_user  modify User         char(80)  binary not null default '';
 alter table db           modify User         char(80)  binary not null default '';
 alter table tables_priv  modify User         char(80)  binary not null default '';
 alter table columns_priv modify User         char(80)  binary not null default '';
@@ -692,4 +709,6 @@ ALTER TABLE proxies_priv ENGINE=InnoDB;
 ALTER TABLE table_stats ENGINE=InnoDB;
 ALTER TABLE column_stats ENGINE=InnoDB;
 ALTER TABLE index_stats ENGINE=InnoDB;
+ALTER TABLE system_user ENGINE=InnoDB;
+
 

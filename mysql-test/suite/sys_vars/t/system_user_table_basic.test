@@ -1,0 +1,327 @@
+# User permissions should be actually checked
+-- source include/not_embedded.inc
+
+# Save the initial number of concurrent sessions
+--source include/count_sessions.inc
+
+--echo #
+--echo # Preparation
+--echo #
+
+call mtr.add_suppression("entry .* in mysql.user is ignored because it duplicates entry in mysql.system_user");
+
+create database d1;
+create table d1.t1 (n int);
+
+--echo # Check that the is_system_user() function exists and works.
+select is_system_user() as should_be_0;
+
+--echo #
+--echo # Check that system_user works and does override mysql.user.
+--echo #
+
+--echo # Connect as regular user and check its permissions. This user has SELECT
+--echo # privileges globally and should be able to SELECT from d1.t1.
+
+--echo # Create a regular user.
+insert into mysql.user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'localhost', 'Y', '', '', '', '');
+flush privileges;
+
+--echo # Verify they are not seen as a system user and their access is correct.
+connect (conn1, localhost, user1, ,);
+select is_system_user() as should_be_0;
+select * from d1.t1;
+
+--echo # Connect as system user and check that its permissions override regular user
+--echo # with the same name. The system user does *not* have global SELECT privilege
+--echo # so SELECT from d1.t1 should fail if the system_user is actually overriding
+--echo # the user privilege entry.
+
+--echo # Create a system_user in addition to the regular user.
+connection default;
+insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'localhost', 'N', '', '', '', '');
+flush privileges;
+
+--echo # Verify that they are seen as a system user and their access is correct.
+disconnect conn1;
+connect (conn1, localhost, user1, ,);
+select is_system_user() as should_be_1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+
+--echo # Change system user's privileges and check that they are automatically
+--echo # updated in the session of a user who is already connected. The new
+--echo # INSERT privilege should be picked up by the session without the need
+--echo # to reconnect.
+
+--echo # Update the privileges of the existing user to add SELECT and INSERT.
+connection default;
+update mysql.system_user set Select_priv = 'Y', Insert_priv = 'Y' where user = 'user1';
+flush privileges;
+
+--echo # Verify that the new privileges are picked up automatically.
+connection conn1;
+select is_system_user() as should_be_1;
+insert into d1.t1 values (1);
+select * from d1.t1;
+
+--echo #
+--echo # If a user entry is migrated from user to system_user or vice versa,
+--echo # their privileges should automatically be changed to the appropriate
+--echo # table without the need to reconnect. Check that appropriate switch
+--echo # happens automatically without re-connection.
+--echo #
+
+--echo # At this point, conn1 is connected as a system user. Removal of this
+--echo # user from the system_user table should update permissions on conn1 to
+--echo # the ones written in user table instead.
+
+--echo # Remove the user from the system_user table.
+connection default;
+delete from mysql.system_user where User = 'user1';
+flush privileges;
+
+--echo # Verify that access was updated to the entry from the user table.
+connection conn1;
+select is_system_user() as should_be_0;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into d1.t1 values (2);
+select * from d1.t1;
+
+--echo # Adding the user back to the system_user table should cause permissions
+--echo # to be updated to the ones written in the system_user table, overriding
+--echo # the entry in the user table.
+
+--echo # Add the user to the system_user table.
+connection default;
+insert into mysql.system_user (User, Host, Select_priv, Insert_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'localhost', 'N', 'Y', '', '', '', '');
+flush privileges;
+
+--echo # Verify that access was updated to the entry from the system_user table.
+connection conn1;
+select is_system_user() as should_be_1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+insert into d1.t1 values (3);
+connection default;
+select * from d1.t1;
+
+--echo # Clean up for the next set of tests.
+connection default;
+delete from mysql.user where User = 'user1';
+delete from mysql.system_user where User = 'user1';
+flush privileges;
+
+--echo #
+--echo # System users are always preferred even if there's an anonymous user
+--echo # which would otherwise be preferred.
+--echo #
+
+--echo # Set up a normal user ('user1'@'local%') and an anonymous user
+--echo # (''@'localhost') and verify that the anonymous user is preferred over
+--echo # the normal user, as is default behavior.
+
+--echo # Add a regular user and an anonymous user.
+connection default;
+insert into mysql.user (User, Host, Select_priv, Insert_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'local%', 'N', 'Y', '', '', '', '');
+insert into mysql.user (User, Host, Select_priv, Insert_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('', 'localhost', 'Y', 'N', '', '', '', '');
+flush privileges;
+
+--echo # Verify that the regular user takes precedence.
+disconnect conn1;
+connect (conn1, localhost, user1, ,);
+select user(), current_user();
+select is_system_user() as should_be_0;
+select * from d1.t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into d1.t1 values (4);
+
+--echo # Set up a system user ('user1'@'local%') and an anonymous user
+--echo # (''@'localhost') and verify that the system user is preferred over
+--echo # the anonymous user.
+
+--echo # Add a system user, overriding the regular user.
+connection default;
+insert into mysql.system_user (User, Host, Select_priv, Insert_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'local%', 'N', 'Y', '', '', '', '');
+flush privileges;
+
+--echo # Verify that the system user is preferred over the anonymous user.
+disconnect conn1;
+connect (conn1, localhost, user1, ,);
+select user(), current_user();
+select is_system_user() as should_be_1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+insert into d1.t1 values (5);
+
+--echo # Clean up for the next set of tests.
+connection default;
+select * from d1.t1;
+delete from mysql.user where User = '' and Host = 'localhost';
+delete from mysql.user where User = 'user1';
+delete from mysql.system_user where User = 'user1';
+flush privileges;
+
+--echo #
+--echo # Once an entry exists in the system_user table for a given user, it
+--echo # should not be possible to use the standard privilege maintenance
+--echo # commands, such as the GRANT, REVOKE, CREATE USER, DROP USER, and
+--echo # RENAME USER commands.
+--echo #
+
+--echo # Add a system user.
+connection default;
+insert into mysql.system_user (User, Host, Select_priv, Insert_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user1', 'localhost', 'N', 'Y', '', '', '', '');
+flush privileges;
+
+--echo # Verify that regular commands do not work with the system user.
+--error ER_WRONG_USAGE
+grant SELECT on *.* to user1@localhost;
+--error ER_WRONG_USAGE
+grant INSERT on *.* to user1@localhost;
+--error ER_WRONG_USAGE
+drop user user1@localhost;
+--error ER_CANNOT_USER
+create user user1@localhost identified by 'foo';
+--error ER_WRONG_USAGE
+rename user user1@localhost to user2@localhost;
+create user user2@localhost;
+--error ER_WRONG_USAGE
+rename user user2@localhost to user1@localhost;
+
+--echo #
+--echo # The system_user table itself should require SUPER privilege to update
+--echo # even if the user has other privileges which would normally allow access
+--echo # to the table.
+--echo #
+
+--echo # Add INSERT, UPDATE, and DELETE privileges to user2.
+connection default;
+grant SELECT, INSERT, UPDATE, DELETE on *.* to user2@localhost;
+
+--echo # Verify that user2 is not allowed to modify system_user.
+connect (conn2, localhost, user2, ,);
+select * from d1.t1;
+select User, Host, Select_priv, Update_priv from mysql.system_user;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user3', 'localhost', 'Y', '', '', '', '');
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+update mysql.system_user set Update_priv = 'Y' where User = 'user1';
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+delete from mysql.system_user where User = 'user1';
+
+--echo # Verify that user2 is allowed to modify mysql.user.
+insert into mysql.user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user3', 'localhost', 'Y', '', '', '', '');
+update mysql.user set Update_priv = 'Y' where User = 'user3';
+let $HOSTNAME= `select @@hostname`;
+--replace_result $HOSTNAME HOSTNAME
+select User, Host, Select_priv, Update_priv from mysql.user;
+delete from mysql.user where User = 'user3';
+
+--echo # Remove global privileges and add db-specific privileges to user2.
+connection default;
+revoke all on *.* from user2@localhost;
+grant SELECT, INSERT, UPDATE, DELETE on mysql.* to user2@localhost;
+
+--echo # Verify that user2 is not allowed to modify system_user.
+connection conn2;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+select User, Host, Select_priv, Update_priv from mysql.system_user;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user3', 'localhost', 'Y', '', '', '', '');
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+update mysql.system_user set Update_priv = 'Y' where User = 'user1';
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+delete from mysql.system_user where User = 'user1';
+
+--echo # Remove db-specific and add table-specific privileges to user2.
+connection default;
+revoke all on mysql.* from user2@localhost;
+grant SELECT, INSERT, UPDATE, DELETE on mysql.system_user to user2@localhost;
+
+--echo # Verify that user2 is not allowed to modify system_user.
+connection conn2;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+select User, Host, Select_priv, Update_priv from mysql.system_user;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('user3', 'localhost', 'Y', '', '', '', '');
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+update mysql.system_user set Update_priv = 'Y' where User = 'user1';
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+delete from mysql.system_user where User = 'user1';
+
+--echo # Remove table-specific privileges from user2.
+connection default;
+revoke all on mysql.system_user from user2@localhost;
+delete from mysql.system_user;
+delete from mysql.user where User = 'user1' or User = 'user2';
+
+--echo #
+--echo # The is_system_user flag should be set correctly when changing users
+--echo # on an existing connection.
+--echo #
+
+connection default;
+
+--echo # Create a system user and a non-system user for this test.
+insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('system_user', 'localhost', 'Y', '', '', '', '');
+insert into mysql.user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+  values ('normal_user', 'localhost', 'Y', '', '', '', '');
+flush privileges;
+
+--echo # Verify that when initially connecting as normal_user and changing
+--echo # to system_user and back, is_system_user is always correct.
+connect (conn3, localhost, normal_user, ,);
+connection conn3;
+select is_system_user() as should_be_0;
+change_user system_user;
+select is_system_user() as should_be_1;
+change_user normal_user;
+select is_system_user() as should_be_0;
+disconnect conn3;
+
+--echo # Verify that when initially connecting as system_user and changing
+--echo # to normal_user and back, is_system_user is always correct.
+connect (conn3, localhost, system_user, ,);
+connection conn3;
+select is_system_user() as should_be_1;
+change_user normal_user;
+select is_system_user() as should_be_0;
+change_user system_user;
+select is_system_user() as should_be_1;
+disconnect conn3;
+
+--echo # Clean up users from this test.
+connection default;
+delete from mysql.system_user where user = "system_user";
+delete from mysql.user where user = "normal_user";
+flush privileges;
+
+--echo #
+--echo # Clean up.
+--echo #
+
+connection default;
+disconnect conn1;
+disconnect conn2;
+drop database d1;
+delete from mysql.system_user;
+delete from mysql.user where User = 'user1' or User = 'user2';
+flush privileges;
+
+# Wait till we reached the initial number of concurrent sessions
+--source include/wait_until_count_sessions.inc

@@ -72,6 +72,7 @@ enum GrantTable
   GRANT_HOST,
   GRANT_PROXIES_PRIV,
   GRANT_ROLES_MAPPING,
+  GRANT_SYSTEM_USER,
   GRANT_TABLES_MAX                              // preserve as the last entry.
 };
 
@@ -737,6 +738,7 @@ bool ROLE_GRANT_PAIR::init(MEM_ROOT *mem, char *username,
 
 static volatile uint64_t acl_version = 0;
 static DYNAMIC_ARRAY acl_hosts, acl_users, acl_dbs, acl_proxy_users;
+static DYNAMIC_ARRAY acl_system_users;
 static HASH acl_roles;
 /*
   An hash containing mappings user <--> role
@@ -760,7 +762,9 @@ static void init_check_host(void);
 static void rebuild_check_host(void);
 static void rebuild_role_grants(void);
 static ACL_USER *find_user_exact(const char *host, const char *user);
+static ACL_USER *find_sys_user_exact(const char *host, const char *user);
 static ACL_USER *find_user_wild(const char *host, const char *user, const char *ip= 0);
+static ACL_USER *find_sys_user_wild(const char *host, const char *user, const char *ip);
 static ACL_ROLE *find_acl_role(const char *user);
 static ROLE_GRANT_PAIR *find_role_grant_pair(const LEX_STRING *u, const LEX_STRING *h, const LEX_STRING *r);
 static ACL_USER_BASE *find_acl_user_base(const char *user, const char *host);
@@ -768,6 +772,13 @@ static bool update_user_table(THD *thd, TABLE *table, const char *host,
                               const char *user, const char *new_password,
                               uint new_password_len);
 static my_bool acl_load(THD *thd, TABLE_LIST *tables);
+static my_bool acl_load_hosts_and_users(THD *thd, TABLE_LIST *tables);
+static my_bool acl_load_users(THD *thd,
+                              TABLE *table,
+                              READ_RECORD *read_record_info,
+                              my_bool is_system_user,
+                              String *users_list);
+static my_bool acl_load_other_acls(THD *thd, TABLE_LIST *tables);
 static my_bool grant_load(THD *thd, TABLE_LIST *tables);
 static inline void get_grantor(THD *thd, char* grantor);
 static bool add_role_user_mapping(const char *uname, const char *hname, const char *rname);
@@ -1030,14 +1041,8 @@ static bool set_user_plugin (ACL_USER *user, int password_len)
 
 static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 {
-  TABLE *table;
-  READ_RECORD read_record_info;
   my_bool return_val= TRUE;
-  bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
-  char tmp_name[SAFE_NAME_LEN+1];
-  int password_length;
   ulonglong old_sql_mode= thd->variables.sql_mode;
-  int rr_status;
   DBUG_ENTER("acl_load");
 
   thd->variables.sql_mode&= ~MODE_PAD_CHAR_TO_FULL_LENGTH;
@@ -1045,6 +1050,30 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   grant_version++; /* Privileges updated */
 
   init_sql_alloc(&acl_memroot, ACL_ALLOC_BLOCK_SIZE, 0, MYF(0));
+
+  if (acl_load_hosts_and_users(thd, tables))
+    goto end;
+  if (acl_load_other_acls(thd, tables))
+    goto end;
+
+  initialized=1;
+  return_val= FALSE;
+  ++acl_version;
+
+end:
+  thd->variables.sql_mode= old_sql_mode;
+  DBUG_RETURN(return_val);
+}
+
+static my_bool acl_load_hosts_and_users(THD *thd, TABLE_LIST *tables)
+{
+  TABLE *table;
+  READ_RECORD read_record_info;
+  bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
+  char tmp_name[SAFE_NAME_LEN+1];
+  int password_length;
+  int rr_status;
+
   (void) my_init_dynamic_array(&acl_hosts,sizeof(ACL_HOST), 20, 50, MYF(0));
   table= tables[GRANT_HOST].table;
   if (table) // "host" table may not exist (e.g. in MySQL 5.6.7+)
@@ -1110,14 +1139,46 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   }
   freeze_size(&acl_hosts);
 
-  table= tables[GRANT_USER].table;
-  if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
-    goto end;
-  table->use_all_columns();
+  allow_all_hosts=0;
   (void) my_init_dynamic_array(&acl_users,sizeof(ACL_USER), 50, 100, MYF(0));
   (void) my_hash_init2(&acl_roles,50, &my_charset_utf8_bin,
                        0, 0, 0, (my_hash_get_key) acl_role_get_key, 0,
                        (void (*)(void *))free_acl_role, 0);
+  (void) my_init_dynamic_array(&acl_system_users,sizeof(ACL_USER), 10, 20, MYF(0));
+
+  if (opt_system_user_table)
+  {
+    table= tables[GRANT_SYSTEM_USER].table;
+    if (init_read_record(&read_record_info, thd, table, NULL, 1, TRUE, FALSE))
+      goto end;
+    table->use_all_columns();
+    String users_list;
+    if (acl_load_users(thd, table, &read_record_info, TRUE, &users_list))
+    {
+      end_read_record(&read_record_info);
+      goto end;
+    }
+    if (users_list.length() != 0)
+    {
+      sql_print_information("Loaded users from system_user table: %s.",
+                            users_list.c_ptr_safe());
+    }
+    else
+    {
+      sql_print_information("Loaded no users from system_user table "
+                            "(table was empty).");
+    }
+    my_qsort((uchar*) dynamic_element(&acl_system_users,0,ACL_USER*),
+             acl_system_users.elements,
+             sizeof(ACL_USER),(qsort_cmp) acl_compare);
+    end_read_record(&read_record_info);
+    freeze_size(&acl_system_users);
+  }
+
+  table= tables[GRANT_USER].table;
+  if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
+    goto end;
+  table->use_all_columns();
 
   username_char_length= MY_MIN(table->field[1]->char_length(),
                                USERNAME_CHAR_LENGTH);
@@ -1162,8 +1223,34 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
     mysql_mutex_unlock(&LOCK_global_system_variables);
   }
 
-  allow_all_hosts=0;
-  while (!(rr_status= read_record_info.read_record(&read_record_info)))
+  if (acl_load_users(thd, table, &read_record_info, FALSE, NULL))
+  {
+    end_read_record(&read_record_info);
+    goto end;
+  }
+
+  my_qsort((uchar*) dynamic_element(&acl_users,0,ACL_USER*),acl_users.elements,
+	   sizeof(ACL_USER),(qsort_cmp) acl_compare);
+  end_read_record(&read_record_info);
+  freeze_size(&acl_users);
+
+  return FALSE;
+
+end:
+  // This return is not spread over the code above to minimize diff
+  // with the upstream.
+  return TRUE;
+}
+
+static my_bool acl_load_users(THD *thd,
+                              TABLE *table,
+                              READ_RECORD *read_record_info,
+                              my_bool is_system_user,
+                              String *users_list)
+{
+  int rr_status;
+  bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
+  while (!(rr_status= read_record_info->read_record(read_record_info)))
   {
     ACL_USER user;
     bool is_role= FALSE;
@@ -1192,6 +1279,14 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
                         "ignored in --skip-name-resolve mode.",
                         safe_str(user.user.str),
                         safe_str(user.host.hostname));
+      continue;
+    }
+    if (!is_system_user && find_sys_user_exact(user.host.hostname, user.user.str))
+    {
+      sql_print_warning("entry '%s'@'%s' in mysql.user is ignored "
+	                "because it duplicates entry in mysql.system_user",
+	                safe_str(user.user.str),
+	                safe_str(user.host.hostname));
       continue;
     }
 
@@ -1342,22 +1437,46 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
       {
         DBUG_PRINT("info", ("Found user %s", user.user.str));
         (void) push_dynamic(&acl_users,(uchar*) &user);
+        if (is_system_user)
+        {
+          ACL_USER sys_user;
+          memcpy(&sys_user, &user, sizeof(sys_user));
+          (void) my_init_dynamic_array(&sys_user.role_grants,
+                                       sizeof(ACL_ROLE *), 8, 8, MYF(0));
+          (void) push_dynamic(&acl_system_users, (uchar*) &sys_user);
+        }
+        if (users_list)
+        {
+          if (users_list->length() != 0)
+            users_list->append(',');
+          users_list->append(user.user.str);
+          users_list->append('@');
+          users_list->append(user.host.hostname);
+        }
       }
       if (!user.host.hostname ||
 	  (user.host.hostname[0] == wild_many && !user.host.hostname[1]))
         allow_all_hosts=1;			// Anyone can connect
     }
   }
-  my_qsort((uchar*) dynamic_element(&acl_users,0,ACL_USER*),acl_users.elements,
-	   sizeof(ACL_USER),(qsort_cmp) acl_compare);
-  end_read_record(&read_record_info);
+
   if (rr_status != READ_RECORD::RR_EOF)
   {
     sql_print_error("Failure while reading %s.%s: %d",
                     table->s->db.str, table->s->table_name.str, rr_status);
-    goto end;
+    return TRUE;
   }
-  freeze_size(&acl_users);
+
+  return FALSE;
+}
+
+static my_bool acl_load_other_acls(THD *thd, TABLE_LIST *tables)
+{
+  TABLE *table;
+  READ_RECORD read_record_info;
+  bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
+  char tmp_name[SAFE_NAME_LEN+1];
+  int rr_status;
 
   table= tables[GRANT_DB].table;
   if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
@@ -1520,13 +1639,12 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 
   init_check_host();
 
-  initialized=1;
-  return_val= FALSE;
-  ++acl_version;
+  return FALSE;
 
 end:
-  thd->variables.sql_mode= old_sql_mode;
-  DBUG_RETURN(return_val);
+  // This return is not spread over the code above to minimize diff
+  // with the upstream.
+  return TRUE;
 }
 
 
@@ -1542,6 +1660,7 @@ void acl_free(bool end)
   free_root(&acl_memroot,MYF(0));
   delete_dynamic(&acl_hosts);
   delete_dynamic_with_callback(&acl_users, (FREE_FUNC) free_acl_user);
+  delete_dynamic_with_callback(&acl_system_users, (FREE_FUNC) free_acl_user);
   delete_dynamic(&acl_dbs);
   delete_dynamic(&acl_wild_hosts);
   delete_dynamic(&acl_proxy_users);
@@ -1593,6 +1712,7 @@ my_bool acl_reload(THD *thd)
 {
   TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   DYNAMIC_ARRAY old_acl_hosts, old_acl_users, old_acl_dbs, old_acl_proxy_users;
+  DYNAMIC_ARRAY old_acl_system_users;
   HASH old_acl_roles, old_acl_roles_mappings;
   MEM_ROOT old_mem;
   my_bool return_val= TRUE;
@@ -1614,6 +1734,7 @@ my_bool acl_reload(THD *thd)
   } acl_arrays[] = {
     { old_acl_hosts,          acl_hosts },
     { old_acl_users,          acl_users },
+    { old_acl_system_users,   acl_system_users },
     { old_acl_proxy_users,    acl_proxy_users },
     { old_acl_dbs,            acl_dbs },
   };
@@ -1634,6 +1755,9 @@ my_bool acl_reload(THD *thd)
   tables[GRANT_ROLES_MAPPING].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("roles_mapping"),
                            "roles_mapping", TL_READ);
+  tables[GRANT_SYSTEM_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
+                           C_STRING_WITH_LEN("system_user"),
+                           "system_user", TL_READ);
   tables[GRANT_HOST].next_local= tables[GRANT_HOST].next_global=
     &tables[GRANT_USER];
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
@@ -1642,11 +1766,18 @@ my_bool acl_reload(THD *thd)
     &tables[GRANT_PROXIES_PRIV];
   tables[GRANT_PROXIES_PRIV].next_local= tables[GRANT_PROXIES_PRIV].next_global=
     &tables[GRANT_ROLES_MAPPING];
+  if (opt_system_user_table)
+  {
+    tables[GRANT_ROLES_MAPPING].next_local=
+      tables[GRANT_ROLES_MAPPING].next_global= &tables[GRANT_SYSTEM_USER];
+  }
   tables[GRANT_HOST].open_type= tables[GRANT_USER].open_type=
     tables[GRANT_DB].open_type= tables[GRANT_PROXIES_PRIV].open_type=
-    tables[GRANT_ROLES_MAPPING].open_type= OT_BASE_ONLY;
+    tables[GRANT_ROLES_MAPPING].open_type= tables[GRANT_SYSTEM_USER].open_type=
+    OT_BASE_ONLY;
   tables[GRANT_HOST].open_strategy= tables[GRANT_PROXIES_PRIV].open_strategy=
-    tables[GRANT_ROLES_MAPPING].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+    tables[GRANT_ROLES_MAPPING].open_strategy=
+    tables[GRANT_SYSTEM_USER].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
  
   if (open_and_lock_tables(thd, &tables[GRANT_HOST], FALSE,
                            MYSQL_LOCK_IGNORE_TIMEOUT))
@@ -1711,6 +1842,7 @@ my_bool acl_reload(THD *thd)
     free_root(&old_mem,MYF(0));
     delete_dynamic(&old_acl_hosts);
     delete_dynamic_with_callback(&old_acl_users, (FREE_FUNC) free_acl_user);
+    delete_dynamic_with_callback(&old_acl_system_users, (FREE_FUNC) free_acl_user);
     delete_dynamic(&old_acl_proxy_users);
     delete_dynamic(&old_acl_dbs);
     my_hash_free(&old_acl_roles_mappings);
@@ -1903,6 +2035,8 @@ bool acl_getroot(Security_context *sctx, char *user, char *host,
     DBUG_RETURN(FALSE);
   }
 
+  sctx->is_system_user= false;
+
   mysql_mutex_lock(&acl_cache->lock);
 
   sctx->master_access= 0;
@@ -1911,7 +2045,11 @@ bool acl_getroot(Security_context *sctx, char *user, char *host,
 
   if (host[0]) // User, not Role
   {
-    acl_user= find_user_wild(host, user, ip);
+    acl_user= find_sys_user_wild(host, user, ip);
+    if (acl_user)
+      sctx->is_system_user= true;
+    else
+      acl_user= find_user_wild(host, user, ip);
 
     if (acl_user)
     {
@@ -1966,7 +2104,16 @@ bool acl_update_user_access(THD *thd)
 
   mysql_mutex_lock(&acl_cache->lock);
 
-  acl_user= find_user_wild(sctx->host, sctx->priv_user, sctx->ip);
+  acl_user= find_sys_user_wild(sctx->host, sctx->priv_user, sctx->ip);
+  if (acl_user)
+  {
+    sctx->is_system_user= true;
+  }
+  else
+  {
+    sctx->is_system_user= false;
+    acl_user= find_user_wild(sctx->host, sctx->priv_user, sctx->ip);
+  }
   /*
      TODO(pivanof): It would be great for all plugins to have a function
      answering a question: "Did something change for user such that this
@@ -2006,6 +2153,7 @@ unlock_and_reset_user:
   mysql_mutex_unlock(&acl_cache->lock);
 
   sctx->master_access= sctx->db_access= 0;
+  sctx->is_system_user= false;
   thd->killed= KILL_CONNECTION;
   DBUG_RETURN(TRUE);
 }
@@ -2942,6 +3090,29 @@ static ACL_USER *find_user_or_anon(const char *host, const char *user, const cha
   return result;
 }
 
+/*
+  unlike find_sys_user_exact and find_sys_user_wild,
+  this function finds anonymous users too, it's when a
+  user is not empty, but priv_user (acl_user->user) is empty.
+*/
+static ACL_USER *find_sys_user_or_anon(const char *host, const char *user, const char *ip)
+{
+  ACL_USER *result= NULL;
+  mysql_mutex_assert_owner(&acl_cache->lock);
+  for (uint i=0; i < acl_system_users.elements; i++)
+  {
+    ACL_USER *acl_user_tmp= dynamic_element(&acl_system_users, i, ACL_USER*);
+    if ((!acl_user_tmp->user.str ||
+         !strcmp(user, acl_user_tmp->user.str)) &&
+         compare_hostname(&acl_user_tmp->host, host, ip))
+    {
+      result= acl_user_tmp;
+      break;
+    }
+  }
+  return result;
+}
+
 
 /*
   Find first entry that matches the specified user@host pair
@@ -2960,6 +3131,23 @@ static ACL_USER * find_user_exact(const char *host, const char *user)
 }
 
 /*
+  Find first entry in system_user that matches the specified user@host pair
+*/
+static ACL_USER *find_sys_user_exact(const char *host, const char *user)
+{
+  if (initialized)
+    mysql_mutex_assert_owner(&acl_cache->lock);
+
+  for (uint i=0 ; i < acl_system_users.elements ; i++)
+  {
+    ACL_USER *acl_user=dynamic_element(&acl_system_users, i, ACL_USER*);
+    if (acl_user->eq(user, host))
+      return acl_user;
+  }
+  return 0;
+}
+
+/*
   Find first entry that matches the specified user@host pair
 */
 static ACL_USER * find_user_wild(const char *host, const char *user, const char *ip)
@@ -2969,6 +3157,23 @@ static ACL_USER * find_user_wild(const char *host, const char *user, const char 
   for (uint i=0 ; i < acl_users.elements ; i++)
   {
     ACL_USER *acl_user=dynamic_element(&acl_users,i,ACL_USER*);
+    if (acl_user->wild_eq(user, host, ip))
+      return acl_user;
+  }
+  return 0;
+}
+
+/*
+  Find first entry in system_user that matches the specified user@host pair
+*/
+static ACL_USER *find_sys_user_wild(const char *host, const char *user, const char *ip)
+{
+  if (initialized)
+    mysql_mutex_assert_owner(&acl_cache->lock);
+
+  for (uint i=0 ; i < acl_system_users.elements ; i++)
+  {
+    ACL_USER *acl_user=dynamic_element(&acl_system_users, i, ACL_USER*);
     if (acl_user->wild_eq(user, host, ip))
       return acl_user;
   }
@@ -6438,7 +6643,10 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     proxied_user= str_list++;
   }
 
-  /* open the mysql.user and mysql.db or mysql.proxies_priv tables */
+  /*
+     open the mysql.user, mysql.system_user and mysql.db or mysql.proxies_priv
+     tables
+  */
   tables[GRANT_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("user"), "user", TL_WRITE);
   TABLE_LIST *next_table;
@@ -6458,7 +6666,12 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
                              "db",
                              TL_WRITE);
   }
+  tables[GRANT_SYSTEM_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
+                             C_STRING_WITH_LEN("system_user"),
+                             "system_user", TL_WRITE);
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global= next_table;
+  if (opt_system_user_table)
+    next_table->next_local= next_table->next_global= &tables[GRANT_SYSTEM_USER];
 
 #ifdef HAVE_REPLICATION
   /*
@@ -6510,6 +6723,13 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     if (!(Str= get_current_user(thd, tmp_Str, false)))
     {
       result= TRUE;
+      continue;
+    }
+
+    if (find_sys_user_exact(Str->host.str, Str->user.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "GRANT", "SYSTEM USER");
+      result= -1;
       continue;
     }
 
@@ -8543,6 +8763,10 @@ static int open_grant_tables(THD *thd, TABLE_LIST *tables)
                              C_STRING_WITH_LEN("roles_mapping"),
                              "roles_mapping", TL_WRITE);
   tables[GRANT_ROLES_MAPPING].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+  tables[GRANT_SYSTEM_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
+                             C_STRING_WITH_LEN("system_user"),
+                             "system_user", TL_WRITE);
+  tables[GRANT_SYSTEM_USER].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
 
 
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
@@ -8557,6 +8781,11 @@ static int open_grant_tables(THD *thd, TABLE_LIST *tables)
     &tables[GRANT_PROXIES_PRIV];
   tables[GRANT_PROXIES_PRIV].next_local= tables[GRANT_PROXIES_PRIV].next_global=
     &tables[GRANT_ROLES_MAPPING];
+  if (opt_system_user_table)
+  {
+    tables[GRANT_ROLES_MAPPING].next_local= tables[GRANT_ROLES_MAPPING].next_global=
+      &tables[GRANT_SYSTEM_USER];
+  }
 
 #ifdef HAVE_REPLICATION
   /*
@@ -9639,6 +9868,13 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
       continue;
     }
 
+    if (find_sys_user_exact(user_name->host.str, user_name->user.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "DROP", "SYSTEM USER");
+      result= TRUE;
+      continue;
+    }
+
     if (handle_grant_data(tables, true, user_name, NULL) <= 0)
     {
       append_user(thd, &wrong_users, user_name);
@@ -9732,6 +9968,14 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
     DBUG_ASSERT(!user_from->is_role());
     DBUG_ASSERT(!user_to->is_role());
 
+    if (find_sys_user_exact(user_from->host.str, user_from->user.str) ||
+        find_sys_user_exact(user_to->host.str, user_to->user.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "RENAME", "SYSTEM USER");
+      result= TRUE;
+      continue;
+    }
+
     /*
       Search all in-memory structures and grant tables
       for a mention of the new user name.
@@ -9810,6 +10054,13 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
   {
     if (!(lex_user= get_current_user(thd, tmp_lex_user, false)))
     {
+      result= -1;
+      continue;
+    }
+
+    if (find_sys_user_exact(lex_user->host.str, lex_user->user.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "REVOKE", "SYSTEM USER");
       result= -1;
       continue;
     }
@@ -11405,7 +11656,17 @@ static bool find_mpvio_user(MPVIO_EXT *mpvio)
 
   mysql_mutex_lock(&acl_cache->lock);
 
-  ACL_USER *user= find_user_or_anon(sctx->host, sctx->user, sctx->ip);
+  /*
+    The session is either connecting or changing user, so they won't be
+    harmed by proactively resetting is_system_user. It will be reset if
+    they are (still) a system user.
+  */
+  sctx->is_system_user= false;
+  ACL_USER *user= find_sys_user_or_anon(sctx->host, sctx->user, sctx->ip);
+  if (user)
+    sctx->is_system_user= true;
+  else
+    user= find_user_or_anon(sctx->host, sctx->user, sctx->ip);
   if (user)
     mpvio->acl_user= user->copy(mpvio->thd->mem_root);
 
@@ -12502,7 +12763,8 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
               sctx->master_access, mpvio.db.str));
 
   if (command == COM_CONNECT &&
-      !(thd->main_security_ctx.master_access & SUPER_ACL))
+      !((thd->main_security_ctx.master_access & SUPER_ACL) ||
+        thd->main_security_ctx.is_system_user))
   {
     mysql_mutex_lock(&LOCK_connection_count);
     bool count_ok= (*thd->scheduler->connection_count <=

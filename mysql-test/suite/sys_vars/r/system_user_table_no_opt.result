@@ -1,0 +1,53 @@
+create database d1;
+create table d1.t1 (n int);
+select is_system_user() as should_be_0;
+should_be_0
+0
+insert into mysql.user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+values ('user1', 'localhost', 'Y', '', '', '', '');
+flush privileges;
+select is_system_user() as should_be_0;
+should_be_0
+0
+select * from d1.t1;
+n
+insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+values ('user1', 'localhost', 'N', '', '', '', '');
+flush privileges;
+select is_system_user() as should_be_0;
+should_be_0
+0
+select * from d1.t1;
+n
+update mysql.system_user set Select_priv = 'Y', Insert_priv = 'Y' where user = 'user1';
+flush privileges;
+select is_system_user() as should_be_0;
+should_be_0
+0
+insert into d1.t1 values (1);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+select * from d1.t1;
+n
+delete from mysql.user where User = 'user1';
+flush privileges;
+select * from d1.t1;
+Got one of the listed errors
+connect(localhost,user1,,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'user1'@'localhost' (using password: NO)
+select is_system_user() as should_be_0;
+should_be_0
+0
+insert into mysql.user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject, authentication_string)
+values ('user1', 'localhost', 'Y', '', '', '', '');
+flush privileges;
+select is_system_user() as should_be_0;
+should_be_0
+0
+select * from d1.t1;
+n
+insert into d1.t1 values (3);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+drop database d1;
+delete from mysql.system_user;
+delete from mysql.user where User = 'user1';
+flush privileges;

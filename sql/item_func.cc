@@ -6476,6 +6476,12 @@ Item *get_system_var(THD *thd, enum_var_type var_type, LEX_STRING name,
 }
 
 
+longlong Item_func_is_system_user::val_int()
+{
+  return current_thd->security_ctx->is_system_user ? 1 : 0;
+}
+
+
 longlong Item_func_row_count::val_int()
 {
   DBUG_ASSERT(fixed == 1);

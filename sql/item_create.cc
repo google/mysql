@@ -1450,6 +1450,18 @@ protected:
 #endif
 
 
+class Create_func_is_system_user : public Create_func_arg0
+{
+public:
+  virtual Item *create_builder(THD *thd);
+
+  static Create_func_is_system_user s_singleton;
+
+protected:
+  Create_func_is_system_user() {}
+  virtual ~Create_func_is_system_user() {}
+};
+
 #ifdef HAVE_SPATIAL
 class Create_func_mbr_intersects : public Create_func_arg2
 {
@@ -4436,6 +4448,15 @@ Create_func_issimple::create_1_arg(THD *thd, Item *arg1)
 }
 #endif
 
+Create_func_is_system_user Create_func_is_system_user::s_singleton;
+
+Item*
+Create_func_is_system_user::create_builder(THD *thd)
+{
+  thd->lex->safe_to_cache_query= 0;
+  return new (thd->mem_root) Item_func_is_system_user();
+}
+
 
 Create_func_last_day Create_func_last_day::s_singleton;
 
@@ -5732,6 +5753,7 @@ static Native_func_registry func_array[] =
   { { C_STRING_WITH_LEN("ISNULL") }, BUILDER(Create_func_isnull)},
   { { C_STRING_WITH_LEN("ISSIMPLE") }, GEOM_BUILDER(Create_func_issimple)},
   { { C_STRING_WITH_LEN("IS_FREE_LOCK") }, BUILDER(Create_func_is_free_lock)},
+  { { C_STRING_WITH_LEN("IS_SYSTEM_USER")}, BUILDER(Create_func_is_system_user)},
   { { C_STRING_WITH_LEN("IS_USED_LOCK") }, BUILDER(Create_func_is_used_lock)},
   { { C_STRING_WITH_LEN("LAST_DAY") }, BUILDER(Create_func_last_day)},
   { { C_STRING_WITH_LEN("LAST_INSERT_ID") }, BUILDER(Create_func_last_insert_id)},

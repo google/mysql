@@ -1129,6 +1129,9 @@ public:
                                        // for authentication
   uint8 salt_len;
 
+  /* The user's ACL is from the system_user table */
+  bool is_system_user;
+
   void init();
   void destroy();
   void skip_grants();

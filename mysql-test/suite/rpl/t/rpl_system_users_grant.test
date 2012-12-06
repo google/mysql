@@ -1,0 +1,45 @@
+# Test checks that system_user table doesn't prevent GRANT commands from
+# replicating.
+
+# User permissions should work
+--source include/not_embedded.inc
+--source include/master-slave.inc
+
+--echo #
+--echo # Create user and check that it's replicated
+--echo #
+
+--echo # On master
+connection master;
+CREATE USER user1;
+SHOW GRANTS FOR user1;
+
+sync_slave_with_master;
+
+--echo # On slave
+connection slave;
+SHOW GRANTS FOR user1;
+
+--echo # Execute GRANT command on master
+connection master;
+GRANT SELECT ON *.* TO user1;
+SHOW GRANTS FOR user1;
+
+sync_slave_with_master;
+
+--echo # Check that GRANT is replicated to slave
+connection slave;
+SHOW GRANTS FOR user1;
+
+
+--echo #
+--echo # Cleanup
+--echo #
+
+--echo # On master
+connection master;
+drop user user1;
+
+sync_slave_with_master;
+
+--source include/rpl_end.inc
