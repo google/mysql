@@ -5372,6 +5372,16 @@ bool check_single_table_access(THD *thd, ulong privilege,
       check_grant(thd, privilege, all_tables, 0, 1, no_errors))
     goto deny;
 
+  if (opt_system_user_table &&
+      !strcmp(all_tables->get_db_name(), "mysql") &&
+      !strcmp(all_tables->get_table_name(), "system_user") &&
+      (privilege & ~SELECT_ACL) &&
+      !(thd->security_ctx->master_access & SUPER_ACL))
+  {
+    my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
+    goto deny;
+  }
+
   thd->security_ctx= backup_ctx;
   return 0;
 
@@ -5685,6 +5695,16 @@ check_table_access(THD *thd, ulong want_access,TABLE_LIST *tables,
         (tables->table && (int)tables->table->s->tmp_table))
       continue;
     thd->security_ctx= sctx;
+    if (opt_system_user_table &&
+        !strcmp(tables->get_db_name(), "mysql") &&
+        !strcmp(tables->get_table_name(), "system_user") &&
+        (want_access & ~SELECT_ACL) &&
+        !(sctx->master_access & SUPER_ACL))
+    {
+      my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
+      goto deny;
+    }
+
     if ((sctx->master_access & want_access) ==
         (want_access & ~EXTRA_ACL) &&
 	thd->db)

@@ -79,6 +79,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -122,6 +123,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -148,6 +150,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -174,6 +177,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -215,6 +219,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -328,6 +333,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -388,6 +394,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -439,6 +446,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -508,6 +516,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0
@@ -581,6 +590,7 @@ mysql	plugin	Compact	16384	0
 mysql	proc	Compact	16384	0
 mysql	procs_priv	Compact	16384	16384
 mysql	servers	Compact	16384	0
+mysql	system_user	Compact	16384	0
 mysql	tables_priv	Compact	16384	16384
 mysql	time_zone	Compact	16384	0
 mysql	time_zone_leap_second	Compact	16384	0

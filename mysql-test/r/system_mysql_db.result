@@ -16,6 +16,7 @@ proc
 procs_priv
 servers
 slow_log
+system_user
 tables_priv
 time_zone
 time_zone_leap_second

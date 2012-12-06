@@ -585,6 +585,10 @@ static sys_var_bool_ptr sys_super_to_set_timestamp(&vars,
                                                    "super_to_set_timestamp",
                                                    &opt_super_to_set_timestamp);
 
+static sys_var_bool_ptr sys_system_user_table(&vars,
+                                              "system_user_table",
+                                              &opt_system_user_table);
+
 #ifdef HAVE_THR_SETCONCURRENCY
 /* purecov: begin tested */
 static sys_var_const    sys_thread_concurrency(&vars, "thread_concurrency",

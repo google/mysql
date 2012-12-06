@@ -21,6 +21,7 @@ mysql.servers                                      OK
 mysql.slow_log
 Error    : You can't use locks with log tables.
 status   : OK
+mysql.system_user                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
 mysql.time_zone_leap_second                        OK
@@ -53,6 +54,7 @@ mysql.servers                                      OK
 mysql.slow_log
 Error    : You can't use locks with log tables.
 status   : OK
+mysql.system_user                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
 mysql.time_zone_leap_second                        OK
@@ -85,6 +87,7 @@ mysql.servers                                      OK
 mysql.slow_log
 Error    : You can't use locks with log tables.
 status   : OK
+mysql.system_user                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
 mysql.time_zone_leap_second                        OK
@@ -119,6 +122,7 @@ mysql.servers                                      OK
 mysql.slow_log
 Error    : You can't use locks with log tables.
 status   : OK
+mysql.system_user                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
 mysql.time_zone_leap_second                        OK
@@ -157,6 +161,7 @@ mysql.servers                                      OK
 mysql.slow_log
 Error    : You can't use locks with log tables.
 status   : OK
+mysql.system_user                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
 mysql.time_zone_leap_second                        OK
@@ -198,6 +203,7 @@ mysql.servers                                      OK
 mysql.slow_log
 Error    : You can't use locks with log tables.
 status   : OK
+mysql.system_user                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
 mysql.time_zone_leap_second                        OK
@@ -238,6 +244,7 @@ mysql.servers                                      OK
 mysql.slow_log
 Error    : You can't use locks with log tables.
 status   : OK
+mysql.system_user                                  OK
 mysql.tables_priv                                  OK
 mysql.time_zone                                    OK
 mysql.time_zone_leap_second                        OK

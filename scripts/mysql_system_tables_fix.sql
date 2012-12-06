@@ -601,3 +601,5 @@ ALTER TABLE db MODIFY Trigger_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT
 
 UPDATE user SET Trigger_priv=Super_priv WHERE @hadTriggerPriv = 0;
 
+CREATE TABLE IF NOT EXISTS system_user LIKE user;
+ALTER TABLE system_user comment='System user accounts and their global privileges';

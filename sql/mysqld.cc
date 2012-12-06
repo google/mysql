@@ -691,6 +691,7 @@ my_bool opt_allow_views;
 my_bool opt_allow_xa;
 my_bool opt_super_to_set_timestamp;
 my_bool rpl_allow_implicit_commit;
+my_bool opt_system_user_table;
 
 
 /* Thread specific variables */
@@ -5911,7 +5912,8 @@ enum options_mysqld
   OPT_ALLOW_XA,
   OPT_RESERVED_SUPER_CONNECTIONS,
   OPT_SUPER_TO_SET_TIMESTAMP,
-  OPT_RPL_ALLOW_IMPLICIT_COMMIT
+  OPT_RPL_ALLOW_IMPLICIT_COMMIT,
+  OPT_SYSTEM_USER_TABLE
 };
 
 
@@ -7430,6 +7432,11 @@ thread is in the relay logs.",
    "events (i.e. the COMMIT) were somehow skipped.",
    &rpl_allow_implicit_commit, &rpl_allow_implicit_commit,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+   {"system-user-table", OPT_SYSTEM_USER_TABLE,
+    "When ON special table mysql.system_user is used in addition to mysql.user. "
+    "mysql.system_user table can be changed only by users with SUPER privilege.",
+    &opt_system_user_table,
+    0, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -8059,6 +8066,7 @@ static int mysql_init_variables(void)
   opt_allow_xa= 0;
   opt_reserved_super_connections= 0;
   rpl_allow_implicit_commit= 0;
+  opt_system_user_table= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */

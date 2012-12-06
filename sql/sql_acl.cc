@@ -46,6 +46,7 @@ enum GrantTable
   GRANT_COLUMNS_PRIV,
   GRANT_PROCS_PRIV,
   GRANT_HOST,
+  GRANT_SYSTEM_USER,
   GRANT_TABLES_MAX                              // preserve as the last entry.
 };
 
@@ -203,7 +204,7 @@ static uchar* acl_entry_get_key(acl_entry *entry, size_t *length,
 #define ACL_KEY_LENGTH (IP_ADDR_STRLEN+1+NAME_LEN+1+USERNAME_LENGTH+1)
 
 static volatile uint64_t acl_version = 0;
-static DYNAMIC_ARRAY acl_hosts,acl_users,acl_dbs;
+static DYNAMIC_ARRAY acl_hosts, acl_users, acl_system_users, acl_dbs;
 static MEM_ROOT mem, memex;
 static bool initialized=0;
 static bool allow_all_hosts=1;
@@ -222,6 +223,7 @@ static bool update_user_table(THD *thd, TABLE *table,
 static void update_hostname(acl_host_and_ip *host, const char *hostname);
 static bool compare_hostname(const acl_host_and_ip *host,const char *hostname,
 			     const char *ip);
+static ACL_USER *find_sys_user_exact_host(const char *user, const char *host);
 static my_bool acl_load(THD *thd, TABLE_LIST *tables);
 static my_bool grant_load(THD *thd, TABLE_LIST *tables);
 static inline void get_grantor(THD *thd, char* grantor);
@@ -322,136 +324,14 @@ my_bool acl_init(bool dont_read_acl_tables)
 }
 
 
-/*
-  Initialize structures responsible for user/db-level privilege checking
-  and load information about grants from open privilege tables.
-
-  SYNOPSIS
-    acl_load()
-      thd     Current thread
-      tables  List containing open "mysql.host", "mysql.user" and
-              "mysql.db" tables.
-
-  RETURN VALUES
-    FALSE  Success
-    TRUE   Error
-*/
-
-static my_bool acl_load(THD *thd, TABLE_LIST *tables)
+static void acl_load_users(THD *thd,
+                           TABLE *table,
+                           READ_RECORD *read_record_info,
+                           my_bool is_system_user)
 {
-  TABLE *table;
-  READ_RECORD read_record_info;
-  my_bool return_val= TRUE;
   bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
-  char tmp_name[NAME_LEN+1];
-  int password_length;
-  ulong old_sql_mode= thd->variables.sql_mode;
-  DBUG_ENTER("acl_load");
 
-  thd->variables.sql_mode&= ~MODE_PAD_CHAR_TO_FULL_LENGTH;
-
-  grant_version++; /* Privileges updated */
-
-  acl_cache->clear(1);				// Clear locked hostname cache
-
-  init_sql_alloc(&mem, ACL_ALLOC_BLOCK_SIZE, 0);
-  table= tables[GRANT_HOST].table;
-  init_read_record(&read_record_info, thd, table, NULL, 1, 0, FALSE);
-  table->use_all_columns();
-  VOID(my_init_dynamic_array(&acl_hosts,sizeof(ACL_HOST),20,50));
-  while (!(read_record_info.read_record(&read_record_info)))
-  {
-    ACL_HOST host;
-    update_hostname(&host.host,get_field(&mem, table->field[0]));
-    host.db=	 get_field(&mem, table->field[1]);
-    if (lower_case_table_names && host.db)
-    {
-      /*
-        convert db to lower case and give a warning if the db wasn't
-        already in lower case
-      */
-      (void) strmov(tmp_name, host.db);
-      my_casedn_str(files_charset_info, host.db);
-      if (strcmp(host.db, tmp_name) != 0)
-        sql_print_warning("'host' entry '%s|%s' had database in mixed "
-                          "case that has been forced to lowercase because "
-                          "lower_case_table_names is set. It will not be "
-                          "possible to remove this privilege using REVOKE.",
-                          host.host.hostname ? host.host.hostname : "",
-                          host.db ? host.db : "");
-    }
-    host.access= get_access(table,2);
-    host.access= fix_rights_for_db(host.access);
-    host.sort=	 get_sort(2,host.host.hostname,host.db);
-    if (check_no_resolve && hostname_requires_resolving(host.host.hostname))
-    {
-      sql_print_warning("'host' entry '%s|%s' "
-		      "ignored in --skip-name-resolve mode.",
-			host.host.hostname ? host.host.hostname : "",
-			host.db ? host.db : "");
-      continue;
-    }
-#ifndef TO_BE_REMOVED
-    if (table->s->fields == 8)
-    {						// Without grant
-      if (host.access & CREATE_ACL)
-	host.access|=REFERENCES_ACL | INDEX_ACL | ALTER_ACL | CREATE_TMP_ACL;
-    }
-#endif
-    VOID(push_dynamic(&acl_hosts,(uchar*) &host));
-  }
-  my_qsort((uchar*) dynamic_element(&acl_hosts,0,ACL_HOST*),acl_hosts.elements,
-	   sizeof(ACL_HOST),(qsort_cmp) acl_compare);
-  end_read_record(&read_record_info);
-  freeze_size(&acl_hosts);
-
-  table= tables[GRANT_USER].table;
-  init_read_record(&read_record_info, thd, table, NULL, 1, 0, FALSE);
-  table->use_all_columns();
-  VOID(my_init_dynamic_array(&acl_users,sizeof(ACL_USER),50,100));
-  password_length= table->field[2]->field_length /
-    table->field[2]->charset()->mbmaxlen;
-  if (password_length < SCRAMBLED_PASSWORD_CHAR_LENGTH_323)
-  {
-    sql_print_error("Fatal error: mysql.user table is damaged or in "
-                    "unsupported 3.20 format.");
-    goto end;
-  }
-
-  DBUG_PRINT("info",("user table fields: %d, password length: %d",
-		     table->s->fields, password_length));
-
-  pthread_mutex_lock(&LOCK_global_system_variables);
-  if (password_length < SCRAMBLED_PASSWORD_CHAR_LENGTH)
-  {
-    if (opt_secure_auth)
-    {
-      pthread_mutex_unlock(&LOCK_global_system_variables);
-      sql_print_error("Fatal error: mysql.user table is in old format, "
-                      "but server started with --secure-auth option.");
-      goto end;
-    }
-    sys_old_passwords.after_update= restrict_update_of_old_passwords_var;
-    if (global_system_variables.old_passwords)
-      pthread_mutex_unlock(&LOCK_global_system_variables);
-    else
-    {
-      global_system_variables.old_passwords= 1;
-      pthread_mutex_unlock(&LOCK_global_system_variables);
-      sql_print_warning("mysql.user table is not updated to new password format; "
-                        "Disabling new password usage until "
-                        "mysql_fix_privilege_tables is run");
-    }
-    thd->variables.old_passwords= 1;
-  }
-  else
-  {
-    sys_old_passwords.after_update= 0;
-    pthread_mutex_unlock(&LOCK_global_system_variables);
-  }
-
-  allow_all_hosts=0;
-  while (!(read_record_info.read_record(&read_record_info)))
+  while (!(read_record_info->read_record(read_record_info)))
   {
     ACL_USER user;
     update_hostname(&user.host, get_field(&mem, table->field[0]));
@@ -460,6 +340,14 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
     {
       sql_print_warning("'user' entry '%s@%s' "
                         "ignored in --skip-name-resolve mode.",
+			user.user ? user.user : "",
+			user.host.hostname ? user.host.hostname : "");
+      continue;
+    }
+    if (!is_system_user && find_sys_user_exact_host(user.user, user.host.hostname))
+    {
+      sql_print_warning("entry '%s'@'%s' in mysql.user is ignored "
+	                "because it duplicates entry in mysql.system_user",
 			user.user ? user.user : "",
 			user.host.hostname ? user.host.hostname : "");
       continue;
@@ -584,11 +472,162 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 #endif
       }
       VOID(push_dynamic(&acl_users,(uchar*) &user));
+      if (is_system_user)
+        VOID(push_dynamic(&acl_system_users, (uchar*) &user));
       if (!user.host.hostname ||
 	  (user.host.hostname[0] == wild_many && !user.host.hostname[1]))
         allow_all_hosts=1;			// Anyone can connect
     }
   }
+}
+
+
+/*
+  Initialize structures responsible for user/db-level privilege checking
+  and load information about grants from open privilege tables.
+
+  SYNOPSIS
+    acl_load()
+      thd     Current thread
+      tables  List containing open "mysql.host", "mysql.user" and
+              "mysql.db" tables.
+
+  RETURN VALUES
+    FALSE  Success
+    TRUE   Error
+*/
+
+static my_bool acl_load(THD *thd, TABLE_LIST *tables)
+{
+  TABLE *table;
+  READ_RECORD read_record_info;
+  my_bool return_val= TRUE;
+  bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
+  char tmp_name[NAME_LEN+1];
+  int password_length;
+  ulong old_sql_mode= thd->variables.sql_mode;
+  DBUG_ENTER("acl_load");
+
+  thd->variables.sql_mode&= ~MODE_PAD_CHAR_TO_FULL_LENGTH;
+
+  grant_version++; /* Privileges updated */
+
+  acl_cache->clear(1);				// Clear locked hostname cache
+
+  init_sql_alloc(&mem, ACL_ALLOC_BLOCK_SIZE, 0);
+  table= tables[GRANT_HOST].table;
+  init_read_record(&read_record_info, thd, table, NULL, 1, 0, FALSE);
+  table->use_all_columns();
+  VOID(my_init_dynamic_array(&acl_hosts,sizeof(ACL_HOST),20,50));
+  while (!(read_record_info.read_record(&read_record_info)))
+  {
+    ACL_HOST host;
+    update_hostname(&host.host,get_field(&mem, table->field[0]));
+    host.db=	 get_field(&mem, table->field[1]);
+    if (lower_case_table_names && host.db)
+    {
+      /*
+        convert db to lower case and give a warning if the db wasn't
+        already in lower case
+      */
+      (void) strmov(tmp_name, host.db);
+      my_casedn_str(files_charset_info, host.db);
+      if (strcmp(host.db, tmp_name) != 0)
+        sql_print_warning("'host' entry '%s|%s' had database in mixed "
+                          "case that has been forced to lowercase because "
+                          "lower_case_table_names is set. It will not be "
+                          "possible to remove this privilege using REVOKE.",
+                          host.host.hostname ? host.host.hostname : "",
+                          host.db ? host.db : "");
+    }
+    host.access= get_access(table,2);
+    host.access= fix_rights_for_db(host.access);
+    host.sort=	 get_sort(2,host.host.hostname,host.db);
+    if (check_no_resolve && hostname_requires_resolving(host.host.hostname))
+    {
+      sql_print_warning("'host' entry '%s|%s' "
+		      "ignored in --skip-name-resolve mode.",
+			host.host.hostname ? host.host.hostname : "",
+			host.db ? host.db : "");
+      continue;
+    }
+#ifndef TO_BE_REMOVED
+    if (table->s->fields == 8)
+    {						// Without grant
+      if (host.access & CREATE_ACL)
+	host.access|=REFERENCES_ACL | INDEX_ACL | ALTER_ACL | CREATE_TMP_ACL;
+    }
+#endif
+    VOID(push_dynamic(&acl_hosts,(uchar*) &host));
+  }
+  my_qsort((uchar*) dynamic_element(&acl_hosts,0,ACL_HOST*),acl_hosts.elements,
+	   sizeof(ACL_HOST),(qsort_cmp) acl_compare);
+  end_read_record(&read_record_info);
+  freeze_size(&acl_hosts);
+
+  allow_all_hosts=0;
+  VOID(my_init_dynamic_array(&acl_users,sizeof(ACL_USER),50,100));
+  VOID(my_init_dynamic_array(&acl_system_users,sizeof(ACL_USER),10,20));
+
+  if (opt_system_user_table)
+  {
+    table= tables[GRANT_SYSTEM_USER].table;
+    init_read_record(&read_record_info, thd, table, NULL, 1, 0, FALSE);
+    table->use_all_columns();
+    acl_load_users(thd, table, &read_record_info, TRUE);
+    my_qsort((uchar*) dynamic_element(&acl_system_users,0,ACL_USER*),
+             acl_system_users.elements,
+             sizeof(ACL_USER),(qsort_cmp) acl_compare);
+    end_read_record(&read_record_info);
+    freeze_size(&acl_system_users);
+  }
+
+  table= tables[GRANT_USER].table;
+  init_read_record(&read_record_info, thd, table, NULL, 1, 0, FALSE);
+  table->use_all_columns();
+  password_length= table->field[2]->field_length /
+    table->field[2]->charset()->mbmaxlen;
+  if (password_length < SCRAMBLED_PASSWORD_CHAR_LENGTH_323)
+  {
+    sql_print_error("Fatal error: mysql.user table is damaged or in "
+                    "unsupported 3.20 format.");
+    goto end;
+  }
+
+  DBUG_PRINT("info",("user table fields: %d, password length: %d",
+		     table->s->fields, password_length));
+
+  pthread_mutex_lock(&LOCK_global_system_variables);
+  if (password_length < SCRAMBLED_PASSWORD_CHAR_LENGTH)
+  {
+    if (opt_secure_auth)
+    {
+      pthread_mutex_unlock(&LOCK_global_system_variables);
+      sql_print_error("Fatal error: mysql.user table is in old format, "
+                      "but server started with --secure-auth option.");
+      goto end;
+    }
+    sys_old_passwords.after_update= restrict_update_of_old_passwords_var;
+    if (global_system_variables.old_passwords)
+      pthread_mutex_unlock(&LOCK_global_system_variables);
+    else
+    {
+      global_system_variables.old_passwords= 1;
+      pthread_mutex_unlock(&LOCK_global_system_variables);
+      sql_print_warning("mysql.user table is not updated to new password format; "
+                        "Disabling new password usage until "
+                        "mysql_fix_privilege_tables is run");
+    }
+    thd->variables.old_passwords= 1;
+  }
+  else
+  {
+    sys_old_passwords.after_update= 0;
+    pthread_mutex_unlock(&LOCK_global_system_variables);
+  }
+
+  acl_load_users(thd, table, &read_record_info, FALSE);
+
   my_qsort((uchar*) dynamic_element(&acl_users,0,ACL_USER*),acl_users.elements,
 	   sizeof(ACL_USER),(qsort_cmp) acl_compare);
   end_read_record(&read_record_info);
@@ -670,6 +709,7 @@ void acl_free(bool end)
   free_root(&mem,MYF(0));
   delete_dynamic(&acl_hosts);
   delete_dynamic(&acl_users);
+  delete_dynamic(&acl_system_users);
   delete_dynamic(&acl_dbs);
   delete_dynamic(&acl_wild_hosts);
   hash_free(&acl_check_hosts);
@@ -705,7 +745,7 @@ void acl_free(bool end)
 my_bool acl_reload(THD *thd)
 {
   TABLE_LIST tables[GRANT_TABLES_MAX];
-  DYNAMIC_ARRAY old_acl_hosts,old_acl_users,old_acl_dbs;
+  DYNAMIC_ARRAY old_acl_hosts, old_acl_users, old_acl_system_users, old_acl_dbs;
   MEM_ROOT old_mem;
   bool old_initialized;
   my_bool return_val= TRUE;
@@ -726,16 +766,23 @@ my_bool acl_reload(THD *thd)
   tables[GRANT_HOST].alias= tables[GRANT_HOST].table_name= (char*) "host";
   tables[GRANT_USER].alias= tables[GRANT_USER].table_name= (char*) "user";
   tables[GRANT_DB].alias= tables[GRANT_DB].table_name= (char*) "db";
+  tables[GRANT_SYSTEM_USER].alias= tables[GRANT_SYSTEM_USER].table_name=
+    (char*) "system_user";
   tables[GRANT_HOST].db= tables[GRANT_USER].db=
-    tables[GRANT_DB].db= (char*) "mysql";
+    tables[GRANT_DB].db= tables[GRANT_SYSTEM_USER].db= (char*) "mysql";
   tables[GRANT_HOST].next_local= tables[GRANT_HOST].next_global=
     &tables[GRANT_USER];
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
     &tables[GRANT_DB];
+  if (opt_system_user_table)
+  {
+    tables[GRANT_DB].next_local= tables[GRANT_DB].next_global=
+      &tables[GRANT_SYSTEM_USER];
+  }
   tables[GRANT_HOST].lock_type= tables[GRANT_USER].lock_type=
-    tables[GRANT_DB].lock_type= TL_READ;
+    tables[GRANT_DB].lock_type= tables[GRANT_SYSTEM_USER].lock_type= TL_READ;
   tables[GRANT_HOST].skip_temporary= tables[GRANT_USER].skip_temporary=
-    tables[GRANT_DB].skip_temporary= TRUE;
+    tables[GRANT_DB].skip_temporary= tables[GRANT_SYSTEM_USER].skip_temporary= TRUE;
 
   if (simple_open_n_lock_tables(thd, &tables[GRANT_HOST]))
   {
@@ -754,6 +801,7 @@ my_bool acl_reload(THD *thd)
 
   old_acl_hosts=acl_hosts;
   old_acl_users=acl_users;
+  old_acl_system_users=acl_system_users;
   old_acl_dbs=acl_dbs;
   old_mem=mem;
   delete_dynamic(&acl_wild_hosts);
@@ -765,6 +813,7 @@ my_bool acl_reload(THD *thd)
     acl_free();				/* purecov: inspected */
     acl_hosts=old_acl_hosts;
     acl_users=old_acl_users;
+    acl_system_users=old_acl_system_users;
     acl_dbs=old_acl_dbs;
     mem=old_mem;
     init_check_host();
@@ -774,6 +823,7 @@ my_bool acl_reload(THD *thd)
     free_root(&old_mem,MYF(0));
     delete_dynamic(&old_acl_hosts);
     delete_dynamic(&old_acl_users);
+    delete_dynamic(&old_acl_system_users);
     delete_dynamic(&old_acl_dbs);
   }
   if (old_initialized)
@@ -882,6 +932,7 @@ static ACL_USER *find_user_low(THD *thd,
                                const char *user,
                                const char *host, const char *ip,
                                const char *passwd_salt, uint passwd_salt_len,
+                               DYNAMIC_ARRAY *users_array,
                                bool do_check_passwd, bool is_raw_passwd,
                                bool allow_anonymous, bool exact_host_match,
                                int *res)
@@ -889,9 +940,9 @@ static ACL_USER *find_user_low(THD *thd,
   ACL_USER *acl_user= 0;
   DBUG_ENTER("find_user");
 
-  for (uint i=0 ; i < acl_users.elements ; i++)
+  for (uint i=0 ; i < users_array->elements ; i++)
   {
-    ACL_USER *acl_user_tmp= dynamic_element(&acl_users,i,ACL_USER*);
+    ACL_USER *acl_user_tmp= dynamic_element(users_array,i,ACL_USER*);
     if (!acl_user_tmp->user && !allow_anonymous && user && user[0])
       continue;
     else if (acl_user_tmp->user &&
@@ -966,7 +1017,7 @@ static ACL_USER *find_user_passwd(THD *thd, const char *user,
                                   int *res)
 {
   return find_user_low(thd, user, host, ip, passwd, passwd_len,
-                       true, true, true, false, res);
+                       &acl_users, true, true, true, false, res);
 }
 
 static ACL_USER *find_user_salt(THD *thd, const char *user,
@@ -975,7 +1026,7 @@ static ACL_USER *find_user_salt(THD *thd, const char *user,
                                 int *res)
 {
   return find_user_low(thd, user, host, ip, (const char*)salt, salt_len,
-                       true, false, false, false, res);
+                       &acl_users, true, false, false, false, res);
 }
 
 static ACL_USER *find_user_no_passwd(const char *user,
@@ -983,14 +1034,39 @@ static ACL_USER *find_user_no_passwd(const char *user,
 {
   int res= 0;
   return find_user_low(NULL, user, host, ip, NULL, 0,
-                       false, false, false, false, &res);
+                       &acl_users, false, false, false, false, &res);
 }
 
 static ACL_USER *find_user_exact_host(const char *user, const char *host)
 {
   int res= 0;
   return find_user_low(NULL, user, host, NULL, NULL, 0,
-                       false, false, false, true, &res);
+                       &acl_users, false, false, false, true, &res);
+}
+
+static ACL_USER *find_sys_user_passwd(THD *thd, const char *user,
+                                      const char *host, const char *ip,
+                                      const char *passwd, uint passwd_len,
+                                      int *res)
+{
+  return find_user_low(thd, user, host, ip, passwd, passwd_len,
+                       &acl_system_users, true, true, true, false, res);
+}
+
+static ACL_USER *find_sys_user_salt(THD *thd, const char *user,
+                                    const char *host, const char *ip,
+                                    const uint8 *salt, uint salt_len,
+                                    int *res)
+{
+  return find_user_low(thd, user, host, ip, (const char*)salt, salt_len,
+                       &acl_system_users, true, false, false, false, res);
+}
+
+static ACL_USER *find_sys_user_exact_host(const char *user, const char *host)
+{
+  int res= 0;
+  return find_user_low(NULL, user, host, NULL, NULL, 0,
+                       &acl_system_users, false, false, false, true, &res);
 }
 
 static void find_db_access(Security_context *sctx,
@@ -1068,8 +1144,13 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
 
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
-  acl_user= find_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
-                             passwd, passwd_len, &res);
+  acl_user= find_sys_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
+                                 passwd, passwd_len, &res);
+  if (res == 1)
+  {
+    acl_user= find_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
+                               passwd, passwd_len, &res);
+  }
 
   /*
     This was moved to separate tree because of heavy HAVE_OPENSSL case.
@@ -1314,10 +1395,17 @@ bool acl_update_user_access(THD *thd)
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
   int res= 1;
-  acl_user= find_user_salt(thd,
-                           sctx->priv_user[0]? sctx->user: sctx->priv_user,
-                           sctx->host, sctx->ip,
-                           sctx->salt, sctx->salt_len, &res);
+  acl_user= find_sys_user_salt(thd,
+                               sctx->priv_user[0]? sctx->user: sctx->priv_user,
+                               sctx->host, sctx->ip,
+                               sctx->salt, sctx->salt_len, &res);
+  if (res == 1)
+  {
+    acl_user= find_user_salt(thd,
+                             sctx->priv_user[0]? sctx->user: sctx->priv_user,
+                             sctx->host, sctx->ip,
+                             sctx->salt, sctx->salt_len, &res);
+  }
   if (!acl_user)
     goto unlock_and_reset_user;
 
@@ -3654,9 +3742,15 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   bzero((char*) &tables,sizeof(tables));
   tables[GRANT_USER].alias= tables[GRANT_USER].table_name= (char*) "user";
   tables[GRANT_DB].alias= tables[GRANT_DB].table_name= (char*) "db";
+  tables[GRANT_SYSTEM_USER].alias= tables[GRANT_SYSTEM_USER].table_name=
+    (char*) "system_user";
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global= &tables[GRANT_DB];
-  tables[GRANT_USER].lock_type= tables[GRANT_DB].lock_type= TL_WRITE;
-  tables[GRANT_USER].db= tables[GRANT_DB].db= (char*) "mysql";
+  if (opt_system_user_table)
+    tables[GRANT_DB].next_local= tables[GRANT_DB].next_global= &tables[GRANT_SYSTEM_USER];
+  tables[GRANT_USER].lock_type= tables[GRANT_DB].lock_type=
+    tables[GRANT_SYSTEM_USER].lock_type= TL_WRITE;
+  tables[GRANT_USER].db= tables[GRANT_DB].db= tables[GRANT_SYSTEM_USER].db=
+    (char*) "mysql";
 
   /*
     This statement will be replicated as a statement, even when using
@@ -3677,7 +3771,8 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
       The tables must be marked "updating" so that tables_ok() takes them into
       account in tests.
     */
-    tables[GRANT_USER].updating= tables[GRANT_DB].updating= 1;
+    tables[GRANT_USER].updating= tables[GRANT_DB].updating=
+      tables[GRANT_SYSTEM_USER].updating= 1;
     if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
     {
       /* Restore the state of binlog format */
@@ -3718,6 +3813,12 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     */
     if (!tmp_Str->user.str && tmp_Str->password.str)
       Str->password= tmp_Str->password;
+    if (find_sys_user_exact_host(Str->user.str, Str->host.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "GRANT", "SYSTEM USER");
+      result= -1;
+      continue;
+    }
     if (replace_user_table(thd, tables[GRANT_USER].table, *Str,
                            (!db ? rights : 0), revoke_grant, create_new_users,
                            test(thd->variables.sql_mode &
@@ -5305,6 +5406,8 @@ int open_grant_tables(THD *thd, TABLE_LIST *tables)
     (char*) "columns_priv";
   tables[GRANT_PROCS_PRIV].alias= tables[GRANT_PROCS_PRIV].table_name=
     (char*) "procs_priv";
+  tables[GRANT_SYSTEM_USER].alias= tables[GRANT_SYSTEM_USER].table_name=
+    (char*) "system_user";
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
     &tables[GRANT_DB];
   tables[GRANT_DB].next_local= tables[GRANT_DB].next_global=
@@ -5313,11 +5416,17 @@ int open_grant_tables(THD *thd, TABLE_LIST *tables)
     &tables[GRANT_COLUMNS_PRIV];
   tables[GRANT_COLUMNS_PRIV].next_local= tables[GRANT_COLUMNS_PRIV].next_global=
     &tables[GRANT_PROCS_PRIV];
+  if (opt_system_user_table)
+  {
+    tables[GRANT_PROCS_PRIV].next_local= tables[GRANT_PROCS_PRIV].next_global=
+      &tables[GRANT_SYSTEM_USER];
+  }
   tables[GRANT_USER].lock_type= tables[GRANT_DB].lock_type=
     tables[GRANT_TABLES_PRIV].lock_type= tables[GRANT_COLUMNS_PRIV].lock_type=
-    tables[GRANT_PROCS_PRIV].lock_type= TL_WRITE;
+    tables[GRANT_PROCS_PRIV].lock_type= tables[GRANT_SYSTEM_USER].lock_type= TL_WRITE;
   tables[GRANT_USER].db= tables[GRANT_DB].db= tables[GRANT_TABLES_PRIV].db=
-    tables[GRANT_COLUMNS_PRIV].db= tables[GRANT_PROCS_PRIV].db= (char*) "mysql";
+    tables[GRANT_COLUMNS_PRIV].db= tables[GRANT_PROCS_PRIV].db=
+    tables[GRANT_SYSTEM_USER].db= (char*) "mysql";
 
 #ifdef HAVE_REPLICATION
   /*
@@ -5331,13 +5440,13 @@ int open_grant_tables(THD *thd, TABLE_LIST *tables)
       account in tests.
     */
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
-      tables[GRANT_TABLES_PRIV].updating=
-      tables[GRANT_COLUMNS_PRIV].updating= tables[GRANT_PROCS_PRIV].updating= 1;
+      tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
+      tables[GRANT_PROCS_PRIV].updating= tables[GRANT_SYSTEM_USER].updating= 1;
     if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
       DBUG_RETURN(1);
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
-      tables[GRANT_TABLES_PRIV].updating=
-      tables[GRANT_COLUMNS_PRIV].updating= tables[GRANT_PROCS_PRIV].updating= 0;
+      tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
+      tables[GRANT_PROCS_PRIV].updating= tables[GRANT_SYSTEM_USER].updating= 0;
   }
 #endif
 
@@ -6076,6 +6185,12 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list)
       result= TRUE;
       continue;
     }  
+    if (find_sys_user_exact_host(user_name->user.str, user_name->host.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "DROP", "SYSTEM USER");
+      result= TRUE;
+      continue;
+    }
     if (handle_grant_data(tables, true, user_name, NULL) <= 0)
     {
       append_user(&wrong_users, user_name);
@@ -6163,6 +6278,13 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
       continue;
     }  
     DBUG_ASSERT(user_to != 0); /* Syntax enforces pairs of users. */
+    if (find_sys_user_exact_host(user_from->user.str, user_from->host.str) ||
+	find_sys_user_exact_host(user_to->user.str, user_to->host.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "RENAME", "SYSTEM USER");
+      result= TRUE;
+      continue;
+    }
 
     /*
       Search all in-memory structures and grant tables
@@ -6247,6 +6369,12 @@ bool mysql_revoke_all(THD *thd,  List <LEX_USER> &list)
       result= -1;
       continue;
     }  
+    if (find_sys_user_exact_host(lex_user->user.str, lex_user->host.str))
+    {
+      my_error(ER_WRONG_USAGE, MYF(0), "REVOKE", "SYSTEM USER");
+      result= -1;
+      continue;
+    }
     if (!find_user_exact_host(lex_user->user.str, lex_user->host.str))
     {
       result= -1;
