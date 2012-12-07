@@ -6724,13 +6724,11 @@ get_row_format_for_create(
 					columns and indexes */
 	HA_CREATE_INFO*	create_info)	/*!< in: create info. */
 {
-	if (!(create_info->used_fields & HA_CREATE_USED_ROW_FORMAT)) {
-		// No ROW_TYPE= clause should imply DEFAULT row type:
-		assert(form->s->row_type == ROW_TYPE_DEFAULT);
-		// ...which is overridden if this sysvar is changed from AUTO:
+	if (!(create_info->used_fields & HA_CREATE_USED_ROW_FORMAT) &&
+	    (form->s->row_type == ROW_TYPE_DEFAULT)) {
 		return innodb_default_row_format_values[
 			innodb_default_row_format];
-	} else { // CREATE TABLE has ROW_FORMAT= clause, use that:
+	} else {
 		return form->s->row_type;
 	}
 }

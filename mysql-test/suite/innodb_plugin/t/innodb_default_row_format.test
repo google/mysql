@@ -1,0 +1,58 @@
+--echo #
+--echo # Testing innodb_default_row_format sysvar
+--echo #
+--source include/have_innodb.inc
+
+--disable_query_log
+# this gets changed when Barracuda tables are created, change it back
+--let $file_format_max_save = `SELECT @@innodb_file_format_max`
+--enable_query_log
+
+--disable_warnings
+DROP TABLE IF EXISTS specify_compact;
+DROP TABLE IF EXISTS specify_compressed;
+DROP TABLE IF EXISTS no_row_format_clause;
+--enable_warnings
+
+CREATE TABLE specify_compact
+  (
+    id INT PRIMARY KEY,
+    msg BLOB
+  ) ENGINE=INNODB ROW_FORMAT=COMPACT;
+
+SELECT engine, row_format
+  FROM information_schema.tables
+  WHERE table_name = 'specify_compact';
+
+DROP TABLE specify_compact;
+
+CREATE TABLE specify_compressed
+  (
+    id INT PRIMARY KEY,
+    msg BLOB
+  ) ENGINE=INNODB ROW_FORMAT=COMPRESSED;
+
+SELECT engine, row_format
+  FROM information_schema.tables
+  WHERE table_name = 'specify_compressed';
+
+DROP TABLE specify_compressed;
+
+CREATE TABLE no_row_format_clause
+  (
+    id INT PRIMARY KEY,
+    msg BLOB
+  ) ENGINE=INNODB;
+
+SELECT engine, row_format
+  FROM information_schema.tables
+  WHERE table_name = 'no_row_format_clause';
+
+DROP TABLE no_row_format_clause;
+
+SHOW WARNINGS;
+
+--disable_query_log
+# restore innodb_file_format_max
+eval SET GLOBAL innodb_file_format_max = \"$file_format_max_save\";
+--enable_query_log

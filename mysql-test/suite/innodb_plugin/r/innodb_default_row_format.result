@@ -1,0 +1,41 @@
+#
+# Testing innodb_default_row_format sysvar
+#
+DROP TABLE IF EXISTS specify_compact;
+DROP TABLE IF EXISTS specify_compressed;
+DROP TABLE IF EXISTS no_row_format_clause;
+CREATE TABLE specify_compact
+(
+id INT PRIMARY KEY,
+msg BLOB
+) ENGINE=INNODB ROW_FORMAT=COMPACT;
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_name = 'specify_compact';
+engine	row_format
+InnoDB	Compact
+DROP TABLE specify_compact;
+CREATE TABLE specify_compressed
+(
+id INT PRIMARY KEY,
+msg BLOB
+) ENGINE=INNODB ROW_FORMAT=COMPRESSED;
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_name = 'specify_compressed';
+engine	row_format
+InnoDB	Compressed
+DROP TABLE specify_compressed;
+CREATE TABLE no_row_format_clause
+(
+id INT PRIMARY KEY,
+msg BLOB
+) ENGINE=INNODB;
+SELECT engine, row_format
+FROM information_schema.tables
+WHERE table_name = 'no_row_format_clause';
+engine	row_format
+InnoDB	Compressed
+DROP TABLE no_row_format_clause;
+SHOW WARNINGS;
+Level	Code	Message
