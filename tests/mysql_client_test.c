@@ -6656,7 +6656,7 @@ static void test_date_dt()
 static void test_pure_coverage()
 {
   MYSQL_STMT *stmt;
-  MYSQL_BIND my_bind[1];
+  MYSQL_BIND my_bind[2];
   int        rc;
   ulong      length;
 
@@ -9331,10 +9331,13 @@ static void test_parse_error_and_bad_length()
   DIE_UNLESS(rc);
   if (!opt_silent)
     fprintf(stdout, "Got error (as expected): '%s'\n", mysql_error(mysql));
-  rc= mysql_real_query(mysql, "SHOW DATABASES", 100);
-  DIE_UNLESS(rc);
-  if (!opt_silent)
-    fprintf(stdout, "Got error (as expected): '%s'\n", mysql_error(mysql));
+  // Many other places depend on the fact that client library doesn't treat \0
+  // in the middle of the string specially. So commented out test cases are
+  // invalid.
+  //rc= mysql_real_query(mysql, "SHOW DATABASES", 100);
+  //DIE_UNLESS(rc);
+  //if (!opt_silent)
+  //  fprintf(stdout, "Got error (as expected): '%s'\n", mysql_error(mysql));
 
   stmt= mysql_simple_prepare(mysql, "SHOW DATABAAAA");
   DIE_UNLESS(!stmt);
@@ -9342,10 +9345,10 @@ static void test_parse_error_and_bad_length()
     fprintf(stdout, "Got error (as expected): '%s'\n", mysql_error(mysql));
   stmt= mysql_stmt_init(mysql);
   DIE_UNLESS(stmt);
-  rc= mysql_stmt_prepare(stmt, "SHOW DATABASES", 100);
-  DIE_UNLESS(rc != 0);
-  if (!opt_silent)
-    fprintf(stdout, "Got error (as expected): '%s'\n", mysql_stmt_error(stmt));
+  //rc= mysql_stmt_prepare(stmt, "SHOW DATABASES", 100);
+  //DIE_UNLESS(rc != 0);
+  //if (!opt_silent)
+  //  fprintf(stdout, "Got error (as expected): '%s'\n", mysql_stmt_error(stmt));
   mysql_stmt_close(stmt);
 }
 
@@ -17300,6 +17303,7 @@ static void test_bug31669()
   DIE_UNLESS(rc);
 
   memset(buff, 'a', sizeof(buff));
+  buff[LARGE_BUFFER_SIZE]= 0;
 
   rc= mysql_change_user(mysql, buff, buff, buff);
   DIE_UNLESS(rc);

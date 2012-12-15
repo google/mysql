@@ -5679,7 +5679,12 @@ get_mm_leaf(RANGE_OPT_PARAM *param, COND *conf_func, Field *field,
         tree= &null_element;
       goto end;
     }
-    if (!(tree= new (alloc) SEL_ARG(field,is_null_string,is_null_string)))
+    str= (uchar*) alloc_root(alloc, key_part->store_length+1);
+    if (!str)
+      goto end;
+    memset(str, 0, key_part->store_length+1);
+    memcpy(str, is_null_string, sizeof(is_null_string));
+    if (!(tree= new (alloc) SEL_ARG(field, str, str)))
       goto end;                                 // out of memory
     if (type == Item_func::ISNOTNULL_FUNC)
     {
@@ -5975,7 +5980,12 @@ get_mm_leaf(RANGE_OPT_PARAM *param, COND *conf_func, Field *field,
       tree->min_flag=NO_MIN_RANGE;		/* From start */
     else
     {						// > NULL
-      tree->min_value=is_null_string;
+      str= (uchar*) alloc_root(alloc, key_part->store_length+1);
+      if (!str)
+        goto end;
+      memset(str, 0, key_part->store_length+1);
+      memcpy(str, is_null_string, sizeof(is_null_string));
+      tree->min_value=str;
       tree->min_flag=NEAR_MIN;
     }
     break;
