@@ -334,8 +334,9 @@ int StatsServerAux::queryVersionNumber(THD* thd,
 
   int res = -1;
   // Prefer stack frame allocation here because it's faster than malloc.
-  // Allocate 1 extra byte to guarantee that the string can be null terminated.
-  char key[tblNameSize + 1];
+  // Allocate 2 extra byte to guarantee that the string can be null terminated
+  // and there's room for the length (see below).
+  char key[tblNameSize + 2];
   int len;   // The length of the string in key, excluding trailing blanks.
   len = RemoveTrailing2sAndDate(search_tbl_name);
   if (len <= 0) {
@@ -355,7 +356,7 @@ int StatsServerAux::queryVersionNumber(THD* thd,
   key[1] = 0;
   memset(key + 2, 0, tblNameSize);
   strncpy(key + 2, search_tbl_name, len);
-  key[tblNameSize] = '\0';
+  key[tblNameSize + 1] = '\0';
 
   int status;
   // XXX(seanrees): changed from index_read to index_read_map as was done in the
@@ -368,7 +369,7 @@ int StatsServerAux::queryVersionNumber(THD* thd,
   if (status < 0) {
     // something happened; bail
     printError("%s: couldn't read version number for %s.%s using the edited "
-               "name %s", kWho, search_db_name, search_tbl_name, key + 1);
+               "name %s", kWho, search_db_name, search_tbl_name, key + 2);
     goto cleanup_scan;
   }
 
@@ -381,13 +382,13 @@ int StatsServerAux::queryVersionNumber(THD* thd,
                                                HA_READ_KEY_EXACT);
     if (status < 0) {
       printError("%s: couldn't read version number for %s.%s using the edited "
-                 "name %s", kWho, search_db_name, search_tbl_name, key + 1);
+                 "name %s", kWho, search_db_name, search_tbl_name, key + 2);
       goto cleanup_scan;
     }
 
     if (status == HA_ERR_KEY_NOT_FOUND) {
       printError("%s: couldn't find version number for %s.%s using the edited "
-                 "name %s", kWho, search_db_name, search_tbl_name, key + 1);
+                 "name %s", kWho, search_db_name, search_tbl_name, key + 2);
       goto cleanup_scan;
     }
   }
