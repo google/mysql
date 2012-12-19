@@ -1,0 +1,1212 @@
+/* Copyright (c) 2006, 2012, Oracle and/or its affiliates.
+   Copyright (c) 2010, 2011, Monty Program Ab
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; version 2 of the License.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+
+#include <my_global.h> // For HAVE_REPLICATION
+#include "sql_priv.h"
+#include <my_dir.h>
+#include "unireg.h"                             // REQUIRED by other includes
+#include "rpl_mi.h"
+#include "slave.h"                              // SLAVE_MAX_HEARTBEAT_PERIOD
+#include "strfunc.h"
+#include "sql_repl.h"
+
+#ifdef HAVE_REPLICATION
+
+#define DEFAULT_CONNECT_RETRY 60
+
+static void init_master_log_pos(Master_info* mi);
+
+Master_info::Master_info(LEX_STRING *connection_name_arg,
+                         bool is_slave_recovery)
+  :Slave_reporting_capability("I/O"),
+   ssl(0), ssl_verify_server_cert(1), fd(-1), io_thd(0), 
+   rli(is_slave_recovery), port(MYSQL_PORT),
+   checksum_alg_before_fd(BINLOG_CHECKSUM_ALG_UNDEF),
+   connect_retry(DEFAULT_CONNECT_RETRY), inited(0), abort_slave(0),
+   slave_running(0), slave_run_id(0), sync_counter(0),
+   heartbeat_period(0), received_heartbeats(0), master_id(0)
+{
+  host[0] = 0; user[0] = 0; password[0] = 0;
+  ssl_ca[0]= 0; ssl_capath[0]= 0; ssl_cert[0]= 0;
+  ssl_cipher[0]= 0; ssl_key[0]= 0;
+  ssl_crl[0]= 0; ssl_crlpath[0]= 0;
+
+  /*
+    Store connection name and lower case connection name
+    It's safe to ignore any OMM errors as this is checked by error()
+  */
+  connection_name.length= cmp_connection_name.length=
+    connection_name_arg->length;
+  if ((connection_name.str= (char*) my_malloc(connection_name_arg->length*2+2,
+                                              MYF(MY_WME))))
+  {
+    cmp_connection_name.str= (connection_name.str +
+                              connection_name_arg->length+1);
+    strmake(connection_name.str, connection_name_arg->str,
+            connection_name.length);
+    memcpy(cmp_connection_name.str, connection_name_arg->str,
+           connection_name.length+1);
+    my_casedn_str(system_charset_info, cmp_connection_name.str);
+  }
+
+  my_init_dynamic_array(&ignore_server_ids, sizeof(::server_id), 16, 16);
+  bzero((char*) &file, sizeof(file));
+  mysql_mutex_init(key_master_info_run_lock, &run_lock, MY_MUTEX_INIT_FAST);
+  mysql_mutex_init(key_master_info_data_lock, &data_lock, MY_MUTEX_INIT_FAST);
+  mysql_mutex_setflags(&run_lock, MYF_NO_DEADLOCK_DETECTION);
+  mysql_mutex_setflags(&data_lock, MYF_NO_DEADLOCK_DETECTION);
+  mysql_mutex_init(key_master_info_sleep_lock, &sleep_lock, MY_MUTEX_INIT_FAST);
+  mysql_cond_init(key_master_info_data_cond, &data_cond, NULL);
+  mysql_cond_init(key_master_info_start_cond, &start_cond, NULL);
+  mysql_cond_init(key_master_info_stop_cond, &stop_cond, NULL);
+  mysql_cond_init(key_master_info_sleep_cond, &sleep_cond, NULL);
+}
+
+Master_info::~Master_info()
+{
+  my_free(connection_name.str);
+  delete_dynamic(&ignore_server_ids);
+  mysql_mutex_destroy(&run_lock);
+  mysql_mutex_destroy(&data_lock);
+  mysql_mutex_destroy(&sleep_lock);
+  mysql_cond_destroy(&data_cond);
+  mysql_cond_destroy(&start_cond);
+  mysql_cond_destroy(&stop_cond);
+  mysql_cond_destroy(&sleep_cond);
+}
+
+/**
+   A comparison function to be supplied as argument to @c sort_dynamic()
+   and @c bsearch()
+
+   @return -1 if first argument is less, 0 if it equal to, 1 if it is greater
+   than the second
+*/
+int change_master_server_id_cmp(ulong *id1, ulong *id2)
+{
+  return *id1 < *id2? -1 : (*id1 > *id2? 1 : 0);
+}
+
+
+/**
+   Reports if the s_id server has been configured to ignore events 
+   it generates with
+
+      CHANGE MASTER IGNORE_SERVER_IDS= ( list of server ids )
+
+   Method is called from the io thread event receiver filtering.
+
+   @param      s_id    the master server identifier
+
+   @retval   TRUE    if s_id is in the list of ignored master  servers,
+   @retval   FALSE   otherwise.
+ */
+bool Master_info::shall_ignore_server_id(ulong s_id)
+{
+  if (likely(ignore_server_ids.elements == 1))
+    return (* (ulong*) dynamic_array_ptr(&ignore_server_ids, 0)) == s_id;
+  else      
+    return bsearch((const ulong *) &s_id,
+                   ignore_server_ids.buffer,
+                   ignore_server_ids.elements, sizeof(ulong),
+                   (int (*) (const void*, const void*)) change_master_server_id_cmp)
+      != NULL;
+}
+
+void Master_info::clear_in_memory_info(bool all)
+{
+  init_master_log_pos(this);
+  if (all)
+  {
+    port= MYSQL_PORT;
+    host[0] = 0; user[0] = 0; password[0] = 0;
+  }
+}
+
+void init_master_log_pos(Master_info* mi)
+{
+  DBUG_ENTER("init_master_log_pos");
+
+  mi->master_log_name[0] = 0;
+  mi->master_log_pos = BIN_LOG_HEADER_SIZE;             // skip magic number
+
+  /* Intentionally init ssl_verify_server_cert to 0, no option available  */
+  mi->ssl_verify_server_cert= 0;
+  /* 
+    always request heartbeat unless master_heartbeat_period is set
+    explicitly zero.  Here is the default value for heartbeat period
+    if CHANGE MASTER did not specify it.  (no data loss in conversion
+    as hb period has a max)
+  */
+  mi->heartbeat_period= (float) min(SLAVE_MAX_HEARTBEAT_PERIOD,
+                                    (slave_net_timeout/2.0));
+  DBUG_ASSERT(mi->heartbeat_period > (float) 0.001
+              || mi->heartbeat_period == 0);
+
+  DBUG_VOID_RETURN;
+}
+
+
+enum {
+  LINES_IN_MASTER_INFO_WITH_SSL= 14,
+
+  /* 5.1.16 added value of master_ssl_verify_server_cert */
+  LINE_FOR_MASTER_SSL_VERIFY_SERVER_CERT= 15,
+
+  /* 5.5 added value of master_heartbeat_period */
+  LINE_FOR_MASTER_HEARTBEAT_PERIOD= 16,
+
+  /* MySQL Cluster 6.3 added master_bind */
+  LINE_FOR_MASTER_BIND = 17,
+
+  /* 6.0 added value of master_ignore_server_id */
+  LINE_FOR_REPLICATE_IGNORE_SERVER_IDS= 18,
+
+  /* 6.0 added value of master_uuid */
+  LINE_FOR_MASTER_UUID= 19,
+
+  /* line for master_retry_count */
+  LINE_FOR_MASTER_RETRY_COUNT= 20,
+
+  /* line for ssl_crl */
+  LINE_FOR_SSL_CRL= 21,
+
+  /* line for ssl_crl */
+  LINE_FOR_SSL_CRLPATH= 22,
+
+  /* Number of lines currently used when saving master info file */
+  LINES_IN_MASTER_INFO= LINE_FOR_SSL_CRLPATH
+};
+
+int init_master_info(Master_info* mi, const char* master_info_fname,
+                     const char* slave_info_fname,
+                     bool abort_if_no_master_info_file,
+                     int thread_mask)
+{
+  int fd,error;
+  char fname[FN_REFLEN+128];
+  DBUG_ENTER("init_master_info");
+
+  if (mi->inited)
+  {
+    /*
+      We have to reset read position of relay-log-bin as we may have
+      already been reading from 'hotlog' when the slave was stopped
+      last time. If this case pos_in_file would be set and we would
+      get a crash when trying to read the signature for the binary
+      relay log.
+
+      We only rewind the read position if we are starting the SQL
+      thread. The handle_slave_sql thread assumes that the read
+      position is at the beginning of the file, and will read the
+      "signature" and then fast-forward to the last position read.
+    */
+    if (thread_mask & SLAVE_SQL)
+    {
+      bool hot_log= FALSE;
+      /* 
+         my_b_seek does an implicit flush_io_cache, so we need to:
+
+         1. check if this log is active (hot)
+         2. if it is we keep log_lock until the seek ends, otherwise 
+            release it right away.
+
+         If we did not take log_lock, SQL thread might race with IO
+         thread for the IO_CACHE mutex.
+
+       */
+      mysql_mutex_t *log_lock= mi->rli.relay_log.get_log_lock();
+      mysql_mutex_lock(log_lock);
+      hot_log= mi->rli.relay_log.is_active(mi->rli.linfo.log_file_name);
+
+      if (!hot_log)
+        mysql_mutex_unlock(log_lock);
+
+      my_b_seek(mi->rli.cur_log, (my_off_t) 0);
+
+      if (hot_log)
+        mysql_mutex_unlock(log_lock);
+    }
+    DBUG_RETURN(0);
+  }
+
+  mi->mysql=0;
+  mi->file_id=1;
+  fn_format(fname, master_info_fname, mysql_data_home, "", 4+32);
+
+  /*
+    We need a mutex while we are changing master info parameters to
+    keep other threads from reading bogus info
+  */
+
+  mysql_mutex_lock(&mi->data_lock);
+  fd = mi->fd;
+
+  /* does master.info exist ? */
+
+  if (access(fname,F_OK))
+  {
+    if (abort_if_no_master_info_file)
+    {
+      mysql_mutex_unlock(&mi->data_lock);
+      DBUG_RETURN(0);
+    }
+    /*
+      if someone removed the file from underneath our feet, just close
+      the old descriptor and re-create the old file
+    */
+    if (fd >= 0)
+      mysql_file_close(fd, MYF(MY_WME));
+    if ((fd= mysql_file_open(key_file_master_info,
+                             fname, O_CREAT|O_RDWR|O_BINARY, MYF(MY_WME))) < 0 )
+    {
+      sql_print_error("Failed to create a new master info file (\
+file '%s', errno %d)", fname, my_errno);
+      goto err;
+    }
+    if (init_io_cache(&mi->file, fd, IO_SIZE*2, READ_CACHE, 0L,0,
+                      MYF(MY_WME)))
+    {
+      sql_print_error("Failed to create a cache on master info file (\
+file '%s')", fname);
+      goto err;
+    }
+
+    mi->fd = fd;
+    mi->clear_in_memory_info(false);
+
+  }
+  else // file exists
+  {
+    if (fd >= 0)
+      reinit_io_cache(&mi->file, READ_CACHE, 0L,0,0);
+    else
+    {
+      if ((fd= mysql_file_open(key_file_master_info,
+                               fname, O_RDWR|O_BINARY, MYF(MY_WME))) < 0 )
+      {
+        sql_print_error("Failed to open the existing master info file (\
+file '%s', errno %d)", fname, my_errno);
+        goto err;
+      }
+      if (init_io_cache(&mi->file, fd, IO_SIZE*2, READ_CACHE, 0L,
+                        0, MYF(MY_WME)))
+      {
+        sql_print_error("Failed to create a cache on master info file (\
+file '%s')", fname);
+        goto err;
+      }
+    }
+
+    mi->fd = fd;
+    int port, connect_retry, master_log_pos, lines;
+    int ssl= 0, ssl_verify_server_cert= 0;
+    float master_heartbeat_period= 0.0;
+    char *first_non_digit;
+    char dummy_buf[HOSTNAME_LENGTH+1];
+
+    /*
+       Starting from 4.1.x master.info has new format. Now its
+       first line contains number of lines in file. By reading this
+       number we will be always distinguish to which version our
+       master.info corresponds to. We can't simply count lines in
+       file since versions before 4.1.x could generate files with more
+       lines than needed.
+       If first line doesn't contain a number or contain number less than
+       LINES_IN_MASTER_INFO_WITH_SSL then such file is treated like file
+       from pre 4.1.1 version.
+       There is no ambiguity when reading an old master.info, as before
+       4.1.1, the first line contained the binlog's name, which is either
+       empty or has an extension (contains a '.'), so can't be confused
+       with an integer.
+
+       So we're just reading first line and trying to figure which version
+       is this.
+    */
+
+    /*
+       The first row is temporarily stored in mi->master_log_name,
+       if it is line count and not binlog name (new format) it will be
+       overwritten by the second row later.
+    */
+    if (init_strvar_from_file(mi->master_log_name,
+                              sizeof(mi->master_log_name), &mi->file,
+                              ""))
+      goto errwithmsg;
+
+    lines= strtoul(mi->master_log_name, &first_non_digit, 10);
+
+    if (mi->master_log_name[0]!='\0' &&
+        *first_non_digit=='\0' && lines >= LINES_IN_MASTER_INFO_WITH_SSL)
+    {
+      /* Seems to be new format => read master log name from next line */
+      if (init_strvar_from_file(mi->master_log_name,
+            sizeof(mi->master_log_name), &mi->file, ""))
+        goto errwithmsg;
+    }
+    else
+      lines= 7;
+
+    if (init_intvar_from_file(&master_log_pos, &mi->file, 4) ||
+        init_strvar_from_file(mi->host, sizeof(mi->host), &mi->file, 0) ||
+        init_strvar_from_file(mi->user, sizeof(mi->user), &mi->file, "test") ||
+        init_strvar_from_file(mi->password, SCRAMBLED_PASSWORD_CHAR_LENGTH+1,
+                              &mi->file, 0) ||
+        init_intvar_from_file(&port, &mi->file, MYSQL_PORT) ||
+        init_intvar_from_file(&connect_retry, &mi->file,
+                              DEFAULT_CONNECT_RETRY))
+      goto errwithmsg;
+
+    /*
+       If file has ssl part use it even if we have server without
+       SSL support. But these options will be ignored later when
+       slave will try connect to master, so in this case warning
+       is printed.
+     */
+    if (lines >= LINES_IN_MASTER_INFO_WITH_SSL)
+    {
+      if (init_intvar_from_file(&ssl, &mi->file, 0) ||
+          init_strvar_from_file(mi->ssl_ca, sizeof(mi->ssl_ca),
+                                &mi->file, 0) ||
+          init_strvar_from_file(mi->ssl_capath, sizeof(mi->ssl_capath),
+                                &mi->file, 0) ||
+          init_strvar_from_file(mi->ssl_cert, sizeof(mi->ssl_cert),
+                                &mi->file, 0) ||
+          init_strvar_from_file(mi->ssl_cipher, sizeof(mi->ssl_cipher),
+                                &mi->file, 0) ||
+          init_strvar_from_file(mi->ssl_key, sizeof(mi->ssl_key),
+                                &mi->file, 0))
+        goto errwithmsg;
+
+      /*
+        Starting from 5.1.16 ssl_verify_server_cert might be
+        in the file
+      */
+      if (lines >= LINE_FOR_MASTER_SSL_VERIFY_SERVER_CERT &&
+          init_intvar_from_file(&ssl_verify_server_cert, &mi->file, 0))
+        goto errwithmsg;
+      /*
+        Starting from 6.0 master_heartbeat_period might be
+        in the file
+      */
+      if (lines >= LINE_FOR_MASTER_HEARTBEAT_PERIOD &&
+          init_floatvar_from_file(&master_heartbeat_period, &mi->file, 0.0))
+        goto errwithmsg;
+      /*
+	Starting from MySQL Cluster 6.3 master_bind might be in the file
+	(this is just a reservation to avoid future upgrade problems) 
+       */
+      if (lines >= LINE_FOR_MASTER_BIND &&
+	  init_strvar_from_file(dummy_buf, sizeof(dummy_buf), &mi->file, ""))
+	  goto errwithmsg;
+      /*
+        Starting from 6.0 list of server_id of ignorable servers might be
+        in the file
+      */
+      if (lines >= LINE_FOR_REPLICATE_IGNORE_SERVER_IDS &&
+          init_dynarray_intvar_from_file(&mi->ignore_server_ids, &mi->file))
+      {
+        sql_print_error("Failed to initialize master info ignore_server_ids");
+        goto errwithmsg;
+      }
+
+      /* reserved */
+      if (lines >= LINE_FOR_MASTER_UUID &&
+	  init_strvar_from_file(dummy_buf, sizeof(dummy_buf), &mi->file, ""))
+	  goto errwithmsg;
+
+      /* Starting from 5.5 the master_retry_count may be in the repository. */
+      if (lines >= LINE_FOR_MASTER_RETRY_COUNT &&
+	  init_strvar_from_file(dummy_buf, sizeof(dummy_buf), &mi->file, ""))
+	  goto errwithmsg;
+
+      if (lines >= LINE_FOR_SSL_CRLPATH &&
+	  (init_strvar_from_file(mi->ssl_crl, sizeof(mi->ssl_crl),
+                                 &mi->file, "") ||
+	   init_strvar_from_file(mi->ssl_crlpath, sizeof(mi->ssl_crlpath),
+                                 &mi->file, "")))
+	  goto errwithmsg;
+    }
+
+#ifndef HAVE_OPENSSL
+    if (ssl)
+      sql_print_warning("SSL information in the master info file "
+                      "('%s') are ignored because this MySQL slave was "
+                      "compiled without SSL support.", fname);
+#endif /* HAVE_OPENSSL */
+
+    /*
+      This has to be handled here as init_intvar_from_file can't handle
+      my_off_t types
+    */
+    mi->master_log_pos= (my_off_t) master_log_pos;
+    mi->port= (uint) port;
+    mi->connect_retry= (uint) connect_retry;
+    mi->ssl= (my_bool) ssl;
+    mi->ssl_verify_server_cert= ssl_verify_server_cert;
+    mi->heartbeat_period= master_heartbeat_period;
+  }
+  DBUG_PRINT("master_info",("log_file_name: %s  position: %ld",
+                            mi->master_log_name,
+                            (ulong) mi->master_log_pos));
+
+  mi->rli.mi= mi;
+  if (init_relay_log_info(&mi->rli, slave_info_fname))
+    goto err;
+
+  mi->inited = 1;
+  mi->rli.is_relay_log_recovery= FALSE;
+  // now change cache READ -> WRITE - must do this before flush_master_info
+  reinit_io_cache(&mi->file, WRITE_CACHE, 0L, 0, 1);
+  if ((error=test(flush_master_info(mi, TRUE, TRUE))))
+    sql_print_error("Failed to flush master info file");
+  mysql_mutex_unlock(&mi->data_lock);
+  DBUG_RETURN(error);
+
+errwithmsg:
+  sql_print_error("Error reading master configuration");
+
+err:
+  if (fd >= 0)
+  {
+    mysql_file_close(fd, MYF(0));
+    end_io_cache(&mi->file);
+  }
+  mi->fd= -1;
+  mysql_mutex_unlock(&mi->data_lock);
+  DBUG_RETURN(1);
+}
+
+
+/*
+  RETURN
+     2 - flush relay log failed
+     1 - flush master info failed
+     0 - all ok
+*/
+int flush_master_info(Master_info* mi, 
+                      bool flush_relay_log_cache, 
+                      bool need_lock_relay_log)
+{
+  IO_CACHE* file = &mi->file;
+  char lbuf[22];
+  int err= 0;
+
+  DBUG_ENTER("flush_master_info");
+  DBUG_PRINT("enter",("master_pos: %ld", (long) mi->master_log_pos));
+
+  /*
+    Flush the relay log to disk. If we don't do it, then the relay log while
+    have some part (its last kilobytes) in memory only, so if the slave server
+    dies now, with, say, from master's position 100 to 150 in memory only (not
+    on disk), and with position 150 in master.info, then when the slave
+    restarts, the I/O thread will fetch binlogs from 150, so in the relay log
+    we will have "[0, 100] U [150, infinity[" and nobody will notice it, so the
+    SQL thread will jump from 100 to 150, and replication will silently break.
+
+    When we come to this place in code, relay log may or not be initialized;
+    the caller is responsible for setting 'flush_relay_log_cache' accordingly.
+  */
+  if (flush_relay_log_cache)
+  {
+    mysql_mutex_t *log_lock= mi->rli.relay_log.get_log_lock();
+    IO_CACHE *log_file= mi->rli.relay_log.get_log_file();
+
+    if (need_lock_relay_log)
+      mysql_mutex_lock(log_lock);
+
+    mysql_mutex_assert_owner(log_lock);
+    err= flush_io_cache(log_file);
+
+    if (need_lock_relay_log)
+      mysql_mutex_unlock(log_lock);
+
+    if (err)
+      DBUG_RETURN(2);
+  }
+  
+  /*
+    produce a line listing the total number and all the ignored server_id:s
+  */
+  char* ignore_server_ids_buf;
+  {
+    ignore_server_ids_buf=
+      (char *) my_malloc((sizeof(::server_id) * 3 + 1) *
+                         (1 + mi->ignore_server_ids.elements), MYF(MY_WME));
+    if (!ignore_server_ids_buf)
+      DBUG_RETURN(1);
+    ulong cur_len= sprintf(ignore_server_ids_buf, "%u",
+                           mi->ignore_server_ids.elements);
+    for (ulong i= 0; i < mi->ignore_server_ids.elements; i++)
+    {
+      ulong s_id;
+      get_dynamic(&mi->ignore_server_ids, (uchar*) &s_id, i);
+      cur_len+= sprintf(ignore_server_ids_buf + cur_len, " %lu", s_id);
+    }
+  }
+
+  /*
+    We flushed the relay log BEFORE the master.info file, because if we crash
+    now, we will get a duplicate event in the relay log at restart. If we
+    flushed in the other order, we would get a hole in the relay log.
+    And duplicate is better than hole (with a duplicate, in later versions we
+    can add detection and scrap one event; with a hole there's nothing we can
+    do).
+  */
+
+  /*
+     In certain cases this code may create master.info files that seems
+     corrupted, because of extra lines filled with garbage in the end
+     file (this happens if new contents take less space than previous
+     contents of file). But because of number of lines in the first line
+     of file we don't care about this garbage.
+  */
+  char heartbeat_buf[sizeof(mi->heartbeat_period) * 4]; // buffer to suffice always
+  sprintf(heartbeat_buf, "%.3f", mi->heartbeat_period);
+  my_b_seek(file, 0L);
+  my_b_printf(file,
+              "%u\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n%d\n%s\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n",
+              LINES_IN_MASTER_INFO,
+              mi->master_log_name, llstr(mi->master_log_pos, lbuf),
+              mi->host, mi->user,
+              mi->password, mi->port, mi->connect_retry,
+              (int)(mi->ssl), mi->ssl_ca, mi->ssl_capath, mi->ssl_cert,
+              mi->ssl_cipher, mi->ssl_key, mi->ssl_verify_server_cert,
+              heartbeat_buf, "", ignore_server_ids_buf,
+              "", 0,
+              mi->ssl_crl, mi->ssl_crlpath);
+  my_free(ignore_server_ids_buf);
+  err= flush_io_cache(file);
+  if (sync_masterinfo_period && !err && 
+      ++(mi->sync_counter) >= sync_masterinfo_period)
+  {
+    err= my_sync(mi->fd, MYF(MY_WME));
+    mi->sync_counter= 0;
+  }
+  DBUG_RETURN(-err);
+}
+
+
+void end_master_info(Master_info* mi)
+{
+  DBUG_ENTER("end_master_info");
+
+  if (!mi->inited)
+    DBUG_VOID_RETURN;
+  end_relay_log_info(&mi->rli);
+  if (mi->fd >= 0)
+  {
+    end_io_cache(&mi->file);
+    mysql_file_close(mi->fd, MYF(MY_WME));
+    mi->fd = -1;
+  }
+  mi->inited = 0;
+
+  DBUG_VOID_RETURN;
+}
+
+/* Multi-Master By P.Linux */
+uchar *get_key_master_info(Master_info *mi, size_t *length,
+                           my_bool not_used __attribute__((unused)))
+{
+  /* Return lower case name */
+  *length= mi->cmp_connection_name.length;
+  return (uchar*) mi->cmp_connection_name.str;
+}
+
+void free_key_master_info(Master_info *mi)
+{
+  DBUG_ENTER("free_key_master_info");
+  terminate_slave_threads(mi,SLAVE_FORCE_ALL);
+  end_master_info(mi);
+  delete mi;
+  DBUG_VOID_RETURN;
+}
+
+/**
+   Check if connection name for master_info is valid.
+
+   It's valid if it's a valid system name of length less than
+   MAX_CONNECTION_NAME.
+
+   @return
+   0 ok
+   1 error
+*/
+
+bool check_master_connection_name(LEX_STRING *name)
+{
+  if (name->length >= MAX_CONNECTION_NAME)
+    return 1;
+  return 0;
+}
+ 
+
+/**
+   Create a log file with a given suffix.
+
+   @param
+   res_file_name	Store result here
+   length		Length of res_file_name buffer
+   info_file		Original file name (prefix)
+   append		1 if we should add suffix last (not before ext)
+   suffix		Suffix
+
+   @note
+   The suffix is added before the extension of the file name prefixed with '-'.
+   The suffix is also converted to lower case and we transform
+   all not safe character, as we do with MySQL table names.
+
+   If suffix is an empty string, then we don't add any suffix.
+   This is to allow one to use this function also to generate old
+   file names without a prefix.
+*/
+
+void create_logfile_name_with_suffix(char *res_file_name, uint length,
+                             const char *info_file, bool append,
+                             LEX_STRING *suffix)
+{
+  char buff[MAX_CONNECTION_NAME+1], res[MAX_CONNECTION_NAME+1], *p;
+
+  p= strmake(res_file_name, info_file, length);
+  /* If not empty suffix and there is place left for some part of the suffix */
+  if (suffix->length != 0 && p <= res_file_name + length -1)
+  {
+    const char *info_file_end= info_file + (p - res_file_name);
+    const char *ext= append ? info_file_end : fn_ext2(info_file);
+    size_t res_length, ext_pos;
+    uint errors;
+
+    /* Create null terminated string */
+    strmake(buff, suffix->str, suffix->length);
+    /* Convert to lower case */
+    my_casedn_str(system_charset_info, buff);
+    /* Convert to characters usable in a file name */
+    res_length= strconvert(system_charset_info, buff,
+                           &my_charset_filename, res, sizeof(res), &errors);
+    
+    ext_pos= (size_t) (ext - info_file);
+    length-= (suffix->length - ext_pos); /* Leave place for extension */
+    p= res_file_name + ext_pos;
+    *p++= '-';                           /* Add separator */
+    p= strmake(p, res, min((size_t) (length - (p - res_file_name)),
+                           res_length));
+    /* Add back extension. We have checked above that there is space for it */
+    strmov(p, ext);
+  }
+}
+
+
+Master_info_index::Master_info_index()
+{
+  size_t filename_length, dir_length;
+  /*
+    Create the Master_info index file by prepending 'multi-' before
+    the master_info_file file name.
+  */
+  fn_format(index_file_name, master_info_file, mysql_data_home,
+            "", MY_UNPACK_FILENAME);
+  filename_length= strlen(index_file_name) + 1; /* Count 0 byte */
+  dir_length= dirname_length(index_file_name);
+  bmove_upp((uchar*) index_file_name + filename_length + 6,
+            (uchar*) index_file_name + filename_length,
+            filename_length - dir_length);
+  memcpy(index_file_name + dir_length, "multi-", 6);
+
+  bzero((char*) &index_file, sizeof(index_file));
+}
+
+Master_info_index::~Master_info_index()
+{
+  /* This will close connection for all objects in the cache */
+  my_hash_free(&master_info_hash);
+  end_io_cache(&index_file);
+  if (index_file.file > 0)
+    my_close(index_file.file, MYF(MY_WME));
+}
+
+
+/* Load All Master_info from master.info.index File
+ * RETURN:
+ *   0 - All Success
+ *   1 - All Fail
+ *   2 - Some Success, Some Fail
+ */
+
+bool Master_info_index::init_all_master_info()
+{
+  int thread_mask;
+  int err_num= 0, succ_num= 0; // The number of success read Master_info
+  char sign[MAX_CONNECTION_NAME];
+  File index_file_nr;
+  DBUG_ENTER("init_all_master_info");
+
+  if ((index_file_nr= my_open(index_file_name,
+                              O_RDWR | O_CREAT | O_BINARY ,
+                              MYF(MY_WME | ME_NOREFRESH))) < 0 ||
+      my_sync(index_file_nr, MYF(MY_WME)) ||
+      init_io_cache(&index_file, index_file_nr,
+                    IO_SIZE, READ_CACHE,
+                    my_seek(index_file_nr,0L,MY_SEEK_END,MYF(0)),
+                    0, MYF(MY_WME | MY_WAIT_IF_FULL)))
+  {
+    if (index_file_nr >= 0)
+      my_close(index_file_nr,MYF(0));
+
+    sql_print_error("Creation of Master_info index file '%s' failed",
+                    index_file_name);
+    DBUG_RETURN(1);
+  }
+
+  /* Initialize Master_info Hash Table */
+  if (my_hash_init(&master_info_hash, system_charset_info, 
+                   MAX_REPLICATION_THREAD, 0, 0, 
+                   (my_hash_get_key) get_key_master_info, 
+                   (my_hash_free_key)free_key_master_info, HASH_UNIQUE))
+  {                                                      
+    sql_print_error("Initializing Master_info hash table failed");
+    DBUG_RETURN(1);
+  }
+
+  reinit_io_cache(&index_file, READ_CACHE, 0L,0,0);
+  while (!init_strvar_from_file(sign, sizeof(sign),
+                                &index_file, NULL))
+  {
+    LEX_STRING connection_name;
+    Master_info *mi;
+    char buf_master_info_file[FN_REFLEN];
+    char buf_relay_log_info_file[FN_REFLEN];
+
+    connection_name.str=    sign;
+    connection_name.length= strlen(sign);
+    if (!(mi= new Master_info(&connection_name, relay_log_recovery)) ||
+        mi->error())
+    {
+      delete mi;
+      DBUG_RETURN(1);
+    }
+
+    lock_slave_threads(mi);
+    init_thread_mask(&thread_mask,mi,0 /*not inverse*/);
+
+    create_logfile_name_with_suffix(buf_master_info_file, sizeof(buf_master_info_file),
+                            master_info_file, 0, &connection_name);
+    create_logfile_name_with_suffix(buf_relay_log_info_file,
+                            sizeof(buf_relay_log_info_file),
+                            relay_log_info_file, 0, &connection_name);
+    if (global_system_variables.log_warnings > 1)
+      sql_print_information("Reading Master_info: '%s'  Relay_info:'%s'",
+                            buf_master_info_file, buf_relay_log_info_file);
+
+    if (init_master_info(mi, buf_master_info_file, buf_relay_log_info_file, 
+                         0, thread_mask))
+    {
+      err_num++;
+      sql_print_error("Initialized Master_info from '%s' failed",
+                      buf_master_info_file);
+      if (!master_info_index->get_master_info(&connection_name,
+                                              MYSQL_ERROR::WARN_LEVEL_NOTE))
+      {
+        /* Master_info is not in HASH; Add it */
+        if (master_info_index->add_master_info(mi, FALSE))
+          return 1;
+        succ_num++;
+        unlock_slave_threads(mi);
+      }
+      else
+      {
+        /* Master_info already in HASH */
+        sql_print_error(ER(ER_CONNECTION_ALREADY_EXISTS),
+                        (int) connection_name.length, connection_name.str);
+        unlock_slave_threads(mi);
+        delete mi;
+      }
+      continue;
+    }
+    else
+    {
+      /* Initialization of Master_info succeded. Add it to HASH */
+      if (global_system_variables.log_warnings > 1)
+        sql_print_information("Initialized Master_info from '%s'",
+                              buf_master_info_file);
+      if (master_info_index->get_master_info(&connection_name,
+                                             MYSQL_ERROR::WARN_LEVEL_NOTE))
+      {
+        /* Master_info was already registered */
+        sql_print_error(ER(ER_CONNECTION_ALREADY_EXISTS),
+                        (int) connection_name.length, connection_name.str);
+        unlock_slave_threads(mi);
+        delete mi;
+        continue;
+      }
+
+      /* Master_info was not registered; add it */
+      if (master_info_index->add_master_info(mi, FALSE))
+        return 1;
+      succ_num++;
+      unlock_slave_threads(mi);
+
+      if (!opt_skip_slave_start)
+      {
+        if (start_slave_threads(1 /* need mutex */,
+              0 /* no wait for start*/,
+              mi,
+              buf_master_info_file,
+              buf_relay_log_info_file,
+              SLAVE_IO | SLAVE_SQL))
+        {
+          sql_print_error("Failed to create slave threads for connection '%.*s'",
+                          (int) connection_name.length,
+                          connection_name.str);
+          continue;
+        }
+        if (global_system_variables.log_warnings)
+          sql_print_information("Started replication for '%.*s'",
+                                (int) connection_name.length,
+                                connection_name.str);
+      }
+    }
+  }
+
+  if (!err_num) // No Error on read Master_info
+  {
+    if (global_system_variables.log_warnings > 1)
+      sql_print_information("Reading of all Master_info entries succeded");
+    DBUG_RETURN(0);
+  }
+  else if (succ_num) // Have some Error and some Success
+  {
+    sql_print_warning("Reading of some Master_info entries failed");
+    DBUG_RETURN(2);
+  }
+  else // All failed
+  {
+    sql_print_error("Reading of all Master_info entries failed!");
+    DBUG_RETURN(1);
+  }
+}
+
+
+/* Write new master.info to master.info.index File */
+bool Master_info_index::write_master_name_to_index_file(LEX_STRING *name,
+                                                        bool do_sync)
+{
+  DBUG_ASSERT(my_b_inited(&index_file) != 0);
+  DBUG_ENTER("write_master_name_to_index_file");
+
+  /* Don't write default slave to master_info.index */
+  if (name->length == 0)
+    DBUG_RETURN(0);
+
+  reinit_io_cache(&index_file, WRITE_CACHE,
+                  my_b_filelength(&index_file), 0, 0);
+
+  if (my_b_write(&index_file, (uchar*) name->str, name->length) ||
+      my_b_write(&index_file, (uchar*) "\n", 1) ||
+      flush_io_cache(&index_file) ||
+      (do_sync && my_sync(index_file.file, MYF(MY_WME))))
+  {
+    sql_print_error("Write of new Master_info for '%.*s' to index file failed",
+                    (int) name->length, name->str);
+    DBUG_RETURN(1);
+  }
+
+  DBUG_RETURN(0);
+}
+
+
+/**
+   Get Master_info for a connection
+
+   @param
+   connection_name	Connection name
+   warning		WARN_LEVEL_NOTE -> Don't print anything
+			WARN_LEVEL_WARN -> Issue warning if not exists
+			WARN_LEVEL_ERROR-> Issue error if not exists
+*/
+
+Master_info *
+Master_info_index::get_master_info(LEX_STRING *connection_name,
+                                   MYSQL_ERROR::enum_warning_level warning)
+{
+  Master_info *mi;
+  char buff[MAX_CONNECTION_NAME+1], *res;
+  uint buff_length;
+  DBUG_ENTER("get_master_info");
+  DBUG_PRINT("enter",
+             ("connection_name: '%.*s'", (int) connection_name->length,
+              connection_name->str));
+
+  /* Make name lower case for comparison */
+  res= strmake(buff, connection_name->str, connection_name->length);
+  my_casedn_str(system_charset_info, buff); 
+  buff_length= (size_t) (res-buff);
+
+  mi= (Master_info*) my_hash_search(&master_info_hash,
+                                    (uchar*) buff, buff_length);
+  if (!mi && warning != MYSQL_ERROR::WARN_LEVEL_NOTE)
+  {
+    my_error(WARN_NO_MASTER_INFO,
+             MYF(warning == MYSQL_ERROR::WARN_LEVEL_WARN ? ME_JUST_WARNING :
+                 0),
+             (int) connection_name->length,
+             connection_name->str);
+  }
+  DBUG_RETURN(mi);
+}
+
+
+/* Check Master_host & Master_port is duplicated or not */
+bool Master_info_index::check_duplicate_master_info(LEX_STRING *name_arg,
+                                                    const char *host,
+                                                    uint port)
+{
+  Master_info *mi;
+  DBUG_ENTER("check_duplicate_master_info");
+
+  /* Get full host and port name */
+  if ((mi= master_info_index->get_master_info(name_arg,
+                                              MYSQL_ERROR::WARN_LEVEL_NOTE)))
+  {
+    if (!host)
+      host= mi->host;
+    if (!port)
+      port= mi->port;
+  }
+  if (!host || !port)
+    DBUG_RETURN(FALSE);                         // Not comparable yet
+
+  for (uint i= 0; i < master_info_hash.records; ++i)
+  {
+    Master_info *tmp_mi;
+    tmp_mi= (Master_info *) my_hash_element(&master_info_hash, i);
+    if (tmp_mi == mi)
+      continue;                                 // Current connection
+    if (!strcasecmp(host, tmp_mi->host) && port == tmp_mi->port)
+    {
+      my_error(ER_CONNECTION_ALREADY_EXISTS, MYF(0),
+               (int) name_arg->length,
+               name_arg->str,
+               (int) tmp_mi->connection_name.length,
+               tmp_mi->connection_name.str);
+      DBUG_RETURN(TRUE);
+    }
+  }
+  DBUG_RETURN(FALSE);
+}
+
+
+/* Add a Master_info class to Hash Table */
+bool Master_info_index::add_master_info(Master_info *mi, bool write_to_file)
+{
+  if (!my_hash_insert(&master_info_hash, (uchar*) mi))
+  {
+    if (global_system_variables.log_warnings > 1)
+      sql_print_information("Added new Master_info '%.*s' to hash table",
+                            (int) mi->connection_name.length,
+                            mi->connection_name.str);
+    if (write_to_file)
+      return write_master_name_to_index_file(&mi->connection_name, 1);
+    return FALSE;
+  }
+
+  /* Impossible error (EOM) ? */
+  sql_print_error("Adding new entry '%.*s' to master_info failed",
+                  (int) mi->connection_name.length,
+                  mi->connection_name.str);
+  return TRUE;
+}
+
+
+/**
+   Remove a Master_info class From Hash Table
+
+   TODO: Change this to use my_rename() to make the file name creation
+   atomic
+*/
+
+bool Master_info_index::remove_master_info(LEX_STRING *name)
+{
+  Master_info* mi;
+  DBUG_ENTER("remove_master_info");
+
+  if ((mi= get_master_info(name, MYSQL_ERROR::WARN_LEVEL_WARN)))
+  {
+    // Delete Master_info and rewrite others to file
+    if (!my_hash_delete(&master_info_hash, (uchar*) mi))
+    {
+      File index_file_nr;
+
+      // Close IO_CACHE and FILE handler fisrt
+      end_io_cache(&index_file);
+      my_close(index_file.file, MYF(MY_WME));
+
+      // Reopen File and truncate it
+      if ((index_file_nr= my_open(index_file_name,
+                                  O_RDWR | O_CREAT | O_TRUNC | O_BINARY ,
+                                  MYF(MY_WME))) < 0 ||
+          init_io_cache(&index_file, index_file_nr,
+                        IO_SIZE, WRITE_CACHE,
+                        my_seek(index_file_nr,0L,MY_SEEK_END,MYF(0)),
+                        0, MYF(MY_WME | MY_WAIT_IF_FULL)))
+      {
+        int error= my_errno;
+        if (index_file_nr >= 0)
+          my_close(index_file_nr,MYF(0));
+
+        sql_print_error("Create of Master Info Index file '%s' failed with "
+                        "error: %M",
+                        index_file_name, error);
+        DBUG_RETURN(TRUE);
+      }
+
+      // Rewrite Master_info.index
+      for (uint i= 0; i< master_info_hash.records; ++i)
+      {
+        Master_info *tmp_mi;
+        tmp_mi= (Master_info *) my_hash_element(&master_info_hash, i);
+        write_master_name_to_index_file(&tmp_mi->connection_name, 0);
+      }
+      my_sync(index_file_nr, MYF(MY_WME));
+    }
+  }
+  DBUG_RETURN(FALSE);
+}
+
+
+/**
+   Master_info_index::give_error_if_slave_running()
+
+   @return
+   TRUE  	If some slave is running.  An error is printed
+   FALSE	No slave is running
+*/
+
+bool Master_info_index::give_error_if_slave_running()
+{
+  DBUG_ENTER("warn_if_slave_running");
+  mysql_mutex_assert_owner(&LOCK_active_mi);
+
+  for (uint i= 0; i< master_info_hash.records; ++i)
+  {
+    Master_info *mi;
+    mi= (Master_info *) my_hash_element(&master_info_hash, i);
+    if (mi->rli.slave_running != MYSQL_SLAVE_NOT_RUN)
+    {
+      my_error(ER_SLAVE_MUST_STOP, MYF(0), (int) mi->connection_name.length,
+               mi->connection_name.str);
+      DBUG_RETURN(TRUE);
+    }
+  }
+  DBUG_RETURN(FALSE);
+}
+
+
+/**
+   Master_info_index::start_all_slaves()
+
+   Start all slaves that was not running.
+
+   @return
+   TRUE  	Error
+   FALSE	Everything ok.
+*/
+
+bool Master_info_index::start_all_slaves(THD *thd)
+{
+  bool result= FALSE;
+  DBUG_ENTER("warn_if_slave_running");
+  mysql_mutex_assert_owner(&LOCK_active_mi);
+
+  for (uint i= 0; i< master_info_hash.records; ++i)
+  {
+    int error;
+    Master_info *mi;
+    mi= (Master_info *) my_hash_element(&master_info_hash, i);
+
+    /*
+      Try to start all slaves that are configured (host is defined)
+      and are not already running
+    */
+    if ((mi->slave_running != MYSQL_SLAVE_RUN_CONNECT ||
+         !mi->rli.slave_running) && *mi->host)
+    {
+      if ((error= start_slave(thd, mi, 1)))
+      {
+        my_error(ER_CANT_START_STOP_SLAVE, MYF(0),
+                 "START",
+                 (int) mi->connection_name.length,
+                 mi->connection_name.str);
+        result= 1;
+        if (error < 0)                            // fatal error
+          break;
+      }
+      else
+        push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_NOTE,
+                            ER_SLAVE_STARTED, ER(ER_SLAVE_STARTED),
+                            (int) mi->connection_name.length,
+                            mi->connection_name.str);
+    }
+  }
+  DBUG_RETURN(result);
+}
+
+
+/**
+   Master_info_index::stop_all_slaves()
+
+   Start all slaves that was not running.
+
+   @return
+   TRUE  	Error
+   FALSE	Everything ok.
+*/
+
+bool Master_info_index::stop_all_slaves(THD *thd)
+{
+  bool result= FALSE;
+  DBUG_ENTER("warn_if_slave_running");
+  mysql_mutex_assert_owner(&LOCK_active_mi);
+
+  for (uint i= 0; i< master_info_hash.records; ++i)
+  {
+    int error;
+    Master_info *mi;
+    mi= (Master_info *) my_hash_element(&master_info_hash, i);
+    if ((mi->slave_running != MYSQL_SLAVE_NOT_RUN ||
+         mi->rli.slave_running))
+    {
+      if ((error= stop_slave(thd, mi, 1)))
+      {
+        my_error(ER_CANT_START_STOP_SLAVE, MYF(0),
+                 "STOP",
+                 (int) mi->connection_name.length,
+                 mi->connection_name.str);
+        result= 1;
+        if (error < 0)                            // Fatal error
+          break;
+      }
+      else
+        push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_NOTE,
+                            ER_SLAVE_STOPPED, ER(ER_SLAVE_STOPPED),
+                            (int) mi->connection_name.length,
+                            mi->connection_name.str);
+    }
+  }
+  DBUG_RETURN(result);
+}
+
+#endif /* HAVE_REPLICATION */
