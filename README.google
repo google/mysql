@@ -1,0 +1,87 @@
+The Google MySQL build environment
+==================================
+
+The scripts in the google/ directory provide a convenient way to:
+  - compile a local binary
+  - build a Debian package
+  - start a local master and server
+  - hook up a fresh server to a fresh master
+
+Note: all the scripts are supposed to be run from the main source
+directory.
+
+
+Build prerequisites
+-------------------
+
+To build MySQL, you need to install the following packages:
+  $ sudo apt-get install automake libtool cmake bison
+
+
+Building Debian packages
+------------------------
+
+Build a Debian package (resultant binaries are placed in ../binaries):
+  ./google/deb
+
+Build a Debian package with debugging support, creating a mysqld with
+trace files (see below)
+  ./google/deb debug
+
+Build a Debian package with profiling:
+  ./google/deb profile
+
+
+Other stuff
+-----------
+
+Run the testsuite for a recently build environment:
+  ./google/tests
+
+Bring up an instance configured as master:
+  ./google/instance start master
+
+Bring up an instance configured as slave:
+  ./google/instance start slave
+
+Bring up a standalone instance x:
+  ./google/instance start x
+
+Bring up a standalone instance x under gdb:
+  ./google/instance debug x
+
+Stop/delete some or all instances:
+  ./google/instance stop x y z
+  ./google/instance stop-all
+  ./google/instance delete x y z
+  ./google/instance delete-all
+
+Debug trace files:
+  To enable mysqld trace add --debug --log to the mysqld command.
+  A really big trace file /tmp/mysql.trace will be created.
+
+  Alternatively, you start the server with:
+    --debug=d,info,error,query,general,where:O,/tmp/mysql.trace
+  which only prints information with the most interesting tags.
+
+
+Using the Debian packages
+-------------------------
+
+The Debian package needs to be manually installed:
+  sudo dpkg -i mysql-google-...x86_64.deb
+
+The package includes both the server and all the client programes,
+with all the manpages but no helper scripts.
+
+How to initialize a new server:
+  mysql_install_db --datadir=.../datadir --force
+
+How to start a server (it will also listen to 0.0.0.0:3306):
+  mysqld --no-defaults --datadir=.../datadir --socket=mysql.sock
+
+How to connect to a server:
+  mysql -S .../datadir/mysql.sock -u root
+
+How to gracefully shutdown a server:
+  mysqladmin -S datadir/mysql.sock -u root shutdown

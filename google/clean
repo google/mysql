@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source google/env.inc
+
+make clean 2>/dev/null
+git clean -n -x -d | awk '{print $3}' | \
+  grep -E '^(include/|libmysqld/|mysql-test/|scripts/|sql-bench/|sql/|storage/|support-files/)' | \
+  xargs rm -rf
+find . -name 'Makefile' ! -path './storage/*' | xargs rm -f
+find . -name '*.cmake' ! -path './cmake/*' ! -path './config.h.cmake' \
+       ! -path './configure.cmake' ! -name 'CPackWixConfig.cmake' \
+       ! -name 'heidisql.cmake' ! -path './pcre/*' | xargs rm -f
+find . -name 'CMakeFiles' -type d | xargs rm -rf
+rm -rf CMakeCache.txt Docs/INFO_BIN Testing VERSION.dep abi_check.out \
+       libmysql/libmysql_exports_file.cc libmysql/libmysql_versions.ld \
+       log mysql-test/mtr mysql-test/mysql-test-run \
+       mysql-test/collections/default.release root/ libevent/ \
+       pcre/CTestCustom.ctest pcre/CTestTestfile.cmake \
+       pcre/cmake_install.cmake pcre/config.h pcre/pcre.h \
+       pcre/pcre_chartables.c pcre/pcre_grep_test.sh pcre/pcre_test.sh
+

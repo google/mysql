@@ -1,0 +1,39 @@
+#!/bin/bash
+
+start=$(date +%s)
+
+print_duration() {
+  echo "Duration: $(expr $(date +%s) - ${start}) seconds"
+}
+
+error_exit() {
+  echo '*** Exit on error'
+  print_duration
+}
+
+trap error_exit ERR
+
+set -e -o pipefail
+
+# By default we produce 64 bit debug version.
+: ${GOOGLE_DEBUG:=1}
+: ${GOOGLE_CLANG:=NO}
+
+case $1 in
+  "prod")
+     GOOGLE_DEBUG=
+     ;;
+
+  "valgrind")
+     GOOGLE_VALGRIND=1
+     ;;
+esac
+
+if [[ "$2". = clang. ]]; then
+  GOOGLE_CLANG=YES
+fi
+
+source google/env.inc
+source google/compile.inc 2>&1 | tee log
+
+print_duration

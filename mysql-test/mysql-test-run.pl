@@ -178,7 +178,6 @@ my @DEFAULT_SUITES= qw(
     optimizer_unfixed_bugs-
     parts-
     percona-
-    perfschema-
     plugins-
     roles-
     rpl-

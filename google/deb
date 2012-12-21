@@ -1,0 +1,40 @@
+#!/bin/bash
+
+trap "echo '*** Exit on error'" ERR
+
+set -e
+
+[[ "$1" == "debug" ]] && GOOGLE_DEBUG=1
+
+source google/env.inc
+source google/compile.inc 2>&1 | tee log
+
+# Install
+
+: ${ROOT_DIR:="$(pwd)/root"}
+rm -rf root
+[[ -d ${ROOT_DIR} ]] || mkdir -p ${ROOT_DIR}
+[[ -a $root ]] || ln -s ${ROOT_DIR} root
+
+( cd ${BUILD_DIR}/client ; make -s install DESTDIR=${ROOT_DIR} )
+( cd ${BUILD_DIR}/extra ; make -s install DESTDIR=${ROOT_DIR} )
+
+# Remove the .h files produced by extra
+rm -rf ${ROOT_DIR}/usr/include/mysql/mysqld_error.h
+rm -rf ${ROOT_DIR}/usr/include/mysql/mysqld_ername.h
+rm -rf ${ROOT_DIR}/usr/include/mysql/sql_state.h
+( cd ${BUILD_DIR}/scripts ; make -s install DESTDIR=${ROOT_DIR} )
+
+# Remove empty directories
+find ${ROOT_DIR} -type d -empty -delete
+
+# Build the deb package
+
+mkdir -p -m 0755 ${ROOT_DIR}/DEBIAN
+cat google/mysql.control | \
+  sed 's/@version@/'${MYSQL_VERSION}-${MYSQL_RELEASE}.${release_suffix}'/' \
+  | sed 's/@architecture@/amd64/' \
+  > ${ROOT_DIR}/DEBIAN/control
+mkdir -p ../binaries
+dpkg-deb --build ${ROOT_DIR} \
+  ../binaries/mysql-google-${MYSQL_VERSION}-${MYSQL_RELEASE}.${release_suffix}.${GOOGLE_ARCH}.deb

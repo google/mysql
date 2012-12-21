@@ -1,0 +1,51 @@
+#!/bin/bash
+
+die() {
+  echo $1
+  exit 1
+}
+
+set -o pipefail
+
+TEST_DIR="$(pwd)/mysql-test"
+
+[[ -a sql/mysqld ]] || die "Nothing to do: mysqld is not built yet"
+
+make test | tee ${TEST_DIR}/log.tests
+RESULT=$?
+
+cd ${TEST_DIR}
+if [[ "$1" != "--only-embedded" ]]
+then
+  ./mysql-test-run.pl \
+    --testcase-timeout=1300 \
+    --timer \
+    --force \
+    --max-test-fail=0 \
+    --parallel=auto \
+    --experimental=collections/default.experimental 2>&1 | tee -a log.tests
+  RESULT=${PIPESTATUS[0]}
+fi
+if [[ "$1" != "--no-embedded" ]]
+then
+  ./mysql-test-run.pl \
+    --testcase-timeout=1300 \
+    --timer \
+    --force \
+    --embedded-server \
+    --max-test-fail=0 \
+    --parallel=auto \
+    --experimental=collections/default.experimental 2>&1 | tee -a log.tests
+  : $((RESULT |= ${PIPESTATUS[0]}))
+fi
+
+(
+echo
+if [[ $RESULT != 0 ]]; then
+  echo "Testing failed"
+else
+  echo "All tests completed successfully"
+fi
+) | tee -a log.tests
+exit $RESULT
+

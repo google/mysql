@@ -1,0 +1,597 @@
+#!/bin/bash
+
+source google/env.inc
+
+DEFAULT_GDB=gdb
+
+INSTANCE_TARGET="/tmp/instance"
+INSTANCE_LINK="instance"
+INSTANCE_BASE_PORT=51000
+INSTANCE_BASE_SERVER_ID=0
+INSTANCE_VERSION_FILENAME=mysql.version
+INSTANCE_PID_FILENAME=mysql.pid
+INSTANCE_SERVER_ID_FILENAME=mysql.id
+INSTANCE_PORT_FILENAME=mysql.port
+INSTANCE_SOCK_FILENAME=mysql.sock
+
+usage() {
+  MESSAGE=$1; shift
+
+  if [ "${MESSAGE}" != "" ]
+  then
+    echo "ERROR: ${MESSAGE}"
+    echo
+  fi
+
+  cat << EOF
+Usage: $0 <arguments>
+
+Valid arguments are:
+
+  status [<instance> ...]
+    Print the current status of the instances named, or if none are named,
+    of all instances.
+
+  start <instance> [mysqld arguments]
+    Start the instances named.
+    Any additional arguments will be passed to mysqld on start.
+
+  stop <instance>
+    Stop the instances named using "mysqladmin shutdown".
+
+  restart <instance> [mysqld arguments]
+    Stop and start each instance named.
+    Any additional arguments will be passed to mysqld on start.
+
+  upgrade <instance> [mysqld arguments]
+    Upgrade the instances named, using the 'mysql_upgrade' script. Each
+    instance will be stopped (if running), upgraded, and then restarted.
+    Any additional arguments will be passed to mysqld on start.
+
+  debug <instance> [mysqld arguments]
+    Start the named instance inside a debugger.
+    Any additional arguments will be passed to mysqld on start.
+
+  attach <instance> [debugger arguments]
+    Attach to the (already started) named instance using a debugger.
+    Any additional arguments passed will be passed to the debugger.
+
+  delete <instance>
+    Stop each instance named and delete its directory.
+
+  stop-all [<instance> ...]
+    Stop all of the instances named, or if none are named, all instances.
+
+  delete-all [<instance> ...]
+    Delete all of the instances named, or if none are named, all instances.
+
+  connect <instance> [client arguments]
+    Connect to the named instance using the MySQL client.
+    Any additional arguments passed will be passed to the MySQL client.
+
+Note:
+
+  If the environment variable \$GDB is set, it should contain the name of
+  an alternate debugger to invoke instead of '${DEFAULT_GDB}' (such as 'cgdb'
+  or the like).
+
+
+EOF
+}
+
+BIN_DIR=$BUILD_DIR
+
+find_highest_number() {
+  BASE=$1; shift
+  FILENAME=$1; shift
+  echo ${BASE} $(find ${INSTANCE_LINK}/ -name ${FILENAME} | xargs cat) | fmt -1 | sort -n | tail -n 1
+}
+
+find_unused_port() {
+  HIGHEST_PORT=$(find_highest_number ${INSTANCE_BASE_PORT} ${INSTANCE_PORT_FILENAME})
+  echo -n $((HIGHEST_PORT + 1))
+}
+
+find_unused_server_id() {
+  HIGHEST_SERVER_ID=$(find_highest_number ${INSTANCE_BASE_SERVER_ID} ${INSTANCE_SERVER_ID_FILENAME})
+  echo -n $((HIGHEST_SERVER_ID + 1))
+}
+
+instance_list() {
+  if [[ ! -h ${INSTANCE_LINK} ]]
+  then
+    return 0
+  fi
+
+  for instance_dir in $(ls -1 ${INSTANCE_LINK})
+  do
+    echo ${instance_dir#${INSTANCE_LINK}/}
+  done
+}
+
+instance_path() {
+  echo -n "${INSTANCE_LINK}/$1"
+}
+
+instance_version_file() {
+  echo -n "$(instance_path $1)/${INSTANCE_VERSION_FILENAME}"
+}
+
+instance_version() {
+  INSTANCE_NAME=$1; shift;
+  INSTANCE_VERSION_FILE=$(instance_version_file ${INSTANCE_NAME})
+
+  if [[ -a ${INSTANCE_VERSION_FILE} ]]
+  then
+    tail -n 1 ${INSTANCE_VERSION_FILE} | awk '{ print $3 }'
+  else
+    echo "unknown"
+  fi
+}
+
+instance_version_save() {
+  INSTANCE_NAME=$1; shift;
+  INSTANCE_VERSION_FILE=$(instance_version_file ${INSTANCE_NAME})
+
+  sql/mysqld --version >> ${INSTANCE_VERSION_FILE}
+}
+
+instance_pid_file() {
+  echo -n "$(instance_path $1)/${INSTANCE_PID_FILENAME}"
+}
+
+instance_pid() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_PID_FILE=$(instance_pid_file ${INSTANCE_NAME})
+
+  if [[ ! -a ${INSTANCE_PID_FILE} ]]
+  then
+    return 1
+  fi
+
+  cat ${INSTANCE_PID_FILE}
+}
+
+instance_sock() {
+  echo -n "$(instance_path $1)/${INSTANCE_SOCK_FILENAME}"
+}
+
+instance_port() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_PATH=$(instance_path ${INSTANCE_NAME})
+  INSTANCE_PORT_FILE=${INSTANCE_PATH}/${INSTANCE_PORT_FILENAME}
+
+  if [[ ! -a ${INSTANCE_PATH} ]]
+  then
+    echo "unknown"
+    return 1
+  fi
+
+  if [[ -a ${INSTANCE_PORT_FILE} ]]
+  then
+    PORT=$(cat ${INSTANCE_PORT_FILE})
+  else
+    PORT=$(find_unused_port)
+    echo ${PORT} > ${INSTANCE_PORT_FILE}
+  fi
+
+  echo -n ${PORT}
+}
+
+instance_server_id() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_PATH=$(instance_path ${INSTANCE_NAME})
+  INSTANCE_SERVER_ID_FILE=${INSTANCE_PATH}/${INSTANCE_SERVER_ID_FILENAME}
+
+  if [[ ! -a ${INSTANCE_PATH} ]]
+  then
+    echo "unknown"
+    return 1
+  fi
+
+  if [[ -a ${INSTANCE_SERVER_ID_FILE} ]]
+  then
+    SERVER_ID=$(cat ${INSTANCE_SERVER_ID_FILE})
+  else
+    SERVER_ID=$(find_unused_server_id)
+    echo ${SERVER_ID} > ${INSTANCE_SERVER_ID_FILE}
+  fi
+
+  echo -n ${SERVER_ID}
+}
+
+instance_exists() {
+  INSTANCE_NAME=$1; shift
+
+  if [[ ! -a $(instance_path ${INSTANCE_NAME}) ]]
+  then
+    return 1
+  fi
+
+  return 0
+}
+
+instance_pid_file_exists() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_PID_FILE=$(instance_pid_file ${INSTANCE_NAME})
+
+  if [[ ! -a ${INSTANCE_PID_FILE} ]]
+  then
+    return 1
+  fi
+
+  return 0
+}
+
+instance_process_exists() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_PID=$(instance_pid ${INSTANCE_NAME})
+
+  if [[ -z ${INSTANCE_PID} ]]
+  then
+    return 1
+  fi
+
+  if [[ ! -a /proc/${INSTANCE_PID} ]]
+  then
+    return 1
+  fi
+
+  if ! grep mysqld /proc/${INSTANCE_PID}/cmdline &>/dev/null
+  then
+    return 1
+  fi
+
+  return 0
+}
+
+instance_is_running() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_SOCK=$(instance_sock ${INSTANCE_NAME})
+
+  if [[ ! -a ${INSTANCE_SOCK} ]]
+  then
+    return 1
+  fi
+
+  if ! client/mysqladmin -S ${INSTANCE_SOCK} ping &> /dev/null
+  then
+    return 1
+  fi
+
+  return 0
+}
+
+instance_status() {
+  INSTANCE_NAME=$1; shift
+
+  if ! instance_exists ${INSTANCE_NAME}
+  then
+    echo -n "missing"
+    return 0
+  fi
+
+  if instance_pid_file_exists ${INSTANCE_NAME}
+  then
+    if instance_process_exists ${INSTANCE_NAME}
+    then
+      if instance_is_running ${INSTANCE_NAME}
+      then
+        echo -n "started"
+        return 0
+      else
+        echo -n "hung"
+        return 0
+      fi
+    else
+      echo -n "aborted"
+      return 0
+    fi
+  fi
+
+  echo -n "stopped"
+}
+
+instance_wait_for_status() {
+  INSTANCE_NAME=$1; shift
+  WAIT_FOR_STATUS=$1; shift
+  WAIT_TIME=$1; shift
+
+  while true
+  do
+    CURRENT_STATUS=$(instance_status ${INSTANCE_NAME})
+    WAIT_TIME=$((WAIT_TIME - 1))
+    if [[ "${CURRENT_STATUS}" = "${WAIT_FOR_STATUS}" ]]
+    then
+      return 0
+    fi
+
+    echo ">>>>>> Waiting for instance '${INSTANCE_NAME}' status '${WAIT_FOR_STATUS}' (currently '${CURRENT_STATUS}'), ${WAIT_TIME}s remaining..."
+
+    if [[ ${WAIT_TIME} -le 0 ]]
+    then
+      # We timed out and still didn't reach the status we wanted.
+      return 1
+    fi
+
+    # Still time left, sleep and try again.
+    sleep 1
+  done
+}
+
+instance_mysqld_start() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_PATH=$(instance_path ${INSTANCE_NAME})
+
+  if [[ ! -a ${INSTANCE_PATH} ]]
+  then
+    echo ">>>>>> Creating instance '${INSTANCE_NAME}'..."
+    mkdir -p ${INSTANCE_PATH}/datadir/mysql ${INSTANCE_PATH}/tmp
+  fi
+
+  INSTANCE_FULLPATH=${PWD}/${INSTANCE_PATH}
+  INSTANCE_PID_FILE=${PWD}/$(instance_pid_file ${INSTANCE_NAME})
+  INSTANCE_ERR_FILE=${INSTANCE_FULLPATH}/mysql.err
+  INSTANCE_DATADIR=${INSTANCE_FULLPATH}/datadir
+  INSTANCE_TMPDIR=${INSTANCE_FULLPATH}/tmp
+
+  INSTANCE_SOCK=$(instance_sock ${INSTANCE_NAME})
+  INSTANCE_FULL_SOCK=${PWD}/${INSTANCE_SOCK}
+  INSTANCE_PORT=$(instance_port ${INSTANCE_NAME})
+  INSTANCE_SERVER_ID=$(instance_server_id ${INSTANCE_NAME})
+
+  read -a basic_cmd <<< "sql/mysqld \
+    --no-defaults \
+    --pid-file=${INSTANCE_PID_FILE} \
+    --datadir=${INSTANCE_DATADIR} \
+    --tmpdir=${INSTANCE_TMPDIR} \
+    --language=${BIN_DIR}/sql/share/english \
+    --character-sets-dir=${BIN_DIR}/sql/share/charsets \
+    --sock=${INSTANCE_FULL_SOCK} \
+    --port=${INSTANCE_PORT} \
+    --server_id=${INSTANCE_SERVER_ID}"
+
+  if [[ ! -a ${INSTANCE_DATADIR}/mysql/user.frm ]]
+  then
+    read -a bootstrap_cmd <<< "${basic_cmd[*]} \
+      --bootstrap \
+      ${MYSQLD_BOOTSTRAP_ARGS}"
+
+    echo ">>>>>> Bootstrapping instance '${INSTANCE_NAME}'..."
+    (
+      echo "use mysql;"; \
+      cat ${SRC_DIR}/scripts/mysql_system_tables.sql \
+          ${SRC_DIR}/scripts/mysql_system_tables_data.sql
+    ) | ${bootstrap_cmd[*]} &> ${INSTANCE_ERR_FILE}
+
+    instance_version_save ${INSTANCE_NAME}
+  fi
+
+  read -a start_cmd <<< "${basic_cmd[*]} \
+    $@ ${MYSQLD_EXTRA_ARGS}"
+
+  echo ">>>>>> Starting instance '${INSTANCE_NAME}'..."
+  echo ">>>>>> Connect  : client/mysql -S ${INSTANCE_SOCK} -u root"
+  echo ">>>>>> Shutdown : client/mysqladmin -S ${INSTANCE_SOCK} -u root shutdown"
+  echo ">>>>>> Command  : ${start_cmd[*]}"
+
+  if [[ -n ${DEBUG} ]]
+  then
+    ${GDB} --eval-command="handle SIGUSR1 nostop" --args ${start_cmd[*]}
+  else
+    ${start_cmd[*]} &>> ${INSTANCE_ERR_FILE} &
+  fi
+}
+
+status() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_STATUS=$(instance_status ${INSTANCE_NAME})
+  INSTANCE_SERVER_ID=$(instance_server_id ${INSTANCE_NAME})
+  INSTANCE_PORT=$(instance_port ${INSTANCE_NAME})
+  INSTANCE_VERSION=$(instance_version ${INSTANCE_NAME} | cut -d- -f1)
+
+  echo "Instance '${INSTANCE_NAME}': status '${INSTANCE_STATUS}' port ${INSTANCE_PORT} server_id ${INSTANCE_SERVER_ID} version '${INSTANCE_VERSION}'."
+}
+
+start() {
+  INSTANCE_NAME=$1; shift
+
+  if instance_is_running ${INSTANCE_NAME}
+  then
+    echo ">>>>>> Instance '${INSTANCE_NAME}' is already running..."
+    return 1
+  fi
+
+  INSTANCE_ARGS=""
+  case ${INSTANCE_NAME} in
+    "master" | "slave")
+      INSTANCE_ARGS="--log-bin=master-bin --log-slave-updates"
+      ;;
+  esac
+
+  instance_mysqld_start ${INSTANCE_NAME} ${INSTANCE_ARGS} $@
+
+  if [[ -z ${DEBUG} ]]
+  then
+    if ! instance_wait_for_status ${INSTANCE_NAME} started 60
+    then
+      echo ">>>>>> Instance '${INSTANCE_NAME}' failed to start!"
+      exit 1
+    fi
+    echo ">>>>>> Instance '${INSTANCE_NAME}' started."
+  fi
+}
+
+debug() {
+  DEBUG=1 start $@
+}
+
+stop() {
+  INSTANCE_NAME="$1"; shift
+  INSTANCE_SOCK=$(instance_sock ${INSTANCE_NAME})
+
+  if ! instance_is_running ${INSTANCE_NAME}
+  then
+    echo ">>>>>> Instance '${INSTANCE_NAME}' does not appear to be running..."
+    return 0
+  fi
+
+  echo ">>>>>> Stopping instance '${INSTANCE_NAME}'..."
+  client/mysqladmin -S ${INSTANCE_SOCK} -u root shutdown
+
+  if ! instance_wait_for_status ${INSTANCE_NAME} stopped 60
+  then
+    echo ">>>>>> Instance '${INSTANCE_NAME}' failed to stop!"
+    exit 1
+  fi
+
+  echo ">>>>>> Instance '${INSTANCE_NAME}' stopped."
+}
+
+restart() {
+  INSTANCE_NAME=$1; shift
+
+  stop ${INSTANCE_NAME}
+  start ${INSTANCE_NAME} $@
+}
+
+upgrade() {
+  INSTANCE_NAME="$1"; shift
+  INSTANCE_SOCK=$(instance_sock ${INSTANCE_NAME})
+
+  if instance_is_running ${INSTANCE_NAME}
+  then
+    stop ${INSTANCE_NAME}
+  fi
+
+  echo ">>>>>> Starting instance '${INSTANCE_NAME}' in skip-grant-tables mode..."
+  start ${INSTANCE_NAME} --skip-grant-tables
+
+  echo ">>>>>> Upgrading instance '${INSTANCE_NAME}'..."
+  client/mysql_upgrade \
+    --socket=${INSTANCE_SOCK} \
+    --user=root \
+    --skip-write-binlog \
+    --force \
+    --verbose
+
+  instance_version_save ${INSTANCE_NAME}
+
+  echo ">>>>>> Upgrade complete, restarting instance '${INSTANCE_NAME}'..."
+  stop ${INSTANCE_NAME}
+  start ${INSTANCE_NAME} $@
+
+  echo ">>>>>> Instance '${INSTANCE_NAME}' upgraded."
+}
+
+delete() {
+  INSTANCE_NAME="$1"; shift
+  INSTANCE_PATH=$(instance_path ${INSTANCE_NAME})
+
+  if ! instance_exists ${INSTANCE_NAME}
+  then
+    echo ">>>>>> Instance '${INSTANCE_NAME}' does not exist."
+    return 1
+  fi
+
+  if instance_is_running ${INSTANCE_NAME}
+  then
+    stop ${INSTANCE_NAME}
+  fi
+
+  echo ">>>>>> Deleting instance '${INSTANCE_NAME}'..."
+  rm -rf ${INSTANCE_PATH}
+
+  echo ">>>>>> Instance '${INSTANCE_NAME}' deleted."
+}
+
+connect() {
+  INSTANCE_NAME=$1; shift
+  INSTANCE_SOCK=$(instance_sock ${INSTANCE_NAME})
+
+  if ! instance_is_running ${INSTANCE_NAME}
+  then
+    echo ">>>>>> Instance '${INSTANCE_NAME}' is not running."
+    return 1
+  fi
+
+  client/mysql -S ${INSTANCE_SOCK} -u root $@
+}
+
+attach() {
+  INSTANCE_NAME=$1; shift
+
+  if ! instance_is_running ${INSTANCE_NAME}
+  then
+    echo ">>>>>> Instance '${INSTANCE_NAME}' is not running."
+    return 1
+  fi
+
+  INSTANCE_PID=$(instance_pid ${INSTANCE_NAME})
+  ${GDB} --eval-command="handle SIGUSR1 nostop" $@ sql/mysqld ${INSTANCE_PID}
+}
+
+for binary in sql/mysqld client/mysql client/mysqladmin
+do
+  if [[ ! -a ${binary} ]]
+  then
+    echo ">>>>>> Missing binary '${binary}'; can't continue!"
+    exit 1
+  fi
+done
+
+if [[ -z ${GDB} ]]
+then
+  GDB=${DEFAULT_GDB}
+fi
+
+if [[ ! -d ${INSTANCE_TARGET} ]]
+then
+  mkdir -p ${INSTANCE_TARGET}
+fi
+
+if [[ ! -h ${INSTANCE_LINK} ]]
+then
+  ln -s ${INSTANCE_TARGET} ${INSTANCE_LINK}
+fi
+
+MODE=$1; shift
+
+case "${MODE}" in
+  "-?"|"--help")
+    usage
+    ;;
+
+  "start"|"stop"|"restart"|"upgrade"|"delete"|"debug"|"connect"|"attach")
+    ${MODE} ${instance_name} $@
+    ;;
+
+  "status"|"stop-all"|"delete-all")
+    MODE_FUNCTION=${MODE/-all}
+
+    if [[ $# > 0 ]]
+    then
+      INSTANCE_LIST=$@
+    else
+      INSTANCE_LIST=$(instance_list)
+    fi
+
+    for instance_name in ${INSTANCE_LIST}
+    do
+      ${MODE_FUNCTION} ${instance_name}
+    done
+
+    if [[ ${MODE} = "delete-all" ]]
+    then
+      rm -rf ${INSTANCE_LINK}
+    fi
+    ;;
+
+  "")
+    usage "Required arguments not provided!"
+    ;;
+
+  *)
+    usage "Unknown argument: ${MODE}"
+    ;;
+esac

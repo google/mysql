@@ -1,0 +1,22 @@
+Package: mariadb-core-10.0-google
+Version: @version@
+Priority: optional
+Architecture: @architecture@
+Conflicts: mysql-server-core, mysql-server-core-5.0, mysql-server-core-5.1, mysql-server-5.0, mysql-server-5.1, mysql-client, mysql-client-5.0, mysql-client-5.1, mysql-core-5.1-google
+Maintainer: Google MySQL SRE
+Description: Google MySQL: the MySQL used at Google
+ MySQL is a fast, stable and true multi-user, multi-threaded SQL database
+ server. SQL (Structured Query Language) is the most popular database query
+ language in the world. The main goals of MySQL are speed, robustness and
+ ease of use.
+ .
+ This package includes both the core server and the client files. There are
+ no helper scripts. Here are the commands for the most common operations:
+   - initialize a new server:
+       $ mysql_install_db --datadir=.../datadir --force
+   - start a server (it will also listen to 0.0.0.0:3306):
+       $ mysqld --no-defaults --datadir=.../datadir --socket=mysql.sock
+   - connect to a server:
+       $ mysql -S .../datadir/mysql.sock -u root
+   - gracefully shutdown a server:
+       $ mysqladmin -S datadir/mysql.sock -u root shutdown
