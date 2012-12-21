@@ -5,6 +5,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK
@@ -48,6 +49,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK
@@ -91,6 +93,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK
@@ -139,6 +142,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK
@@ -188,6 +192,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK
@@ -240,6 +245,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK
@@ -295,6 +301,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK
@@ -347,6 +354,7 @@ Processing databases
 information_schema
 mtr
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql
 mysql.column_stats                                 OK

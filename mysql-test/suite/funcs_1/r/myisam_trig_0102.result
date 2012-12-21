@@ -206,6 +206,7 @@ NULL	update 3.5.1.7	42
 select trigger_name from information_schema.triggers order by trigger_name;
 trigger_name
 gs_insert
+te_insert
 trg5_1
 trg_abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWX
 ts_insert
