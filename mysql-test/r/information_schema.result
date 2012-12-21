@@ -491,6 +491,7 @@ ROUTINE_NAME
 add_suppression
 check_testcase
 check_warnings
+expect_log_output
 force_restart
 sel2
 sub1

@@ -40,6 +40,30 @@ FOR EACH ROW BEGIN
 END
 */||
 
+--
+-- Create table where testcases can insert patterns for messages
+-- that must be output to the server log for the test to succeed
+--
+CREATE TABLE test_expected (
+  pattern VARCHAR(255),
+  count INT,
+  found INT
+) ENGINE=MyISAM||
+
+--
+-- Declare a trigger that makes sure
+-- no invalid patterns can be inserted
+-- into test_expected
+--
+/*!50002
+CREATE DEFINER=root@localhost TRIGGER te_insert
+BEFORE INSERT ON test_expected
+FOR EACH ROW BEGIN
+  DECLARE dummy INT;
+  SELECT "" REGEXP NEW.pattern INTO dummy;
+END
+*/||
+
 
 --
 -- Load table with patterns that will be suppressed globally(always)
@@ -178,10 +202,27 @@ INSERT INTO global_suppressions VALUES
 --
 CREATE DEFINER=root@localhost PROCEDURE check_warnings(OUT result INT)
 BEGIN
-  DECLARE `pos` bigint unsigned;
-
   -- Don't write these queries to binlog
   SET SQL_LOG_BIN=0;
+
+  --
+  -- Add errors for expected statements that are missing
+  --
+  UPDATE test_expected te
+    SET te.found = (
+      SELECT COUNT(*) FROM error_log el
+        WHERE el.line REGEXP te.pattern AND el.suspicious = 1
+    );
+  UPDATE error_log el, test_expected te
+    SET el.suspicious = 0
+    WHERE el.suspicious = 1
+      AND el.line REGEXP te.pattern
+      AND te.count = te.found;
+  INSERT
+    INTO error_log (suspicious, line)
+    SELECT 2, CONCAT("[Test Error] Expected ", te.count, " lines matching pattern '",
+                     te.pattern, "', found ", te.found)
+      FROM test_expected te WHERE te.count != te.found;
 
   --
   -- Remove mark from lines that are suppressed by global suppressions
@@ -201,11 +242,11 @@ BEGIN
   -- Get the number of marked lines and return result
   --
   SELECT COUNT(*) INTO @num_warnings FROM error_log
-    WHERE suspicious=1;
+    WHERE suspicious != 0;
 
   IF @num_warnings > 0 THEN
     SELECT line
-        FROM error_log WHERE suspicious=1;
+        FROM error_log WHERE suspicious != 0;
     --SELECT * FROM test_suppressions;
     -- Return 2 -> check failed
     SELECT 2 INTO result;
@@ -216,6 +257,7 @@ BEGIN
 
   -- Cleanup for next test
   TRUNCATE test_suppressions;
+  TRUNCATE test_expected;
   DROP TABLE error_log;
 
 END||
@@ -232,4 +274,15 @@ BEGIN
 END
 */||
 
+--
+-- Declare a procedure testcases can use to insert expected server
+-- log output
+--
+/*!50001
+CREATE DEFINER=root@localhost
+PROCEDURE expect_log_output(pattern VARCHAR(255), count INT)
+BEGIN
+  INSERT INTO test_expected (pattern, count) VALUES (pattern, count);
+END
+*/||
 

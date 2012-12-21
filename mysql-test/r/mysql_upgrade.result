@@ -1,5 +1,6 @@
 Run mysql_upgrade once
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK
@@ -33,6 +34,7 @@ Run it again - should say already completed
 This installation of MySQL is already upgraded to VERSION, use --force if you still need to run mysql_upgrade
 Force should run it regardless of wether it's been run before
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK
@@ -66,6 +68,7 @@ CREATE USER mysqltest1@'%' IDENTIFIED by 'sakila';
 GRANT ALL ON *.* TO mysqltest1@'%';
 Run mysql_upgrade with password protected account
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK
@@ -101,6 +104,7 @@ mysqlcheck: Got error: 2005: Unknown MySQL server host 'not_existing_host' (errn
 FATAL ERROR: Upgrade failed
 set GLOBAL sql_mode='STRICT_ALL_TABLES,ANSI_QUOTES,NO_ZERO_DATE';
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK
@@ -140,6 +144,7 @@ UPDATE mysql.proc SET character_set_client = NULL WHERE name LIKE 'testproc';
 UPDATE mysql.proc SET collation_connection = NULL WHERE name LIKE 'testproc';
 UPDATE mysql.proc SET db_collation = NULL WHERE name LIKE 'testproc';
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK
@@ -182,6 +187,7 @@ GRANT USAGE ON *.* TO 'user3'@'%';
 GRANT ALL PRIVILEGES ON `roelt`.`test2` TO 'user3'@'%';
 Run mysql_upgrade with all privileges on a user
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK
@@ -223,6 +229,7 @@ DROP USER 'user3'@'%';
 # Droping the previously created mysql_upgrade_info file..
 # Running mysql_upgrade with --skip-write-binlog..
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK

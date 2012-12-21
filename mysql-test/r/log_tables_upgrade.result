@@ -12,6 +12,7 @@ test.bug49823	repair	status	OK
 RENAME TABLE general_log TO renamed_general_log;
 RENAME TABLE test.bug49823 TO general_log;
 mtr.global_suppressions                            OK
+mtr.test_expected                                  OK
 mtr.test_suppressions                              OK
 mysql.columns_priv                                 OK
 mysql.db                                           OK
