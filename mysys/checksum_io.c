@@ -36,7 +36,7 @@
 #define get_block_offset(n) ((n) % IOCACHE_FITTED_BLOCK_SIZE)
 /* Get the location of the start of our block */
 /* n is the index of the block in the file (zero-indexed) */
-#define get_block_loc(index) ((index) * IOCACHE_BLOCK_SIZE)
+#define get_block_loc(index) (((my_off_t) index) * IOCACHE_BLOCK_SIZE)
 
 /*
   When reading this struct to and from disk, read in increments of
@@ -152,7 +152,8 @@ static int insert_into_block(CHKSUM_BLOCK *block,  const uchar *Buffer,
 */
 static size_t chksum_write_block(int file, CHKSUM_BLOCK *block, int block_num)
 {
-  int loc, res;
+  my_off_t loc;
+  size_t res;
 
   loc= get_block_loc(block_num);
 
@@ -176,7 +177,7 @@ static size_t chksum_write_block(int file, CHKSUM_BLOCK *block, int block_num)
 */
 static size_t get_block_at_index(int Filedes,  CHKSUM_BLOCK *block, int block_num)
 {
-  int block_loc;
+  my_off_t block_loc;
   ha_checksum chksum;
   size_t res;
 
@@ -584,3 +585,125 @@ size_t chksum_write(File Filedes, const uchar *Buffer, size_t Count, myf MyFlags
     DBUG_RETURN(0);                             /* Want only errors */
   DBUG_RETURN(res);
 }
+
+/**********************************************************************
+ Testing of checksum_io
+**********************************************************************/
+
+#ifdef MAIN
+
+static void die(const char* fmt, ...)
+{
+  va_list va_args;
+  va_start(va_args,fmt);
+  fprintf(stderr,"Error:");
+  vfprintf(stderr, fmt,va_args);
+  fprintf(stderr,", errno=%d\n", errno);
+  exit(1);
+}
+
+static File open_temp_file(const char* name_prefix)
+{
+  char fname[FN_REFLEN];
+  File fd= create_temp_file(fname, NULL, name_prefix, O_CREAT | O_RDWR,  MYF(0));
+
+  if (fd < 0)
+    die("failed to create a temporary file");
+
+  (void) my_delete(fname, MYF(0));
+  return fd;
+}
+
+void test_chksum_huge_files()
+{
+  /* this would overflow ints if they are used where they should not */
+  const my_off_t file_size= 0x123456000ULL;
+
+  File fd= open_temp_file("chksum_write_huge_test.");
+
+  uchar buf[4096];
+  memset(buf, 0xa6, 4096);
+
+  fputs("Testing huge checksummed file writing...\n", stderr);
+
+  my_off_t total_written= 0;
+  while (total_written < file_size) {
+    size_t to_write= min(file_size - total_written, 4096);
+    size_t written= chksum_write(fd, buf, to_write, MYF(0));
+
+    my_off_t chksum_pos= chksum_tell(fd, MYF(0));
+    my_off_t real_pos= my_tell(fd, MYF(0));
+
+    if (written == MY_FILE_ERROR || written != to_write)
+    {
+      fprintf(stderr, "total_written: 0x%08llx chksum_pos: 0x%08llx, real_pos: 0x%08llx\n",
+              total_written, chksum_pos, real_pos);
+      die("chksum_write returned an error while writing to a file");
+    }
+
+    total_written+= written;
+
+    fprintf(stderr, "0x%08llx of 0x%08llx\r", total_written, file_size);
+
+    /* chksum_pos can never be greater than the real_pos, since checksumming
+     * has some overhead.  However this overhead is supposed to be small, so
+     * chksum_pos cannot be much smaller than the real_pos.
+     */
+    if (chksum_pos != total_written || chksum_pos < real_pos/2 || chksum_pos > real_pos)
+    {
+      fprintf(stderr, "total_written: 0x%08llx chksum_pos: 0x%08llx, real_pos: 0x%08llx\n",
+              total_written, chksum_pos, real_pos);
+      die("chksum I/O position has wrapped due to an improper cast/sign extension");
+    }
+  }
+  chksum_seek(fd, 0, SEEK_SET, MYF(0));
+
+  fputs("Testing huge checksummed file reading...\n", stderr);
+
+  my_off_t total_read= 0;
+  while (total_read < total_written) {
+    size_t read= chksum_read(fd, buf, 4096, MYF(0));
+
+    my_off_t chksum_pos= chksum_tell(fd, MYF(0));
+    my_off_t real_pos= my_tell(fd, MYF(0));
+
+    if (read == 0)
+    {
+      fprintf(stderr, "total_read: 0x%08llx chksum_pos: 0x%08llx, real_pos: 0x%08llx\n",
+              total_read, chksum_pos, real_pos);
+      die("chksum_read encountered an unexpected EOF");
+    }
+
+    if (read == MY_FILE_ERROR)
+    {
+      fprintf(stderr, "total_read: 0x%08llx chksum_pos: 0x%08llx, real_pos: 0x%08llx\n",
+              total_read, chksum_pos, real_pos);
+      die("chksum_read returned an error while reading from a file");
+    }
+
+    total_read+= read;
+
+    fprintf(stderr, "0x%08llx of 0x%08llx\r", total_read, total_written);
+
+    if (chksum_pos != total_read || chksum_pos < real_pos/2 || chksum_pos > real_pos)
+    {
+      fprintf(stderr, "total_read: 0x%08llx chksum_pos: 0x%08llx, real_pos: 0x%08llx\n",
+              total_read, chksum_pos, real_pos);
+      die("chksum I/O position has wrapped due to an improper cast/sign extension");
+    }
+  }
+
+  (void) my_close(fd, MYF(0));
+
+  fputs("Huge file checksumming tests passed.\n", stderr);
+}
+
+int main(int argc __attribute__((unused)), char** argv)
+{
+  MY_INIT(argv[0]);
+
+  test_chksum_huge_files();
+  return 0;
+}
+
+#endif

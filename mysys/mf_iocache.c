@@ -1918,70 +1918,6 @@ void close_file(IO_CACHE* info)
   my_close(info->file, MYF(MY_WME));
 }
 
-int test_chksum()
-{
-  uchar resbuffer[4096];
-  File fd;
-  const uchar *data;
-  size_t len;
-  size_t res;
-
-  fd = my_open("/tmp/chksum_write_test", O_CREAT | O_RDWR,  MYF(0));
-  data = (const uchar *) "hello world";
-  len = strlen((char *)data);
-
-  res = chksum_write(fd, data, len, MYF(0));
-
-  bzero(resbuffer, 4096);
-
-  if (res != len)
-    die("chksum_write did not report writing all the data");
-
-
-  /* see if we get the same data back */
-  chksum_seek(fd, 0, MY_SEEK_SET, MYF(0));
-  res = chksum_read(fd, resbuffer, len, MYF(0));
-
-  if (res != len)
-    die("chksum_read did not report reading all the data");
-
-  if (res != strlen((char*)resbuffer))
-    die("chksum_read did not report as many bytes read as were returned");
-
-  res = memcmp((char*)data, (char*)resbuffer, len);
-
-  if (res)
-    die("chksum I/O data returned did not match data inserted");
-
-
-  res = chksum_write(fd, data, len, MYF(0));
-
-  bzero(resbuffer, 4096);
-
-
-  if (res != len)
-    die("chksum_write did not report writing all the data");
-
-
-  /* see if we get the same data back */
-  my_seek(fd, 0, MY_SEEK_SET, MYF(0));
-  res = chksum_read(fd, resbuffer, len, MYF(0));
-
-
-  if (res != len)
-    die("chksum_read did not report reading all the data");
-
-  if (res != strlen((char*)resbuffer))
-    die("chksum_read did not report as many bytes read as were returned");
-
-  res = strncmp((char*)data, (char*)resbuffer, len);
-
-  if (res)
-    die("chksum I/O data returned did not match data inserted");
-
-  return 0;
-}
-
 int main(int argc __attribute__((unused)), char** argv)
 {
   /* Fix the "unused argument" error message that is not relevant here. */
@@ -1998,9 +1934,6 @@ int main(int argc __attribute__((unused)), char** argv)
   uchar* block, *block_end;
   MY_INIT(argv[0]);
   max_block = cache_size*3;
-
-  if (test_chksum())
-    die("test_chksum() failed");
 
   if (!(block=(uchar*)my_malloc(max_block,MYF(MY_WME))))
     die("Not enough memory to allocate test block");

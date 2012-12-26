@@ -100,10 +100,11 @@ test_thr_alarm$(EXEEXT): thr_alarm.c $(LIBRARIES)
 test_thr_lock$(EXEEXT): thr_lock.c $(LIBRARIES)
 	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) $(LIBS)
 
+test_checksum_io$(EXEEXT): checksum_io.c $(LIBRARIES)
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) @ZLIB_LIBS@ $(LIBS)
+
 test_io_cache$(EXEEXT): mf_iocache.c $(LIBRARIES)
-	$(CP) $(srcdir)/mf_iocache.c test_io_cache.c
-	$(LINK) $(FLAGS) -DMAIN ./test_io_cache.c $(LDADD) @ZLIB_LIBS@ $(LIBS)
-	$(RM) -f test_io_cache.c
+	$(LINK) $(FLAGS) -DMAIN -o $@ $< $(LDADD) @ZLIB_LIBS@ $(LIBS)
 
 test_dir$(EXEEXT): test_dir.c $(LIBRARIES)
 	$(LINK) $(FLAGS) -DMAIN $(srcdir)/test_dir.c $(LDADD) $(LIBS)
