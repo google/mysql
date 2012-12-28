@@ -119,6 +119,10 @@ static my_off_t chksum_pos_rtof(my_off_t pos)
   This function copies data into the block and recalculates
   the requisite chksum and len.
 
+  This function must work correctly when start is equal to
+  IOCACHE_FITTED_BLOCK_SIZE. It must also work correctly when count is 0.
+  This is useful for extending the last block in the file.
+
   @param[in,out]  block   The chksum_block we will be writing our data into
   @param[in]      Buffer  The data we will be copying into the block
   @param[in]      start   The offset from the beginning of the block to which
@@ -250,6 +254,54 @@ error:
              "Aborting server...\n",
              MYF(0));
   exit(1);
+}
+
+/*
+  Grows the file to the requested (virtual) size by padding it with NUL
+  characters and writing proper checksums for these blocks.
+
+  If the file does not need to be extended, nothing is done and the function
+  returns successfully.
+
+  @param[in]  file       File descriptor
+  @param[in]  to_size    Virtual size that the file needs to be extended to
+
+  @return
+    @retval ERROR    FALSE
+    @retval SUCCESS  TRUE
+*/
+static my_bool chksum_grow_file(File file, my_off_t to_size)
+{
+  /* Get current file size */
+  my_off_t pos, file_size;
+  if (MY_FILEPOS_ERROR == (pos= my_tell(file, MYF(0))) ||
+      MY_FILEPOS_ERROR == (file_size= my_seek(file, 0, MY_SEEK_END, MYF(0))) ||
+      MY_FILEPOS_ERROR == my_seek(file, pos, MY_SEEK_SET, MYF(0)))
+    return FALSE;
+
+  /* Resize the file if needed */
+  my_off_t offset= file_size;
+  while (offset < to_size)
+  {
+    CHKSUM_BLOCK block;
+    block_num_t block_num = get_block_num(offset);
+    block_offset_t block_offset= get_block_offset(offset);
+
+    my_bool got_block= get_block_at_index(file, &block, block_num);
+    if (!got_block)
+      return FALSE;
+
+    block_offset_t amount_to_clear= min(IOCACHE_FITTED_BLOCK_SIZE - block_offset,
+                                        to_size - offset);
+    (void) insert_into_block(&block, NULL, block_offset + amount_to_clear, 0);
+
+    my_bool write_successful= chksum_write_block(file, &block, block_num);
+    if (!write_successful)
+      return FALSE;
+
+    offset+= amount_to_clear;
+  }
+  return TRUE;
 }
 
 
@@ -508,10 +560,15 @@ size_t chksum_pwrite(File Filedes, const uchar *Buffer, size_t Count,
   DBUG_ENTER("chksum_pwrite");
   DBUG_PRINT("chksum", ("Filedes %d, Buffer %p, Count %llu, offset %llu",
                         (int) Filedes, (void *) Buffer, (ulonglong) Count, offset));
-  /*
-    Determine whether or not we are writing into the middle of a block, and take
-    care of that case so that we can be block-aligned.
-  */
+
+  /* Determine if we are writing past the end of file and there are blocks
+   * that need to be adjusted, so that the CRC matches after inserting zeroes
+   * between the current end of file and the data we are about to write.
+   */
+  if (!chksum_grow_file(Filedes, offset))
+  {
+    return MY_FILE_ERROR;
+  }
 
   /* doesn't count block metadata */
   size_t total_written= 0;
@@ -773,6 +830,53 @@ static void test_read_from_block_returns_data_if_available()
     die("read_from_block failed to return all the available data from the block");
 }
 
+static void test_chksum_pwrite_past_the_end_of_the_file()
+{
+  fputs("Testing chksum_pwrite correctly extends the file if the offset is past its end...\n", stderr);
+
+  File fd= open_temp_file("chksum_pwrite_past_end.");
+  const size_t len= strlen((const char*) test_string);
+
+  size_t res= chksum_write(fd, test_string, len, MYF(0));
+  if (res != len || chksum_tell(fd, MYF(0)) != len)
+    die("chksum_write returned an error while writing to a file");
+
+  const my_off_t big_offset = 0x123456789ULL;
+  res= chksum_pwrite(fd, test_string, len, big_offset, MYF(0));
+
+  if (res != len)
+    die("chksum_pwrite returned an error while writing to a file");
+
+  my_off_t file_size= chksum_seek(fd, 0, SEEK_END, MYF(0));
+  if (file_size != big_offset + len)
+    die("chksum_pwrite didn't extend the file correctly");
+
+  uchar buf[4096];
+  chksum_seek(fd, 0, SEEK_SET, MYF(0));
+  my_off_t bytes_read= chksum_read(fd, buf, len, MYF(0));
+
+  if (bytes_read != len || 0 != memcmp(test_string, buf, len))
+    die("chksum_write wrote incorrect data");
+
+  while (bytes_read < big_offset)
+  {
+    size_t to_read= min(sizeof buf, big_offset - bytes_read);
+    res= chksum_read(fd, buf, to_read, MYF(0));
+    if (res != to_read)
+      die("chksum_pwrite did not extend the file properly");
+
+    if (!check_mem_eq(buf, 0, to_read))
+      die("chksum_pwrite did not extend the file with zeros");
+
+    bytes_read+= res;
+  }
+
+  res= chksum_read(fd, buf, len, MYF(0));
+
+  if (res != len || 0 != memcmp(test_string, buf, len))
+    die("chksum_pwrite wrote incorrect data");
+}
+
 static void test_chksum_huge_files()
 {
   fputs("Testing huge checksummed file writing...\n", stderr);
@@ -866,6 +970,7 @@ int main(int argc __attribute__((unused)), char **argv)
   test_insert_into_block_clears_empty_ranges();
   test_insert_into_block_on_empty_inserts();
   test_read_from_block_returns_data_if_available();
+  test_chksum_pwrite_past_the_end_of_the_file();
   test_chksum_huge_files();
   return 0;
 }
