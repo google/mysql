@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS test1;
 DROP TABLE IF EXISTS test2;
 DROP TABLE IF EXISTS test3;
 DROP TABLE IF EXISTS test4;
+DROP TABLE IF EXISTS test5;
 
 call mtr.expect_log_output("Unrecognized storage engine 'bar' listed in --deprecated-engines=", 1);
 call mtr.expect_log_output("Unrecognized storage engine 'baz' listed in --deprecated-engines=", 1);
@@ -41,6 +42,11 @@ ALTER TABLE test3 ENGINE=InnoDB;
 --error ER_ENGINE_DEPRECATED
 ALTER TABLE test3 ADD (y int), ENGINE=InnoDB;
 
+# verify that the new code handles unrecognized engines:
+SELECT engine FROM information_schema.engines WHERE engine = 'frobnitz';
+ALTER TABLE test3 ENGINE=frobnitz;
+CREATE TABLE test5 (x int) ENGINE=frobnitz;
+
 SHOW CREATE TABLE test0;
 SHOW CREATE TABLE test3;
 SHOW TABLES;
@@ -54,6 +60,7 @@ DROP TABLE test4;
 DROP TABLE IF EXISTS test0;
 DROP TABLE IF EXISTS test1;
 DROP TABLE IF EXISTS test2;
+DROP TABLE IF EXISTS test5;
 --enable_query_log
 --enable_warnings
 

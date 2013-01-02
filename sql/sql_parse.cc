@@ -3025,6 +3025,7 @@ end_with_restore_list:
         goto error;
 
       if (create_info.used_fields & HA_CREATE_USED_ENGINE &&
+          create_info.db_type != NULL &&
           create_info.db_type->flags & HTON_DEPRECATED)
       {
           my_error(ER_ENGINE_DEPRECATED, MYF(0),

@@ -18,6 +18,15 @@ ALTER TABLE test3 ENGINE=InnoDB;
 ERROR HY000: InnoDB is deprecated by the system administrator. Please use a different storage engine.
 ALTER TABLE test3 ADD (y int), ENGINE=InnoDB;
 ERROR HY000: InnoDB is deprecated by the system administrator. Please use a different storage engine.
+SELECT engine FROM information_schema.engines WHERE engine = 'frobnitz';
+engine
+ALTER TABLE test3 ENGINE=frobnitz;
+Warnings:
+Warning	1286	Unknown table engine 'frobnitz'
+CREATE TABLE test5 (x int) ENGINE=frobnitz;
+Warnings:
+Warning	1286	Unknown table engine 'frobnitz'
+Warning	1266	Using storage engine MyISAM for table 'test5'
 SHOW CREATE TABLE test0;
 Table	Create Table
 test0	CREATE TABLE `test0` (
@@ -34,6 +43,7 @@ Tables_in_test
 test0
 test3
 test4
+test5
 DROP TABLE test0;
 DROP TABLE test3;
 DROP TABLE test4;
