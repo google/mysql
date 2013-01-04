@@ -263,7 +263,7 @@ connection default;
 drop mapped user user1;
 connection conn1;
 --disable_result_log
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2013
 reap;
 --enable_result_log
 --error 2006,2013  # = "MySQL server has gone away
@@ -282,7 +282,7 @@ connection default;
 drop user role1;
 connection conn1;
 --disable_result_log
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2013
 reap;
 --enable_result_log
 --error 2006,2013  # = "MySQL server has gone away
@@ -301,7 +301,7 @@ connection default;
 drop mapped user user1;
 create mapped user user1 identified by 'foo' role 'role1';
 connection conn1;
---error 2006  # = "MySQL server has gone away
+--error ER_QUERY_INTERRUPTED,2006,2013  # = "MySQL server has gone away
 select * from t1;
 
 # User connections should be killed even if role behind the mapped user was
@@ -315,7 +315,7 @@ drop user role1;
 create user role1;
 grant all privileges on *.* to role1 with grant option;
 connection conn1;
---error 2006  # = "MySQL server has gone away
+--error ER_QUERY_INTERRUPTED,2006,2013  # = "MySQL server has gone away
 select * from t1;
 
 # When user password is changed through mysql.mapped_user table all user
@@ -327,9 +327,9 @@ connection default;
 update mysql.mapped_user set Password = password('asdf') where User = 'user1';
 flush privileges;
 connection conn1;
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2013
 select * from d1.t1;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013  # = "MySQL server has gone away
 select * from d1.t1;
 
 # When user is deleted from mysql.mapped_user table all user connections should
@@ -341,9 +341,9 @@ connection default;
 delete from mysql.mapped_user where User = 'user1';
 flush privileges;
 connection conn1;
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2013
 select * from d1.t1;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013  # = "MySQL server has gone away
 select * from d1.t1;
 
 # When role behind mapped user is deleted from mysql.user table all user
@@ -355,9 +355,9 @@ connect (conn1, localhost, user1, foo, );
 select * from d1.t1;
 delete from mysql.user where User = 'role1';
 flush privileges;
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2013
 select * from d1.t1;
---error 2006  # = "MySQL server has gone away
+--error 2006,2013  # = "MySQL server has gone away
 select * from d1.t1;
 
 # If user connection is idle then it will survive manipulations with the user

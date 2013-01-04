@@ -209,7 +209,7 @@ n
 drop mapped user user1;
 create mapped user user1 identified by 'foo' role 'role1';
 select * from t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 use d1;
 select * from t1;
 n
@@ -219,7 +219,7 @@ drop user role1;
 create user role1;
 grant all privileges on *.* to role1 with grant option;
 select * from t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from d1.t1;
 n
 8
@@ -227,9 +227,9 @@ n
 update mysql.mapped_user set Password = password('asdf') where User = 'user1';
 flush privileges;
 select * from d1.t1;
-ERROR 70100: Query execution was interrupted
+Got one of the listed errors
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from d1.t1;
 n
 8
@@ -237,9 +237,9 @@ n
 delete from mysql.mapped_user where User = 'user1';
 flush privileges;
 select * from d1.t1;
-ERROR 70100: Query execution was interrupted
+Got one of the listed errors
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 create mapped user user1 identified by 'foo' role 'role1';
 select * from d1.t1;
 n
@@ -248,9 +248,9 @@ n
 delete from mysql.user where User = 'role1';
 flush privileges;
 select * from d1.t1;
-ERROR 70100: Query execution was interrupted
+Got one of the listed errors
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 create user role1;
 grant all privileges on *.* to role1 with grant option;
 select * from d1.t1;
