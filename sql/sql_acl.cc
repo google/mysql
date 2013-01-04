@@ -327,6 +327,7 @@ my_bool acl_init(bool dont_read_acl_tables)
 static void acl_load_users(THD *thd,
                            TABLE *table,
                            READ_RECORD *read_record_info,
+                           ulong allow_access_mask,
                            my_bool is_system_user)
 {
   bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
@@ -471,6 +472,16 @@ static void acl_load_users(THD *thd,
           user.access|= SUPER_ACL | EXECUTE_ACL;
 #endif
       }
+      ulong allowed_access= user.access & allow_access_mask;
+      if (allowed_access != user.access)
+      {
+        sql_print_warning("User '%s'@'%s' was assigned access %lu "
+                          "but was allowed to have only %lu.",
+                          user.user, user.host.hostname,
+                          user.access, allowed_access);
+        user.access= allowed_access;
+      }
+
       VOID(push_dynamic(&acl_users,(uchar*) &user));
       if (is_system_user)
         VOID(push_dynamic(&acl_system_users, (uchar*) &user));
@@ -574,7 +585,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
     table= tables[GRANT_SYSTEM_USER].table;
     init_read_record(&read_record_info, thd, table, NULL, 1, 0, FALSE);
     table->use_all_columns();
-    acl_load_users(thd, table, &read_record_info, TRUE);
+    acl_load_users(thd, table, &read_record_info, ~0UL, TRUE);
     my_qsort((uchar*) dynamic_element(&acl_system_users,0,ACL_USER*),
              acl_system_users.elements,
              sizeof(ACL_USER),(qsort_cmp) acl_compare);
@@ -626,7 +637,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
     pthread_mutex_unlock(&LOCK_global_system_variables);
   }
 
-  acl_load_users(thd, table, &read_record_info, FALSE);
+  acl_load_users(thd, table, &read_record_info, ~opt_block_user_access, FALSE);
 
   my_qsort((uchar*) dynamic_element(&acl_users,0,ACL_USER*),acl_users.elements,
 	   sizeof(ACL_USER),(qsort_cmp) acl_compare);

@@ -591,6 +591,10 @@ static sys_var_bool_ptr sys_system_user_table(&vars,
                                               "system_user_table",
                                               &opt_system_user_table);
 
+static sys_var_const    sys_block_user_access(&vars, "block_user_access",
+                                              OPT_GLOBAL, SHOW_LONG,
+                                              (uchar*) &opt_block_user_access);
+
 #ifdef HAVE_THR_SETCONCURRENCY
 /* purecov: begin tested */
 static sys_var_const    sys_thread_concurrency(&vars, "thread_concurrency",

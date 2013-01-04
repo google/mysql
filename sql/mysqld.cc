@@ -692,6 +692,7 @@ my_bool opt_allow_xa;
 my_bool opt_super_to_set_timestamp;
 my_bool rpl_allow_implicit_commit;
 my_bool opt_system_user_table;
+long opt_block_user_access;
 
 
 /* Thread specific variables */
@@ -5915,7 +5916,8 @@ enum options_mysqld
   OPT_SUPER_TO_SET_TIMESTAMP,
   OPT_RPL_ALLOW_IMPLICIT_COMMIT,
   OPT_SYSTEM_USER_TABLE,
-  OPT_DEPRECATED_ENGINES
+  OPT_DEPRECATED_ENGINES,
+  OPT_BLOCK_USER_ACCESS
 };
 
 
@@ -7443,6 +7445,11 @@ thread is in the relay logs.",
     "mysql.system_user table can be changed only by users with SUPER privilege.",
     &opt_system_user_table,
     0, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"block-user-access", OPT_BLOCK_USER_ACCESS,
+   "Mask of user privileges that should be blocked and never allowed to be"
+   "granted to any user from mysql.user table.",
+   &opt_block_user_access, &opt_block_user_access,
+   0, GET_ULONG, REQUIRED_ARG, 0, 0, 0xFFFFFFFFUL, 0, 1, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -8073,6 +8080,7 @@ static int mysql_init_variables(void)
   opt_reserved_super_connections= 0;
   rpl_allow_implicit_commit= 0;
   opt_system_user_table= 0;
+  opt_block_user_access= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */
