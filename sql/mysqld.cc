@@ -702,6 +702,7 @@ my_bool opt_super_to_set_timestamp;
 
 my_bool opt_update_connection_privs;
 my_bool opt_system_user_table;
+ulong opt_block_user_access;
 
 /* Thread specific variables */
 
@@ -8174,6 +8175,7 @@ static int mysql_init_variables(void)
   opt_reserved_super_connections= 0;
   opt_update_connection_privs= 1;
   opt_system_user_table= 0;
+  opt_block_user_access= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */

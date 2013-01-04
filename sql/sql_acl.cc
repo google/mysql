@@ -776,6 +776,7 @@ static my_bool acl_load_hosts_and_users(THD *thd, TABLE_LIST *tables);
 static my_bool acl_load_users(THD *thd,
                               TABLE *table,
                               READ_RECORD *read_record_info,
+                              ulong allow_access_mask,
                               my_bool is_system_user,
                               String *users_list);
 static my_bool acl_load_other_acls(THD *thd, TABLE_LIST *tables);
@@ -1153,7 +1154,7 @@ static my_bool acl_load_hosts_and_users(THD *thd, TABLE_LIST *tables)
       goto end;
     table->use_all_columns();
     String users_list;
-    if (acl_load_users(thd, table, &read_record_info, TRUE, &users_list))
+    if (acl_load_users(thd, table, &read_record_info, ~0UL, TRUE, &users_list))
     {
       end_read_record(&read_record_info);
       goto end;
@@ -1223,7 +1224,8 @@ static my_bool acl_load_hosts_and_users(THD *thd, TABLE_LIST *tables)
     mysql_mutex_unlock(&LOCK_global_system_variables);
   }
 
-  if (acl_load_users(thd, table, &read_record_info, FALSE, NULL))
+  if (acl_load_users(thd, table, &read_record_info, ~opt_block_user_access,
+                     FALSE, NULL))
   {
     end_read_record(&read_record_info);
     goto end;
@@ -1245,6 +1247,7 @@ end:
 static my_bool acl_load_users(THD *thd,
                               TABLE *table,
                               READ_RECORD *read_record_info,
+                              ulong allow_access_mask,
                               my_bool is_system_user,
                               String *users_list)
 {
@@ -1421,6 +1424,16 @@ static my_bool acl_load_users(THD *thd,
 
       (void) my_init_dynamic_array(&user.role_grants,sizeof(ACL_ROLE *),
                                    8, 8, MYF(0));
+
+      ulong allowed_access= user.access & allow_access_mask;
+      if (allowed_access != user.access)
+      {
+        sql_print_warning("User '%s'@'%s' was assigned access %lu "
+                          "but was allowed to have only %lu.",
+                          user.user.str, user.host.hostname,
+                          user.access, allowed_access);
+        user.access= allowed_access;
+      }
 
       if (is_role)
       {

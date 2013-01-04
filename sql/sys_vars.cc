@@ -2510,6 +2510,13 @@ static Sys_var_mybool Sys_system_user_table(
        READ_ONLY GLOBAL_VAR(opt_system_user_table), CMD_LINE(OPT_ARG),
        DEFAULT(FALSE));
 
+static Sys_var_ulong Sys_block_user_access(
+       "block_user_access",
+       "Mask of user privileges that should be blocked and never allowed to be"
+       "granted to any user from mysql.user table.",
+       READ_ONLY GLOBAL_VAR(opt_block_user_access), CMD_LINE(OPT_ARG),
+       VALID_RANGE(0, NO_ACCESS - 1), DEFAULT(0), BLOCK_SIZE(1));
+
 /* 
   thread_concurrency is a no-op on all platforms since
   MySQL 5.1.  It will be removed in the context of

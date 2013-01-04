@@ -1,0 +1,133 @@
+call mtr.add_suppression("User .* was assigned access .* but was allowed to have only");
+select @@block_user_access;
+@@block_user_access
+0
+create database d1;
+create table d1.t1 (n int);
+create user user1;
+grant select,insert,update,delete on *.* to user1;
+insert into mysql.system_user
+(User, Host, Select_priv, Insert_priv, Update_priv, Delete_priv,
+ssl_cipher, x509_issuer, x509_subject, authentication_string)
+values ('user2', '%', 'Y', 'Y', 'Y', 'Y', '', '', '', '');
+flush privileges;
+insert into t1 values (1);
+insert into t1 values (2);
+select * from t1;
+n
+1
+2
+update t1 set n = 3 where n = 2;
+delete from t1 where n = 1;
+select * from t1;
+n
+3
+insert into t1 values (4);
+insert into t1 values (5);
+select * from t1;
+n
+4
+3
+5
+update t1 set n = 6 where n = 5;
+delete from t1 where n = 4;
+select * from t1;
+n
+3
+6
+select @@block_user_access;
+@@block_user_access
+12
+select User, Host, Select_priv, Insert_priv, Update_priv, Delete_priv
+from mysql.user
+where User = 'user1';
+User	Host	Select_priv	Insert_priv	Update_priv	Delete_priv
+user1	%	Y	Y	Y	Y
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT ON *.* TO 'user1'@'%'
+select User, Host, Select_priv, Insert_priv, Update_priv, Delete_priv
+from mysql.system_user
+where User = 'user2';
+User	Host	Select_priv	Insert_priv	Update_priv	Delete_priv
+user2	%	Y	Y	Y	Y
+show grants for user2;
+Grants for user2@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user2'@'%'
+insert into t1 values (7);
+select * from t1;
+n
+7
+3
+6
+update t1 set n = 8 where n = 3;
+ERROR 42000: UPDATE command denied to user 'user1'@'localhost' for table 't1'
+delete from t1 where n = 7;
+ERROR 42000: DELETE command denied to user 'user1'@'localhost' for table 't1'
+select * from t1;
+n
+7
+3
+6
+insert into t1 values (9);
+select * from t1;
+n
+7
+3
+6
+9
+update t1 set n = 10 where n = 9;
+delete from t1 where n = 6;
+select * from t1;
+n
+7
+3
+10
+select @@block_user_access;
+@@block_user_access
+2
+select User, Host, Select_priv, Insert_priv, Update_priv, Delete_priv
+from mysql.user
+where User = 'user1';
+User	Host	Select_priv	Insert_priv	Update_priv	Delete_priv
+user1	%	Y	Y	Y	Y
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, UPDATE, DELETE ON *.* TO 'user1'@'%'
+select User, Host, Select_priv, Insert_priv, Update_priv, Delete_priv
+from mysql.system_user
+where User = 'user2';
+User	Host	Select_priv	Insert_priv	Update_priv	Delete_priv
+user2	%	Y	Y	Y	Y
+show grants for user2;
+Grants for user2@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user2'@'%'
+insert into t1 values (11);
+ERROR 42000: INSERT command denied to user 'user1'@'localhost' for table 't1'
+select * from t1;
+n
+7
+3
+10
+update t1 set n = 12 where n = 3;
+delete from t1 where n = 7;
+select * from t1;
+n
+12
+10
+insert into t1 values (13);
+select * from t1;
+n
+13
+12
+10
+update t1 set n = 14 where n = 13;
+delete from t1 where n = 10;
+select * from t1;
+n
+14
+12
+drop user user1;
+delete from mysql.system_user where User = 'user2';
+drop database d1;
+flush privileges;

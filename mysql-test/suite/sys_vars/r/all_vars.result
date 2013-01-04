@@ -12,6 +12,7 @@ left join t1 on variable_name=test_name where test_name is null;
 there should be *no* variables listed below:
 allow_delayed_write
 allow_xa
+block_user_access
 reserved_super_connections
 super_to_set_timestamp
 update_connection_privs
