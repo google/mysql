@@ -54,7 +54,8 @@ const char * NEAR globerrs[GLOBERRS]=
   "File '%s' (fileno: %d) was not closed",
   "Can't change ownership of the file '%s' (Errcode: %d)",
   "Can't change permissions of the file '%s' (Errcode: %d)",
-  "Can't seek in file '%s' (Errcode: %d)"
+  "Can't seek in file '%s' (Errcode: %d)",
+  "Query creates a temporary file larger than io_cache_max_size (%lu)."
 };
 
 void init_glob_errs(void)
@@ -98,6 +99,7 @@ void init_glob_errs()
   EE(EE_CHANGE_OWNERSHIP)   = "Can't change ownership of the file '%s' (Errcode: %d)";
   EE(EE_CHANGE_PERMISSIONS) = "Can't change permissions of the file '%s' (Errcode: %d)";
   EE(EE_CANT_SEEK)      = "Can't seek in file '%s' (Errcode: %d)";
+  EE(EE_OVER_IO_CACHE_LIMIT) = "Query creates a temporary file larger than io_cache_max_size (%lu).";
 }
 #endif
 

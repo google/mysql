@@ -52,8 +52,8 @@ TODO:
 #define MAP_TO_USE_RAID
 #include "mysys_priv.h"
 #include <m_string.h>
-#ifdef HAVE_AIOWAIT
 #include "mysys_err.h"
+#ifdef HAVE_AIOWAIT
 static void my_aiowait(my_aio_result *result);
 #endif
 #include <errno.h>
@@ -1550,6 +1550,7 @@ int _my_b_write(register IO_CACHE *info, const uchar *Buffer, size_t Count)
     if (io_cache_max_size > 0 && my_b_tell(info) > io_cache_max_size)
     {
       fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
+      my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
       return info->error= -1;
     }
     if (info->direct_write(info->file, Buffer, length, info->myflags | MY_NABP))
@@ -1615,6 +1616,7 @@ int my_b_append(register IO_CACHE *info, const uchar *Buffer, size_t Count)
   if (io_cache_max_size > 0 && my_b_tell(info) > io_cache_max_size)
   {
     fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
+    my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
     return info->error= -1;
   }
   if (Count >= IO_SIZE)
@@ -1675,6 +1677,7 @@ int my_block_write(register IO_CACHE *info, const uchar *Buffer, size_t Count,
   if (io_cache_max_size > 0 && pos + Count > io_cache_max_size)
   {
     fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
+    my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
     return info->error= -1;
   }
 
@@ -1793,6 +1796,7 @@ int my_b_flush_io_cache(IO_CACHE *info,
       if (io_cache_max_size > 0 && my_b_tell(info) > io_cache_max_size)
       {
         fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
+        my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
         info->error= -1;
         DBUG_RETURN(info->error);
       }
