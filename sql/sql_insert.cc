@@ -2884,15 +2884,7 @@ bool mysql_insert_select_prepare(THD *thd)
   TABLE_LIST *first_select_leaf_table;
   DBUG_ENTER("mysql_insert_select_prepare");
 
-  /*
-    Statement-based replication of INSERT ... SELECT ... LIMIT is not safe
-    as order of rows is not defined, so in mixed mode we go to row-based.
-
-    Note that we may consider a statement as safe if ORDER BY primary_key
-    is present or we SELECT a constant. However it may confuse users to
-    see very similiar statements replicated differently.
-  */
-  if (lex->current_select->select_limit)
+  if (!is_read_clause_safe_for_stmt_replication(thd))
   {
     lex->set_stmt_unsafe();
     thd->set_current_stmt_binlog_row_based_if_mixed();

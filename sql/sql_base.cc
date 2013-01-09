@@ -6193,7 +6193,8 @@ find_field_in_table_ref(THD *thd, TABLE_LIST *table_list,
   */
   if (/* Exclude nested joins. */
       (!table_list->nested_join ||
-       /* Include merge views and information schema tables. */
+       /* Include views and information schema tables. */
+       table_list->view ||
        table_list->field_translation) &&
       /*
         Test if the field qualifiers match the table reference we plan
@@ -6209,14 +6210,14 @@ find_field_in_table_ref(THD *thd, TABLE_LIST *table_list,
 
   if (table_list->field_translation)
   {
-    /* 'table_list' is a view or an information schema table. */
+    /* 'table_list' is a MERGE view or an information schema table. */
     if ((fld= find_field_in_view(thd, table_list, name, length, item_name, ref,
                                  register_tree_change)))
       *actual_table= table_list;
   }
-  else if (!table_list->nested_join)
+  else if (table_list->view || !table_list->nested_join)
   {
-    /* 'table_list' is a stored table. */
+    /* 'table_list' is a TMPTABLE view or stored table. */
     DBUG_ASSERT(table_list->table);
     if ((fld= find_field_in_table(thd, table_list->table, name, length,
                                   allow_rowid,

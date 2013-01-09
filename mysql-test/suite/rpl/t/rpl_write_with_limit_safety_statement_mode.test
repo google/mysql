@@ -1,0 +1,5 @@
+--source include/have_binlog_format_statement.inc
+
+# the actual test is the same as for rpl_limit_query_mixed_logging so is
+# moved to an include:
+--source ../include/rpl_write_with_limit_safety_test.inc

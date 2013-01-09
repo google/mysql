@@ -6,8 +6,6 @@ UPDATE t1 SET b='4' WHERE a=1 LIMIT 1;
 Warnings:
 Note	1592	Statement may not be safe to log in statement format.
 UPDATE t1 SET b='5' WHERE a=2 ORDER BY a LIMIT 1;
-Warnings:
-Note	1592	Statement may not be safe to log in statement format.
 DROP TABLE t1;
 ### NOT filtered database => assertion: binlog disabled and warnings ARE NOT shown
 SET SQL_LOG_BIN= 0;

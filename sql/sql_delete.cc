@@ -478,15 +478,7 @@ int mysql_prepare_delete(THD *thd, TABLE_LIST *table_list, Item **conds)
   DBUG_ENTER("mysql_prepare_delete");
   List<Item> all_fields;
 
-  /*
-    Statement-based replication of DELETE ... LIMIT is not safe as order of
-    rows is not defined, so in mixed mode we go to row-based.
-
-    Note that we may consider a statement as safe if ORDER BY primary_key
-    is present. However it may confuse users to see very similiar statements
-    replicated differently.
-  */
-  if (thd->lex->current_select->select_limit)
+  if (!is_read_clause_safe_for_stmt_replication(thd))
   {
     thd->lex->set_stmt_unsafe();
     thd->set_current_stmt_binlog_row_based_if_mixed();

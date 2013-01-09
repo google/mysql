@@ -17305,7 +17305,7 @@ void st_select_lex::print(THD *thd, String *str, enum_query_type query_type)
     from clause
     TODO: support USING/FORCE/IGNORE index
   */
-  if (table_list.elements)
+  if (top_join_list.elements)
   {
     str->append(STRING_WITH_LEN(" from "));
     /* go through join tree */
@@ -17404,3 +17404,224 @@ bool JOIN::change_result(select_result *res)
 /**
   @} (end of group Query_Optimizer)
 */
+
+static TABLE_LIST *get_first_global_read_table(LEX *lex)
+{
+  TABLE_LIST *table_ptr= lex->query_tables;
+  if (lex->sql_command == SQLCOM_INSERT_SELECT ||
+      lex->sql_command == SQLCOM_REPLACE_SELECT)
+  {
+    // skip first table, which is the target of the write operation
+    table_ptr= table_ptr->next_global;
+  }
+  return table_ptr;
+}
+
+// For statement-based replication safety, results from a read clause in a DML
+// query need to be deterministically ordered if it or any outer clause has a
+// LIMIT; this checks whether such a limit is present.
+static bool clause_or_any_outer_has_limit(SELECT_LEX *select_lex)
+{
+  while (select_lex != NULL) {
+    if (select_lex->select_limit != NULL)
+    {
+      return TRUE;
+    }
+    if (select_lex->master_unit()->is_union())
+    {
+      // Unions will either have a global ORDER BY and reorder themselves that
+      // way, or will be nondeterministically ordered regardless of the
+      // predicability of their consituent queries.  As such, limits further out
+      // are irrelevant:
+      return FALSE;
+    }
+    select_lex= select_lex->outer_select();
+  }
+  return FALSE;
+}
+
+// (simple struct, only for use with the callback just below)
+struct find_local_field_data
+{
+  THD *thd;
+  SELECT_LEX *select_lex;
+};
+
+/**
+  Helper function for list_contains_unique_index.
+  Find a field reference in an ORDER * list whose Item values may not be fixed
+  yet.  The field in question must be local to the query to be found.
+
+  Used in is_read_clause_safe_for_stmt_replication()
+
+  @param field                The field to search for.
+  @param data                 find_local_field_data * with current THD and
+                              SELECT_LEX whose order_list should be searched.
+
+  @retval
+    TRUE                 found
+  @retval
+    FALSE                not found.
+*/
+static bool
+find_local_field_in_unfixed_order_list(Field *field, void *data)
+{
+  find_local_field_data *data_ptr= (find_local_field_data *) data;
+  THD *thd= data_ptr->thd;
+  for (ORDER *order_entry= data_ptr->select_lex->order_list.first;
+       order_entry != NULL;
+       order_entry= order_entry->next)
+  {
+    Item *item= (*order_entry->item)->real_item();
+    if (item->type() != Item::FIELD_ITEM)
+    {
+      continue;
+    }
+    Item_field *item_field= (Item_field*)item;
+
+    // find_field_in_tables wants thd->lex->current_select to be set to
+    // the select that mentions the Item being searched for, set that up
+    // and restore the previous value afterwards:
+    SELECT_LEX *current_save= thd->lex->current_select;
+    thd->lex->current_select= data_ptr->select_lex;
+    Field *from_field= find_field_in_tables(thd, item_field,
+                                            item_field->context->first_name_resolution_table,
+                                            item_field->context->last_name_resolution_table,
+                                            &item,
+                                            IGNORE_EXCEPT_NON_UNIQUE,
+                                            item_field->any_privileges,
+                                            FALSE);
+    thd->lex->current_select= current_save;
+    if (from_field != NULL &&
+        from_field != not_found_field &&
+        from_field != view_ref_found &&
+        from_field->eq(field))
+    {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
+  Determines whether the current query, which should be an INSERT ... SELECT,
+  UPDATE, or DELETE, reads data in ways that we can tell are likely to be
+  nondeterministic even with identical database contents, and therefore unsafe
+  for statement-based replication.
+
+  Returns FALSE if a LIMIT clause is present, unless the relevant clause and all
+  subqueries thereof have ORDER BY clauses encompassing the unique key(s) of all
+  tables they use.
+
+  Returns FALSE if any UNION query or subquery has a union-spanning LIMIT;
+  the safety of union-spanning ORDER BY clauses is comparatively complex to
+  establish.
+
+  Returns FALSE if any information_schema tables are accessed.  These tables are
+  virtual; their contents and schema are dependent on the server software and
+  configuration as much as on the data in the database.
+
+  Returns TRUE otherwise.
+
+  This is a heuristic!  It will return FALSE for some safe but complex
+  constructs (e.g. ORDER BY -x for a signed numeric non-null unique column with
+  LIMIT), and could be improved in the future.
+*/
+bool is_read_clause_safe_for_stmt_replication(THD *thd)
+{
+  DBUG_ENTER("is_select_safe_for_stmt_replication");
+  DBUG_PRINT("info", ("processing query %.*s", (int)thd->query_length(), thd->query()));
+
+  LEX *lex= thd->lex;
+  for (TABLE_LIST *table_ptr = get_first_global_read_table(lex);
+       table_ptr != lex->first_not_own_table();
+       table_ptr= table_ptr->next_global)
+  {
+    SELECT_LEX *select_lex= table_ptr->select_lex;
+    if (table_ptr->view)
+    {
+      if (table_ptr->effective_algorithm == VIEW_ALGORITHM_MERGE ||
+          table_ptr->effective_algorithm == VIEW_ALGORITHM_TMPTABLE)
+      {
+        // will be handled as subquery by examining accessed tables in other
+        // loop iterations
+        DBUG_ASSERT(table_ptr->nested_join != NULL || table_ptr->derived != NULL);
+      }
+      else
+      {
+        // unknown view algorithm, should not happen
+        DBUG_ASSERT(0);
+        // ...but just in case, assume unsafe if asserts are compiled out:
+        DBUG_RETURN(FALSE);
+      }
+    }
+    else if (table_ptr->derived)
+    {
+      // subqueries will be checked separately in outer loop
+    }
+    else if (table_ptr->schema_table)
+    {
+      // consider statement-based replication of any write queries reading from
+      // information_schema unsafe regardless of whether a LIMIT is present,
+      // since the results may include replica-specific runtime data
+      DBUG_PRINT("info", ("query is accessing a schema table"));
+      DBUG_RETURN(FALSE);
+    }
+    else if (table_ptr->nested_join)
+    {
+      // nested join will be checked separately in other loop iterations
+    }
+    else if (table_ptr->placeholder() || !table_ptr->table)
+    {
+      // the above should have been all the type of placeholder TABLE_LIST
+      // types; sanity check, in case other kinds of placeholder are added:
+      String table_desc;
+      table_ptr->print(thd, &table_desc, QT_ORDINARY);
+      DBUG_PRINT("info", ("can't tell what %s is, presuming unsafe", table_desc.c_ptr()));
+      DBUG_RETURN(FALSE);
+    }
+    else
+    {
+      // that's everything else, so table_ptr is a data table
+      if (clause_or_any_outer_has_limit(select_lex))
+      {
+        // select has a LIMIT clause, need to check for ORDER BY
+        // $some_unique_key
+        bool found_index_for_table= FALSE;
+        if (select_lex->order_list.first != NULL) {
+          find_local_field_data data= { thd, select_lex };
+          found_index_for_table= list_contains_unique_index(table_ptr->table,
+                                          find_local_field_in_unfixed_order_list,
+                                          &data);
+        }
+        if (!found_index_for_table)
+        {
+          DBUG_PRINT("info", ("table %.*s is used in DML query with LIMIT "
+                              "and without ORDER BY some_unique_key",
+                              (int)table_ptr->table_name_length,
+                              table_ptr->table_name));
+          DBUG_RETURN(FALSE);
+        }
+      }
+    }
+    if (select_lex->master_unit() && select_lex->master_unit()->is_union())
+    {
+      SELECT_LEX_UNIT *master= select_lex->master_unit();
+      bool has_global_limit= master->fake_select_lex != NULL &&
+                             master->fake_select_lex->select_limit != NULL;
+      bool has_outer_limit= select_lex->outer_select() != NULL &&
+                            clause_or_any_outer_has_limit(select_lex->outer_select());
+      if (has_global_limit || has_outer_limit)
+      {
+        // Whole UNION queries are unsafe to LIMIT unless they're sorted by
+        // every column, since there is otherwise no deterministic ordering
+        // contstraint between rows produced by different SELECT clauses.
+        // Could check for a total ORDER BY here later.
+        DBUG_PRINT("info", ("query uses union with global limit, which is "
+                            "unsafe"));
+        DBUG_RETURN(FALSE);
+      }
+    }
+  }
+  DBUG_RETURN(TRUE);
+}
