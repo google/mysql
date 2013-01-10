@@ -176,11 +176,10 @@ static my_bool chksum_write_block(File file, CHKSUM_BLOCK *block, block_num_t bl
 
   if (res != to_write)
   {
-    my_printf_error(my_errno,
-                    "chksum_write_block failed due to my_pwrite(fd=%d) returning %llu with errno=%d, "
-                    "while trying to write block %llu, at block_loc %llu\n",
-                    MYF(0),
-                    file, (ulonglong) res, my_errno, block_num, block_loc);
+    fprintf(stderr,
+            "chksum_write_block failed due to my_pwrite(fd=%d) returning %llu with errno=%d, "
+            "while trying to write block %llu, at block_loc %llu\n",
+            file, (ulonglong) res, my_errno, block_num, block_loc);
     return FALSE;
   }
   return TRUE;
@@ -215,11 +214,10 @@ static my_bool get_block_at_index(File file, CHKSUM_BLOCK *block, block_num_t bl
     }
     else if (res == MY_FILE_ERROR)
     {
-      my_printf_error(my_errno,
-                      "get_block_at_index failed in my_pread(fd=%d), errno=%d, "
-                      "while trying to read block %llu, at block_loc %llu\n",
-                      MYF(0),
-                      file, my_errno, block_num, block_loc);
+      fprintf(stderr,
+              "get_block_at_index failed in my_pread(fd=%d), errno=%d, "
+              "while trying to read block %llu, at block_loc %llu\n",
+              file, my_errno, block_num, block_loc);
       return FALSE;
     }
     else
@@ -249,10 +247,9 @@ static my_bool get_block_at_index(File file, CHKSUM_BLOCK *block, block_num_t bl
   return TRUE;
 
 error:
-  my_message(0,
-             "Block corruption found in IO Cache: checksums do not match\n"
-             "Aborting server...\n",
-             MYF(0));
+  fprintf(stderr,
+          "Block corruption found in IO Cache: checksums do not match\n"
+          "Aborting server...\n");
   exit(1);
 }
 
