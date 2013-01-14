@@ -1781,6 +1781,7 @@ bool acl_update_user_access(THD *thd)
   if (res == 3)
     goto unlock_and_reset_user;
 
+  sctx->uses_role= false;
   if (!acl_user)
   {
     ACL_MAPPED_USER *acl_mapped_user= find_mapped_user_salt(
@@ -1788,6 +1789,7 @@ bool acl_update_user_access(THD *thd)
     if (acl_mapped_user)
     {
       acl_user= find_user_no_passwd(acl_mapped_user->role, sctx->host, sctx->ip);
+      sctx->uses_role= true;
     }
   }
 
@@ -1795,6 +1797,29 @@ bool acl_update_user_access(THD *thd)
     goto unlock_and_reset_user;
 
   sctx->master_access= acl_user->access;
+  if (!sctx->uses_role)
+  {
+    sctx->priv_user= acl_user->user ? sctx->user : (char *) "";
+  }
+  else
+  {
+    if (acl_user->user)
+    {
+      /*
+        Copy out acl_user->user as the lifetime for that buffer is different
+        than for sctx.
+      */
+      strncpy(sctx->priv_user_buffer, acl_user->user, USERNAME_LENGTH + 1);
+      sctx->priv_user= sctx->priv_user_buffer;
+    }
+    else
+      sctx->priv_user= (char *) "";
+  }
+  if (acl_user->host.hostname)
+    strmake(sctx->priv_host, acl_user->host.hostname, MAX_HOSTNAME - 1);
+  else
+    *sctx->priv_host= 0;
+
   sctx->db_access= 0;
   if (thd->db)
     find_db_access(sctx, acl_user->user, sctx->host, sctx->ip, thd->db);

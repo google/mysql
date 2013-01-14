@@ -173,6 +173,30 @@ select * from t1;
 n
 8
 10
+create user role2@localhost;
+grant all on *.* to role2@localhost;
+select user(), current_user();
+user()	current_user()
+user1@localhost	role1@%
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+update mysql.mapped_user set Role = 'role2' where User = 'user1';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+user1@localhost	role2@localhost
+select * from t1;
+n
+8
+10
+update mysql.mapped_user set Role = 'role1' where User = 'user1';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+user1@localhost	role1@%
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+drop user role2@localhost;
 grant all privileges on *.* to role1 with grant option;
 create procedure inf_loop()
 sql security invoker

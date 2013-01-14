@@ -243,6 +243,29 @@ connection default;
 use d1;
 select * from t1;
 
+# When role is changed permissions and user identification should switch properly
+create user role2@localhost;
+grant all on *.* to role2@localhost;
+connection conn1;
+select user(), current_user();
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+connection default;
+update mysql.mapped_user set Role = 'role2' where User = 'user1';
+flush privileges;
+connection conn1;
+select user(), current_user();
+select * from t1;
+connection default;
+update mysql.mapped_user set Role = 'role1' where User = 'user1';
+flush privileges;
+connection conn1;
+select user(), current_user();
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+connection default;
+drop user role2@localhost;
+
 # When user is dropped all user connections should be killed in the middle of
 # the query.
 grant all privileges on *.* to role1 with grant option;
