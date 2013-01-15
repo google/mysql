@@ -87,11 +87,11 @@ connection server_1;
 # Setting id will cause a log rotate
 set binlog_group_id=1800, master_server_id=34;
 
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 0;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 500;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1006;
 --replace_column 1 # 2 #
 show binlog info for 1007;
@@ -101,22 +101,22 @@ show binlog info for 1008;
 show binlog info for 1031;
 --replace_column 1 # 2 #
 show binlog info for 1056;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1057;
 # Should have a different server_id because we set it above.
 --replace_column 1 # 2 #
 show binlog info for 1800;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1900;
 
 # Disable the hierarchical cache and verify same lookups
 set global rpl_hierarchical_cache_frequency=0;
 
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 0;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 500;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1006;
 --replace_column 1 # 2 #
 show binlog info for 1007;
@@ -126,22 +126,22 @@ show binlog info for 1008;
 show binlog info for 1031;
 --replace_column 1 # 2 #
 show binlog info for 1056;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1057;
 # Should have a different server_id because we set it above.
 --replace_column 1 # 2 #
 show binlog info for 1800;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1900;
 
 # Re-enable the hierarchical cache and verify same lookups
 set global rpl_hierarchical_cache_frequency=50;
 
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 0;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 500;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1006;
 --replace_column 1 # 2 #
 show binlog info for 1007;
@@ -151,12 +151,12 @@ show binlog info for 1008;
 show binlog info for 1031;
 --replace_column 1 # 2 #
 show binlog info for 1056;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1057;
 # Should have a different server_id because we set it above.
 --replace_column 1 # 2 #
 show binlog info for 1800;
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1900;
 
 #
@@ -173,7 +173,7 @@ connection server_1;
 # purge logs from before we set id to 1800 and caused a rotate
 sleep 1;
 purge binary logs before now();
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1056;
 --replace_column 1 # 2 #
 show binlog info for 1800;
@@ -183,7 +183,7 @@ let $second_log= query_get_value(show binary logs, Log_name, 2);
 --replace_result $second_log second_log
 eval purge binary logs to '$second_log';
 
---error 1220
+--error ER_ERROR_WHEN_EXECUTING_COMMAND
 show binlog info for 1800;
 --replace_column 1 # 2 #
 show binlog info for 1850;
@@ -201,7 +201,7 @@ purge binary logs before now();
 connection server_1;
 
 # Changing group_id to be lower than the current requires 'with reset'.
---error 1642
+--error ER_STATEMENT_REQUIRES_OPTION
 set binlog_group_id=19, master_server_id=1;
 set binlog_group_id=19, master_server_id=1 with reset;
 create table t2 (a int, b char(32));
@@ -571,13 +571,13 @@ eval set binlog_group_id=$server_2_group_id, master_server_id=1 with reset;
 #
 connection server_2;
 --source include/stop_slave.inc
---error 1149
+--error ER_SYNTAX_ERROR
 change master to master_log_file='master-bin.000001', connect_using_group_id;
---error 1149
+--error ER_SYNTAX_ERROR
 change master to master_log_pos=4, connect_using_group_id;
---error 1149
+--error ER_SYNTAX_ERROR
 change master to relay_log_file='slave-bin.000001', connect_using_group_id;
---error 1149
+--error ER_SYNTAX_ERROR
 change master to relay_log_pos=4, connect_using_group_id;
 
 #
