@@ -1484,7 +1484,8 @@ public:
   */
   JOIN_TAB *get_sort_by_join_tab()
   {
-    return (need_tmp || !sort_by_table || skip_sort_order) ?
+    return (need_tmp || !sort_by_table || skip_sort_order ||
+            (group && !group_list)) ?
         NULL : join_tab+const_tables;
   }
 
