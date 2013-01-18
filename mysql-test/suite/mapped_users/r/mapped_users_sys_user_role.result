@@ -1,0 +1,92 @@
+call mtr.add_suppression("entry .* in mysql.user is ignored because it duplicates entry in mysql.system_user");
+create table t1 (i int);
+insert into t1 values (1);
+update mysql.db set User = 'root' where User = '';
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where length(User) = 0;
+delete from mysql.user where length(User) = 0;
+flush privileges;
+create user rolefoo@localhost identified by 'foo';
+grant usage on *.* to rolefoo@localhost;
+grant select, insert on *.* to rolefoo@localhost;
+create mapped user mapfoo identified by 'bar' role 'rolefoo';
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+insert into mysql.system_user
+select * from mysql.user where User = 'rolefoo';
+update mysql.user set User = 'rolefoo_save' where User = 'rolefoo';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+connect(localhost,mapfoo,bar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'mapfoo'@'localhost' (using password: YES)
+update mysql.system_user set User = 'rolefoo_save' where User = 'rolefoo';
+update mysql.user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+insert into t1 values (2);
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+select * from t1;
+i
+1
+2
+update mysql.user set User = 'rolefoo_save' where User = 'rolefoo';
+update mysql.system_user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+insert into t1 values (3);
+select * from t1;
+i
+1
+2
+3
+select * from t1;
+Got one of the listed errors
+update mysql.user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+connect(localhost,mapfoo,bar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'mapfoo'@'localhost' (using password: YES)
+update mysql.system_user set User = 'rolefoo_save' where User = 'rolefoo';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+select * from t1;
+i
+1
+2
+3
+update mysql.system_user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+select user(), current_user();
+Got one of the listed errors
+update mysql.user set User = 'rolefoo2' where User = 'rolefoo';
+update mysql.mapped_user set Role = 'rolefoo2' where User = 'mapfoo';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo2@localhost
+select * from t1;
+i
+1
+2
+3
+update mysql.mapped_user set Role = 'rolefoo' where User = 'mapfoo';
+flush privileges;
+select user(), current_user();
+Got one of the listed errors
+drop table t1;
+drop user rolefoo2@localhost;
+delete from mysql.system_user where User = 'rolefoo';
+flush privileges;
+update mysql.db set User='' where User='root';
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;

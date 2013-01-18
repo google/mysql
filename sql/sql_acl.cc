@@ -1487,6 +1487,11 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     acl_mapped_user= find_mapped_user_passwd(thd, passwd, passwd_len, &res);
     if (acl_mapped_user) {
       acl_user= find_user_no_passwd(acl_mapped_user->role, sctx->host, sctx->ip);
+      if (acl_user &&
+          find_sys_user_exact_host(acl_user->user, acl_user->host.hostname))
+      {
+        acl_user= NULL;
+      }
       if (acl_user)
       {
         res= 0;
@@ -1789,6 +1794,11 @@ bool acl_update_user_access(THD *thd)
     if (acl_mapped_user)
     {
       acl_user= find_user_no_passwd(acl_mapped_user->role, sctx->host, sctx->ip);
+      if (acl_user &&
+          find_sys_user_exact_host(acl_user->user, acl_user->host.hostname))
+      {
+        acl_user= NULL;
+      }
       sctx->uses_role= true;
     }
   }
