@@ -111,7 +111,7 @@ REPLACE INTO t1 SELECT xx,y,z FROM (SELECT x AS xx,y,z FROM t2 ORDER BY x LIMIT 
 REPLACE INTO t1 SELECT xx,y,z FROM (SELECT x AS xx,y,z FROM t2) q1 LIMIT 1;
 Warnings:
 Note	1592	Statement may not be safe to log in statement format.
-* UNSAFE: UNIONS as subqueries with 
+* UNSAFE: UNIONS as subqueries with LIMIT on outer query
 INSERT INTO t1 SELECT x+90,y,z FROM ((SELECT x,y,z FROM t2 ORDER BY x) UNION (SELECT 1,2,3)) q1 LIMIT 1;
 Warnings:
 Note	1592	Statement may not be safe to log in statement format.
