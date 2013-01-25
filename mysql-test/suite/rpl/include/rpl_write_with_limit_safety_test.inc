@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS t1;
 DROP TABLE IF EXISTS t2;
 DROP TABLE IF EXISTS t3;
 DROP TABLE IF EXISTS t4;
+DROP TABLE IF EXISTS t5;
 --enable_query_log
 --enable_warnings
 
@@ -21,6 +22,7 @@ CREATE TABLE t1 (x int PRIMARY KEY, y int, z int);
 CREATE TABLE t2 (x int PRIMARY KEY, y int UNIQUE NOT NULL, z int);
 CREATE TABLE t3 (a int PRIMARY KEY, b int UNIQUE NULL, c int);
 CREATE TABLE t4 (a int, b int, c int, PRIMARY KEY (a,b));
+CREATE TABLE t5 (x int PRIMARY KEY, yy int UNIQUE NOT NULL, zz int);
 CREATE OR REPLACE VIEW v1 AS SELECT x+5 as x,y,z FROM t2;
 CREATE OR REPLACE VIEW v2 AS SELECT x+15 as x,y,z FROM t2 LIMIT 1;
 CREATE OR REPLACE VIEW v3 AS SELECT x+25 as x,y,z FROM t2 ORDER BY t2.x;
@@ -107,17 +109,21 @@ INSERT INTO t1 SELECT a+100,b,c FROM t4 ORDER BY a LIMIT 1;
 REPLACE INTO t1 SELECT a,b,c FROM t4 ORDER BY b LIMIT 1;
 --echo * SAFE: LIMIT on joins where ORDER BY uniquely orders all tables
 REPLACE INTO t1 SELECT x,y,z FROM t2 JOIN t3 ON x=a ORDER BY x, a LIMIT 1;
+INSERT INTO t1 SELECT x+1000,y,z FROM t2 NATURAL JOIN t5 ORDER BY t2.x, t5.x LIMIT 1;
 --echo * UNSAFE: LIMIT on joins where ORDER BY doesn't uniquely order some of the joined tables
 REPLACE INTO t1 SELECT x,y,z FROM t2 JOIN t3 ON x=b ORDER BY x LIMIT 1;
+--echo * FALSE ALARM: Natural join columns aren't resolved correctly pre-fix_fields()
+INSERT INTO t1 SELECT x+1000,y,z FROM t2 NATURAL JOIN t5 ORDER BY x LIMIT 1;
 
 DROP TABLE t1;
 DROP TABLE t2;
 DROP TABLE t3;
 DROP TABLE t4;
+DROP TABLE t5;
 DROP VIEW v1;
 DROP VIEW v2;
 DROP VIEW v3;
 DROP VIEW v4;
 
---source include/rpl_end.inc
 --source include/show_binlog_events.inc
+--source include/rpl_end.inc

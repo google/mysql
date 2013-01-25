@@ -17488,7 +17488,7 @@ find_local_field_in_unfixed_order_list(Field *field, void *data)
                                             item_field->context->first_name_resolution_table,
                                             item_field->context->last_name_resolution_table,
                                             &item,
-                                            IGNORE_EXCEPT_NON_UNIQUE,
+                                            IGNORE_ERRORS,
                                             item_field->any_privileges,
                                             FALSE);
     thd->lex->current_select= current_save;
