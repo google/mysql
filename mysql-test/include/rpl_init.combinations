@@ -6,3 +6,22 @@ binlog-format=statement
 
 [mix]
 binlog-format=mixed
+
+[row-crc]
+binlog-format=row
+binlog-checksum=CRC32
+master_verify_checksum
+slave_sql_verify_checksum
+
+[stmt-crc]
+binlog-format=statement
+binlog-checksum=CRC32
+master_verify_checksum
+slave_sql_verify_checksum
+
+[mix-crc]
+binlog-format=mixed
+binlog-checksum=CRC32
+master_verify_checksum
+slave_sql_verify_checksum
+
