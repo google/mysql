@@ -1,0 +1,98 @@
+--source include/master-slave.inc
+--source include/have_innodb.inc
+
+set @save_binlog_checksum = @@global.binlog_checksum;
+set @save_master_verify_checksum = @@global.master_verify_checksum;
+set @@global.binlog_checksum = CRC32;
+set @@global.master_verify_checksum = 1;
+
+connection slave;
+set @slave_save_binlog_checksum = @@global.binlog_checksum;
+set @save_slave_sql_verify_checksum = @@global.slave_sql_verify_checksum;
+set @@global.binlog_checksum = CRC32;
+set @@global.slave_sql_verify_checksum = 1;
+
+connection master;
+create table t1 (val int primary key, comment char(64)) engine=innodb;
+
+#
+# Test use of transaction cache which uses my_checksum_combine as well
+# as Query_log_event and Xid_log_event
+#
+begin;
+insert into t1 values (1, 'this is the first row');
+insert into t1 values (2, 'this is the second row');
+insert into t1 values (3, 'this is the third row');
+commit;
+
+#
+# Test of User_var_log_event
+#
+set @my_val=4, @my_comment='this is the fourth row';
+insert into t1 values (@my_val, @my_comment);
+
+#
+# Test of Intvar_log_event
+#
+create table t2 (val int primary key not null auto_increment, name char(16));
+insert into t2 (name) values ('dog');
+insert into t2 (name) values ('cat');
+insert into t2 (name) values ('penguin');
+insert into t2 (name) values ('elephant');
+insert into t2 (name) values ('dolphin');
+insert into t1 values (LAST_INSERT_ID(), 'last value inserted into table t2');
+
+#
+# Test use of Rand_log_event
+#
+create table t3 (val int primary key, comment char(64)) engine=innodb;
+--disable_warnings
+insert into t3 values (FLOOR(10 + RAND() * 10), 'val is a random num between 10 and 20');
+--enable_warnings
+
+#
+# Test of Rotate_log_event
+#
+# Master running with '--max_binlog_size=4K' so write enough events for bin
+# log to grow larger than that a couple of times.
+#
+create table t4 (val int primary key) engine=innodb;
+--disable_query_log
+let $i= 50;
+while ($i)
+{
+  eval insert into t4 values ($i);
+  dec $i;
+}
+--enable_query_log
+
+#
+# Test of Execute_load_query_log_event
+#
+
+create table t5 (day date,id int(9),category enum('a','b','c'),name varchar(60));
+load data infile '../../std_data/rpl_loaddata2.dat' into table t5 fields terminated by ',' optionally enclosed by '%' escaped by '@' lines terminated by '\n##\n' starting by '>' ignore 1 lines;
+
+#
+# Verify all is well on the slave
+#
+sync_slave_with_master;
+--source include/check_slave_no_error.inc
+
+select * from t1;
+select * from t2;
+select count(*) from t3;
+select * from t4;
+select * from t5;
+
+connection master;
+drop table t1, t2, t3, t4, t5;
+
+set @@global.binlog_checksum = @save_binlog_checksum;
+set @@global.master_verify_checksum = @save_master_verify_checksum;
+
+connection slave;
+set @@global.binlog_checksum = @slave_save_binlog_checksum;
+set @@global.slave_sql_verify_checksum = @save_slave_sql_verify_checksum;
+
+--source include/rpl_end.inc

@@ -1,0 +1,111 @@
+include/master-slave.inc
+[connection master]
+set @save_binlog_checksum = @@global.binlog_checksum;
+set @save_master_verify_checksum = @@global.master_verify_checksum;
+set @@global.binlog_checksum = CRC32;
+set @@global.master_verify_checksum = 1;
+set @slave_save_binlog_checksum = @@global.binlog_checksum;
+set @save_slave_sql_verify_checksum = @@global.slave_sql_verify_checksum;
+set @@global.binlog_checksum = CRC32;
+set @@global.slave_sql_verify_checksum = 1;
+create table t1 (val int primary key, comment char(64)) engine=innodb;
+begin;
+insert into t1 values (1, 'this is the first row');
+insert into t1 values (2, 'this is the second row');
+insert into t1 values (3, 'this is the third row');
+commit;
+set @my_val=4, @my_comment='this is the fourth row';
+insert into t1 values (@my_val, @my_comment);
+create table t2 (val int primary key not null auto_increment, name char(16));
+insert into t2 (name) values ('dog');
+insert into t2 (name) values ('cat');
+insert into t2 (name) values ('penguin');
+insert into t2 (name) values ('elephant');
+insert into t2 (name) values ('dolphin');
+insert into t1 values (LAST_INSERT_ID(), 'last value inserted into table t2');
+create table t3 (val int primary key, comment char(64)) engine=innodb;
+insert into t3 values (FLOOR(10 + RAND() * 10), 'val is a random num between 10 and 20');
+create table t4 (val int primary key) engine=innodb;
+create table t5 (day date,id int(9),category enum('a','b','c'),name varchar(60));
+load data infile '../../std_data/rpl_loaddata2.dat' into table t5 fields terminated by ',' optionally enclosed by '%' escaped by '@' lines terminated by '\n##\n' starting by '>' ignore 1 lines;
+include/check_slave_no_error.inc
+select * from t1;
+val	comment
+1	this is the first row
+2	this is the second row
+3	this is the third row
+4	this is the fourth row
+5	last value inserted into table t2
+select * from t2;
+val	name
+1	dog
+2	cat
+3	penguin
+4	elephant
+5	dolphin
+select count(*) from t3;
+count(*)
+1
+select * from t4;
+val
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+select * from t5;
+day	id	category	name
+2003-02-22	2461	b	a a a @ %  ' " a
+2003-03-22	2161	c	asdf
+2003-03-22	2416	a	bbbbb
+drop table t1, t2, t3, t4, t5;
+set @@global.binlog_checksum = @save_binlog_checksum;
+set @@global.master_verify_checksum = @save_master_verify_checksum;
+set @@global.binlog_checksum = @slave_save_binlog_checksum;
+set @@global.slave_sql_verify_checksum = @save_slave_sql_verify_checksum;
+include/rpl_end.inc
