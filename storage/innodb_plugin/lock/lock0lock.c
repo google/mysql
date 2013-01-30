@@ -4687,9 +4687,11 @@ loop:
 				print the lock without attempting to
 				load the page in the buffer pool. */
 
-				fprintf(file, "RECORD LOCKS on"
-					" non-existing space %lu\n",
-					(ulong) space);
+				if (file) {
+					fprintf(file, "RECORD LOCKS on"
+						" non-existing space %lu\n",
+						(ulong) space);
+				}
 				goto print_rec;
 			}
 
@@ -4710,11 +4712,14 @@ loop:
 		}
 
 print_rec:
-		lock_rec_print(file, lock);
+		if (file) {
+			lock_rec_print(file, lock);
+		}
 	} else {
 		ut_ad(lock_get_type_low(lock) & LOCK_TABLE);
-
-		lock_table_print(file, lock);
+		if (file) {
+			lock_table_print(file, lock);
+		}
 	}
 
 	load_page_first = TRUE;
@@ -4722,9 +4727,11 @@ print_rec:
 	nth_lock++;
 
 	if (nth_lock >= 10) {
-		fputs("10 LOCKS PRINTED FOR THIS TRX:"
-		      " SUPPRESSING FURTHER PRINTS\n",
-		      file);
+		if (file) {
+			fputs("10 LOCKS PRINTED FOR THIS TRX:"
+			      " SUPPRESSING FURTHER PRINTS\n",
+			      file);
+		}
 
 		nth_trx++;
 		nth_lock = 0;
