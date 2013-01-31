@@ -2505,7 +2505,7 @@ static bool send_show_master_info_header(THD *thd, bool full,
   field_list.push_back(new Item_empty_string("Replicate_Wild_Ignore_Table",
                                              28));
   field_list.push_back(new Item_return_int("Last_Errno", 4, MYSQL_TYPE_LONG));
-  field_list.push_back(new Item_empty_string("Last_Error", 20));
+  field_list.push_back(new Item_empty_blob("Last_Error", MAX_SLAVE_ERRMSG));
   field_list.push_back(new Item_return_int("Skip_Counter", 10,
                                            MYSQL_TYPE_LONG));
   field_list.push_back(new Item_return_int("Exec_Master_Log_Pos", 10,
@@ -2534,7 +2534,7 @@ static bool send_show_master_info_header(THD *thd, bool full,
   field_list.push_back(new Item_return_int("Last_IO_Errno", 4, MYSQL_TYPE_LONG));
   field_list.push_back(new Item_empty_string("Last_IO_Error", 20));
   field_list.push_back(new Item_return_int("Last_SQL_Errno", 4, MYSQL_TYPE_LONG));
-  field_list.push_back(new Item_empty_string("Last_SQL_Error", 20));
+  field_list.push_back(new Item_empty_blob("Last_SQL_Error", MAX_SLAVE_ERRMSG));
   field_list.push_back(new Item_empty_string("Replicate_Ignore_Server_Ids",
                                              FN_REFLEN));
   field_list.push_back(new Item_return_int("Master_Server_Id", sizeof(ulong),
