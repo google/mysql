@@ -2109,6 +2109,15 @@ public:
   void make_field(Send_field *field);
 };
 
+class Item_empty_blob :public Item_blob
+{
+public:
+  Item_empty_blob(const char* header, uint length) : Item_blob("", length) {
+    name=(char*) header;
+  }
+  void make_field(Send_field *field);
+};
+
 
 class Item_return_int :public Item_int
 {

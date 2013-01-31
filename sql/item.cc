@@ -4774,6 +4774,18 @@ void Item_empty_string::make_field(Send_field *tmp_field)
   init_make_field(tmp_field, string_field_type());
 }
 
+void Item_empty_blob::make_field(Send_field *tmp_field)
+{
+  enum_field_types type= MYSQL_TYPE_TINY_BLOB;
+  if (max_length >= 16777216)
+    type= MYSQL_TYPE_LONG_BLOB;
+  else if (max_length >= 65536)
+    type= MYSQL_TYPE_MEDIUM_BLOB;
+  else if (max_length >= 256)
+    type= MYSQL_TYPE_BLOB;
+  init_make_field(tmp_field, type);
+}
+
 
 enum_field_types Item::field_type() const
 {
