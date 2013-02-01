@@ -1656,7 +1656,7 @@ bool show_master_info(THD* thd, Master_info* mi)
   field_list.push_back(new Item_empty_string("Replicate_Wild_Ignore_Table",
                                              28));
   field_list.push_back(new Item_return_int("Last_Errno", 4, MYSQL_TYPE_LONG));
-  field_list.push_back(new Item_empty_string("Last_Error", 20));
+  field_list.push_back(new Item_empty_blob("Last_Error", MAX_SLAVE_ERRMSG));
   field_list.push_back(new Item_return_int("Skip_Counter", 10,
                                            MYSQL_TYPE_LONG));
   field_list.push_back(new Item_return_int("Exec_Master_Log_Pos", 10,
