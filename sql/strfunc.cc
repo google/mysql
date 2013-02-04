@@ -496,7 +496,10 @@ uint strconvert(CHARSET_INFO *from_cs, const char *from,
       wc= '?';
     }
     else
+    {
+      error_count++;
       break; // Impossible char.
+    }
 
 outp:
 

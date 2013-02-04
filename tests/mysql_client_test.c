@@ -1836,6 +1836,7 @@ static void test_double_compare()
   my_bind[2].buffer= (void *)&double_data;
 
   tiny_data= 1;
+  memset(real_data, 0, sizeof(real_data));
   strmov(real_data, "10.2");
   double_data= 34.5;
   rc= mysql_stmt_bind_param(stmt, my_bind);
@@ -3988,7 +3989,7 @@ static void test_bind_result_ext1()
   short      i_data;
   uchar      b_data;
   int        f_data;
-  long       bData;
+  int        bData;
   char       d_data[20];
   double     szData;
   MYSQL_BIND my_bind[8];
@@ -4084,7 +4085,7 @@ static void test_bind_result_ext1()
     fprintf(stdout, "\n data (float)  : %d(%lu)", f_data, length[4]);
     fprintf(stdout, "\n data (double) : %s(%lu)", d_data, length[5]);
 
-    fprintf(stdout, "\n data (bin)    : %ld(%lu)", bData, length[6]);
+    fprintf(stdout, "\n data (bin)    : %d(%lu)", bData,  length[6]);
     fprintf(stdout, "\n data (str)    : %g(%lu)", szData, length[7]);
   }
 
@@ -5707,6 +5708,7 @@ static void test_manual_sample()
 
   /* Specify the data */
   int_data= 10;             /* integer */
+  memset(str_data, 0, sizeof(str_data));
   strmov(str_data, "MySQL"); /* string  */
 
   /* INSERT SMALLINT data as NULL */
@@ -7670,6 +7672,7 @@ static void test_decimal_bug()
   rc= mysql_stmt_bind_param(stmt, my_bind);
   check_execute(stmt, rc);
 
+  memset(data, 0, sizeof(data));
   strmov(data, "8.0");
   rc= mysql_stmt_execute(stmt);
   check_execute(stmt, rc);
@@ -11652,6 +11655,7 @@ static void test_view_insert_fields()
     my_bind[i].is_null= 0;
     my_bind[i].buffer= (char *)&parm[i];
 
+    memset(parm[i], 0, sizeof(parm[i]));
     strmov(parm[i], "1");
     my_bind[i].buffer_length= 2;
     my_bind[i].length= &l[i];
@@ -13112,7 +13116,7 @@ static void test_bug8330()
   int i, rc;
   const char *query= "select a,b from t1 where a=?";
   MYSQL_BIND my_bind[2];
-  long lval[2];
+  int lval[2];
 
   myheader("test_bug8330");
 
@@ -13125,6 +13129,7 @@ static void test_bug8330()
   myquery(rc);
 
   bzero((char*) my_bind, sizeof(my_bind));
+  lval[0]= lval[1]= 0;
   for (i=0; i < 2; i++)
   {
     stmt[i]= mysql_stmt_init(mysql);
@@ -13619,6 +13624,7 @@ static void test_bug9478()
     {
       char buff[8];
       /* Fill in the fetch packet */
+      memset(buff, 0, sizeof(buff));
       int4store(buff, stmt->stmt_id);
       buff[4]= 1;                               /* prefetch rows */
       rc= ((*mysql->methods->advanced_command)(mysql, COM_STMT_FETCH,
@@ -17827,6 +17833,7 @@ static void test_bug43560(void)
   rc= mysql_stmt_prepare(stmt, insert_str, strlen(insert_str));
   check_execute(stmt, rc);
 
+  memset(&bind, 0, sizeof(bind));
   bind.buffer_type= MYSQL_TYPE_STRING;
   bind.buffer_length= BUFSIZE;
   bind.buffer= buffer;

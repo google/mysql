@@ -1089,6 +1089,11 @@ static void uf_varchar2(MI_COLUMNDEF *rec, MI_BIT_BUFF *bit_buff,
 
 	/* Functions to decode of buffer of bits */
 
+static uchar get_bit_buff_byte(MI_BIT_BUFF *bit_buff, int byte_num)
+{
+  return bit_buff->end - bit_buff->pos > byte_num ? bit_buff->pos[byte_num] : 0;
+}
+
 #if BITS_SAVED == 64
 
 static void decode_bytes(MI_COLUMNDEF *rec,MI_BIT_BUFF *bit_buff,uchar *to,
@@ -1114,10 +1119,10 @@ static void decode_bytes(MI_COLUMNDEF *rec,MI_BIT_BUFF *bit_buff,uchar *to,
 	return;				/* Can't be right */
       }
       bit_buff->current_byte= (bit_buff->current_byte << 32) +
-	((((uint) bit_buff->pos[3])) +
-	 (((uint) bit_buff->pos[2]) << 8) +
-	 (((uint) bit_buff->pos[1]) << 16) +
-	 (((uint) bit_buff->pos[0]) << 24));
+	((((uint) get_bit_buff_byte(bit_buff, 3))) +
+	 (((uint) get_bit_buff_byte(bit_buff, 2)) << 8) +
+	 (((uint) get_bit_buff_byte(bit_buff, 1)) << 16) +
+	 (((uint) get_bit_buff_byte(bit_buff, 0)) << 24));
       bit_buff->pos+=4;
       bits+=32;
     }
@@ -1208,23 +1213,23 @@ static void decode_bytes(MI_COLUMNDEF *rec, MI_BIT_BUFF *bit_buff, uchar *to,
       }
 #if BITS_SAVED == 32
       bit_buff->current_byte= (bit_buff->current_byte << 24) +
-	(((uint) ((uchar) bit_buff->pos[2]))) +
-	  (((uint) ((uchar) bit_buff->pos[1])) << 8) +
-	    (((uint) ((uchar) bit_buff->pos[0])) << 16);
+	(((uint) get_bit_buff_byte(bit_buff, 2))) +
+	  (((uint) get_bit_buff_byte(bit_buff, 1)) << 8) +
+	    (((uint) get_bit_buff_byte(bit_buff, 0)) << 16);
       bit_buff->pos+=3;
       bits+=24;
 #else
       if (bits)				/* We must have at leasts 9 bits */
       {
 	bit_buff->current_byte=  (bit_buff->current_byte << 8) +
-	  (uint) ((uchar) bit_buff->pos[0]);
+	  (uint) get_bit_buff_byte(bit_buff, 0);
 	bit_buff->pos++;
 	bits+=8;
       }
       else
       {
-	bit_buff->current_byte= ((uint) ((uchar) bit_buff->pos[0]) << 8) +
-	  ((uint) ((uchar) bit_buff->pos[1]));
+	bit_buff->current_byte= ((uint) get_bit_buff_byte(bit_buff, 0) << 8) +
+	  ((uint) get_bit_buff_byte(bit_buff, 1));
 	bit_buff->pos+=2;
 	bits+=16;
       }
@@ -1248,14 +1253,14 @@ static void decode_bytes(MI_COLUMNDEF *rec, MI_BIT_BUFF *bit_buff, uchar *to,
 	{				/* We don't need to check end */
 #if BITS_SAVED == 32
 	  bit_buff->current_byte= (bit_buff->current_byte << 24) +
-	    (((uint) ((uchar) bit_buff->pos[2]))) +
-	      (((uint) ((uchar) bit_buff->pos[1])) << 8) +
-		(((uint) ((uchar) bit_buff->pos[0])) << 16);
+	    (((uint) get_bit_buff_byte(bit_buff, 2))) +
+	      (((uint) get_bit_buff_byte(bit_buff, 1)) << 8) +
+		(((uint) get_bit_buff_byte(bit_buff, 0)) << 16);
 	  bit_buff->pos+=3;
 	  bits+=24;
 #else
 	  bit_buff->current_byte=  (bit_buff->current_byte << 8) +
-	    (uint) ((uchar) bit_buff->pos[0]);
+	    (uint) get_bit_buff_byte(bit_buff, 0);
 	  bit_buff->pos+=1;
 	  bits+=8;
 #endif
@@ -1442,26 +1447,26 @@ static void fill_buffer(MI_BIT_BUFF *bit_buff)
   }
 
 #if BITS_SAVED == 64
-  bit_buff->current_byte=  ((((uint) ((uchar) bit_buff->pos[7]))) +
-			     (((uint) ((uchar) bit_buff->pos[6])) << 8) +
-			     (((uint) ((uchar) bit_buff->pos[5])) << 16) +
-			     (((uint) ((uchar) bit_buff->pos[4])) << 24) +
+  bit_buff->current_byte=  ((((uint) get_bit_buff_byte(bit_buff, 7))) +
+			     (((uint) get_bit_buff_byte(bit_buff, 6)) << 8) +
+			     (((uint) get_bit_buff_byte(bit_buff, 5)) << 16) +
+			     (((uint) get_bit_buff_byte(bit_buff, 4)) << 24) +
 			     ((ulonglong)
-			      ((((uint) ((uchar) bit_buff->pos[3]))) +
-			       (((uint) ((uchar) bit_buff->pos[2])) << 8) +
-			       (((uint) ((uchar) bit_buff->pos[1])) << 16) +
-			       (((uint) ((uchar) bit_buff->pos[0])) << 24)) << 32));
+			      ((((uint) get_bit_buff_byte(bit_buff, 3))) +
+			       (((uint) get_bit_buff_byte(bit_buff, 2)) << 8) +
+			       (((uint) get_bit_buff_byte(bit_buff, 1)) << 16) +
+			       (((uint) get_bit_buff_byte(bit_buff, 0)) << 24)) << 32));
   bit_buff->pos+=8;
 #else
 #if BITS_SAVED == 32
-  bit_buff->current_byte=  (((uint) ((uchar) bit_buff->pos[3])) +
-			     (((uint) ((uchar) bit_buff->pos[2])) << 8) +
-			     (((uint) ((uchar) bit_buff->pos[1])) << 16) +
-			     (((uint) ((uchar) bit_buff->pos[0])) << 24));
+  bit_buff->current_byte=  (((uint) get_bit_buff_byte(bit_buff, 3)) +
+			     (((uint) get_bit_buff_byte(bit_buff, 2)) << 8) +
+			     (((uint) get_bit_buff_byte(bit_buff, 1)) << 16) +
+			     (((uint) get_bit_buff_byte(bit_buff, 0)) << 24));
   bit_buff->pos+=4;
 #else
-  bit_buff->current_byte=  (uint) (((uint) ((uchar) bit_buff->pos[1]))+
-				    (((uint) ((uchar) bit_buff->pos[0])) << 8));
+  bit_buff->current_byte=  (uint) (((uint) get_bit_buff_byte(bit_buff, 1))+
+				    (((uint) get_bit_buff_byte(bit_buff, 0)) << 8));
   bit_buff->pos+=2;
 #endif
 #endif

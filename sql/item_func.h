@@ -62,26 +62,26 @@ public:
   enum Type type() const { return FUNC_ITEM; }
   virtual enum Functype functype() const   { return UNKNOWN_FUNC; }
   Item_func(void):
-    allowed_arg_cols(1), arg_count(0)
+    allowed_arg_cols(1), arg_count(0), used_tables_cache(0)
   {
     with_sum_func= 0;
   }
   Item_func(Item *a):
-    allowed_arg_cols(1), arg_count(1)
+    allowed_arg_cols(1), arg_count(1), used_tables_cache(0)
   {
     args= tmp_arg;
     args[0]= a;
     with_sum_func= a->with_sum_func;
   }
   Item_func(Item *a,Item *b):
-    allowed_arg_cols(1), arg_count(2)
+    allowed_arg_cols(1), arg_count(2), used_tables_cache(0)
   {
     args= tmp_arg;
     args[0]= a; args[1]= b;
     with_sum_func= a->with_sum_func || b->with_sum_func;
   }
   Item_func(Item *a,Item *b,Item *c):
-    allowed_arg_cols(1)
+    allowed_arg_cols(1), used_tables_cache(0)
   {
     arg_count= 0;
     if ((args= (Item**) sql_alloc(sizeof(Item*)*3)))
@@ -92,7 +92,7 @@ public:
     }
   }
   Item_func(Item *a,Item *b,Item *c,Item *d):
-    allowed_arg_cols(1)
+    allowed_arg_cols(1), used_tables_cache(0)
   {
     arg_count= 0;
     if ((args= (Item**) sql_alloc(sizeof(Item*)*4)))
@@ -104,7 +104,7 @@ public:
     }
   }
   Item_func(Item *a,Item *b,Item *c,Item *d,Item* e):
-    allowed_arg_cols(1)
+    allowed_arg_cols(1), used_tables_cache(0)
   {
     arg_count= 5;
     if ((args= (Item**) sql_alloc(sizeof(Item*)*5)))

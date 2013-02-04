@@ -4279,7 +4279,7 @@ my_mb_wc_filename(CHARSET_INFO *cs __attribute__((unused)),
   if (*s != MY_FILENAME_ESCAPE)
     return MY_CS_ILSEQ;
   
-  if (s + 3 > e)
+  if (s + 3 > e || s[1] == 0 || s[2] == 0)
     return MY_CS_TOOSMALL3;
   
   byte1= s[1];
@@ -4301,7 +4301,7 @@ my_mb_wc_filename(CHARSET_INFO *cs __attribute__((unused)),
     }
   }
   
-  if (s + 4 > e)
+  if (s + 4 > e || s[3] == 0 || s[4] == 0)
     return MY_CS_TOOSMALL4;
 
   if ((byte1= hexlo(byte1)) >= 0 &&

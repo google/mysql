@@ -84,7 +84,7 @@ void Item_func::set_arguments(List<Item> &list)
 }
 
 Item_func::Item_func(List<Item> &list)
-  :allowed_arg_cols(1)
+  :allowed_arg_cols(1), used_tables_cache(0)
 {
   set_arguments(list);
 }

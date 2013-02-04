@@ -1968,6 +1968,7 @@ parse_option(const char *origin, option_string **stmt, char delm)
 
     count++;
     strncpy(buffer, ptr, (size_t)(retstr - ptr));
+    buffer[retstr - ptr]= 0;
     if ((buffer_ptr= strchr(buffer, ':')))
     {
       char *option_ptr;

@@ -408,6 +408,7 @@ static uchar **make_char_array(uchar **old_pos, uint fields,
     while (fields--)
     {
       *(pos++) = (char_pos+= length);
+      memset(char_pos, 0, length);
     }
   }
 

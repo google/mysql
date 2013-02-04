@@ -1716,6 +1716,7 @@ int open_table_from_share(THD *thd, TABLE_SHARE *share, const char *alias,
   if (!(record= (uchar*) alloc_root(&outparam->mem_root,
                                    share->rec_buff_length * records)))
     goto err;                                   /* purecov: inspected */
+  memset(record, 0, share->rec_buff_length * records);
 
   if (records == 0)
   {

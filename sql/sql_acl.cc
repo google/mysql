@@ -1202,6 +1202,7 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
       break;
 #endif /* HAVE_OPENSSL */
     }
+    sctx->access_ver = acl_version;
     sctx->master_access= user_access;
     sctx->priv_user= acl_user->user ? sctx->user : (char *) "";
     sctx->salt_len= acl_user->salt_len;
