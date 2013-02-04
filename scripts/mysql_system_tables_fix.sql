@@ -601,8 +601,3 @@ ALTER TABLE db MODIFY Trigger_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT
 
 UPDATE user SET Trigger_priv=Super_priv WHERE @hadTriggerPriv = 0;
 
-# Activate the new, possible modified privilege tables
-# This should not be needed, but gives us some extra testing that the above
-# changes was correct
-
-flush privileges;
