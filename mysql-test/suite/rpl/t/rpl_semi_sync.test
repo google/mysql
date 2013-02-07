@@ -128,6 +128,12 @@ sync_with_master;
 connection master;
 set global rpl_semi_sync_always_on= 1;
 set global rpl_semi_sync_timeout= 10;
+if ($VALGRIND_TEST)
+{
+  --disable_query_log
+  set global rpl_semi_sync_timeout= 100;
+  --enable_query_log
+}
 show status like 'Rpl_semi_sync_status';
 show status like 'Rpl_semi_sync_no_tx';
 show status like 'Rpl_semi_sync_yes_tx';
