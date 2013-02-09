@@ -20,6 +20,8 @@
 ################################################################################
 
 --source include/have_innodb.inc
+# mysqltest with embedded server crashes in this test
+--source include/not_embedded.inc
 
 --disable_warnings
 DROP TABLE IF EXISTS t1;

@@ -10,3 +10,4 @@
 #
 ##############################################################################
 innodb_bug14676111: MDEV-4396
+innodb-changed-pages: Works only with XtraDB and and uses XtraDB-specific flags (have_xtradb.inc cannot execute)
