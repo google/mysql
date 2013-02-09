@@ -164,10 +164,8 @@ our $opt_vs_config = $ENV{'MTR_VS_CONFIG'};
 
 my @DEFAULT_SUITES= qw(
     main-
-    archive-
     binlog-
     csv-
-    federated-
     funcs_1-
     funcs_2-
     handler-
