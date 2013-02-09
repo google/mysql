@@ -311,7 +311,7 @@ bool throw_bounds_warning(THD *thd, const char *name,
     else
       llstr(v, buf);
 
-    if (thd->variables.sql_mode & MODE_STRICT_ALL_TABLES)
+    if (thd->is_strict_mode())
     {
       my_error(ER_WRONG_VALUE_FOR_VAR, MYF(0), name, buf);
       return true;
@@ -331,7 +331,7 @@ bool throw_bounds_warning(THD *thd, const char *name, bool fixed, double v)
 
     my_gcvt(v, MY_GCVT_ARG_DOUBLE, sizeof(buf) - 1, buf, NULL);
 
-    if (thd->variables.sql_mode & MODE_STRICT_ALL_TABLES)
+    if (thd->is_strict_mode())
     {
       my_error(ER_WRONG_VALUE_FOR_VAR, MYF(0), name, buf);
       return true;
@@ -487,10 +487,6 @@ SHOW_VAR* enumerate_sys_vars(THD *thd, bool sorted, enum enum_var_type type)
       if (type == OPT_GLOBAL && var->check_type(type))
         continue;
 
-      /* don't show non-visible variables */
-      if (var->not_visible())
-        continue;
-
       show->name= var->name.str;
       show->value= (char*) var;
       show->type= SHOW_SYS;
@@ -531,10 +527,6 @@ sys_var *intern_find_sys_var(const char *str, uint length)
   */
   var= (sys_var*) my_hash_search(&system_variable_hash,
                               (uchar*) str, length ? length : strlen(str));
-
-  /* Don't show non-visible variables. */
-  if (var && var->not_visible())
-    return NULL;
 
   return var;
 }

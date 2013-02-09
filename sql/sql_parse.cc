@@ -270,12 +270,14 @@ void init_update_queries(void)
                                             CF_CAN_GENERATE_ROW_EVENTS;
   sql_command_flags[SQLCOM_CREATE_INDEX]=   CF_CHANGES_DATA | CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_ALTER_TABLE]=    CF_CHANGES_DATA | CF_WRITE_LOGS_COMMAND |
-                                            CF_AUTO_COMMIT_TRANS | CF_REPORT_PROGRESS ;
+                                            CF_AUTO_COMMIT_TRANS | CF_REPORT_PROGRESS |
+                                            CF_INSERTS_DATA;
   sql_command_flags[SQLCOM_TRUNCATE]=       CF_CHANGES_DATA | CF_WRITE_LOGS_COMMAND |
                                             CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_DROP_TABLE]=     CF_CHANGES_DATA | CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_LOAD]=           CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
-                                            CF_CAN_GENERATE_ROW_EVENTS | CF_REPORT_PROGRESS;
+                                            CF_CAN_GENERATE_ROW_EVENTS | CF_REPORT_PROGRESS |
+                                            CF_INSERTS_DATA;
   sql_command_flags[SQLCOM_CREATE_DB]=      CF_CHANGES_DATA | CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_DROP_DB]=        CF_CHANGES_DATA | CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_ALTER_DB_UPGRADE]= CF_AUTO_COMMIT_TRANS;
@@ -294,19 +296,23 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_UPDATE]=	    CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
-                                            CF_CAN_BE_EXPLAINED;
+                                            CF_CAN_BE_EXPLAINED |
+                                            CF_UPDATES_DATA;
   sql_command_flags[SQLCOM_UPDATE_MULTI]=   CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
-                                            CF_CAN_BE_EXPLAINED;
+                                            CF_CAN_BE_EXPLAINED |
+                                            CF_UPDATES_DATA;
   sql_command_flags[SQLCOM_INSERT]=	    CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
-                                            CF_CAN_BE_EXPLAINED;
+                                            CF_CAN_BE_EXPLAINED |
+                                            CF_INSERTS_DATA;
   sql_command_flags[SQLCOM_INSERT_SELECT]=  CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
-                                            CF_CAN_BE_EXPLAINED;
+                                            CF_CAN_BE_EXPLAINED |
+                                            CF_INSERTS_DATA;
   sql_command_flags[SQLCOM_DELETE]=         CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
@@ -318,11 +324,13 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_REPLACE]=        CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
-                                            CF_CAN_BE_EXPLAINED;;
+                                            CF_CAN_BE_EXPLAINED |
+                                            CF_INSERTS_DATA;;
   sql_command_flags[SQLCOM_REPLACE_SELECT]= CF_CHANGES_DATA | CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
-                                            CF_CAN_BE_EXPLAINED;
+                                            CF_CAN_BE_EXPLAINED |
+                                            CF_INSERTS_DATA;
   sql_command_flags[SQLCOM_SELECT]=         CF_REEXECUTION_FRAGILE |
                                             CF_CAN_GENERATE_ROW_EVENTS |
                                             CF_OPTIMIZER_TRACE |
@@ -634,10 +642,13 @@ void execute_init_command(THD *thd, LEX_STRING *init_command,
 }
 
 
-static char *fgets_fn(char *buffer, size_t size, fgets_input_t input)
+static char *fgets_fn(char *buffer, size_t size, fgets_input_t input, int *error)
 {
   MYSQL_FILE *in= static_cast<MYSQL_FILE*> (input);
-  return mysql_file_fgets(buffer, size, in);
+  char *line= mysql_file_fgets(buffer, size, in);
+  if (error)
+    *error= (line == NULL) ? ferror(in->m_file) : 0;
+  return line;
 }
 
 
@@ -664,24 +675,52 @@ static void handle_bootstrap_impl(THD *thd)
 
   for ( ; ; )
   {
-    char buffer[MAX_BOOTSTRAP_QUERY_SIZE];
+    char buffer[MAX_BOOTSTRAP_QUERY_SIZE] = "";
     int rc, length;
     char *query;
+    int error= 0;
 
-    rc= read_bootstrap_query(buffer, &length, file, fgets_fn);
+    rc= read_bootstrap_query(buffer, &length, file, fgets_fn, &error);
 
-    if (rc == READ_BOOTSTRAP_ERROR)
+    if (rc == READ_BOOTSTRAP_EOF)
+      break;
+    /*
+      Check for bootstrap file errors. SQL syntax errors will be
+      caught below.
+    */
+    if (rc != READ_BOOTSTRAP_SUCCESS)
     {
-      thd->raise_error(ER_SYNTAX_ERROR);
+      /*
+        mysql_parse() may have set a successful error status for the previous
+        query. We must clear the error status to report the bootstrap error.
+      */
+      thd->get_stmt_da()->reset_diagnostics_area();
+
+      /* Get the nearest query text for reference. */
+      char *err_ptr= buffer + (length <= MAX_BOOTSTRAP_ERROR_LEN ?
+                                        0 : (length - MAX_BOOTSTRAP_ERROR_LEN));
+      switch (rc)
+      {
+      case READ_BOOTSTRAP_ERROR:
+        my_printf_error(ER_UNKNOWN_ERROR, "Bootstrap file error, return code (%d). "
+                        "Nearest query: '%s'", MYF(0), error, err_ptr);
+        break;
+
+      case READ_BOOTSTRAP_QUERY_SIZE:
+        my_printf_error(ER_UNKNOWN_ERROR, "Boostrap file error. Query size "
+                        "exceeded %d bytes near '%s'.", MYF(0),
+                        MAX_BOOTSTRAP_LINE_SIZE, err_ptr);
+        break;
+
+      default:
+        DBUG_ASSERT(false);
+        break;
+      }
+
       thd->protocol->end_statement();
       bootstrap_error= 1;
       break;
     }
-
-    if (rc == READ_BOOTSTRAP_EOF)
-      break;
-
-    DBUG_ASSERT(rc == 0);
 
     query= (char *) thd->memdup_w_gap(buffer, length + 1,
                                       thd->db_length + 1 +
@@ -762,8 +801,6 @@ void do_handle_bootstrap(THD *thd)
   handle_bootstrap_impl(thd);
 
 end:
-  net_end(&thd->net);
-  thd->cleanup();
   delete thd;
 
 #ifndef EMBEDDED_LIBRARY
@@ -1134,7 +1171,18 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
     thd->security_ctx->user= 0;
     thd->user_connect= 0;
 
-    rc= acl_authenticate(thd, 0, packet_length);
+    /*
+      to limit COM_CHANGE_USER ability to brute-force passwords,
+      we only allow three unsuccessful COM_CHANGE_USER per connection.
+    */
+    if (thd->failed_com_change_user >= 3)
+    {
+      my_message(ER_UNKNOWN_COM_ERROR, ER(ER_UNKNOWN_COM_ERROR), MYF(0));
+      rc= 1;
+    }
+    else
+      rc= acl_authenticate(thd, 0, packet_length);
+
     MYSQL_AUDIT_NOTIFY_CONNECTION_CHANGE_USER(thd);
     if (rc)
     {
@@ -1149,6 +1197,8 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       thd->variables.collation_connection= save_collation_connection;
       thd->variables.character_set_results= save_character_set_results;
       thd->update_charset();
+      thd->failed_com_change_user++;
+      my_sleep(1000000);
     }
     else
     {
@@ -1450,10 +1500,10 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
         and flushes tables.
       */
       bool res;
-      my_pthread_setspecific_ptr(THR_THD, NULL);
+      set_current_thd(0);
       res= reload_acl_and_cache(NULL, options | REFRESH_FAST,
                                 NULL, &not_used);
-      my_pthread_setspecific_ptr(THR_THD, thd);
+      set_current_thd(thd);
       if (res)
         break;
     }
@@ -1624,6 +1674,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
 
   THD_STAGE_INFO(thd, stage_cleaning_up);
   thd->reset_query();
+  thd->set_examined_row_count(0);                   // For processlist
   thd->set_command(COM_SLEEP);
 
   /* Performance Schema Interface instrumentation, end */
@@ -2556,6 +2607,7 @@ case SQLCOM_PREPARE:
     LEX_MASTER_INFO *lex_mi= &thd->lex->mi;
     Master_info *mi;
     bool new_master= 0;
+    bool master_info_added;
 
     if (check_global_access(thd, SUPER_ACL))
       goto error;
@@ -2578,15 +2630,19 @@ case SQLCOM_PREPARE:
       new_master= 1;
     }
 
-    res= change_master(thd, mi);
+    res= change_master(thd, mi, &master_info_added);
     if (res && new_master)
     {
       /*
-        The new master was added by change_master(). Remove it as it didn't
-        work.
+        If the new master was added by change_master(), remove it as it didn't
+        work (this will free mi as well).
+
+        If new master was not added, we still need to free mi.
       */
-      master_info_index->remove_master_info(&lex_mi->connection_name);
-      delete mi;
+      if (master_info_added)
+        master_info_index->remove_master_info(&lex_mi->connection_name);
+      else
+        delete mi;
     }
 
     mysql_mutex_unlock(&LOCK_active_mi);
@@ -2787,7 +2843,14 @@ case SQLCOM_PREPARE:
         goto end_with_restore_list;
       }
 
-      if (!(res= open_and_lock_tables(thd, lex->query_tables, TRUE, 0)))
+      res= open_and_lock_tables(thd, lex->query_tables, TRUE, 0);
+      if (res)
+      {
+        /* Got error or warning. Set res to 1 if error */
+        if (!(res= thd->is_error()))
+          my_ok(thd);                           // CREATE ... IF NOT EXISTS
+      }
+      else
       {
         /* The table already exists */
         if (create_table->table)
@@ -4806,16 +4869,20 @@ finish:
 
   if (! thd->in_sub_stmt)
   {
-    /* report error issued during command execution */
-    if (thd->killed_errno())
+    if (thd->killed != NOT_KILLED)
     {
-      if (! thd->stmt_da->is_set())
-        thd->send_kill_message();
-    }
-    if (thd->killed < KILL_CONNECTION)
-    {
-      thd->killed= NOT_KILLED;
-      thd->mysys_var->abort= 0;
+      /* report error issued during command execution */
+      if (thd->killed_errno())
+      {
+        /* If we already sent 'ok', we can ignore any kill query statements */
+        if (! thd->stmt_da->is_set())
+          thd->send_kill_message();
+      }
+      if (thd->killed < KILL_CONNECTION)
+      {
+        thd->reset_killed();
+        thd->mysys_var->abort= 0;
+      }
     }
     if (thd->is_error() || (thd->variables.option_bits & OPTION_MASTER_SQL_ERROR))
       trans_rollback_stmt(thd);
@@ -4965,7 +5032,8 @@ static bool execute_show_status(THD *thd, TABLE_LIST *all_tables)
   mysql_mutex_lock(&LOCK_status);
   add_diff_to_status(&global_status_var, &thd->status_var,
                      &old_status_var);
-  thd->status_var= old_status_var;
+  memcpy(&thd->status_var, &old_status_var,
+         offsetof(STATUS_VAR, last_cleared_system_status_var));
   mysql_mutex_unlock(&LOCK_status);
   return res;
 }
@@ -6144,6 +6212,7 @@ bool add_field_to_list(THD *thd, LEX_STRING *field_name, enum_field_types type,
 {
   register Create_field *new_field;
   LEX  *lex= thd->lex;
+  uint8 datetime_precision= length ? atoi(length) : 0;
   DBUG_ENTER("add_field_to_list");
 
   if (check_string_char_length(field_name, "", NAME_CHAR_LEN,
@@ -6180,11 +6249,13 @@ bool add_field_to_list(THD *thd, LEX_STRING *field_name, enum_field_types type,
       no need fix_fields()
       
       We allow only one function as part of default value - 
-      NOW() as default for TIMESTAMP type.
+      NOW() as default for TIMESTAMP and DATETIME type.
     */
     if (default_value->type() == Item::FUNC_ITEM && 
-        !(((Item_func*)default_value)->functype() == Item_func::NOW_FUNC &&
-         type == MYSQL_TYPE_TIMESTAMP))
+        (static_cast<Item_func*>(default_value)->functype() !=
+         Item_func::NOW_FUNC ||
+         (mysql_type_to_time_type(type) != MYSQL_TIMESTAMP_DATETIME) ||
+         default_value->decimals < datetime_precision))
     {
       my_error(ER_INVALID_DEFAULT, MYF(0), field_name->str);
       DBUG_RETURN(1);
@@ -6206,7 +6277,9 @@ bool add_field_to_list(THD *thd, LEX_STRING *field_name, enum_field_types type,
     }
   }
 
-  if (on_update_value && type != MYSQL_TYPE_TIMESTAMP)
+  if (on_update_value &&
+      (mysql_type_to_time_type(type) != MYSQL_TIMESTAMP_DATETIME ||
+       on_update_value->decimals < datetime_precision))
   {
     my_error(ER_INVALID_ON_UPDATE, MYF(0), field_name->str);
     DBUG_RETURN(1);
@@ -6443,8 +6516,13 @@ TABLE_LIST *st_select_lex::add_table_to_list(THD *thd,
   ptr->next_name_resolution_table= NULL;
   /* Link table in global list (all used tables) */
   lex->add_to_query_tables(ptr);
-  ptr->mdl_request.init(MDL_key::TABLE, ptr->db, ptr->table_name, mdl_type,
-                        MDL_TRANSACTION);
+
+  // Pure table aliases do not need to be locked:
+  if (!test(table_options & TL_OPTION_ALIAS))
+  {
+    ptr->mdl_request.init(MDL_key::TABLE, ptr->db, ptr->table_name, mdl_type,
+                          MDL_TRANSACTION);
+  }
   DBUG_RETURN(ptr);
 }
 
@@ -7020,7 +7098,7 @@ static uint kill_threads_for_user(THD *thd, LEX_USER *user,
         mysql_mutex_unlock(&LOCK_thread_count);
         DBUG_RETURN(ER_KILL_DENIED_ERROR);
       }
-      if (!threads_to_kill.push_back(tmp, tmp->mem_root))
+      if (!threads_to_kill.push_back(tmp, thd->mem_root))
         mysql_mutex_lock(&tmp->LOCK_thd_data); // Lock from delete
     }
   }
@@ -7066,8 +7144,10 @@ void sql_kill(THD *thd, ulong id, killed_state state)
   uint error;
   if (!(error= kill_one_thread(thd, id, state)))
   {
-    if (! thd->killed)
+    if ((!thd->killed))
       my_ok(thd);
+    else
+      my_error(killed_errno(thd->killed), MYF(0), id);
   }
   else
     my_error(error, MYF(0), id);

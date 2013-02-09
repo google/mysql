@@ -1,5 +1,6 @@
 /*
    Copyright (c) 2000, 2011, Oracle and/or its affiliates.
+   Copyright (c) 2009, 2013, Monty Program Ab.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,6 +37,7 @@
 #include "sp.h"
 #include "events.h"
 #include "sql_handler.h"
+#include "sql_statistics.h"
 #include <my_dir.h>
 #include <m_ctype.h>
 #include "log.h"
@@ -754,7 +756,7 @@ bool mysql_rm_db(THD *thd,char *db,bool if_exists, bool silent)
 {
   ulong deleted_tables= 0;
   bool error= true;
-  char	path[FN_REFLEN+16];
+  char	path[FN_REFLEN + 16];
   MY_DIR *dirp;
   uint length;
   bool found_other_files= false;
@@ -815,6 +817,17 @@ bool mysql_rm_db(THD *thd,char *db,bool if_exists, bool silent)
                        MYSQL_OPEN_SKIP_TEMPORARY) ||
       lock_db_routines(thd, db))
     goto exit;
+
+  if (!in_bootstrap)
+  {
+    for (table= tables; table; table= table->next_local)
+    {
+      LEX_STRING db_name= { table->db, table->db_length };
+      LEX_STRING table_name= { table->table_name, table->table_name_length };
+      if (table->open_type == OT_BASE_ONLY || !find_temporary_table(thd, table))
+        (void) delete_statistics_for_table(thd, &db_name, &table_name);
+    }
+  }
 
   /* mysql_ha_rm_tables() requires a non-null TABLE_LIST. */
   if (tables)
@@ -916,7 +929,7 @@ update_binlog:
 
     if (!(query= (char*) thd->alloc(MAX_DROP_TABLE_Q_LEN)))
       goto exit; /* not much else we can do */
-    query_pos= query_data_start= strmov(query,"drop table ");
+    query_pos= query_data_start= strmov(query,"DROP TABLE ");
     query_end= query + MAX_DROP_TABLE_Q_LEN;
     db_len= strlen(db);
 
@@ -927,7 +940,7 @@ update_binlog:
       char quoted_name[FN_REFLEN+3];
 
       // Only write drop table to the binlog for tables that no longer exist.
-      if (check_if_table_exists(thd, tbl, &exists))
+      if (check_if_table_exists(thd, tbl, 0, &exists))
       {
         error= true;
         goto exit;

@@ -3525,6 +3525,11 @@ sub mysql_install_db {
     mtr_appendfile_to_file("$sql_dir/mysql_system_tables.sql",
 			   $bootstrap_sql_file);
 
+    # Add the performance tables
+    # for a production system
+    mtr_appendfile_to_file("$sql_dir/mysql_performance_tables.sql",
+                          $bootstrap_sql_file);
+
     # Add the mysql system tables initial data
     # for a production system
     mtr_appendfile_to_file("$sql_dir/mysql_system_tables_data.sql",
@@ -3593,9 +3598,10 @@ sub mysql_install_db {
 	verbose       => $opt_verbose,
        ) != 0)
   {
+    my $data= mtr_grab_file($path_bootstrap_log);
     mtr_error("Error executing mysqld --bootstrap\n" .
               "Could not install system database from $bootstrap_sql_file\n" .
-	      "see $path_bootstrap_log for errors");
+	      "The $path_bootstrap_log file contains:\n$data\n");
   }
 }
 
@@ -5264,9 +5270,6 @@ sub mysqld_arguments ($$$) {
   }
 
   my $found_skip_core= 0;
-  my @plugins;
-  my %seen;
-  my $plugin;
   foreach my $arg ( @$extra_opts )
   {
     # Skip --defaults-file option since it's handled above.
@@ -5286,12 +5289,6 @@ sub mysqld_arguments ($$$) {
     {
       ; # Dont add --skip-log-bin when mysqld have --log-slave-updates in config
     }
-    elsif ($plugin = mtr_match_prefix($arg,  "--plugin-load="))
-    {
-      next if $plugin =~ /=$/;
-      push @plugins, $plugin unless $seen{$plugin};
-      $seen{$plugin} = 1;
-    }
     else
     {
       mtr_add_arg($args, "%s", $arg);
@@ -5307,11 +5304,6 @@ sub mysqld_arguments ($$$) {
   # Facility stays disabled if timeout value is zero.
   mtr_add_arg($args, "--loose-debug-sync-timeout=%s",
               $opt_debug_sync_timeout) unless $opt_user_args;
-
-  if (@plugins) {
-    my $sep = (IS_WINDOWS) ? ';' : ':';
-    mtr_add_arg($args, "--plugin-load=%s" .  join($sep, @plugins));
-  }
 
   return $args;
 }

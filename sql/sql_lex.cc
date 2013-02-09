@@ -1,4 +1,5 @@
 /* Copyright (c) 2000, 2012, Oracle and/or its affiliates.
+   Copyright (c) 2009, 2013, Monty Program Ab.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -458,6 +459,9 @@ void lex_start(THD *thd)
   lex->set_var_list.empty();
   lex->param_list.empty();
   lex->view_list.empty();
+  lex->with_persistent_for_clause= FALSE;
+  lex->column_list= NULL;
+  lex->index_list= NULL;
   lex->prepared_stmt_params.empty();
   lex->auxiliary_table_list.empty();
   lex->unit.next= lex->unit.master=
@@ -1880,6 +1884,7 @@ void st_select_lex::init_query()
   ref_pointer_array= 0;
   select_n_where_fields= 0;
   select_n_having_items= 0;
+  n_child_sum_items= 0;
   subquery_in_having= explicit_limit= 0;
   is_item_list_lookup= 0;
   first_execution= 1;
@@ -2556,7 +2561,7 @@ LEX::LEX()
   my_init_dynamic_array2(&plugins, sizeof(plugin_ref),
                          plugins_static_buffer,
                          INITIAL_LEX_PLUGIN_LIST_SIZE, 
-                         INITIAL_LEX_PLUGIN_LIST_SIZE);
+                         INITIAL_LEX_PLUGIN_LIST_SIZE, 0);
   reset_query_tables_list(TRUE);
   mi.init();
 }
@@ -2595,7 +2600,8 @@ bool LEX::can_be_merged()
       if (tmp_unit->first_select()->parent_lex == this &&
           (tmp_unit->item == 0 ||
            (tmp_unit->item->place() != IN_WHERE &&
-            tmp_unit->item->place() != IN_ON)))
+            tmp_unit->item->place() != IN_ON &&
+            tmp_unit->item->place() != SELECT_LIST)))
       {
         selects_allow_merge= 0;
         break;
@@ -4444,6 +4450,3 @@ void binlog_unsafe_map_init()
 }
 #endif
 
-#ifdef HAVE_EXPLICIT_TEMPLATE_INSTANTIATION
-template class Mem_root_array<ORDER*, true>;
-#endif

@@ -511,6 +511,7 @@ typedef struct system_variables
   ulong net_write_timeout;
   ulong optimizer_prune_level;
   ulong optimizer_search_depth;
+  ulong use_stat_tables;
   ulong preload_buff_size;
   ulong profiling_history_size;
   ulong read_buff_size;
@@ -699,6 +700,8 @@ typedef struct system_status_var
   ulonglong binlog_bytes_written;
   double last_query_cost;
   double cpu_time, busy_time;
+  /* Don't initialize */
+  volatile int64 memory_used;             /* This shouldn't be accumulated */
 } STATUS_VAR;
 
 /*
@@ -708,6 +711,7 @@ typedef struct system_status_var
 */
 
 #define last_system_status_var questions
+#define last_cleared_system_status_var memory_used
 
 void mark_transaction_to_rollback(THD *thd, bool all);
 
@@ -1272,7 +1276,8 @@ enum enum_thread_type
   SYSTEM_THREAD_SLAVE_SQL= 4,
   SYSTEM_THREAD_NDBCLUSTER_BINLOG= 8,
   SYSTEM_THREAD_EVENT_SCHEDULER= 16,
-  SYSTEM_THREAD_EVENT_WORKER= 32
+  SYSTEM_THREAD_EVENT_WORKER= 32,
+  SYSTEM_THREAD_BINLOG_BACKGROUND= 64
 };
 
 inline char const *
@@ -1440,7 +1445,8 @@ public:
     m_reopen_array(NULL),
     m_locked_tables_count(0)
   {
-    init_sql_alloc(&m_locked_tables_root, MEM_ROOT_BLOCK_SIZE, 0);
+    init_sql_alloc(&m_locked_tables_root, MEM_ROOT_BLOCK_SIZE, 0,
+                   MYF(MY_THREAD_SPECIFIC));
   }
   void unlock_locked_tables(THD *thd);
   ~Locked_tables_list()
@@ -1780,7 +1786,7 @@ public:
   bool save_prep_leaf_list;
 
 #ifndef MYSQL_CLIENT
-  int binlog_setup_trx_data();
+  binlog_cache_mngr *  binlog_setup_trx_data();
 
   /*
     Public interface to write RBR events to the binlog
@@ -1914,7 +1920,8 @@ public:
     {
       bzero((char*)this, sizeof(*this));
       xid_state.xid.null();
-      init_sql_alloc(&mem_root, ALLOC_ROOT_MIN_BLOCK_SIZE, 0);
+      init_sql_alloc(&mem_root, ALLOC_ROOT_MIN_BLOCK_SIZE, 0,
+                     MYF(MY_THREAD_SPECIFIC));
     }
   } transaction;
   Global_read_lock global_read_lock;
@@ -2313,6 +2320,7 @@ public:
 
   bool	     no_errors;
   uint8      password;
+  uint8      failed_com_change_user;
 
   /**
     Set to TRUE if execution of the current compound statement
@@ -2563,6 +2571,11 @@ public:
     enter_stage(stage, NULL, src_function, src_file, src_line);
     mysql_mutex_unlock(&mysys_var->mutex);
     return;
+  }
+  inline bool is_strict_mode() const
+  {
+    return variables.sql_mode & (MODE_STRICT_TRANS_TABLES |
+                                 MODE_STRICT_ALL_TABLES);
   }
   inline my_time_t query_start() { query_start_used=1; return start_time; }
   inline ulong query_start_sec_part()
@@ -2840,6 +2853,19 @@ public:
   inline int killed_errno() const
   {
     return ::killed_errno(killed);
+  }
+  inline void reset_killed()
+  {
+    /*
+      Resetting killed has to be done under a mutex to ensure
+      its not done during an awake() call.
+    */
+    if (killed != NOT_KILLED)
+    {
+      mysql_mutex_lock(&LOCK_thd_data);
+      killed= NOT_KILLED;
+      mysql_mutex_unlock(&LOCK_thd_data);
+    }
   }
   inline void send_kill_message() const
   {
@@ -3337,7 +3363,7 @@ my_eof(THD *thd)
 
 const my_bool strict_date_checking= 0;
 
-inline ulong sql_mode_for_dates(THD *thd)
+inline ulonglong sql_mode_for_dates(THD *thd)
 {
   if (strict_date_checking)
     return (thd->variables.sql_mode &
@@ -3346,7 +3372,7 @@ inline ulong sql_mode_for_dates(THD *thd)
   return (thd->variables.sql_mode & MODE_INVALID_DATES);
 }
 
-inline ulong sql_mode_for_dates()
+inline ulonglong sql_mode_for_dates()
 {
   return sql_mode_for_dates(current_thd);
 }
@@ -4085,6 +4111,8 @@ class Unique :public Sql_alloc
   uint full_size;
   uint min_dupl_count;   /* always 0 for unions, > 0 for intersections */
 
+  bool merge(TABLE *table, uchar *buff, bool without_last_merge);
+
 public:
   ulong elements;
   Unique(qsort_cmp2 comp_func, void *comp_func_fixed_arg,
@@ -4125,7 +4153,7 @@ public:
   }
 
   void reset();
-  bool walk(tree_walk_action action, void *walk_action_arg);
+  bool walk(TABLE *table, tree_walk_action action, void *walk_action_arg);
 
   uint get_size() const { return size; }
   ulonglong get_max_in_memory_size() const { return max_in_memory_size; }
@@ -4359,6 +4387,16 @@ public:
   Statement that need the binlog format to be unchanged.
 */
 #define CF_FORCE_ORIGINAL_BINLOG_FORMAT (1U << 16)
+
+/**
+  Statement that inserts new rows (INSERT, REPLACE, LOAD, ALTER TABLE)
+*/
+#define CF_INSERTS_DATA (1U << 17)
+
+/**
+  Statement that updates existing rows (UPDATE, multi-update)
+*/
+#define CF_UPDATES_DATA (1U << 18)
 
 /* Bits in server_command_flags */
 

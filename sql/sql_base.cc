@@ -49,6 +49,7 @@
 #include "sql_trigger.h"
 #include "transaction.h"
 #include "sql_prepare.h"
+#include "sql_statistics.h"
 #include <m_ctype.h>
 #include <my_dir.h>
 #include <hash.h>
@@ -2417,10 +2418,11 @@ void drop_open_table(THD *thd, TABLE *table, const char *db_name,
     Check that table exists in table definition cache, on disk
     or in some storage engine.
 
-    @param       thd     Thread context
-    @param       table   Table list element
-    @param[out]  exists  Out parameter which is set to TRUE if table
-                         exists and to FALSE otherwise.
+    @param       thd        Thread context
+    @param       table      Table list element
+    @param       fast_check Check only if share or .frm file exists 
+    @param[out]  exists     Out parameter which is set to TRUE if table
+                            exists and to FALSE otherwise.
 
     @note This function acquires LOCK_open internally.
 
@@ -2432,7 +2434,8 @@ void drop_open_table(THD *thd, TABLE *table, const char *db_name,
     @retval  FALSE  No error. 'exists' out parameter set accordingly.
 */
 
-bool check_if_table_exists(THD *thd, TABLE_LIST *table, bool *exists)
+bool check_if_table_exists(THD *thd, TABLE_LIST *table, bool fast_check,
+                           bool *exists)
 {
   char path[FN_REFLEN + 1];
   TABLE_SHARE *share;
@@ -2440,7 +2443,8 @@ bool check_if_table_exists(THD *thd, TABLE_LIST *table, bool *exists)
 
   *exists= TRUE;
 
-  DBUG_ASSERT(thd->mdl_context.
+  DBUG_ASSERT(fast_check ||
+              thd->mdl_context.
               is_lock_owner(MDL_key::TABLE, table->db,
                             table->table_name, MDL_SHARED));
 
@@ -2456,6 +2460,12 @@ bool check_if_table_exists(THD *thd, TABLE_LIST *table, bool *exists)
 
   if (!access(path, F_OK))
     goto end;
+
+  if (fast_check)
+  {
+    *exists= FALSE;
+    goto end;
+  }
 
   /* .FRM file doesn't exist. Check if some engine can provide it. */
   if (ha_check_if_table_exists(thd, table->db, table->table_name, exists))
@@ -3021,7 +3031,7 @@ bool open_table(THD *thd, TABLE_LIST *table_list, MEM_ROOT *mem_root,
   {
     bool exists;
 
-    if (check_if_table_exists(thd, table_list, &exists))
+    if (check_if_table_exists(thd, table_list, 0, &exists))
       DBUG_RETURN(TRUE);
 
     if (!exists)
@@ -4670,6 +4680,32 @@ open_and_process_table(THD *thd, LEX *lex, TABLE_LIST *tables,
     goto end;
   }
 
+  if (get_use_stat_tables_mode(thd) > NEVER && tables->table)
+  {
+    TABLE_SHARE *table_share= tables->table->s;
+    if (table_share && table_share->table_category == TABLE_CATEGORY_USER &&
+        table_share->tmp_table == NO_TMP_TABLE)
+    {
+      if (table_share->stats_cb.stats_can_be_read ||
+	  !alloc_statistics_for_table_share(thd, table_share, FALSE))
+      {
+        if (table_share->stats_cb.stats_can_be_read)
+        {   
+          KEY *key_info= table_share->key_info;
+          KEY *key_info_end= key_info + table_share->keys;
+          KEY *table_key_info= tables->table->key_info;
+          for ( ; key_info < key_info_end; key_info++, table_key_info++)
+            table_key_info->read_stats= key_info->read_stats;
+          Field **field_ptr= table_share->field;
+          Field **table_field_ptr= tables->table->field;
+          for ( ; *field_ptr; field_ptr++, table_field_ptr++)
+            (*table_field_ptr)->read_stats= (*field_ptr)->read_stats;
+          tables->table->stats_is_read= table_share->stats_cb.stats_is_read;
+        }
+      }	
+    }
+  }
+
 process_view_routines:
   /*
     Again we may need cache all routines used by this view and add
@@ -4718,7 +4754,18 @@ extern "C" uchar *schema_set_get_key(const uchar *record, size_t *length,
                            open, see open_table() description for details.
 
   @retval FALSE  Success.
-  @retval TRUE   Failure (e.g. connection was killed)
+  @retval TRUE   Failure (e.g. connection was killed) or table existed
+	         for a CREATE TABLE.
+
+  @notes
+  In case of CREATE TABLE we avoid a wait for tables that are in use
+  by first trying to do a meta data lock with timeout == 0.  If we get a
+  timeout we will check if table exists (it should) and retry with
+  normal timeout if it didn't exists.
+  Note that for CREATE TABLE IF EXISTS we only generate a warning
+  but still return TRUE (to abort the calling open_table() function).
+  On must check THD->is_error() if one wants to distinguish between warning
+  and error.
 */
 
 bool
@@ -4730,6 +4777,10 @@ lock_table_names(THD *thd,
   TABLE_LIST *table;
   MDL_request global_request;
   Hash_set<TABLE_LIST, schema_set_get_key> schema_set;
+  ulong org_lock_wait_timeout= lock_wait_timeout;
+  /* Check if we are using CREATE TABLE ... IF NOT EXISTS */
+  bool create_table;
+  Dummy_error_handler error_handler;
   DBUG_ENTER("lock_table_names");
 
   DBUG_ASSERT(!thd->locked_tables_mode);
@@ -4760,8 +4811,14 @@ lock_table_names(THD *thd,
     }
   }
 
-  if (! (flags & MYSQL_OPEN_SKIP_SCOPED_MDL_LOCK) &&
-      ! mdl_requests.is_empty())
+  if (mdl_requests.is_empty())
+    DBUG_RETURN(FALSE);
+
+  /* Check if CREATE TABLE IF NOT EXISTS was used */
+  create_table= (tables_start && tables_start->open_strategy ==
+                 TABLE_LIST::OPEN_IF_EXISTS);
+
+  if (!(flags & MYSQL_OPEN_SKIP_SCOPED_MDL_LOCK))
   {
     /*
       Scoped locks: Take intention exclusive locks on all involved
@@ -4789,12 +4846,58 @@ lock_table_names(THD *thd,
     global_request.init(MDL_key::GLOBAL, "", "", MDL_INTENTION_EXCLUSIVE,
                         MDL_STATEMENT);
     mdl_requests.push_front(&global_request);
+
+    if (create_table)
+      lock_wait_timeout= 0;                     // Don't wait for timeout
   }
 
-  if (thd->mdl_context.acquire_locks(&mdl_requests, lock_wait_timeout))
-    DBUG_RETURN(TRUE);
+  for (;;)
+  {
+    bool exists= TRUE;
+    bool res;
 
-  DBUG_RETURN(FALSE);
+    if (create_table)
+      thd->push_internal_handler(&error_handler);  // Avoid warnings & errors
+    res= thd->mdl_context.acquire_locks(&mdl_requests, lock_wait_timeout);
+    if (create_table)
+      thd->pop_internal_handler();
+    if (!res)
+      DBUG_RETURN(FALSE);                       // Got locks
+
+    if (!create_table)
+      DBUG_RETURN(TRUE);                        // Return original error
+
+    /*
+      We come here in the case of lock timeout when executing
+      CREATE TABLE IF NOT EXISTS.
+      Verify that table really exists (it should as we got a lock conflict)
+    */
+    if (check_if_table_exists(thd, tables_start, 1, &exists))
+      DBUG_RETURN(TRUE);                       // Should never happen
+    if (exists)
+    {
+      if (thd->lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS)
+      {
+        push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_NOTE,
+                            ER_TABLE_EXISTS_ERROR, ER(ER_TABLE_EXISTS_ERROR),
+                            tables_start->table_name);
+      }
+      else
+        my_error(ER_TABLE_EXISTS_ERROR, MYF(0), tables_start->table_name);
+      DBUG_RETURN(TRUE);
+    }
+    /* purecov: begin inspected */
+    /*
+      We got error from acquire_locks but table didn't exists.
+      In theory this should never happen, except maybe in
+      CREATE or DROP DATABASE scenario.
+      We play safe and restart the original acquire_locks with the
+      original timeout
+    */
+    create_table= 0;
+    lock_wait_timeout= org_lock_wait_timeout;
+    /* purecov: end */
+  }
 }
 
 
@@ -4916,11 +5019,11 @@ bool open_tables(THD *thd, TABLE_LIST **start, uint *counter, uint flags,
   }
 
   /*
-    Initialize temporary MEM_ROOT for new .FRM parsing. Do not allocate
+    Initialize temporary MEM_ROOT for new .FRM parsing. Do not alloctaate
     anything yet, to avoid penalty for statements which don't use views
     and thus new .FRM format.
   */
-  init_sql_alloc(&new_frm_mem, 8024, 0);
+  init_sql_alloc(&new_frm_mem, 8024, 0, MYF(0));
 
   thd->current_tablenr= 0;
 restart:
@@ -5624,6 +5727,8 @@ bool open_and_lock_tables(THD *thd, TABLE_LIST *tables,
   if (lock_tables(thd, tables, counter, flags))
     goto err;
 
+  (void) read_statistics_for_tables_if_needed(thd, tables);
+  
   if (derived)
   {
     if (mysql_handle_derived(thd->lex, DT_INIT))
@@ -8852,34 +8957,33 @@ err_no_arena:
 ******************************************************************************/
 
 
-/*
-  Fill fields with given items.
+/**
+  Fill the fields of a table with the values of an Item list
 
-  SYNOPSIS
-    fill_record()
-    thd           thread handler
-    fields        Item_fields list to be filled
-    values        values to fill with
-    ignore_errors TRUE if we should ignore errors
+  @param thd           thread handler
+  @param table_arg     the table that is being modified
+  @param fields        Item_fields list to be filled
+  @param values        values to fill with
+  @param ignore_errors TRUE if we should ignore errors
 
-  NOTE
+  @details
     fill_record() may set table->auto_increment_field_not_null and a
     caller should make sure that it is reset after their last call to this
     function.
 
-  RETURN
-    FALSE   OK
-    TRUE    error occured
+  @return Status
+  @retval true An error occured.
+  @retval false OK.
 */
 
 static bool
-fill_record(THD * thd, List<Item> &fields, List<Item> &values,
+fill_record(THD * thd, TABLE *table_arg, List<Item> &fields, List<Item> &values,
             bool ignore_errors)
 {
   List_iterator_fast<Item> f(fields),v(values);
   Item *value, *fld;
   Item_field *field;
-  TABLE *table= 0, *vcol_table= 0;
+  TABLE *vcol_table= 0;
   bool save_abort_on_warning= thd->abort_on_warning;
   bool save_no_errors= thd->no_errors;
   DBUG_ENTER("fill_record");
@@ -8901,12 +9005,13 @@ fill_record(THD * thd, List<Item> &fields, List<Item> &values,
       my_error(ER_NONUPDATEABLE_COLUMN, MYF(0), fld->name);
       goto err;
     }
-    table= field->field->table;
-    table->auto_increment_field_not_null= FALSE;
+    DBUG_ASSERT(field->field->table == table_arg);
+    table_arg->auto_increment_field_not_null= FALSE;
     f.rewind();
   }
   else if (thd->lex->unit.insert_table_with_stored_vcol)
     vcol_table= thd->lex->unit.insert_table_with_stored_vcol;
+
   while ((fld= f++))
   {
     if (!(field= fld->filed_for_view_update()))
@@ -8916,7 +9021,7 @@ fill_record(THD * thd, List<Item> &fields, List<Item> &values,
     }
     value=v++;
     Field *rfield= field->field;
-    table= rfield->table;
+    TABLE* table= rfield->table;
     if (rfield == table->next_number_field)
       table->auto_increment_field_not_null= TRUE;
     if (rfield->vcol_info && 
@@ -8929,18 +9034,22 @@ fill_record(THD * thd, List<Item> &fields, List<Item> &values,
                           ER(ER_WARNING_NON_DEFAULT_VALUE_FOR_VIRTUAL_COLUMN),
                           rfield->field_name, table->s->table_name.str);
     }
-    if ((value->save_in_field(rfield, 0) < 0) && !ignore_errors)
+    if ((!rfield->vcol_info || rfield->stored_in_db) && 
+        (value->save_in_field(rfield, 0)) < 0 && !ignore_errors)
     {
       my_message(ER_UNKNOWN_ERROR, ER(ER_UNKNOWN_ERROR), MYF(0));
       goto err;
     }
+    rfield->set_explicit_default(value);
     DBUG_ASSERT(vcol_table == 0 || vcol_table == table);
     vcol_table= table;
   }
   /* Update virtual fields*/
   thd->abort_on_warning= FALSE;
   if (vcol_table && vcol_table->vfield &&
-      update_virtual_fields(thd, vcol_table, TRUE))
+      update_virtual_fields(thd, vcol_table,
+                            vcol_table->triggers ? VCOL_UPDATE_ALL :
+                                                   VCOL_UPDATE_FOR_WRITE))
     goto err;
   thd->abort_on_warning= save_abort_on_warning;
   thd->no_errors=        save_no_errors;
@@ -8948,8 +9057,8 @@ fill_record(THD * thd, List<Item> &fields, List<Item> &values,
 err:
   thd->abort_on_warning= save_abort_on_warning;
   thd->no_errors=        save_no_errors;
-  if (table)
-    table->auto_increment_field_not_null= FALSE;
+  if (fields.elements)
+    table_arg->auto_increment_field_not_null= FALSE;
   DBUG_RETURN(TRUE);
 }
 
@@ -8958,42 +9067,39 @@ err:
   Fill fields in list with values from the list of items and invoke
   before triggers.
 
-  SYNOPSIS
-    fill_record_n_invoke_before_triggers()
-      thd           thread context
-      fields        Item_fields list to be filled
-      values        values to fill with
-      ignore_errors TRUE if we should ignore errors
-      triggers      object holding list of triggers to be invoked
-      event         event type for triggers to be invoked
+  @param thd           thread context
+  @param table         the table that is being modified
+  @param fields        Item_fields list to be filled
+  @param values        values to fill with
+  @param ignore_errors TRUE if we should ignore errors
+  @param event         event type for triggers to be invoked
 
-  NOTE
+  @detail
     This function assumes that fields which values will be set and triggers
     to be invoked belong to the same table, and that TABLE::record[0] and
     record[1] buffers correspond to new and old versions of row respectively.
 
-  RETURN
-    FALSE   OK
-    TRUE    error occured
+  @return Status
+  @retval true An error occured.
+  @retval false OK.
 */
 
 bool
-fill_record_n_invoke_before_triggers(THD *thd, List<Item> &fields,
+fill_record_n_invoke_before_triggers(THD *thd, TABLE *table, List<Item> &fields,
                                      List<Item> &values, bool ignore_errors,
-                                     Table_triggers_list *triggers,
                                      enum trg_event_type event)
 {
   bool result;
-  result= (fill_record(thd, fields, values, ignore_errors) ||
+  Table_triggers_list *triggers= table->triggers;
+  result= (fill_record(thd, table, fields, values, ignore_errors) ||
            (triggers && triggers->process_triggers(thd, event,
                                                    TRG_ACTION_BEFORE, TRUE)));
   /*
     Re-calculate virtual fields to cater for cases when base columns are
     updated by the triggers.
   */
-  if (!result && triggers)
+  if (!result && triggers && table)
   {
-    TABLE *table= 0;
     List_iterator_fast<Item> f(fields);
     Item *fld;
     Item_field *item_field;
@@ -9001,45 +9107,46 @@ fill_record_n_invoke_before_triggers(THD *thd, List<Item> &fields,
     {
       fld= (Item_field*)f++;
       item_field= fld->filed_for_view_update();
-      if (item_field && item_field->field &&
-          (table= item_field->field->table) &&
-        table->vfield)
-        result= update_virtual_fields(thd, table, TRUE);
+      if (item_field && item_field->field && table && table->vfield)
+      {
+        DBUG_ASSERT(table == item_field->field->table);
+        result= update_virtual_fields(thd, table,
+                                      table->triggers ? VCOL_UPDATE_ALL :
+                                                        VCOL_UPDATE_FOR_WRITE);
+      }
     }
   }
   return result;
 }
 
 
-/*
-  Fill field buffer with values from Field list
+/**
+  Fill the field buffer of a table with the values of an Item list
 
-  SYNOPSIS
-    fill_record()
-    thd           thread handler
-    ptr           pointer on pointer to record
-    values        list of fields
-    ignore_errors TRUE if we should ignore errors
-    use_value     forces usage of value of the items instead of result
+  @param thd           thread handler
+  @param table_arg     the table that is being modified
+  @param ptr           pointer on pointer to record of fields
+  @param values        values to fill with
+  @param ignore_errors TRUE if we should ignore errors
+  @param use_value     forces usage of value of the items instead of result
 
-  NOTE
+  @details
     fill_record() may set table->auto_increment_field_not_null and a
     caller should make sure that it is reset after their last call to this
     function.
 
-  RETURN
-    FALSE   OK
-    TRUE    error occured
+  @return Status
+  @retval true An error occured.
+  @retval false OK.
 */
 
 bool
-fill_record(THD *thd, Field **ptr, List<Item> &values, bool ignore_errors,
-            bool use_value)
+fill_record(THD *thd, TABLE *table, Field **ptr, List<Item> &values,
+            bool ignore_errors, bool use_value)
 {
   List_iterator_fast<Item> v(values);
   List<TABLE> tbl_list;
   Item *value;
-  TABLE *table= 0;
   Field *field;
   bool abort_on_warning_saved= thd->abort_on_warning;
   DBUG_ENTER("fill_record");
@@ -9054,7 +9161,7 @@ fill_record(THD *thd, Field **ptr, List<Item> &values, bool ignore_errors,
     On INSERT or UPDATE fields are checked to be from the same table,
     thus we safely can take table from the first field.
   */
-  table= (*ptr)->table;
+  DBUG_ASSERT((*ptr)->table == table);
 
   /*
     Reset the table->auto_increment_field_not_null as it is valid for
@@ -9085,10 +9192,14 @@ fill_record(THD *thd, Field **ptr, List<Item> &values, bool ignore_errors,
     else
       if (value->save_in_field(field, 0) < 0)
         goto err;
+    field->set_explicit_default(value);
   }
   /* Update virtual fields*/
   thd->abort_on_warning= FALSE;
-  if (table->vfield && update_virtual_fields(thd, table, TRUE))
+  if (table->vfield &&
+      update_virtual_fields(thd, table, 
+                            table->triggers ? VCOL_UPDATE_ALL :
+                                              VCOL_UPDATE_FOR_WRITE))
     goto err;
   thd->abort_on_warning= abort_on_warning_saved;
   DBUG_RETURN(thd->is_error());
@@ -9101,36 +9212,34 @@ err:
 
 
 /*
-  Fill fields in array with values from the list of items and invoke
+  Fill fields in an array with values from the list of items and invoke
   before triggers.
 
-  SYNOPSIS
-    fill_record_n_invoke_before_triggers()
-      thd           thread context
-      ptr           NULL-ended array of fields to be filled
-      values        values to fill with
-      ignore_errors TRUE if we should ignore errors
-      triggers      object holding list of triggers to be invoked
-      event         event type for triggers to be invoked
+  @param thd           thread context
+  @param table         the table that is being modified
+  @param ptr        the fields to be filled
+  @param values        values to fill with
+  @param ignore_errors TRUE if we should ignore errors
+  @param event         event type for triggers to be invoked
 
-  NOTE
+  @detail
     This function assumes that fields which values will be set and triggers
     to be invoked belong to the same table, and that TABLE::record[0] and
     record[1] buffers correspond to new and old versions of row respectively.
 
-  RETURN
-    FALSE   OK
-    TRUE    error occured
+  @return Status
+  @retval true An error occured.
+  @retval false OK.
 */
 
 bool
-fill_record_n_invoke_before_triggers(THD *thd, Field **ptr,
+fill_record_n_invoke_before_triggers(THD *thd, TABLE *table, Field **ptr,
                                      List<Item> &values, bool ignore_errors,
-                                     Table_triggers_list *triggers,
                                      enum trg_event_type event)
 {
   bool result;
-  result= (fill_record(thd, ptr, values, ignore_errors, FALSE) ||
+  Table_triggers_list *triggers= table->triggers;
+  result= (fill_record(thd, table, ptr, values, ignore_errors, FALSE) ||
            (triggers && triggers->process_triggers(thd, event,
                                                    TRG_ACTION_BEFORE, TRUE)));
   /*
@@ -9139,9 +9248,11 @@ fill_record_n_invoke_before_triggers(THD *thd, Field **ptr,
   */
   if (!result && triggers && *ptr)
   {
-    TABLE *table= (*ptr)->table;
+    DBUG_ASSERT(table == (*ptr)->table);
     if (table->vfield)
-      result= update_virtual_fields(thd, table, TRUE);
+      result= update_virtual_fields(thd, table,
+                                    table->triggers ? VCOL_UPDATE_ALL : 
+                                                      VCOL_UPDATE_FOR_WRITE);
   }
   return result;
 
@@ -9216,7 +9327,7 @@ my_bool mysql_rm_tmp_tables(void)
     my_dirend(dirp);
   }
   delete thd;
-  my_pthread_setspecific_ptr(THR_THD,  0);
+  set_current_thd(0);
   DBUG_RETURN(0);
 }
 
@@ -9280,7 +9391,11 @@ bool mysql_notify_thread_having_shared_lock(THD *thd, THD *in_use,
     in_use->killed= KILL_SYSTEM_THREAD;
     mysql_mutex_lock(&in_use->mysys_var->mutex);
     if (in_use->mysys_var->current_cond)
+    {
+      mysql_mutex_lock(in_use->mysys_var->current_mutex);
       mysql_cond_broadcast(in_use->mysys_var->current_cond);
+      mysql_mutex_unlock(in_use->mysys_var->current_mutex);
+    }
     mysql_mutex_unlock(&in_use->mysys_var->mutex);
     signalled= TRUE;
   }
@@ -9626,6 +9741,12 @@ has_write_table_auto_increment_not_first_in_pk(TABLE_LIST *tables)
     must call close_system_tables() to close systems tables opened
     with this call.
 
+  NOTES
+   In some situations we  use this function to open system tables for
+   writing. It happens, for examples, with statistical tables when
+   they are updated by an ANALYZE command. In these cases we should
+   guarantee that system tables will not be deadlocked.
+
   RETURN
     FALSE   Success
     TRUE    Error
@@ -9779,11 +9900,6 @@ open_log_table(THD *thd, TABLE_LIST *one_table, Open_tables_backup *backup)
     /* Make sure all columns get assigned to a default value */
     table->use_all_columns();
     table->no_replicate= 1;
-    /*
-      Don't set automatic timestamps as we may want to use time of logging,
-      not from query start
-    */
-    table->timestamp_field_type= TIMESTAMP_NO_AUTO_SET;
   }
   else
     thd->restore_backup_open_tables_state(backup);
@@ -9839,6 +9955,7 @@ int dynamic_column_error_message(enum_dyncol_func_result rc)
   switch (rc) {
   case ER_DYNCOL_YES:
   case ER_DYNCOL_OK:
+  case ER_DYNCOL_TRUNCATED:
     break; // it is not an error
   case ER_DYNCOL_FORMAT:
     my_error(ER_DYN_COL_WRONG_FORMAT, MYF(0));

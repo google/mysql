@@ -243,8 +243,7 @@ static int assign_condition_item(MEM_ROOT *mem_root, const char* name, THD *thd,
   truncated= assign_fixed_string(mem_root, & my_charset_utf8_bin, 64, ci, str);
   if (truncated)
   {
-    if (thd->variables.sql_mode & (MODE_STRICT_TRANS_TABLES |
-                                   MODE_STRICT_ALL_TABLES))
+    if (thd->is_strict_mode())
     {
       thd->raise_error_printf(ER_COND_ITEM_TOO_LONG, name);
       DBUG_RETURN(1);
@@ -348,8 +347,7 @@ int Signal_common::eval_signal_informations(THD *thd, MYSQL_ERROR *cond)
                                    & utf8_text, str);
     if (truncated)
     {
-      if (thd->variables.sql_mode & (MODE_STRICT_TRANS_TABLES |
-                                     MODE_STRICT_ALL_TABLES))
+      if (thd->is_strict_mode())
       {
         thd->raise_error_printf(ER_COND_ITEM_TOO_LONG,
                                 "MESSAGE_TEXT");
@@ -479,7 +477,7 @@ bool Signal_statement::execute(THD *thd)
 
 bool Resignal_statement::execute(THD *thd)
 {
-  MYSQL_ERROR *signaled;
+  Sql_condition_info *signaled;
   int result= TRUE;
 
   DBUG_ENTER("Resignal_statement::execute");
@@ -492,15 +490,21 @@ bool Resignal_statement::execute(THD *thd)
     DBUG_RETURN(result);
   }
 
+  MYSQL_ERROR signaled_err(thd->mem_root);
+  signaled_err.set(signaled->m_sql_errno,
+                   signaled->m_sql_state,
+                   signaled->m_level,
+                   signaled->m_message);
+
   if (m_cond == NULL)
   {
     /* RESIGNAL without signal_value */
-    result= raise_condition(thd, signaled);
+    result= raise_condition(thd, &signaled_err);
     DBUG_RETURN(result);
   }
 
   /* RESIGNAL with signal_value */
-  result= raise_condition(thd, signaled);
+  result= raise_condition(thd, &signaled_err);
 
   DBUG_RETURN(result);
 }

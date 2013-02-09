@@ -283,6 +283,9 @@ enum ha_base_keytype {
 #define HA_USES_BLOCK_SIZE	 ((uint) 32768)
 #define HA_SORT_ALLOWS_SAME      512    /* Intern bit when sorting records */
 
+/* This flag can be used only in KEY::ext_key_flags */
+#define HA_EXT_NOSAME            131072
+
 	/* These flags can be added to key-seg-flag */
 
 #define HA_SPACE_PACK		 1	/* Pack space in key-seg */
@@ -331,6 +334,12 @@ enum ha_base_keytype {
 #define HA_CREATE_PAGE_CHECKSUM	32
 #define HA_CREATE_DELAY_KEY_WRITE 64
 #define HA_CREATE_RELIES_ON_SQL_LAYER 128
+
+
+/* Flags used by start_bulk_insert */
+
+#define HA_CREATE_UNIQUE_INDEX_BY_SORT   1
+
 
 /*
   The following flags (OR-ed) are passed to handler::info() method.

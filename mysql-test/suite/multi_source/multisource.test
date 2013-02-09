@@ -8,6 +8,15 @@
 
 --connect (slave,127.0.0.1,root,,,$SERVER_MYPORT_3)
 
+# MDEV-3984: crash/read of freed memory when changing master with named connection
+# This fails after adding the new master 'abc', check we do not free twice.
+--error ER_RELAY_LOG_INIT
+change master 'abc' to relay_log_file='';
+# This fails before adding the new master, check that we do free it.
+--error ER_WRONG_ARGUMENTS
+change master 'abc2' to master_host='';
+
+
 # Start replication from the first master
 
 --replace_result $SERVER_MYPORT_1 MYPORT_1
@@ -169,6 +178,7 @@ select * from db2.t1;
 
 --connection master1
 flush logs;
+--source include/wait_for_binlog_checkpoint.inc
 --save_master_pos
 --connection slave
 --sync_with_master 0, 'master1'

@@ -1148,6 +1148,24 @@ skip_size_check:
 	return(DB_SUCCESS);
 }
 
+/*********************************************************************//**
+Initializes the log tracking subsystem and starts its thread.  */
+static
+void
+init_log_online(void)
+/*=================*/
+{
+	if (srv_track_changed_pages) {
+
+		log_online_read_init();
+
+		/* Create the thread that follows the redo log to output the
+		   changed page bitmap */
+		os_thread_create(&srv_redo_log_follow_thread, NULL,
+				 thread_ids + 5 + SRV_MAX_N_IO_THREADS);
+	}
+}
+
 /********************************************************************
 Starts InnoDB and creates a new database if database files
 are not found and the user wants.
@@ -1543,7 +1561,8 @@ innobase_start_or_create_for_mysql(void)
 			((double) srv_buf_pool_size) / (1024 * 1024));
 	}
 
-	err = buf_pool_init(srv_buf_pool_size, srv_buf_pool_instances);
+	err = buf_pool_init(srv_buf_pool_size, (ibool) srv_buf_pool_populate,
+			    srv_buf_pool_instances);
 
 	ut_print_timestamp(stderr);
 	fprintf(stderr,
@@ -1793,6 +1812,8 @@ innobase_start_or_create_for_mysql(void)
 	trx_sys_file_format_init();
 
 	if (create_new_db) {
+		init_log_online();
+
 		mtr_start(&mtr);
 
 		fsp_header_init(0, sum_of_new_sizes, &mtr);
@@ -1891,6 +1912,8 @@ innobase_start_or_create_for_mysql(void)
 
 			return(DB_ERROR);
 		}
+
+		init_log_online();
 
 		/* Since the insert buffer init is in dict_boot, and the
 		insert buffer is needed in any disk i/o, first we call
@@ -2038,19 +2061,6 @@ innobase_start_or_create_for_mysql(void)
 	synchronously */
 	if (srv_auto_lru_dump && srv_blocking_lru_restore)
 		buf_LRU_file_restore();
-
-	if (srv_track_changed_pages) {
-
-		/* Initialize the log tracking subsystem here to block
-		server startup until it's completed due to the potential
-		need to re-read previous server run's log. */
-		log_online_read_init();
-
-		/* Create the thread that follows the redo log to output the
-		changed page bitmap */
-		os_thread_create(&srv_redo_log_follow_thread, NULL,
-				 thread_ids + 6 + SRV_MAX_N_IO_THREADS);
-	}
 
 	srv_is_being_started = FALSE;
 

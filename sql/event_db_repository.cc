@@ -410,7 +410,6 @@ Event_db_repository::index_read_for_db_for_i_s(THD *thd, TABLE *schema_table,
                                                TABLE *event_table,
                                                const char *db)
 {
-  int ret=0;
   CHARSET_INFO *scs= system_charset_info;
   KEY *key_info;
   uint key_len;
@@ -420,7 +419,14 @@ Event_db_repository::index_read_for_db_for_i_s(THD *thd, TABLE *schema_table,
   DBUG_ENTER("Event_db_repository::index_read_for_db_for_i_s");
 
   DBUG_PRINT("info", ("Using prefix scanning on PK"));
-  event_table->file->ha_index_init(0, 1);
+
+  int ret= event_table->file->ha_index_init(0, 1);
+  if (ret)
+  {
+    event_table->file->print_error(ret, MYF(0));
+    DBUG_RETURN(true);
+  }
+
   key_info= event_table->key_info;
 
   if (key_info->key_parts == 0 ||
@@ -830,9 +836,6 @@ Event_db_repository::update_event(THD *thd, Event_parse_data *parse_data,
                               (int) table->field[ET_FIELD_ON_COMPLETION]->val_int()))
     goto end;
 
-  /* Don't update create on row update. */
-  table->timestamp_field_type= TIMESTAMP_NO_AUTO_SET;
-
   /*
     mysql_event_fill_row() calls my_error() in case of error so no need to
     handle it here
@@ -1134,8 +1137,6 @@ update_timing_fields_for_event(THD *thd,
     goto end;
 
   store_record(table, record[1]);
-  /* Don't update create on row update. */
-  table->timestamp_field_type= TIMESTAMP_NO_AUTO_SET;
 
   my_tz_OFFSET0->gmt_sec_to_TIME(&time, last_executed);
   fields[ET_FIELD_LAST_EXECUTED]->set_notnull();

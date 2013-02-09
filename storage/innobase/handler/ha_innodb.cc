@@ -98,6 +98,7 @@ static ulong commit_threads = 0;
 static mysql_mutex_t commit_threads_m;
 static mysql_cond_t commit_cond;
 static mysql_mutex_t commit_cond_m;
+static mysql_mutex_t pending_checkpoint_mutex;
 static bool innodb_inited = 0;
 
 #define INSIDE_HA_INNOBASE_CC
@@ -256,11 +257,13 @@ static mysql_pfs_key_t	innobase_share_mutex_key;
 static mysql_pfs_key_t	commit_threads_m_key;
 static mysql_pfs_key_t	commit_cond_mutex_key;
 static mysql_pfs_key_t	commit_cond_key;
+static mysql_pfs_key_t	pending_checkpoint_mutex_key;
 
 static PSI_mutex_info	all_pthread_mutexes[] = {
 	{&commit_threads_m_key, "commit_threads_m", 0},
 	{&commit_cond_mutex_key, "commit_cond_mutex", 0},
-	{&innobase_share_mutex_key, "innobase_share_mutex", 0}
+	{&innobase_share_mutex_key, "innobase_share_mutex", 0},
+	{&pending_checkpoint_mutex_key, "pending_checkpoint_mutex", 0}
 };
 
 static PSI_cond_info	all_innodb_conds[] = {
@@ -604,6 +607,9 @@ innobase_commit_ordered(
         bool all);			/*!< in: TRUE - commit transaction
                                              FALSE - the current SQL statement
                                              ended */
+static
+void
+innobase_kill_query(handlerton *hton, THD* thd, enum thd_kill_levels level);
 
 /*****************************************************************//**
 Commits a transaction in an InnoDB database or marks an SQL statement
@@ -1252,8 +1258,7 @@ convert_error_code_to_mysql(
 		return(0);
 
 	case DB_INTERRUPTED:
-		my_error(ER_QUERY_INTERRUPTED, MYF(0));
-		/* fall through */
+                return(HA_ERR_ABORTED_BY_USER);
 
 	case DB_FOREIGN_EXCEED_MAX_CASCADE:
 		ut_ad(thd);
@@ -1345,11 +1350,22 @@ convert_error_code_to_mysql(
 	case DB_TABLE_NOT_FOUND:
 		return(HA_ERR_NO_SUCH_TABLE);
 
-	case DB_TOO_BIG_RECORD:
-		my_error(ER_TOO_BIG_ROWSIZE, MYF(0),
-			 page_get_free_space_of_empty(flags
-						      & DICT_TF_COMPACT) / 2);
+	case DB_TOO_BIG_RECORD: {
+		/* If prefix is true then a 768-byte prefix is stored
+		locally for BLOB fields. Refer to dict_table_get_format() */
+		bool prefix = (dict_tf_get_format(flags) == UNIV_FORMAT_A);
+		my_printf_error(ER_TOO_BIG_ROWSIZE,
+			"Row size too large (> %lu). Changing some columns "
+			"to TEXT or BLOB %smay help. In current row "
+			"format, BLOB prefix of %d bytes is stored inline.",
+			MYF(0),
+			page_get_free_space_of_empty(flags &
+				DICT_TF_COMPACT) / 2,
+			prefix ? "or using ROW_FORMAT=DYNAMIC "
+			"or ROW_FORMAT=COMPRESSED ": "",
+			prefix ? DICT_MAX_FIXED_COL_LEN : 0);
 		return(HA_ERR_TO_BIG_ROW);
+        }
 
 	case DB_TOO_BIG_INDEX_COL:
 		my_error(ER_INDEX_COLUMN_TOO_LONG, MYF(0),
@@ -1866,7 +1882,10 @@ innobase_next_autoinc(
 		offset = 0;
 	}
 
-	/* Check for overflow. */
+	/* Check for overflow. Current can be > max_value if the value is
+	in reality a negative value.The visual studio compilers converts
+	large double values automatically into unsigned long long datatype
+	maximum value */
 	if (block >= max_value
 	    || offset > max_value
 	    || current >= max_value
@@ -2520,7 +2539,7 @@ trx_is_interrupted(
 /*===============*/
 	trx_t*	trx)	/*!< in: transaction */
 {
-	return(trx && trx->mysql_thd && thd_killed((THD*) trx->mysql_thd));
+	return(trx && trx->mysql_thd && thd_kill_level((THD*) trx->mysql_thd));
 }
 
 /**********************************************************************//**
@@ -2670,6 +2689,7 @@ innobase_init(
 		innobase_release_temporary_latches;
 
 	innobase_hton->alter_table_flags = innobase_alter_table_flags;
+        innobase_hton->kill_query = innobase_kill_query;
 
 	ut_a(DATA_MYSQL_TRUE_VARCHAR == (ulint)MYSQL_TYPE_VARCHAR);
 
@@ -3066,6 +3086,9 @@ innobase_change_buffering_inited_ok:
 	mysql_mutex_init(commit_cond_mutex_key,
 			 &commit_cond_m, MY_MUTEX_INIT_FAST);
 	mysql_cond_init(commit_cond_key, &commit_cond, NULL);
+	mysql_mutex_init(pending_checkpoint_mutex_key,
+			 &pending_checkpoint_mutex,
+			 MY_MUTEX_INIT_FAST);
 	innodb_inited= 1;
 #ifdef MYSQL_DYNAMIC_PLUGIN
 	if (innobase_hton != p) {
@@ -3130,6 +3153,7 @@ innobase_end(
 		mysql_mutex_destroy(&commit_threads_m);
 		mysql_mutex_destroy(&commit_cond_m);
 		mysql_cond_destroy(&commit_cond);
+		mysql_mutex_destroy(&pending_checkpoint_mutex);
 	}
 
 	DBUG_RETURN(err);
@@ -3513,17 +3537,144 @@ innobase_rollback_trx(
 	DBUG_RETURN(convert_error_code_to_mysql(error, 0, NULL));
 }
 
+
+struct pending_checkpoint {
+	struct pending_checkpoint *next;
+	handlerton *hton;
+	void *cookie;
+	ib_uint64_t lsn;
+};
+static struct pending_checkpoint *pending_checkpoint_list;
+static struct pending_checkpoint *pending_checkpoint_list_end;
+
 /*****************************************************************//**
 Handle a commit checkpoint request from server layer.
-We simply flush the redo log immediately and do the notify call.*/
+We put the request in a queue, so that we can notify upper layer about
+checkpoint complete when we have flushed the redo log.
+If we have already flushed all relevant redo log, we notify immediately.*/
 static
 void
 innobase_checkpoint_request(
 	handlerton *hton,
 	void *cookie)
 {
-	log_buffer_flush_to_disk();
-	commit_checkpoint_notify_ha(hton, cookie);
+	ib_uint64_t			lsn;
+	ib_uint64_t			flush_lsn;
+	struct pending_checkpoint *	entry;
+
+	/* Do the allocation outside of lock to reduce contention. The normal
+	case is that not everything is flushed, so we will need to enqueue. */
+	entry = static_cast<struct pending_checkpoint *>
+		(my_malloc(sizeof(*entry), MYF(MY_WME)));
+	if (!entry) {
+		sql_print_error("Failed to allocate %u bytes."
+				" Commit checkpoint will be skipped.",
+				static_cast<unsigned>(sizeof(*entry)));
+		return;
+	}
+
+	entry->next = NULL;
+	entry->hton = hton;
+	entry->cookie = cookie;
+
+	mysql_mutex_lock(&pending_checkpoint_mutex);
+	lsn = log_get_lsn();
+	flush_lsn = log_get_flush_lsn();
+	if (lsn > flush_lsn) {
+		/* Put the request in queue.
+		When the log gets flushed past the lsn, we will remove the
+		entry from the queue and notify the upper layer. */
+		entry->lsn = lsn;
+		if (pending_checkpoint_list_end) {
+			pending_checkpoint_list_end->next = entry;
+			/* There is no need to order the entries in the list
+			by lsn. The upper layer can accept notifications in
+			any order, and short delays in notifications do not
+			significantly impact performance. */
+		} else {
+			pending_checkpoint_list = entry;
+		}
+		pending_checkpoint_list_end = entry;
+		entry = NULL;
+	}
+	mysql_mutex_unlock(&pending_checkpoint_mutex);
+
+	if (entry) {
+		/* We are already flushed. Notify the checkpoint immediately. */
+		commit_checkpoint_notify_ha(entry->hton, entry->cookie);
+		my_free(entry);
+	}
+}
+
+/*****************************************************************//**
+Log code calls this whenever log has been written and/or flushed up
+to a new position. We use this to notify upper layer of a new commit
+checkpoint when necessary.*/
+void
+innobase_mysql_log_notify(
+/*===============*/
+	ib_uint64_t	write_lsn,	/*!< in: LSN written to log file */
+	ib_uint64_t	flush_lsn)	/*!< in: LSN flushed to disk */
+{
+	struct pending_checkpoint *	pending;
+	struct pending_checkpoint *	entry;
+	struct pending_checkpoint *	last_ready;
+
+	/* It is safe to do a quick check for NULL first without lock.
+	Even if we should race, we will at most skip one checkpoint and
+	take the next one, which is harmless. */
+	if (!pending_checkpoint_list)
+		return;
+
+	mysql_mutex_lock(&pending_checkpoint_mutex);
+	pending = pending_checkpoint_list;
+	if (!pending)
+	{
+		mysql_mutex_unlock(&pending_checkpoint_mutex);
+		return;
+	}
+
+	last_ready = NULL;
+	for (entry = pending; entry != NULL; entry = entry -> next)
+	{
+		/* Notify checkpoints up until the first entry that has not
+		been fully flushed to the redo log. Since we do not maintain
+		the list ordered, in principle there could be more entries
+		later than were also flushed. But there is no harm in
+		delaying notifications for those a bit. And in practise, the
+		list is unlikely to have more than one element anyway, as we
+		flush the redo log at least once every second. */
+		if (entry->lsn > flush_lsn)
+			break;
+		last_ready = entry;
+	}
+
+	if (last_ready)
+	{
+		/* We found some pending checkpoints that are now flushed to
+		disk. So remove them from the list. */
+		pending_checkpoint_list = entry;
+		if (!entry)
+			pending_checkpoint_list_end = NULL;
+	}
+
+	mysql_mutex_unlock(&pending_checkpoint_mutex);
+
+	if (!last_ready)
+		return;
+
+	/* Now that we have released the lock, notify upper layer about all
+	commit checkpoints that have now completed. */
+	for (;;) {
+		entry = pending;
+		pending = pending->next;
+
+		commit_checkpoint_notify_ha(entry->hton, entry->cookie);
+
+		my_free(entry);
+		if (entry == last_ready)
+			break;
+	}
 }
 
 /*****************************************************************//**
@@ -3695,6 +3846,30 @@ innobase_close_connection(
 
 	DBUG_RETURN(0);
 }
+
+/*****************************************************************//**
+Cancel any pending lock request associated with the current THD. */
+static
+void
+innobase_kill_query(
+/*======================*/
+        handlerton*	hton,	    /*!< in: innobase handlerton */
+	THD*	thd,	            /*!< in: MySQL thread being killed */
+        enum thd_kill_levels level) /*!< in: kill level */
+{
+	trx_t*	trx;
+	DBUG_ENTER("innobase_kill_query");
+	DBUG_ASSERT(hton == innodb_hton_ptr);
+
+	trx = thd_to_trx(thd);
+	/* Cancel a pending lock request. */
+	if (trx) {
+		lock_trx_handle_wait(trx);
+	}
+
+	DBUG_VOID_RETURN;
+}
+
 
 /*************************************************************************//**
 ** InnoDB database tables
@@ -10598,7 +10773,7 @@ ha_innobase::check(
 			row_mysql_unlock_data_dictionary(prebuilt->trx);
 		}
 
-		if (thd_killed(user_thd)) {
+		if (thd_kill_level(user_thd)) {
 			break;
 		}
 
@@ -10656,7 +10831,7 @@ ha_innobase::check(
 		srv_fatal_semaphore_wait_threshold, 7200/*2 hours*/);
 
 	prebuilt->trx->op_info = "";
-	if (thd_killed(user_thd)) {
+	if (thd_kill_level(user_thd)) {
 		my_error(ER_QUERY_INTERRUPTED, MYF(0));
 	}
 
@@ -14960,8 +15135,8 @@ static MYSQL_SYSVAR_ENUM(stats_method, srv_innodb_stats_method,
 #if defined UNIV_DEBUG || defined UNIV_IBUF_DEBUG
 static MYSQL_SYSVAR_UINT(change_buffering_debug, ibuf_debug,
   PLUGIN_VAR_RQCMDARG,
-  "Debug flags for InnoDB change buffering (0=none)",
-  NULL, NULL, 0, 0, 1, 0);
+  "Debug flags for InnoDB change buffering (0=none, 2=crash at merge)",
+  NULL, NULL, 0, 0, 2, 0);
 #endif /* UNIV_DEBUG || UNIV_IBUF_DEBUG */
 
 static MYSQL_SYSVAR_BOOL(random_read_ahead, srv_random_read_ahead,

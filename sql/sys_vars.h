@@ -51,7 +51,6 @@
 #define ON_CHECK(X) X
 #define ON_UPDATE(X) X
 #define READ_ONLY sys_var::READONLY+
-#define NOT_VISIBLE sys_var::INVISIBLE+
 // this means that Sys_var_charptr initial value was malloc()ed
 #define PREALLOCATED sys_var::ALLOCATED+
 #define PARSED_EARLY sys_var::PARSE_EARLY+
@@ -2046,19 +2045,4 @@ public:
     return update_multi_source_variable_func(this, thd, mi);
   }
 };
-
-
-/****************************************************************************
-  Used templates
-****************************************************************************/
-
-#ifdef HAVE_EXPLICIT_TEMPLATE_INSTANTIATION
-template class List<set_var_base>;
-template class List_iterator_fast<set_var_base>;
-template class Sys_var_integer<int, GET_INT, SHOW_SINT>;
-template class Sys_var_integer<uint, GET_UINT, SHOW_INT>;
-template class Sys_var_integer<ulong, GET_ULONG, SHOW_LONG>;
-template class Sys_var_integer<ha_rows, GET_HA_ROWS, SHOW_HA_ROWS>;
-template class Sys_var_integer<ulonglong, GET_ULL, SHOW_LONGLONG>;
-#endif
 

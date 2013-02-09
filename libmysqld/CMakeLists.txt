@@ -75,7 +75,8 @@ SET(SQL_EMBEDDED_SOURCES emb_qcache.cc libmysqld.c lib_sql.cc
            ../sql/debug_sync.cc ../sql/opt_table_elimination.cc
            ../sql/sql_prepare.cc ../sql/sql_rename.cc ../sql/sql_repl.cc 
            ../sql/sql_select.cc ../sql/sql_servers.cc
-           ../sql/sql_show.cc ../sql/sql_state.c ../sql/sql_string.cc
+           ../sql/sql_show.cc ../sql/sql_state.c 
+           ../sql/sql_statistics.cc ../sql/sql_string.cc
            ../sql/sql_tablespace.cc ../sql/sql_table.cc ../sql/sql_test.cc
            ../sql/sql_trigger.cc ../sql/sql_udf.cc ../sql/sql_union.cc
            ../sql/sql_update.cc ../sql/sql_view.cc ../sql/sql_profile.cc
@@ -149,8 +150,21 @@ IF(UNIX)
   ${CMAKE_STATIC_LIBRARY_PREFIX}mysqld-debug)
 ENDIF()
 
+# List of exported functions in embedded (client api except client plugin or 
+# async (*_start/*_cont functions)
+
+SET(EMBEDDED_API)
+
+FOREACH(f ${CLIENT_API_FUNCTIONS})
+  IF(f MATCHES "plugin|_start$|_cont$")
+    # Ignore functions, embedded does not export them
+  ELSE()
+    SET(EMBEDDED_API ${EMBEDDED_API} ${f})
+  ENDIF()	
+ENDFOREACH()
+
 IF(NOT DISABLE_SHARED)
-  MERGE_LIBRARIES(libmysqld SHARED mysqlserver EXPORTS ${CLIENT_API_FUNCTIONS}
+  MERGE_LIBRARIES(libmysqld SHARED mysqlserver EXPORTS ${EMBEDDED_API}
     COMPONENT Server) 
   IF(UNIX)
     # Name the shared library, handle versioning (provides same api as client

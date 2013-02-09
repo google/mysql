@@ -78,7 +78,7 @@ extern CHARSET_INFO *character_set_filesystem;
 extern MY_BITMAP temp_pool;
 extern bool opt_large_files, server_id_supplied;
 extern bool opt_update_log, opt_bin_log, opt_error_log;
-extern my_bool opt_log, opt_slow_log;
+extern my_bool opt_log, opt_slow_log, opt_bootstrap;
 extern my_bool opt_backup_history_log;
 extern my_bool opt_backup_progress_log;
 extern ulonglong log_output_options;
@@ -107,6 +107,7 @@ extern char* opt_secure_backup_file_priv;
 extern size_t opt_secure_backup_file_priv_len;
 extern my_bool opt_log_slow_admin_statements, opt_log_slow_slave_statements;
 extern my_bool sp_automatic_privileges, opt_noacl;
+extern ulong use_stat_tables;
 extern my_bool opt_old_style_user_limits, trust_function_creators;
 extern uint opt_crash_binlog_innodb;
 extern char *shared_memory_base_name, *mysqld_unix_port;
@@ -230,6 +231,7 @@ extern PSI_mutex_key key_LOCK_des_key_file;
 #endif
 
 extern PSI_mutex_key key_BINLOG_LOCK_index, key_BINLOG_LOCK_xid_list,
+  key_BINLOG_LOCK_binlog_background_thread,
   key_delayed_insert_mutex, key_hash_filo_lock, key_LOCK_active_mi,
   key_LOCK_connection_count, key_LOCK_crypt, key_LOCK_delayed_create,
   key_LOCK_delayed_insert, key_LOCK_delayed_status, key_LOCK_error_log,
@@ -261,6 +263,8 @@ extern PSI_cond_key key_PAGE_cond, key_COND_active, key_COND_pool;
 #endif /* HAVE_MMAP */
 
 extern PSI_cond_key key_BINLOG_COND_xid_list, key_BINLOG_update_cond,
+  key_BINLOG_COND_binlog_background_thread,
+  key_BINLOG_COND_binlog_background_thread_end,
   key_COND_cache_status_changed, key_COND_manager,
   key_COND_rpl_status, key_COND_server_started,
   key_delayed_insert_cond, key_delayed_insert_cond_client,
@@ -402,6 +406,9 @@ extern PSI_stage_info stage_slave_waiting_worker_to_free_events;
 extern PSI_stage_info stage_slave_waiting_worker_queue;
 extern PSI_stage_info stage_slave_waiting_event_from_coordinator;
 extern PSI_stage_info stage_slave_waiting_workers_to_exit;
+extern PSI_stage_info stage_binlog_waiting_background_tasks;
+extern PSI_stage_info stage_binlog_processing_checkpoint_notify;
+extern PSI_stage_info stage_binlog_stopping_background_thread;
 #ifdef HAVE_PSI_STATEMENT_INTERFACE
 /**
   Statement instrumentation keys (sql).
@@ -514,6 +521,8 @@ enum options_mysqld
   OPT_LOG_ERROR,
   OPT_LOWER_CASE_TABLE_NAMES,
   OPT_MAX_LONG_DATA_SIZE,
+  OPT_PLUGIN_LOAD,
+  OPT_PLUGIN_LOAD_ADD,
   OPT_ONE_THREAD,
   OPT_PFS_INSTRUMENT,
   OPT_POOL_OF_THREADS,
@@ -565,6 +574,7 @@ enum enum_query_type
 typedef int64 query_id_t;
 extern query_id_t global_query_id;
 extern my_atomic_rwlock_t global_query_id_lock;
+extern my_atomic_rwlock_t statistics_lock;
 
 void unireg_end(void) __attribute__((noreturn));
 
@@ -660,6 +670,10 @@ inline THD *_current_thd(void)
 }
 #endif
 #define current_thd _current_thd()
+inline int set_current_thd(THD *thd)
+{
+  return my_pthread_setspecific_ptr(THR_THD, thd);
+}
 
 /*
   @todo remove, make it static in ha_maria.cc

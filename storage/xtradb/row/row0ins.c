@@ -2012,7 +2012,10 @@ row_ins_index_entry_low(
 	the function will return in both low_match and up_match of the
 	cursor sensible values */
 
-	if (dict_index_is_clust(index)) {
+	if (UNIV_UNLIKELY(thr_get_trx(thr)->fake_changes)) {
+		search_mode = (mode & BTR_MODIFY_TREE)
+			? BTR_SEARCH_TREE : BTR_SEARCH_LEAF;
+	} else if (dict_index_is_clust(index)) {
 		search_mode = mode;
 	} else if (!(thr_get_trx(thr)->check_unique_secondary)) {
 		search_mode = mode | BTR_INSERT | BTR_IGNORE_SEC_UNIQUE;
@@ -2021,7 +2024,7 @@ row_ins_index_entry_low(
 	}
 
 	btr_cur_search_to_nth_level(index, 0, entry, PAGE_CUR_LE,
-				    thr_get_trx(thr)->fake_changes ? BTR_SEARCH_LEAF : search_mode,
+				    search_mode,
 				    &cursor, 0, __FILE__, __LINE__, &mtr);
 
 	if (cursor.flag == BTR_CUR_INSERT_TO_IBUF) {
@@ -2181,9 +2184,16 @@ row_ins_index_entry_low(
 
 				goto function_exit;
 			}
-			err = btr_cur_pessimistic_insert(
+
+			err = btr_cur_optimistic_insert(
 				0, &cursor, entry, &insert_rec, &big_rec,
 				n_ext, thr, &mtr);
+
+			if (err == DB_FAIL) {
+				err = btr_cur_pessimistic_insert(
+					0, &cursor, entry, &insert_rec,
+					&big_rec, n_ext, thr, &mtr);
+			}
 		}
 	}
 

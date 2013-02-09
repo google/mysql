@@ -1,8 +1,8 @@
-revision-id: wlad@montyprogram.com-20121106212013-iaojf2m619t5ya37
-date: 2012-11-06 22:20:13 +0100
-build-date: 2012-11-07 15:20:20 +0100
-revno: 3476
+revision-id: sanja@askmonty.org-20130204153039-ws7tcwfmbi6vil6e
+date: 2013-02-04 17:30:39 +0200
+build-date: 2013-02-04 17:17:58 +0100
+revno: 3501
 branch-nick: 10.0
 
 
-MySQL source 10.0.0
+MySQL source 10.0.1

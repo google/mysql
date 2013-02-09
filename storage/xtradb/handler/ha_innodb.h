@@ -123,7 +123,6 @@ class ha_innobase: public handler
 	*/
 	enum row_type get_row_type() const;
 
-	const char* table_type() const;
 	const char* index_type(uint key_number);
 	const char** bas_ext() const;
 	Table_flags table_flags() const;
@@ -138,6 +137,7 @@ class ha_innobase: public handler
 	int close(void);
 	double scan_time();
 	double read_time(uint index, uint ranges, ha_rows rows);
+	my_bool is_fake_change_enabled(THD *thd);
 	bool is_corrupt() const;
 
 	int write_row(uchar * buf);

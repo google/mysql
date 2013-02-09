@@ -993,11 +993,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  COLLATION_SYM                 /* SQL-2003-N */
 %token  COLUMNS
 %token  COLUMN_ADD_SYM
+%token  COLUMN_CHECK_SYM
 %token  COLUMN_CREATE_SYM
 %token  COLUMN_DELETE_SYM
-%token  COLUMN_EXISTS_SYM
 %token  COLUMN_GET_SYM
-%token  COLUMN_LIST_SYM
 %token  COLUMN_SYM                    /* SQL-2003-R */
 %token  COLUMN_NAME_SYM               /* SQL-2003-N */
 %token  COMMENT_SYM
@@ -1595,6 +1594,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         ev_alter_on_schedule_completion opt_ev_rename_to opt_ev_sql_stmt
         optional_flush_tables_arguments opt_dyncol_type dyncol_type
         opt_time_precision kill_type kill_option int_num
+        opt_default_time_precision
 
 /*
   Bit field of MYSQL_START_TRANS_OPT_* flags.
@@ -1715,7 +1715,12 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         show describe load alter optimize keycache preload flush
         reset purge begin commit rollback savepoint release
         slave master_def master_defs master_file_def slave_until_opts
-        repair analyze check start checksum
+        repair analyze
+        analyze_table_list analyze_table_elem_spec
+        opt_persistent_stat_clause persistent_stat_spec
+        persistent_column_stat_spec persistent_index_stat_spec
+        table_column_list table_index_list table_index_name
+        check start checksum
         field_list field_list_item field_spec kill column_def key_def
         keycache_list keycache_list_or_parts assign_to_keycache
         assign_to_keycache_parts
@@ -6025,9 +6030,9 @@ attribute:
           NULL_SYM { Lex->type&= ~ NOT_NULL_FLAG; }
         | not NULL_SYM { Lex->type|= NOT_NULL_FLAG; }
         | DEFAULT now_or_signed_literal { Lex->default_value=$2; }
-        | ON UPDATE_SYM NOW_SYM optional_braces
+        | ON UPDATE_SYM NOW_SYM opt_default_time_precision
           {
-            Item *item= new (YYTHD->mem_root) Item_func_now_local(6);
+            Item *item= new (YYTHD->mem_root) Item_func_now_local($4);
             if (item == NULL)
               MYSQL_YYABORT;
             Lex->on_update_value= item;
@@ -6119,9 +6124,9 @@ type_with_opt_collate:
 
 
 now_or_signed_literal:
-          NOW_SYM optional_braces
+          NOW_SYM opt_default_time_precision
           {
-            $$= new (YYTHD->mem_root) Item_func_now_local(6);
+            $$= new (YYTHD->mem_root) Item_func_now_local($2);
             if ($$ == NULL)
               MYSQL_YYABORT;
           }
@@ -7431,7 +7436,7 @@ analyze:
             /* Will be overriden during execution. */
             YYPS->m_lock_type= TL_UNLOCK;
           }
-          table_list
+          analyze_table_list
           {
             THD *thd= YYTHD;
             LEX* lex= thd->lex;
@@ -7441,6 +7446,96 @@ analyze:
               MYSQL_YYABORT;
           }
         ;
+
+analyze_table_list:
+          analyze_table_elem_spec
+        | analyze_table_list ',' analyze_table_elem_spec
+        ;
+
+analyze_table_elem_spec:
+          table_name opt_persistent_stat_clause
+        ;
+
+opt_persistent_stat_clause:
+          /* empty */
+          {}        
+        | PERSISTENT_SYM FOR_SYM persistent_stat_spec  
+          { 
+            THD *thd= YYTHD;
+            thd->lex->with_persistent_for_clause= TRUE;
+          }
+        ;
+
+persistent_stat_spec:
+          ALL
+          {}
+        | COLUMNS persistent_column_stat_spec INDEXES persistent_index_stat_spec
+          {}
+
+persistent_column_stat_spec:
+          ALL {}
+        | '('
+          { 
+            THD *thd= YYTHD;
+            LEX* lex= thd->lex;
+            lex->column_list= new List<LEX_STRING>;
+            if (lex->column_list == NULL)
+              MYSQL_YYABORT;
+          }
+          table_column_list
+          ')' 
+        ;
+ 
+persistent_index_stat_spec:
+          ALL {}
+        | '('
+          { 
+            THD *thd= YYTHD;
+            LEX* lex= thd->lex;
+            lex->index_list= new List<LEX_STRING>;
+            if (lex->index_list == NULL)
+              MYSQL_YYABORT;
+          }
+          table_index_list
+          ')' 
+        ;
+
+table_column_list:
+          /* empty */
+          {}
+        | ident 
+          {
+            Lex->column_list->push_back((LEX_STRING*)
+            sql_memdup(&$1, sizeof(LEX_STRING)));
+          }
+        | table_column_list ',' ident
+          {
+            Lex->column_list->push_back((LEX_STRING*)
+            sql_memdup(&$3, sizeof(LEX_STRING)));
+          }
+        ;
+
+table_index_list:
+          /* empty */
+          {}
+        | table_index_name 
+        | table_index_list ',' table_index_name
+        ;
+
+table_index_name:
+          ident
+          {
+            Lex->index_list->push_back(
+              (LEX_STRING*) sql_memdup(&$1, sizeof(LEX_STRING)));
+          }
+        |
+          PRIMARY_SYM
+          {
+            LEX_STRING str= {(char*) "PRIMARY", 7};
+            Lex->index_list->push_back(
+              (LEX_STRING*) sql_memdup(&str, sizeof(LEX_STRING)));
+          }  
+        ;  
 
 binlog_base64_event:
           BINLOG_SYM TEXT_STRING_sys
@@ -7943,6 +8038,12 @@ select_alias:
         | AS TEXT_STRING_sys { $$=$2; }
         | ident { $$=$1; }
         | TEXT_STRING_sys { $$=$1; }
+        ;
+
+opt_default_time_precision:
+          /* empty */             { $$= NOT_FIXED_DEC;  }
+        | '(' ')'                 { $$= NOT_FIXED_DEC;  }
+        | '(' real_ulong_num ')'  { $$= $2; };
         ;
 
 opt_time_precision:
@@ -8464,7 +8565,7 @@ dyncall_create_element:
        alloc_root(YYTHD->mem_root, sizeof(DYNCALL_CREATE_DEF));
      if ($$ == NULL)
        MYSQL_YYABORT;
-     $$->num= $1;
+     $$->key= $1;
      $$->value= $3;
      $$->type= (DYNAMIC_COLUMN_TYPE)$4;
      $$->cs= lex->charset;
@@ -9018,16 +9119,9 @@ function_call_nonkeyword:
               MYSQL_YYABORT;
           }
         |
-          COLUMN_EXISTS_SYM '(' expr ',' expr ')'
+          COLUMN_CHECK_SYM '(' expr ')'
           {
-            $$= new (YYTHD->mem_root) Item_func_dyncol_exists($3, $5);
-            if ($$ == NULL)
-              MYSQL_YYABORT;
-          }
-        |
-          COLUMN_LIST_SYM '(' expr ')'
-          {
-            $$= new (YYTHD->mem_root) Item_func_dyncol_list($3);
+            $$= new (YYTHD->mem_root) Item_func_dyncol_check($3);
             if ($$ == NULL)
               MYSQL_YYABORT;
           }
@@ -11656,11 +11750,19 @@ show_param:
           {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SHOW_AUTHORS;
+            push_warning_printf(YYTHD, MYSQL_ERROR::WARN_LEVEL_WARN,
+                                ER_WARN_DEPRECATED_SYNTAX_NO_REPLACEMENT,
+                                ER(ER_WARN_DEPRECATED_SYNTAX_NO_REPLACEMENT),
+                                "SHOW AUTHORS");
           }
         | CONTRIBUTORS_SYM
           {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SHOW_CONTRIBUTORS;
+            push_warning_printf(YYTHD, MYSQL_ERROR::WARN_LEVEL_WARN,
+                                ER_WARN_DEPRECATED_SYNTAX_NO_REPLACEMENT,
+                                ER(ER_WARN_DEPRECATED_SYNTAX_NO_REPLACEMENT),
+                                "SHOW CONTRIBUTORS");
           }
         | PRIVILEGES
           {
@@ -13175,11 +13277,10 @@ keyword:
         | CHECKPOINT_SYM        {}
         | CLOSE_SYM             {}
         | COLUMN_ADD_SYM        {}
+        | COLUMN_CHECK_SYM      {}
         | COLUMN_CREATE_SYM     {}
         | COLUMN_DELETE_SYM     {}
-        | COLUMN_EXISTS_SYM     {}
         | COLUMN_GET_SYM        {}
-        | COLUMN_LIST_SYM       {}
         | COMMENT_SYM           {}
         | COMMIT_SYM            {}
         | CONTAINS_SYM          {}

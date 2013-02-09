@@ -63,7 +63,7 @@ int select_union::send_data(List<Item> &values)
     return 0;
   if (table->no_rows_with_nulls)
     table->null_catch_flags= CHECK_ROW_FOR_NULLS_TO_REJECT;
-  fill_record(thd, table->field, values, TRUE, FALSE);
+  fill_record(thd, table, table->field, values, TRUE, FALSE);
   if (thd->is_error())
     return 1;
   if (table->no_rows_with_nulls)
@@ -716,7 +716,7 @@ bool st_select_lex_unit::exec()
                             ER(ER_QUERY_EXCEEDED_ROWS_EXAMINED_LIMIT),
                             thd->accessed_rows_and_keys,
                             thd->lex->limit_rows_examined->val_uint());
-        thd->killed= NOT_KILLED;
+        thd->reset_killed();
         break;
       }
     }

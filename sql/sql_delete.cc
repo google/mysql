@@ -35,6 +35,7 @@
 #include "sql_select.h"
 #include "sp_head.h"
 #include "sql_trigger.h"
+#include "sql_statistics.h"
 #include "transaction.h"
 #include "records.h"                            // init_read_record,
 #include "sql_derived.h"                        // mysql_handle_list_of_derived
@@ -200,6 +201,7 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
 #endif
   /* Update the table->file->stats.records number */
   table->file->info(HA_STATUS_VARIABLE | HA_STATUS_NO_LOCK);
+  set_statistics_for_table(thd, table);
 
   table->covering_keys.clear_all();
   table->quick_keys.clear_all();		// Can't use 'only index'
@@ -262,7 +264,8 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
     {
       DBUG_ASSERT(usable_index == MAX_KEY);
       table->sort.io_cache= (IO_CACHE *) my_malloc(sizeof(IO_CACHE),
-                                                   MYF(MY_FAE | MY_ZEROFILL));
+                                                   MYF(MY_FAE | MY_ZEROFILL |
+                                                       MY_THREAD_SPECIFIC));
     
       if (!(sortorder= make_unireg_sortorder(order, &length, NULL)) ||
 	  (table->sort.found_records= filesort(thd, table, sortorder, length,
@@ -330,7 +333,9 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
 	 ! thd->is_error())
   {
     if (table->vfield)
-      update_virtual_fields(thd, table);
+      update_virtual_fields(thd, table,
+                            table->triggers ? VCOL_UPDATE_ALL :
+                                              VCOL_UPDATE_FOR_READ);
     thd->inc_examined_row_count(1);
     // thd->is_error() is tested to disallow delete row on error
     if (!select || select->skip_record(thd) > 0)

@@ -144,7 +144,8 @@ extern char*	srv_doublewrite_file;
 
 extern ibool	srv_recovery_stats;
 
-extern my_bool	srv_track_changed_pages;
+extern my_bool		srv_track_changed_pages;
+extern ib_uint64_t	srv_max_bitmap_file_size;
 
 extern
 ulonglong       srv_changed_pages_limit;
@@ -182,6 +183,7 @@ extern my_bool	srv_use_sys_malloc;
 extern ibool	srv_use_sys_malloc;
 #endif /* UNIV_HOTBACKUP */
 extern ulint	srv_buf_pool_size;	/*!< requested size in bytes */
+extern my_bool	srv_buf_pool_populate;	/*!< virtual page preallocation */
 extern ulint    srv_buf_pool_instances; /*!< requested number of buffer pool instances */
 extern ulint	srv_buf_pool_old_size;	/*!< previously requested size */
 extern ulint	srv_buf_pool_curr_size;	/*!< current size in bytes */
@@ -393,6 +395,10 @@ extern uint srv_auto_lru_dump;
 
 /** Whether startup should be blocked until buffer pool is fully restored */
 extern ibool srv_blocking_lru_restore;
+
+/** When TRUE, fake change transcations take S rather than X row locks.
+When FALSE, row locks are not taken at all. */
+extern my_bool srv_fake_changes_locks;
 
 /** Status variables to be passed to MySQL */
 typedef struct export_var_struct export_struc;

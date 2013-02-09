@@ -5514,8 +5514,7 @@ String *Item::check_well_formed_result(String *str, bool send_error)
                cs->csname,  hexbuf);
       return 0;
     }
-    if ((thd->variables.sql_mode &
-         (MODE_STRICT_TRANS_TABLES | MODE_STRICT_ALL_TABLES)))
+    if (thd->is_strict_mode())
     {
       null_value= 1;
       str= 0;
@@ -5577,7 +5576,7 @@ bool Item::eq_by_collation(Item *item, bool binary_cmp, CHARSET_INFO *cs)
 /**
   Create a field to hold a string value from an item.
 
-  If max_length > CONVERT_IF_BIGGER_TO_BLOB create a blob @n
+  If too_big_for_varchar() create a blob @n
   If max_length > 0 create a varchar @n
   If max_length == 0 create a CHAR(0) 
 
@@ -5592,7 +5591,7 @@ Field *Item::make_string_field(TABLE *table)
     Note: the following check is repeated in 
     subquery_types_allow_materialization():
   */
-  if (max_length/collation.collation->mbmaxlen > CONVERT_IF_BIGGER_TO_BLOB)
+  if (too_big_for_varchar())
     field= new Field_blob(max_length, maybe_null, name,
                           collation.collation, TRUE);
   /* Item_type_holder holds the exact type, do not change it */
@@ -5697,7 +5696,7 @@ Field *Item::tmp_table_field_from_field_type(TABLE *table, bool fixed_length)
     DBUG_ASSERT(0);
     /* If something goes awfully wrong, it's better to get a string than die */
   case MYSQL_TYPE_STRING:
-    if (fixed_length && max_length < CONVERT_IF_BIGGER_TO_BLOB)
+    if (fixed_length && !too_big_for_varchar())
     {
       field= new Field_string(max_length, maybe_null, name,
                               collation.collation);
@@ -8849,9 +8848,10 @@ int Item_cache_temporal::save_in_field(Field *field, bool no_conversions)
 }
 
 
-void Item_cache_temporal::store_packed(longlong val_arg)
+void Item_cache_temporal::store_packed(longlong val_arg, Item *example)
 {
   /* An explicit values is given, save it. */
+  store(example);
   value_cached= true;
   value= val_arg;
   null_value= false;
@@ -9597,11 +9597,18 @@ table_map Item_ref::used_tables() const
 
 
 void Item_ref::update_used_tables() 
-{ 
+{
   if (!get_depended_from())
-    (*ref)->update_used_tables(); 
+    (*ref)->update_used_tables();
+  maybe_null|= (*ref)->maybe_null;
 }
 
+void Item_direct_view_ref::update_used_tables()
+{
+  Item_ref::update_used_tables();
+  if (view->table && view->table->maybe_null)
+    maybe_null= TRUE;
+}
 
 table_map Item_direct_view_ref::used_tables() const
 {
@@ -9653,14 +9660,3 @@ const char *dbug_print_item(Item *item)
 
 #endif /*DBUG_OFF*/
 
-/*****************************************************************************
-** Instantiate templates
-*****************************************************************************/
-
-#ifdef HAVE_EXPLICIT_TEMPLATE_INSTANTIATION
-template class List<Item>;
-template class List_iterator<Item>;
-template class List_iterator_fast<Item>;
-template class List_iterator_fast<Item_field>;
-template class List<List_item>;
-#endif

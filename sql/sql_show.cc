@@ -45,6 +45,7 @@
 #include "set_var.h"
 #include "sql_trigger.h"
 #include "sql_derived.h"
+#include "sql_statistics.h"
 #include "sql_connect.h"
 #include "authors.h"
 #include "contributors.h"
@@ -457,7 +458,7 @@ bool
 ignore_db_dirs_init()
 {
   return my_init_dynamic_array(&ignore_db_dirs_array, sizeof(LEX_STRING *),
-                               0, 0);
+                               0, 0, MYF(0));
 }
 
 
@@ -736,7 +737,8 @@ find_files(THD *thd, List<LEX_STRING> *files, const char *db,
 
   bzero((char*) &table_list,sizeof(table_list));
 
-  if (!(dirp = my_dir(path,MYF(dir ? MY_WANT_STAT : 0))))
+  if (!(dirp = my_dir(path,MYF((dir ? MY_WANT_STAT : 0) |
+                               MY_THREAD_SPECIFIC))))
   {
     if (my_errno == ENOENT)
       my_error(ER_BAD_DB_ERROR, MYF(ME_BELL+ME_WAITTANG), db);
@@ -1386,8 +1388,35 @@ static void append_directory(THD *thd, String *packet, const char *dir_type,
 
 #define LIST_PROCESS_HOST_LEN 64
 
-static bool get_field_default_value(THD *thd, Field *timestamp_field,
-                                    Field *field, String *def_value,
+
+/**
+  Print "ON UPDATE" clause of a field into a string.
+
+  @param timestamp_field   Pointer to timestamp field of a table.
+  @param field             The field to generate ON UPDATE clause for.
+  @bool  lcase             Whether to print in lower case.
+  @return                  false on success, true on error.
+*/
+static bool print_on_update_clause(Field *field, String *val, bool lcase)
+{
+  DBUG_ASSERT(val->charset()->mbminlen == 1);
+  val->length(0);
+  if (field->has_update_default_function())
+  {
+    if (lcase)
+      val->append(STRING_WITH_LEN("on update "));
+    else
+      val->append(STRING_WITH_LEN("ON UPDATE "));
+    val->append(STRING_WITH_LEN("CURRENT_TIMESTAMP"));
+    if (field->decimals() > 0)
+      val->append_parenthesized(field->decimals());
+    return true;
+  }
+  return false;
+}
+
+
+static bool get_field_default_value(THD *thd, Field *field, String *def_value,
                                     bool quoted)
 {
   bool has_default;
@@ -1398,8 +1427,7 @@ static bool get_field_default_value(THD *thd, Field *timestamp_field,
      We are using CURRENT_TIMESTAMP instead of NOW because it is
      more standard
   */
-  has_now_default= (timestamp_field == field &&
-                    field->unireg_check != Field::TIMESTAMP_UN_FIELD);
+  has_now_default= field->has_insert_default_function();
 
   has_default= (field_type != FIELD_TYPE_BLOB &&
                 !(field->flags & NO_DEFAULT_VALUE_FLAG) &&
@@ -1411,7 +1439,11 @@ static bool get_field_default_value(THD *thd, Field *timestamp_field,
   if (has_default)
   {
     if (has_now_default)
+    {
       def_value->append(STRING_WITH_LEN("CURRENT_TIMESTAMP"));
+      if (field->decimals() > 0)
+        def_value->append_parenthesized(field->decimals());
+    }
     else if (!field->is_null())
     {                                             // Not null by default
       char tmp[MAX_FIELD_WIDTH];
@@ -1643,16 +1675,18 @@ int store_create_info(THD *thd, TABLE_LIST *table_list, String *packet,
     }
 
     if (!field->vcol_info &&
-        get_field_default_value(thd, table->timestamp_field,
-                                field, &def_value, 1))
+        get_field_default_value(thd, field, &def_value, 1))
     {
       packet->append(STRING_WITH_LEN(" DEFAULT "));
       packet->append(def_value.ptr(), def_value.length(), system_charset_info);
     }
 
-    if (!limited_mysql_mode && table->timestamp_field == field &&
-        field->unireg_check != Field::TIMESTAMP_DN_FIELD)
-      packet->append(STRING_WITH_LEN(" ON UPDATE CURRENT_TIMESTAMP"));
+    if (!limited_mysql_mode && print_on_update_clause(field, &def_value, false))
+    {
+      packet->append(STRING_WITH_LEN(" "));
+      packet->append(def_value);
+    }
+
 
     if (field->unireg_check == Field::NEXT_NUMBER &&
         !(thd->variables.sql_mode & MODE_NO_FIELD_OPTIONS))
@@ -2116,10 +2150,6 @@ public:
   double progress;
 };
 
-#ifdef HAVE_EXPLICIT_TEMPLATE_INSTANTIATION
-template class I_List<thread_info>;
-#endif
-
 static const char *thread_state_info(THD *tmp)
 {
 #ifndef EMBEDDED_LIBRARY
@@ -2305,11 +2335,14 @@ void Show_explain_request::call_in_target_thread()
                  target_thd->query_length(),
                  target_thd->query_charset());
 
+  DBUG_ASSERT(current_thd == target_thd);
+  set_current_thd(request_thd);
   if (target_thd->lex->unit.print_explain(explain_buf, 0 /* explain flags*/,
                                           &printed_anything))
   {
     failed_to_produce= TRUE;
   }
+  set_current_thd(target_thd);
 
   if (!printed_anything)
     failed_to_produce= TRUE;
@@ -2320,10 +2353,20 @@ void Show_explain_request::call_in_target_thread()
 
 int select_result_explain_buffer::send_data(List<Item> &items)
 {
-  fill_record(thd, dst_table->field, items, TRUE, FALSE);
-  if ((dst_table->file->ha_write_tmp_row(dst_table->record[0])))
-    return 1;
-  return 0;
+  int res;
+  THD *cur_thd= current_thd;
+  DBUG_ENTER("select_result_explain_buffer::send_data");
+
+  /*
+    Switch to the recieveing thread, so that we correctly count memory used
+    by it. This is needed as it's the receiving thread that will free the
+    memory.
+  */
+  set_current_thd(thd);
+  fill_record(thd, dst_table, dst_table->field, items, TRUE, FALSE);
+  res= dst_table->file->ha_write_tmp_row(dst_table->record[0]);
+  set_current_thd(cur_thd);  
+  DBUG_RETURN(test(res));
 }
 
 
@@ -2549,6 +2592,18 @@ int fill_schema_processlist(THD* thd, TABLE_LIST* tables, COND* cond)
       }
       mysql_mutex_unlock(&tmp->LOCK_thd_data);
 
+      /*
+        This may become negative if we free a memory allocated by another
+        thread in this thread. However it's better that we notice it eventually
+        than hide it.
+      */
+      table->field[12]->store((longlong) (tmp->status_var.memory_used +
+                                          sizeof(THD)),
+                              FALSE);
+      table->field[12]->set_notnull();
+      table->field[13]->store((longlong) tmp->get_examined_row_count(), TRUE);
+      table->field[13]->set_notnull();
+
       if (schema_table_store_record(thd, table))
       {
         mysql_mutex_unlock(&LOCK_thread_count);
@@ -2621,7 +2676,7 @@ int add_status_vars(SHOW_VAR *list)
   if (status_vars_inited)
     mysql_mutex_lock(&LOCK_status);
   if (!all_status_vars.buffer && // array is not allocated yet - do it now
-      my_init_dynamic_array(&all_status_vars, sizeof(SHOW_VAR), 200, 20))
+      my_init_dynamic_array(&all_status_vars, sizeof(SHOW_VAR), 200, 20, MYF(0)))
   {
     res= 1;
     goto err;
@@ -2755,7 +2810,6 @@ static bool show_status_array(THD *thd, const char *wild,
   int len;
   LEX_STRING null_lex_str;
   SHOW_VAR tmp, *var;
-  COND *partial_cond= 0;
   enum_check_fields save_count_cuted_fields= thd->count_cuted_fields;
   bool res= FALSE;
   CHARSET_INFO *charset= system_charset_info;
@@ -2769,7 +2823,6 @@ static bool show_status_array(THD *thd, const char *wild,
   if (*prefix)
     *prefix_end++= '_';
   len=name_buffer + sizeof(name_buffer) - prefix_end;
-  partial_cond= make_cond_for_info_schema(cond, table->pos_in_table_list);
 
   for (; variables->name; variables++)
   {
@@ -2807,14 +2860,14 @@ static bool show_status_array(THD *thd, const char *wild,
     if (show_type == SHOW_ARRAY)
     {
       show_status_array(thd, wild, (SHOW_VAR *) var->value, value_type,
-                        status_var, name_buffer, table, ucase_names, partial_cond);
+                        status_var, name_buffer, table, ucase_names, cond);
     }
     else
     {
       if ((wild_checked ||
            (wild && wild[0] && wild_case_compare(system_charset_info,
                                                  name_buffer, wild))) &&
-          (!partial_cond || partial_cond->val_int()))
+          (!cond || cond->val_int()))
       {
         char *value=var->value;
         const char *pos, *end;                  // We assign a lot of const's
@@ -2970,7 +3023,8 @@ static int aggregate_user_stats(HASH *all_user_stats, HASH *agg_user_stats)
     {
       // First entry for this role.
       if (!(agg_user= (USER_STATS*) my_malloc(sizeof(USER_STATS),
-                                              MYF(MY_WME | MY_ZEROFILL))))
+                                              MYF(MY_WME | MY_ZEROFILL|
+                                                  MY_THREAD_SPECIFIC))))
       {
         sql_print_error("Malloc in aggregate_user_stats failed");
         DBUG_RETURN(1);
@@ -3360,13 +3414,13 @@ bool get_lookup_value(THD *thd, Item_func *item_func,
     Item_field *item_field;
     CHARSET_INFO *cs= system_charset_info;
 
-    if (item_func->arguments()[0]->type() == Item::FIELD_ITEM &&
+    if (item_func->arguments()[0]->real_item()->type() == Item::FIELD_ITEM &&
         item_func->arguments()[1]->const_item())
     {
       idx_field= 0;
       idx_val= 1;
     }
-    else if (item_func->arguments()[1]->type() == Item::FIELD_ITEM &&
+    else if (item_func->arguments()[1]->real_item()->type() == Item::FIELD_ITEM &&
              item_func->arguments()[0]->const_item())
     {
       idx_field= 1;
@@ -3375,7 +3429,7 @@ bool get_lookup_value(THD *thd, Item_func *item_func,
     else
       return 0;
 
-    item_field= (Item_field*) item_func->arguments()[idx_field];
+    item_field= (Item_field*) item_func->arguments()[idx_field]->real_item();
     if (table->table != item_field->field->table)
       return 0;
     tmp_str= item_func->arguments()[idx_val]->val_str(&str_buff);
@@ -4056,8 +4110,9 @@ end:
   /* Restore original LEX value, statement's arena and THD arena values. */
   lex_end(thd->lex);
 
-  if (i_s_arena.free_list)
-    i_s_arena.free_items();
+  // Free items, before restoring backup_arena below.
+  DBUG_ASSERT(i_s_arena.free_list == NULL);
+  thd->free_items();
 
   /*
     For safety reset list of open temporary tables before closing
@@ -4342,7 +4397,7 @@ static int fill_schema_table_from_frm(THD *thd, TABLE_LIST *tables,
 
   if (schema_table->i_s_requested_object & OPEN_TRIGGER_ONLY)
   {
-    init_sql_alloc(&tbl.mem_root, TABLE_ALLOC_BLOCK_SIZE, 0);
+    init_sql_alloc(&tbl.mem_root, TABLE_ALLOC_BLOCK_SIZE, 0, MYF(0));
     if (!Table_triggers_list::check_n_load(thd, db_name->str,
                                            table_name->str, &tbl, 1))
     {
@@ -5212,7 +5267,7 @@ static int get_schema_column_record(THD *thd, TABLE_LIST *tables,
   const char *wild= lex->wild ? lex->wild->ptr() : NullS;
   CHARSET_INFO *cs= system_charset_info;
   TABLE *show_table;
-  Field **ptr, *field, *timestamp_field;
+  Field **ptr, *field;
   int count;
   DBUG_ENTER("get_schema_column_record");
 
@@ -5236,7 +5291,6 @@ static int get_schema_column_record(THD *thd, TABLE_LIST *tables,
   show_table= tables->table;
   count= 0;
   ptr= show_table->field;
-  timestamp_field= show_table->timestamp_field;
   show_table->use_all_columns();               // Required for default
   restore_record(show_table, s->default_values);
 
@@ -5284,7 +5338,7 @@ static int get_schema_column_record(THD *thd, TABLE_LIST *tables,
                            cs);
     table->field[4]->store((longlong) count, TRUE);
 
-    if (get_field_default_value(thd, timestamp_field, field, &type, 0))
+    if (get_field_default_value(thd, field, &type, 0))
     {
       table->field[5]->store(type.ptr(), type.length(), cs);
       table->field[5]->set_notnull();
@@ -5301,10 +5355,8 @@ static int get_schema_column_record(THD *thd, TABLE_LIST *tables,
 
     if (field->unireg_check == Field::NEXT_NUMBER)
       table->field[17]->store(STRING_WITH_LEN("auto_increment"), cs);
-    if (timestamp_field == field &&
-        field->unireg_check != Field::TIMESTAMP_DN_FIELD)
-      table->field[17]->store(STRING_WITH_LEN("on update CURRENT_TIMESTAMP"),
-                              cs);
+    if (print_on_update_clause(field, &type, true))
+      table->field[17]->store(type.ptr(), type.length(), cs);
     if (field->vcol_info)
     {
       if (field->stored_in_db)
@@ -5843,7 +5895,13 @@ int fill_schema_proc(THD *thd, TABLE_LIST *tables, COND *cond)
   {
     DBUG_RETURN(1);
   }
-  proc_table->file->ha_index_init(0, 1);
+
+  if (proc_table->file->ha_index_init(0, 1))
+  {
+    res= 1;
+    goto err;
+  }
+
   if ((res= proc_table->file->ha_index_first(proc_table->record[0])))
   {
     res= (res == HA_ERR_END_OF_FILE) ? 0 : 1;
@@ -5869,7 +5927,9 @@ int fill_schema_proc(THD *thd, TABLE_LIST *tables, COND *cond)
   }
 
 err:
-  proc_table->file->ha_index_end();
+  if (proc_table->file->inited)
+    (void) proc_table->file->ha_index_end();
+
   close_system_tables(thd, &open_tables_state_backup);
   DBUG_RETURN(res);
 }
@@ -5903,9 +5963,12 @@ static int get_schema_stat_record(THD *thd, TABLE_LIST *tables,
     TABLE *show_table= tables->table;
     KEY *key_info=show_table->s->key_info;
     if (show_table->file)
+    {
       show_table->file->info(HA_STATUS_VARIABLE |
                              HA_STATUS_NO_LOCK |
                              HA_STATUS_TIME);
+      set_statistics_for_table(thd, show_table);
+    }
     for (uint i=0 ; i < show_table->s->keys ; i++,key_info++)
     {
       KEY_PART_INFO *key_part= key_info->key_part;
@@ -5936,8 +5999,8 @@ static int get_schema_stat_record(THD *thd, TABLE_LIST *tables,
           KEY *key=show_table->key_info+i;
           if (key->rec_per_key[j])
           {
-            ha_rows records=(show_table->file->stats.records /
-                             key->rec_per_key[j]);
+            ha_rows records=((double) show_table->stat_records() /
+                             key->actual_rec_per_key(j));
             table->field[9]->store((longlong) records, TRUE);
             table->field[9]->set_notnull();
           }
@@ -7065,9 +7128,12 @@ int fill_variables(THD *thd, TABLE_LIST *tables, COND *cond)
       schema_table_idx == SCH_GLOBAL_VARIABLES)
     option_type= OPT_GLOBAL;
 
+  COND *partial_cond= make_cond_for_info_schema(cond, tables);
+
   mysql_rwlock_rdlock(&LOCK_system_variables_hash);
   res= show_status_array(thd, wild, enumerate_sys_vars(thd, sorted_vars, option_type),
-                         option_type, NULL, "", tables->table, upper_case_names, cond);
+                         option_type, NULL, "", tables->table,
+                         upper_case_names, partial_cond);
   mysql_rwlock_unlock(&LOCK_system_variables_hash);
   DBUG_RETURN(res);
 }
@@ -7104,13 +7170,18 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
     tmp1= &thd->status_var;
   }
 
+  COND *partial_cond= make_cond_for_info_schema(cond, tables);
+  // Evaluate and cache const subqueries now, before the mutex.
+  if (partial_cond)
+    partial_cond->val_int();
+
   mysql_mutex_lock(&LOCK_status);
   if (option_type == OPT_GLOBAL)
     calc_sum_of_all_status(&tmp);
   res= show_status_array(thd, wild,
                          (SHOW_VAR *)all_status_vars.buffer,
                          option_type, tmp1, "", tables->table,
-                         upper_case_names, cond);
+                         upper_case_names, partial_cond);
   mysql_mutex_unlock(&LOCK_status);
   DBUG_RETURN(res);
 }
@@ -8582,6 +8653,8 @@ ST_FIELD_INFO processlist_fields_info[]=
   {"MAX_STAGE", 2, MYSQL_TYPE_TINY,  0, 0, "Max_stage", SKIP_OPEN_TABLE},
   {"PROGRESS", 703, MYSQL_TYPE_DECIMAL,  0, 0, "Progress",
    SKIP_OPEN_TABLE},
+  {"MEMORY_USED", 7, MYSQL_TYPE_LONG, 0, 0, "Memory_used", SKIP_OPEN_TABLE},
+  {"EXAMINED_ROWS", 7, MYSQL_TYPE_LONG, 0, 0, "Examined_rows", SKIP_OPEN_TABLE},
   {0, 0, MYSQL_TYPE_STRING, 0, 0, 0, SKIP_OPEN_TABLE}
 };
 
@@ -8905,18 +8978,13 @@ ST_SCHEMA_TABLE schema_tables[]=
 };
 
 
-#ifdef HAVE_EXPLICIT_TEMPLATE_INSTANTIATION
-template class List_iterator_fast<char>;
-template class List<char>;
-#endif
-
 int initialize_schema_table(st_plugin_int *plugin)
 {
   ST_SCHEMA_TABLE *schema_table;
   DBUG_ENTER("initialize_schema_table");
 
   if (!(schema_table= (ST_SCHEMA_TABLE *)my_malloc(sizeof(ST_SCHEMA_TABLE),
-                                MYF(MY_WME | MY_ZEROFILL))))
+                                                   MYF(MY_WME | MY_ZEROFILL))))
       DBUG_RETURN(1);
   /* Historical Requirement */
   plugin->data= schema_table; // shortcut for the future

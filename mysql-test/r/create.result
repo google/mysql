@@ -55,9 +55,9 @@ ERROR 42000: Incorrect table name 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 create table a (`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` int);
 ERROR 42000: Identifier name 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' is too long
 create table t1 (a datetime default now());
-ERROR 42000: Invalid default value for 'a'
+drop table t1;
 create table t1 (a datetime on update now());
-ERROR HY000: Invalid ON UPDATE clause for 'a' column
+drop table t1;
 create table t1 (a int default 100 auto_increment);
 ERROR 42000: Invalid default value for 'a'
 create table t1 (a tinyint default 1000);
@@ -1762,7 +1762,9 @@ t1	CREATE TABLE `t1` (
   `TIME_MS` decimal(22,3) NOT NULL DEFAULT '0.000',
   `STAGE` tinyint(2) NOT NULL DEFAULT '0',
   `MAX_STAGE` tinyint(2) NOT NULL DEFAULT '0',
-  `PROGRESS` decimal(7,3) NOT NULL DEFAULT '0.000'
+  `PROGRESS` decimal(7,3) NOT NULL DEFAULT '0.000',
+  `MEMORY_USED` int(7) NOT NULL DEFAULT '0',
+  `EXAMINED_ROWS` int(7) NOT NULL DEFAULT '0'
 )  DEFAULT CHARSET=utf8
 drop table t1;
 create temporary table t1 like information_schema.processlist;
@@ -1780,7 +1782,9 @@ t1	CREATE TEMPORARY TABLE `t1` (
   `TIME_MS` decimal(22,3) NOT NULL DEFAULT '0.000',
   `STAGE` tinyint(2) NOT NULL DEFAULT '0',
   `MAX_STAGE` tinyint(2) NOT NULL DEFAULT '0',
-  `PROGRESS` decimal(7,3) NOT NULL DEFAULT '0.000'
+  `PROGRESS` decimal(7,3) NOT NULL DEFAULT '0.000',
+  `MEMORY_USED` int(7) NOT NULL DEFAULT '0',
+  `EXAMINED_ROWS` int(7) NOT NULL DEFAULT '0'
 )  DEFAULT CHARSET=utf8
 drop table t1;
 create table t1 like information_schema.character_sets;
@@ -2403,3 +2407,30 @@ a	b
 1	1
 drop table t1;
 #
+# Checking that CREATE IF NOT EXISTS is not blocked by running SELECT
+#
+create table t1 (a int, b int) engine=myisam;
+create table t2 (a int, b int) engine=myisam;
+insert into t1 values (1,1);
+lock tables t1 read;
+set @@lock_wait_timeout=5;
+create table if not exists t1 (a int, b int);
+Warnings:
+Note	1050	Table 't1' already exists
+create table if not exists t1 (a int, b int) select 2,2;
+Warnings:
+Note	1050	Table 't1' already exists
+create table if not exists t1 like t2;
+Warnings:
+Note	1050	Table 't1' already exists
+create table t1 (a int, b int);
+ERROR 42S01: Table 't1' already exists
+create table t1 (a int, b int) select 2,2;
+ERROR 42S01: Table 't1' already exists
+create table t1 like t2;
+ERROR 42S01: Table 't1' already exists
+select * from t1;
+a	b
+1	1
+unlock tables;
+drop table t1,t2;

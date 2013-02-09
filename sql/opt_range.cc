@@ -117,6 +117,7 @@
 #include "records.h"          // init_read_record, end_read_record
 #include <m_ctype.h>
 #include "sql_select.h"
+#include "filesort.h"         // filesort_free_buffers
 
 #ifndef EXTRA_DEBUG
 #define test_rb_tree(A,B) {}
@@ -1772,7 +1773,8 @@ QUICK_RANGE_SELECT::QUICK_RANGE_SELECT(THD *thd, TABLE *table, uint key_nr,
   index= key_nr;
   head=  table;
   key_part_info= head->key_info[index].key_part;
-  my_init_dynamic_array(&ranges, sizeof(QUICK_RANGE*), 16, 16);
+  my_init_dynamic_array(&ranges, sizeof(QUICK_RANGE*), 16, 16,
+                        MYF(MY_THREAD_SPECIFIC));
 
   /* 'thd' is not accessible in QUICK_RANGE_SELECT::reset(). */
   mrr_buf_size= thd->variables.mrr_buff_size;
@@ -1781,7 +1783,8 @@ QUICK_RANGE_SELECT::QUICK_RANGE_SELECT(THD *thd, TABLE *table, uint key_nr,
   if (!no_alloc && !parent_alloc)
   {
     // Allocates everything through the internal memroot
-    init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0);
+    init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0,
+                   MYF(MY_THREAD_SPECIFIC));
     thd->mem_root= &alloc;
   }
   else
@@ -1791,7 +1794,7 @@ QUICK_RANGE_SELECT::QUICK_RANGE_SELECT(THD *thd, TABLE *table, uint key_nr,
 
   /* Allocate a bitmap for used columns (Q: why not on MEM_ROOT?) */
   if (!(bitmap= (my_bitmap_map*) my_malloc(head->s->column_bitmap_size,
-                                           MYF(MY_WME))))
+                                           MYF(MY_WME | MY_THREAD_SPECIFIC))))
   {
     column_bitmap.bitmap= 0;
     *create_error= 1;
@@ -1876,7 +1879,8 @@ QUICK_INDEX_SORT_SELECT::QUICK_INDEX_SORT_SELECT(THD *thd_param,
   index= MAX_KEY;
   head= table;
   bzero(&read_record, sizeof(read_record));
-  init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0);
+  init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0,
+                 MYF(MY_THREAD_SPECIFIC));
   DBUG_VOID_RETURN;
 }
 
@@ -1889,7 +1893,8 @@ int QUICK_INDEX_SORT_SELECT::init()
 int QUICK_INDEX_SORT_SELECT::reset()
 {
   DBUG_ENTER("QUICK_INDEX_SORT_SELECT::reset");
-  DBUG_RETURN(read_keys_and_merge());
+  const int retval= read_keys_and_merge();
+  DBUG_RETURN(retval);
 }
 
 bool
@@ -1946,7 +1951,8 @@ QUICK_ROR_INTERSECT_SELECT::QUICK_ROR_INTERSECT_SELECT(THD *thd_param,
   head= table;
   record= head->record[0];
   if (!parent_alloc)
-    init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0);
+    init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0,
+                   MYF(MY_THREAD_SPECIFIC));
   else
     bzero(&alloc, sizeof(MEM_ROOT));
   last_rowid= (uchar*) alloc_root(parent_alloc? parent_alloc : &alloc,
@@ -2140,8 +2146,9 @@ int QUICK_ROR_INTERSECT_SELECT::init_ror_merged_scan(bool reuse_handler)
       There is no use of this->file. Use it for the first of merged range
       selects.
     */
-    if (quick->init_ror_merged_scan(TRUE))
-      DBUG_RETURN(1);
+    int error= quick->init_ror_merged_scan(TRUE);
+    if (error)
+      DBUG_RETURN(error);
     quick->file->extra(HA_EXTRA_KEYREAD_PRESERVE_FIELDS);
   }
   while ((cur= quick_it++))
@@ -2244,7 +2251,8 @@ QUICK_ROR_UNION_SELECT::QUICK_ROR_UNION_SELECT(THD *thd_param,
   head= table;
   rowid_length= table->file->ref_length;
   record= head->record[0];
-  init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0);
+  init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0,
+                 MYF(MY_THREAD_SPECIFIC));
   thd_param->mem_root= &alloc;
 }
 
@@ -2334,8 +2342,8 @@ int QUICK_ROR_UNION_SELECT::reset()
   List_iterator_fast<QUICK_SELECT_I> it(quick_selects);
   while ((quick= it++))
   {
-    if (quick->reset())
-      DBUG_RETURN(1);
+    if ((error= quick->reset()))
+      DBUG_RETURN(error);
     if ((error= quick->get_next()))
     {
       if (error == HA_ERR_END_OF_FILE)
@@ -2346,10 +2354,10 @@ int QUICK_ROR_UNION_SELECT::reset()
     queue_insert(&queue, (uchar*)quick);
   }
 
-  if (head->file->ha_rnd_init_with_error(1))
+  if ((error= head->file->ha_rnd_init(1)))
   {
     DBUG_PRINT("error", ("ROR index_merge rnd_init call failed"));
-    DBUG_RETURN(1);
+    DBUG_RETURN(error);
   }
 
   DBUG_RETURN(0);
@@ -2926,7 +2934,7 @@ int SQL_SELECT::test_quick_select(THD *thd, key_map keys_to_use,
   DBUG_PRINT("enter",("keys_to_use: %lu  prev_tables: %lu  const_tables: %lu",
 		      (ulong) keys_to_use.to_ulonglong(), (ulong) prev_tables,
 		      (ulong) const_tables));
-  DBUG_PRINT("info", ("records: %lu", (ulong) head->file->stats.records));
+  DBUG_PRINT("info", ("records: %lu", (ulong) head->stat_records()));
   delete quick;
   quick=0;
   needed_reg.clear_all();
@@ -2934,7 +2942,7 @@ int SQL_SELECT::test_quick_select(THD *thd, key_map keys_to_use,
   DBUG_ASSERT(!head->is_filled_at_execution());
   if (keys_to_use.is_clear_all() || head->is_filled_at_execution())
     DBUG_RETURN(0);
-  records= head->file->stats.records;
+  records= head->stat_records();
   if (!records)
     records++;					/* purecov: inspected */
   scan_time= (double) records / TIME_FOR_COMPARE + 1;
@@ -2978,7 +2986,8 @@ int SQL_SELECT::test_quick_select(THD *thd, key_map keys_to_use,
     param.force_default_mrr= ordered_output;
 
     thd->no_errors=1;				// Don't warn about NULL
-    init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0);
+    init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0,
+                   MYF(MY_THREAD_SPECIFIC));
     if (!(param.key_parts=
            (KEY_PART*) alloc_root(&alloc,
                                   sizeof(KEY_PART) *
@@ -3071,7 +3080,7 @@ int SQL_SELECT::test_quick_select(THD *thd, key_map keys_to_use,
     if (group_trp)
     {
       param.table->quick_condition_rows= min(group_trp->records,
-                                             head->file->stats.records);
+                                             head->stat_records());
       if (group_trp->read_cost < best_read_time)
       {
         best_trp= group_trp;
@@ -3423,7 +3432,8 @@ bool prune_partitions(THD *thd, TABLE *table, Item *pprune_cond)
   my_bitmap_map *old_sets[2];
 
   prune_param.part_info= part_info;
-  init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0);
+  init_sql_alloc(&alloc, thd->variables.range_alloc_block_size, 0,
+                 MYF(MY_THREAD_SPECIFIC));
   range_par->mem_root= &alloc;
   range_par->old_root= thd->mem_root;
 
@@ -4677,7 +4687,7 @@ TABLE_READ_PLAN *get_best_disjunct_quick(PARAM *param, SEL_IMERGE *imerge,
   DBUG_PRINT("info", ("index_merge scans cost %g", imerge_cost));
   if (imerge_too_expensive || (imerge_cost > read_time) ||
       ((non_cpk_scan_records+cpk_scan_records >=
-        param->table->file->stats.records) &&
+        param->table->stat_records()) &&
        read_time != DBL_MAX))
   {
     /*
@@ -4748,7 +4758,7 @@ TABLE_READ_PLAN *get_best_disjunct_quick(PARAM *param, SEL_IMERGE *imerge,
       imerge_trp->read_cost= imerge_cost;
       imerge_trp->records= non_cpk_scan_records + cpk_scan_records;
       imerge_trp->records= min(imerge_trp->records,
-                               param->table->file->stats.records);
+                               param->table->stat_records());
       imerge_trp->range_scans= range_scans;
       imerge_trp->range_scans_end= range_scans + n_child_scans;
       read_time= imerge_cost;
@@ -4819,7 +4829,7 @@ skip_to_ror_scan:
         ((TRP_ROR_INTERSECT*)(*cur_roru_plan))->index_scan_costs;
     roru_total_records += (*cur_roru_plan)->records;
     roru_intersect_part *= (*cur_roru_plan)->records /
-                           param->table->file->stats.records;
+                           param->table->stat_records();
   }
 
   /*
@@ -4829,7 +4839,7 @@ skip_to_ror_scan:
     in disjunction do not share key parts.
   */
   roru_total_records -= (ha_rows)(roru_intersect_part*
-                                  param->table->file->stats.records);
+                                  param->table->stat_records());
   /* ok, got a ROR read plan for each of the disjuncts
     Calculate cost:
     cost(index_union_scan(scan_1, ... scan_n)) =
@@ -5106,12 +5116,12 @@ static inline
 ha_rows get_table_cardinality_for_index_intersect(TABLE *table)
 {
   if (table->file->ha_table_flags() & HA_STATS_RECORDS_IS_EXACT)
-    return table->file->stats.records;
+    return table->stat_records();
   else
   {
     ha_rows d;
     double q;
-    for (q= (double)table->file->stats.records, d= 1 ; q >= 10; q/= 10, d*= 10 ) ;
+    for (q= (double)table->stat_records(), d= 1 ; q >= 10; q/= 10, d*= 10 ) ;
     return (ha_rows) (floor(q+0.5) * d);
   } 
 }
@@ -5514,9 +5524,8 @@ ha_rows records_in_index_intersect_extension(PARTIAL_INDEX_INTERSECT_INFO *curr,
     ha_rows ext_records= ext_index_scan->records;
     if (i < used_key_parts)
     {
-      ulong *rec_per_key= key_info->rec_per_key+i-1;
-      ulong f1= rec_per_key[0] ? rec_per_key[0] : 1;
-      ulong f2= rec_per_key[1] ? rec_per_key[1] : 1;
+      ulong f1= key_info->actual_rec_per_key(i-1);
+      ulong f2= key_info->actual_rec_per_key(i);
       ext_records= (ha_rows) ((double) ext_records / f2 * f1);
     }
     if (ext_records < table_cardinality)
@@ -6008,7 +6017,7 @@ ROR_INTERSECT_INFO* ror_intersect_init(const PARAM *param)
   info->is_covering= FALSE;
   info->index_scan_costs= 0.0;
   info->index_records= 0;
-  info->out_rows= (double) param->table->file->stats.records;
+  info->out_rows= (double) param->table->stat_records();
   bitmap_clear_all(&info->covered_fields);
   return info;
 }
@@ -6134,7 +6143,7 @@ static double ror_scan_selectivity(const ROR_INTERSECT_INFO *info,
   min_range.flag= HA_READ_KEY_EXACT;
   max_range.key= key_val;
   max_range.flag= HA_READ_AFTER_KEY;
-  ha_rows prev_records= info->param->table->file->stats.records;
+  ha_rows prev_records= info->param->table->stat_records();
   DBUG_ENTER("ror_scan_selectivity");
 
   for (sel_arg= scan->sel_arg; sel_arg;
@@ -6361,7 +6370,7 @@ TRP_ROR_INTERSECT *get_best_ror_intersect(const PARAM *param, SEL_TREE *tree,
   double min_cost= DBL_MAX;
   DBUG_ENTER("get_best_ror_intersect");
 
-  if ((tree->n_ror_scans < 2) || !param->table->file->stats.records ||
+  if ((tree->n_ror_scans < 2) || !param->table->stat_records() ||
       !optimizer_flag(param->thd, OPTIMIZER_SWITCH_INDEX_MERGE_INTERSECT))
     DBUG_RETURN(NULL);
 
@@ -10616,7 +10625,10 @@ int read_keys_and_merge_scans(THD *thd,
     *unique_ptr= unique;
   }
   else
+  {
     unique->reset();
+    filesort_free_buffers(head, false);
+  }
 
   DBUG_ASSERT(file->ref_length == unique->get_size());
   DBUG_ASSERT(thd->variables.sortbuff_size == unique->get_max_in_memory_size());
@@ -10775,6 +10787,13 @@ int QUICK_INDEX_INTERSECT_SELECT::get_next()
     If a Clustered PK scan is present, it is used only to check if row
     satisfies its condition (and never used for row retrieval).
 
+    Locking: to ensure that exclusive locks are only set on records that
+    are included in the final result we must release the lock
+    on all rows we read but do not include in the final result. This
+    must be done on each index that reads the record and the lock
+    must be released using the same handler (the same quick object) as
+    used when reading the record.
+
   RETURN
    0     - Ok
    other - Error code if any error occurred.
@@ -10785,6 +10804,12 @@ int QUICK_ROR_INTERSECT_SELECT::get_next()
   List_iterator_fast<QUICK_SELECT_WITH_RECORD> quick_it(quick_selects);
   QUICK_SELECT_WITH_RECORD *qr;
   QUICK_RANGE_SELECT* quick;
+
+  /* quick that reads the given rowid first. This is needed in order
+  to be able to unlock the row using the same handler object that locked
+  it */
+  QUICK_RANGE_SELECT* quick_with_last_rowid;
+
   int error, cmp;
   uint last_rowid_count=0;
   DBUG_ENTER("QUICK_ROR_INTERSECT_SELECT::get_next");
@@ -10798,7 +10823,10 @@ int QUICK_ROR_INTERSECT_SELECT::get_next()
     if (cpk_quick)
     {
       while (!error && !cpk_quick->row_in_ranges())
+      {
+        quick->file->unlock_row(); /* row not in range; unlock */
         error= quick->get_next();
+      }
     }
     if (error)
       DBUG_RETURN(error);
@@ -10810,6 +10838,7 @@ int QUICK_ROR_INTERSECT_SELECT::get_next()
     quick->file->position(quick->record);
     memcpy(last_rowid, quick->file->ref, head->file->ref_length);
     last_rowid_count= 1;
+    quick_with_last_rowid= quick;
 
     while (last_rowid_count < quick_selects.elements)
     {
@@ -10823,9 +10852,17 @@ int QUICK_ROR_INTERSECT_SELECT::get_next()
       do
       {
         if ((error= quick->get_next()))
+        {
+          quick_with_last_rowid->file->unlock_row();
           DBUG_RETURN(error);
+        }
         quick->file->position(quick->record);
         cmp= head->file->cmp_ref(quick->file->ref, last_rowid);
+        if (cmp < 0)
+        {
+          /* This row is being skipped.  Release lock on it. */
+          quick->file->unlock_row();
+        }
       } while (cmp < 0);
 
       key_copy(qr->key_tuple, record, head->key_info + quick->index,
@@ -10839,13 +10876,19 @@ int QUICK_ROR_INTERSECT_SELECT::get_next()
         {
           while (!cpk_quick->row_in_ranges())
           {
+            quick->file->unlock_row(); /* row not in range; unlock */
             if ((error= quick->get_next()))
+            {
+              quick_with_last_rowid->file->unlock_row();
               DBUG_RETURN(error);
+            }
           }
           quick->file->position(quick->record);
         }
         memcpy(last_rowid, quick->file->ref, head->file->ref_length);
+        quick_with_last_rowid->file->unlock_row();
         last_rowid_count= 1;
+        quick_with_last_rowid= quick;
 
         //save the fields here
         key_copy(qr->key_tuple, record, head->key_info + quick->index,
@@ -10972,8 +11015,13 @@ int QUICK_RANGE_SELECT::reset()
 
   if (file->inited == handler::NONE)
   {
+    DBUG_EXECUTE_IF("bug14365043_2",
+                    DBUG_SET("+d,ha_index_init_fail"););
     if ((error= file->ha_index_init(index,1)))
-      goto err;
+    {
+        file->print_error(error, MYF(0));
+        goto err;
+    }
   }
 
   /* Allocate buffer if we need one but haven't allocated it yet */
@@ -11015,7 +11063,7 @@ err:
   /* Restore bitmaps set on entry */
   if (in_ror_merged_scan)
     head->column_bitmaps_set_no_signal(save_read_set, save_write_set);
-  
+
   DBUG_RETURN(error);
 }
 
@@ -12659,14 +12707,14 @@ void cost_group_min_max(TABLE* table, KEY *index_info, uint used_key_parts,
   double cpu_cost= 0; /* TODO: CPU cost of index_read calls? */
   DBUG_ENTER("cost_group_min_max");
 
-  table_records= table->file->stats.records;
+  table_records= table->stat_records();
   keys_per_block= (table->file->stats.block_size / 2 /
                    (index_info->key_length + table->file->ref_length)
                         + 1);
   num_blocks= (uint)(table_records / keys_per_block) + 1;
 
   /* Compute the number of keys in a group. */
-  keys_per_group= index_info->rec_per_key[group_key_parts - 1];
+  keys_per_group= index_info->actual_rec_per_key(group_key_parts - 1);
   if (keys_per_group == 0) /* If there is no statistics try to guess */
     /* each group contains 10% of all records */
     keys_per_group= (uint)(table_records / 10) + 1;
@@ -12686,7 +12734,7 @@ void cost_group_min_max(TABLE* table, KEY *index_info, uint used_key_parts,
       Compute the probability that two ends of a subgroup are inside
       different blocks.
     */
-    keys_per_subgroup= index_info->rec_per_key[used_key_parts - 1];
+    keys_per_subgroup= index_info->actual_rec_per_key(used_key_parts - 1);
     if (keys_per_subgroup >= keys_per_block) /* If a subgroup is bigger than */
       p_overlap= 1.0;       /* a block, it will overlap at least two blocks. */
     else
@@ -12883,7 +12931,8 @@ QUICK_GROUP_MIN_MAX_SELECT(TABLE *table, JOIN *join_arg, bool have_min_arg,
   DBUG_ASSERT(!parent_alloc);
   if (!parent_alloc)
   {
-    init_sql_alloc(&alloc, join->thd->variables.range_alloc_block_size, 0);
+    init_sql_alloc(&alloc, join->thd->variables.range_alloc_block_size, 0,
+                   MYF(MY_THREAD_SPECIFIC));
     join->thd->mem_root= &alloc;
   }
   else
@@ -12938,7 +12987,8 @@ int QUICK_GROUP_MIN_MAX_SELECT::init()
 
   if (min_max_arg_part)
   {
-    if (my_init_dynamic_array(&min_max_ranges, sizeof(QUICK_RANGE*), 16, 16))
+    if (my_init_dynamic_array(&min_max_ranges, sizeof(QUICK_RANGE*), 16, 16,
+                              MYF(MY_THREAD_SPECIFIC)))
       return 1;
 
     if (have_min)
@@ -13184,7 +13234,10 @@ int QUICK_GROUP_MIN_MAX_SELECT::reset(void)
     head->enable_keyread(); /* We need only the key attributes */
   }
   if ((result= file->ha_index_init(index,1)))
+  {
+    head->file->print_error(result, MYF(0));
     DBUG_RETURN(result);
+  }
   if (quick_prefix_select && quick_prefix_select->reset())
     DBUG_RETURN(1);
   result= file->ha_index_last(record);
@@ -13359,9 +13412,10 @@ int QUICK_GROUP_MIN_MAX_SELECT::next_min()
     */
     if (min_max_arg_part && min_max_arg_part->field->is_null())
     {
+      uchar *tmp_key_buff= (uchar*)my_alloca(max_used_key_length);
       /* Find the first subsequent record without NULL in the MIN/MAX field. */
-      key_copy(tmp_record, record, index_info, max_used_key_length);
-      result= file->ha_index_read_map(record, tmp_record,
+      key_copy(tmp_key_buff, record, index_info, max_used_key_length);
+      result= file->ha_index_read_map(record, tmp_key_buff,
                                       make_keypart_map(real_key_parts),
                                       HA_READ_AFTER_KEY);
       /*
@@ -13377,10 +13431,11 @@ int QUICK_GROUP_MIN_MAX_SELECT::next_min()
       if (!result)
       {
         if (key_cmp(index_info->key_part, group_prefix, real_prefix_len))
-          key_restore(record, tmp_record, index_info, 0);
+          key_restore(record, tmp_key_buff, index_info, 0);
       }
       else if (result == HA_ERR_KEY_NOT_FOUND || result == HA_ERR_END_OF_FILE)
         result= 0; /* There is a result in any case. */
+      my_afree(tmp_key_buff);
     }
   }
 
@@ -14137,11 +14192,3 @@ void QUICK_GROUP_MIN_MAX_SELECT::dbug_dump(int indent, bool verbose)
 
 #endif /* !DBUG_OFF */
 
-/*****************************************************************************
-** Instantiate templates 
-*****************************************************************************/
-
-#ifdef HAVE_EXPLICIT_TEMPLATE_INSTANTIATION
-template class List<QUICK_RANGE>;
-template class List_iterator<QUICK_RANGE>;
-#endif
