@@ -1,0 +1,41 @@
+--source include/master-slave.inc
+--source include/have_debug.inc
+
+sync_slave_with_master;
+--source include/stop_slave.inc
+
+let $debug_save= `SELECT @@GLOBAL.debug`;
+
+connection master;
+CREATE TABLE t1 (a INT PRIMARY KEY);
+INSERT INTO t1 VALUES (0);
+INSERT INTO t1 VALUES (1);
+INSERT INTO t1 VALUES (2);
+
+# Would be nice to use DEBUG_SYNC but I don't see how that can be done
+# on the bin log dump thread.
+SET GLOBAL DEBUG="d,sleep_after_binlog_EOF";
+
+connection slave;
+--source include/start_slave.inc
+SLEEP 3;
+
+connection master;
+INSERT INTO t1 VALUES (3);
+INSERT INTO t1 VALUES (4);
+INSERT INTO t1 VALUES (5);
+FLUSH LOGS;
+INSERT INTO t1 VALUES (6);
+INSERT INTO t1 VALUES (7);
+INSERT INTO t1 VALUES (8);
+let $rows_on_master= `SELECT COUNT(*) FROM t1`;
+
+sync_slave_with_master;
+let $rows_on_slave= `SELECT COUNT(*) FROM t1`;
+
+eval SELECT $rows_on_master - $rows_on_slave AS diff_rows;
+
+connection master;
+eval SET GLOBAL debug='$debug_save';
+DROP TABLE t1;
+--source include/rpl_end.inc
