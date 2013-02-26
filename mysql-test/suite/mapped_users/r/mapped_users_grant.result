@@ -1,0 +1,379 @@
+# Prepare play-ground
+create table t1 (i int);
+insert into t1 values (1);
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create user rolefoo@localhost identified by 'foo';
+grant usage on *.* to rolefoo@localhost;
+grant select on *.* to rolefoo@localhost;
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo', password('bar'), '2020-01-01'),
+('rolefoo', 'dropfoo', password('bar'), '2020-01-01');
+flush privileges;
+# uses wrong password
+connect(localhost,mapfoo,foo,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'mapfoo'@'localhost' (using password: YES)
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+select user(), current_user();
+user()	current_user()
+dropfoo@localhost	rolefoo@localhost
+# Confirm that the mapped user can be dropped and not used after a drop
+# Must use 'delete' instead
+drop user dropfoo;
+ERROR HY000: Operation DROP USER failed for 'dropfoo'@'%'
+delete from mysql.mapped_user where user = 'dropfoo';
+flush privileges;
+# Confirm that mapped user cannot be used after a drop
+connect(localhost,dropfoo,foo,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'dropfoo'@'localhost' (using password: YES)
+# Confirm that mapped user can be used after a create
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+select User, Role from mysql.mapped_user;
+User	Role
+mapfoo	rolefoo
+# This is a new entry
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo', password('bar1'), '2020-01-01');
+flush privileges;
+select User, Role from mysql.mapped_user;
+User	Role
+mapfoo	rolefoo
+mapfoo	rolefoo
+select distinct User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+User	Role	Password
+mapfoo	rolefoo	*50275DCAC24DA7E634D1139D15FED2AD08C72C06
+mapfoo	rolefoo	*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB
+#
+# All changes in user-level and database-level permissions should be
+# immediately visible to all active connections.
+#
+# Set up
+create user role1;
+grant all privileges on test.* to role1;
+insert into mysql.mapped_user values
+('role1', 'user1', password('foo'), '2020-01-01');
+flush privileges;
+create database d1;
+create table d1.t1 (n int);
+insert into d1.t1 values (1);
+select * from d1.t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+use d1;
+ERROR 42000: Access denied for user 'role1'@'%' to database 'd1'
+# Let's play with user-level permissions
+grant select on *.* to role1;
+select * from d1.t1;
+n
+1
+use d1;
+select * from t1;
+n
+1
+insert into t1 values (2);
+ERROR 42000: INSERT command denied to user 'role1'@'localhost' for table 't1'
+grant insert on *.* to role1;
+insert into t1 values (3);
+select * from t1;
+n
+1
+3
+delete from t1 where n=1;
+ERROR 42000: DELETE command denied to user 'role1'@'localhost' for table 't1'
+grant delete on *.* to role1;
+delete from t1 where n=3;
+select * from t1;
+n
+1
+revoke insert on *.* from role1;
+insert into t1 values (4);
+ERROR 42000: INSERT command denied to user 'role1'@'localhost' for table 't1'
+insert into d1.t1 values (5);
+select * from d1.t1;
+n
+1
+5
+revoke select on *.* from role1;
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+delete from t1;
+select * from d1.t1;
+n
+insert into d1.t1 values (6);
+revoke delete on *.* from role1;
+delete from t1;
+ERROR 42000: DELETE command denied to user 'role1'@'localhost' for table 't1'
+select * from d1.t1;
+n
+6
+select * from d1.t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+use d1;
+ERROR 42000: Access denied for user 'role1'@'%' to database 'd1'
+update mysql.user set Select_priv = 'Y' where User = 'role1';
+flush privileges;
+select * from d1.t1;
+n
+6
+update mysql.user set Select_priv = 'N' where User = 'role1';
+flush privileges;
+select * from d1.t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+# Now database-level privileges
+grant select on d1.* to role1;
+select * from d1.t1;
+n
+6
+use d1;
+select * from t1;
+n
+6
+insert into t1 values (7);
+ERROR 42000: INSERT command denied to user 'role1'@'localhost' for table 't1'
+grant insert on d1.* to role1;
+insert into t1 values (8);
+select * from t1;
+n
+6
+8
+update mysql.db set Insert_priv = 'N' where Db = 'd1' and User = 'role1';
+flush privileges;
+insert into t1 values (9);
+ERROR 42000: INSERT command denied to user 'role1'@'localhost' for table 't1'
+update mysql.db set Insert_priv = 'Y' where Db = 'd1' and User = 'role1';
+flush privileges;
+insert into t1 values (10);
+delete from t1;
+ERROR 42000: DELETE command denied to user 'role1'@'localhost' for table 't1'
+grant delete on d1.* to role1;
+delete from t1 where n=6;
+select * from t1;
+n
+8
+10
+revoke all on d1.* from role1;
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+insert into t1 values (11);
+ERROR 42000: INSERT command denied to user 'role1'@'localhost' for table 't1'
+delete from t1;
+ERROR 42000: DELETE command denied to user 'role1'@'localhost' for table 't1'
+select Select_priv from mysql.db where Db = 'd1' and User = 'role1';
+Select_priv
+insert into mysql.db (Host, Db, User, Select_priv)
+values ('%', 'd1', 'role1', 'Y');
+flush privileges;
+select * from t1;
+n
+8
+10
+delete from mysql.db where Db = 'd1' and User = 'role1';
+flush privileges;
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+use d1;
+select * from t1;
+n
+8
+10
+# When role is changed permissions and user identification should switch
+# properly
+create user role2@localhost;
+grant all on *.* to role2@localhost;
+select user(), current_user();
+user()	current_user()
+user1@localhost	role1@%
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+update mysql.mapped_user set Role = 'role2' where User = 'user1';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+user1@localhost	role2@localhost
+select * from t1;
+n
+8
+10
+update mysql.mapped_user set Role = 'role1' where User = 'user1';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+user1@localhost	role1@%
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't1'
+drop user role2@localhost;
+# When role behind the mapped user is dropped all user connections should
+# be killed in the middle of the query.
+grant all privileges on *.* to role1 with grant option;
+create procedure inf_loop()
+sql security invoker
+begin
+loop_label: loop
+select * from d1.t1;
+end loop loop_label;
+end;//
+use d1;
+select * from t1;
+n
+8
+10
+call inf_loop();
+drop user role1;
+select * from d1.t1;
+Got one of the listed errors
+# User connections should be killed even if role behind the mapped user
+# was re-created while connection was idle.
+create user role1;
+grant all on *.* to role1;
+use d1;
+select * from t1;
+n
+8
+10
+drop user role1;
+create user role1;
+grant all privileges on *.* to role1 with grant option;
+select * from t1;
+Got one of the listed errors
+# When user password is changed through mysql.mapped_user table all user
+# connections should be killed eventually (at the start of next query).
+select * from d1.t1;
+n
+8
+10
+update mysql.mapped_user set Password = password('asdf') where User = 'user1';
+flush privileges;
+select * from d1.t1;
+Got one of the listed errors
+select * from d1.t1;
+Got one of the listed errors
+# When user is deleted from mysql.mapped_user table all user connections
+# should be killed eventually (at the start of the next query).
+select * from d1.t1;
+n
+8
+10
+delete from mysql.mapped_user where User = 'user1';
+flush privileges;
+select * from d1.t1;
+Got one of the listed errors
+select * from d1.t1;
+Got one of the listed errors
+# When role behind mapped user is deleted from mysql.user table all user
+# connections should be killed eventually (at the start of the next query).
+insert into mysql.mapped_user values
+('role1', 'user1', password('foo'), '2020-01-01');
+flush privileges;
+select * from d1.t1;
+n
+8
+10
+delete from mysql.user where User = 'role1';
+flush privileges;
+select * from d1.t1;
+Got one of the listed errors
+select * from d1.t1;
+Got one of the listed errors
+# If user connection is idle then it will survive manipulations with the
+# user through mysql.mapped_user table even if after one of
+# 'flush privileges' execution mapped user didn't exist.
+create user role1;
+grant all privileges on *.* to role1 with grant option;
+select * from d1.t1;
+n
+8
+10
+update mysql.mapped_user set User = 'user2' where User = 'user1';
+flush privileges;
+update mysql.mapped_user set User = 'user1' where User = 'user2';
+flush privileges;
+select * from d1.t1;
+n
+8
+10
+# Creating and dropping mapped user with the same name as real user
+# shouldn't have any impact on that real user connections.
+select * from d1.t1;
+n
+8
+10
+insert into mysql.mapped_user values
+('bogus', 'role1', password('foo'), '2020-01-01');
+flush privileges;
+select * from d1.t1;
+n
+8
+10
+delete from mysql.mapped_user where user='role1';
+flush privileges;
+select * from d1.t1;
+n
+8
+10
+# Creation of user with the same name as mapped user should kill all
+# connections from that mapped user eventually (at the start of the next
+# query).
+select * from d1.t1;
+n
+8
+10
+create user user1;
+select * from d1.t1;
+Got one of the listed errors
+select * from d1.t1;
+Got one of the listed errors
+# The same goes about renaming of real user to the same name as mapped
+# user.
+drop user user1;
+create user user2;
+select * from d1.t1;
+n
+8
+10
+rename user user2 to user1;
+select * from d1.t1;
+Got one of the listed errors
+select * from d1.t1;
+Got one of the listed errors
+# But connection from mapped user will survive if a real user was renamed
+# to the same name as the mapped user and then renamed back to some other
+# name while the connection was idle.
+rename user user1 to user2;
+select * from d1.t1;
+n
+8
+10
+rename user user2 to user1;
+rename user user1 to user2;
+select * from d1.t1;
+n
+8
+10
+# Final cleanup
+use test;
+drop database d1;
+drop user role1;
+drop user user2;
+delete from mysql.mapped_user where user='user1';
+flush privileges;
+drop table t1;
+# This deletes all entries that match mapped_user.User
+delete from mysql.mapped_user where user='mapfoo';
+flush privileges;
+select User, Role from mysql.mapped_user;
+User	Role
+drop user rolefoo@localhost;
+flush privileges;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

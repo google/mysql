@@ -1,0 +1,123 @@
+#
+# Test change user for
+#   user to user
+#   user to mapped user
+#   mapped user to user
+#   mapped user to mapped user
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+--echo # Prepare play-ground
+select user(), current_user();
+
+--source include/disable_anon_user.inc
+
+create table t1 (i int);
+create table t2 (i int);
+
+insert into t1 values (1);
+insert into t2 values (1);
+
+create user rolefoo@localhost identified by 'bar';
+create user rolefoo2@localhost identified by 'bar';
+insert into mysql.mapped_user values
+  ('rolefoo', 'mapfoo', password('bar'), '2020-01-01'),
+  ('rolefoo2', 'mapfoo2', password('bar'), '2020-01-01');
+flush privileges;
+
+grant select on test.t1 to rolefoo@localhost;
+grant select on test.t2 to rolefoo2@localhost;
+
+--echo # from user to user
+
+connect (root_conn, localhost, root);
+select user(), current_user(), 'before change to rolefoo';
+echo change user to rolefoo;
+change_user rolefoo,bar;
+select user(), current_user(), 'after change to rolefoo';
+show grants;
+use test;
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+
+connection default;
+disconnect root_conn;
+
+--echo # from user to mapped user
+
+connect (root_conn, localhost, root);
+select user(), current_user(), 'before change to mapfoo';
+echo change user to rolefoo;
+change_user mapfoo,bar;
+select user(), current_user(), 'after change to mapfoo';
+show grants;
+use test;
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+
+connection default;
+disconnect root_conn;
+
+--echo # from mapped user to user
+
+connect (map_conn, localhost, mapfoo, bar,);
+select user(), current_user(), 'before change to rolefoo2';
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+echo change user to rolefoo2;
+change_user rolefoo2,bar;
+select user(), current_user(), 'after change to rolefoo2';
+show grants;
+use test;
+select count(*) from t2;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t1;
+
+connection default;
+disconnect map_conn;
+
+--echo # from mapped user to mapped user
+
+connect (map_conn, localhost, mapfoo, bar,);
+select user(), current_user(), 'before change to mapfoo2';
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+echo change user to mapfoo2;
+change_user mapfoo2,bar;
+select user(), current_user(), 'after change to mapfoo2';
+show grants;
+use test;
+select count(*) from t2;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t1;
+
+connection default;
+disconnect map_conn;
+
+--echo # confirm that change password fails for mapped users
+connect (map_conn, localhost, mapfoo, bar,);
+select user(), current_user(), 'before set password';
+--echo # must fail
+--error ER_NOT_SUPPORTED_YET
+set password = password('foobar');
+
+connection default;
+
+--echo # cleanup
+connection default;
+drop user rolefoo@localhost;
+drop user rolefoo2@localhost;
+delete from mysql.mapped_user where user in ('mapfoo', 'mapfoo2');
+flush privileges;
+
+select User, Role from mysql.mapped_user;
+
+drop table t1;
+drop table t2;
+
+--source include/reenable_anon_user.inc

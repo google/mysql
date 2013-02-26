@@ -1,0 +1,272 @@
+# Prepare play-ground
+select user(), current_user();
+user()	current_user()
+root@localhost	root@localhost
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create table t1 (i int);
+create table t2 (i int);
+insert into t1 values (1);
+insert into t2 values (1);
+create user rolefoo@localhost identified by 'bar';
+create user rolefoo2@localhost identified by 'bar';
+create user rolefoodup@localhost identified by 'bar';
+grant select on test.t1 to rolefoo@localhost;
+grant select on test.t1 to rolefoodup@localhost;
+grant select on test.t2 to rolefoo2@localhost;
+# Confirm use of mysql.user entry when mysql.mapped_user
+# entry has the same name.
+# Test mysql.user entries are checked first;
+insert into mysql.mapped_user values
+('bogus', 'rolefoo', password('bar'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+# Test mapped user entries have:
+#   name  role  password
+#   same  same  same -> create raises error
+insert into mysql.mapped_user values
+('rolefoo', 'same_mu', password('bar'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+same_mu@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+# Test mapped user entries have:
+#   name  role  password
+#   same  same  diff -> OK, sql_acl code retries until match found
+insert into mysql.mapped_user values
+('rolefoo', 'mu1', password('bar1'), '2020-01-01'),
+('rolefoo', 'mu1', password('bar2'), '2020-01-01'),
+('rolefoo', 'mu1', password('bar3'), '2020-01-01'),
+('rolefoo', 'mu1', password('bar4'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select user(), current_user();
+user()	current_user()
+mu1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+# Test mapped user entries have:
+#   name  role  password
+#   same  diff  same -> create raises error
+insert into mysql.mapped_user values
+('rolefoo', 'sds', password('bar3'), '2020-01-01');
+flush privileges;
+# Create duplicate, error;
+insert into mysql.mapped_user values
+('rolefoodup', 'sds', password('bar3'), '2020-01-01');
+ERROR 23000: Duplicate entry 'sds-*21AFA1F030AF1E26E0FFF2993FBED06D3CBDC332' for key 'PRIMARY'
+select user(), current_user();
+user()	current_user()
+sds@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+# Test mapped user entries have:
+#   name  role  password
+#   same  diff  diff -> password determines role
+insert into mysql.mapped_user values
+('rolefoo', 'sdd', password('bar5'), '2020-01-01'),
+('rolefoo2', 'sdd', password('bar6'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+sdd@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+sdd@localhost	rolefoo2@localhost
+select count(*) from t2;
+count(*)
+1
+select count(*) from t1;
+ERROR 42000: SELECT command denied to user 'rolefoo2'@'localhost' for table 't1'
+# Test mapped user entries have:
+#   name  role  password
+#   diff  same  same -> name determines role
+insert into mysql.mapped_user values
+('rolefoo', 'dss1', password('bar7'), '2020-01-01'),
+('rolefoo', 'dss2', password('bar7'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+dss1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+dss2@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+# Test mapped user entries have:
+#   name  role  password
+#   diff  same  diff -> name determines role
+insert into mysql.mapped_user values
+('rolefoo', 'dsd1', password('bar8'), '2020-01-01'),
+('rolefoo', 'dsd2', password('bar9'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+dsd1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+dsd2@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+# Test mapped user entries have:
+#   name  role  password
+#   diff  diff  diff -> name determine role
+insert into mysql.mapped_user values
+('rolefoo', 'ddd1', password('bar8'), '2020-01-01'),
+('rolefoo2', 'ddd2', password('bar9'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+ddd1@localhost	rolefoo@localhost
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+ddd2@localhost	rolefoo2@localhost
+select count(*) from t2;
+count(*)
+1
+select count(*) from t1;
+ERROR 42000: SELECT command denied to user 'rolefoo2'@'localhost' for table 't1'
+# Check that automatic user permissions update works with mapped users
+# with the same name but different passwords.
+insert into mysql.mapped_user values
+('rolefoo', 'user1', password('foo1'), '2020-01-01'),
+('rolefoo2', 'user1', password('foo2'), '2020-01-01');
+flush privileges;
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+insert into t1 values (2);
+ERROR 42000: INSERT command denied to user 'rolefoo'@'localhost' for table 't1'
+insert into t2 values (2);
+ERROR 42000: INSERT command denied to user 'rolefoo'@'localhost' for table 't2'
+select count(*) from t2;
+count(*)
+1
+select count(*) from t1;
+ERROR 42000: SELECT command denied to user 'rolefoo2'@'localhost' for table 't1'
+insert into t1 values (3);
+ERROR 42000: INSERT command denied to user 'rolefoo2'@'localhost' for table 't1'
+insert into t2 values (3);
+ERROR 42000: INSERT command denied to user 'rolefoo2'@'localhost' for table 't2'
+grant insert on test.t1 to rolefoo2@localhost;
+grant insert on test.t2 to rolefoo@localhost;
+insert into t2 values (4);
+insert into t1 values (4);
+ERROR 42000: INSERT command denied to user 'rolefoo'@'localhost' for table 't1'
+insert into t1 values (5);
+insert into t2 values (5);
+ERROR 42000: INSERT command denied to user 'rolefoo2'@'localhost' for table 't2'
+select * from t1;
+i
+1
+5
+select * from t2;
+i
+1
+4
+# Automatic connection drops should respect password difference too.
+rename user rolefoo@localhost to rolefoo_copy@localhost;
+select * from t1;
+Got one of the listed errors
+select * from t2;
+i
+1
+4
+rename user rolefoo_copy@localhost to rolefoo@localhost;
+select * from t1;
+i
+1
+5
+rename user rolefoo2@localhost to rolefoo2_copy@localhost;
+select * from t2;
+Got one of the listed errors
+select * from t1;
+i
+1
+5
+rename user rolefoo2_copy@localhost to rolefoo2@localhost;
+select * from t2;
+i
+1
+4
+delete from mysql.mapped_user where user='user1';
+flush privileges;
+select * from t1;
+Got one of the listed errors
+select * from t2;
+Got one of the listed errors
+# cleanup
+drop user rolefoo@localhost;
+drop user rolefoo2@localhost;
+drop user rolefoodup@localhost;
+delete from mysql.mapped_user;
+flush privileges;
+select User, Role from mysql.mapped_user;
+User	Role
+drop table t1;
+drop table t2;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

@@ -1,0 +1,48 @@
+#
+# Test the mapped_user table
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+-- source include/have_debug.inc
+
+create table t1 (i int);
+
+insert into t1 values (1);
+
+--echo # Be sure that nothing will bother us
+--source include/disable_anon_user.inc
+
+create user role1@localhost;
+insert into mysql.mapped_user values
+  ('role1', 'mubug1', password('mubug1'), '2020-01-01');
+flush privileges;
+
+grant select on test.t1 to role1@localhost;
+show grants for role1@localhost;
+
+connect (m1, localhost, mubug1,mubug1,);
+send select count(*) from t1;
+sleep 1;
+
+connection default;
+flush privileges;
+create user aa@localhost;
+create user zz@localhost;
+flush privileges;
+
+connection m1;
+reap;
+
+--echo # cleanup
+connection default;
+disconnect m1;
+
+drop table t1;
+drop user role1@localhost;
+drop user aa@localhost;
+drop user zz@localhost;
+delete from mysql.mapped_user;
+flush privileges;
+
+--source include/reenable_anon_user.inc

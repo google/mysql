@@ -1,0 +1,207 @@
+# Prepare play-ground.
+create table t1 (i int);
+create table t2 (i int);
+insert into t1 values (1);
+insert into t2 values (2);
+show create table mysql.mapped_user;
+Table	Create Table
+mapped_user	CREATE TABLE `mapped_user` (
+  `Role` char(80) COLLATE utf8_bin NOT NULL DEFAULT '',
+  `User` char(80) COLLATE utf8_bin NOT NULL DEFAULT '',
+  `Password` char(41) CHARACTER SET latin1 COLLATE latin1_bin NOT NULL DEFAULT '',
+  `PasswordChanged` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`User`,`Password`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Mapped users'
+# Confirm the variable is displayed.
+show variables like "mapped_users";
+Variable_name	Value
+mapped_users	ON
+# Be sure that nothing will bother us.
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create user role1@localhost;
+create user role2@localhost;
+create user role3@localhost identified by 'role3';
+create user role4@localhost identified by 'role4';
+create user role5@localhost identified by 'role5';
+create user role6@localhost identified by 'role6';
+create user role7@localhost identified by 'role7';
+grant select on test.t1 to role1@localhost;
+grant select on test.t2 to role2@localhost;
+grant select on test.t2 to role5@localhost;
+grant all privileges on *.* to role6@localhost;
+grant all privileges on *.* to role7@localhost;
+update mysql.user set max_user_connections=2 where user='role7';
+flush privileges;
+show grants for role1@localhost;
+Grants for role1@localhost
+GRANT USAGE ON *.* TO 'role1'@'localhost'
+GRANT SELECT ON `test`.`t1` TO 'role1'@'localhost'
+show grants for role2@localhost;
+Grants for role2@localhost
+GRANT USAGE ON *.* TO 'role2'@'localhost'
+GRANT SELECT ON `test`.`t2` TO 'role2'@'localhost'
+# Confirm access control works for users.
+select user(), current_user();
+user()	current_user()
+role1@localhost	role1@localhost
+show grants;
+Grants for role1@localhost
+GRANT USAGE ON *.* TO 'role1'@'localhost'
+GRANT SELECT ON `test`.`t1` TO 'role1'@'localhost'
+select * from t1;
+i
+1
+select * from t2;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+role5@localhost	role5@localhost
+show grants;
+Grants for role5@localhost
+GRANT USAGE ON *.* TO 'role5'@'localhost' IDENTIFIED BY PASSWORD '*13628CC562C2E9BFC38F389235E718DB1F5B7C7D'
+GRANT SELECT ON `test`.`t2` TO 'role5'@'localhost'
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role5'@'localhost' for table 't1'
+select * from t2;
+i
+2
+# Confirm that passwords can be changed for normal users.
+set password = password('foobar');
+# Cannot use with empty Password.
+insert into mysql.mapped_user values
+('role1', 'invmap1', '', '2020-01-01');
+flush privileges;
+connect(localhost,invmap1,,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'invmap1'@'localhost' (using password: NO)
+# Cannot use empty Role.
+insert into mysql.mapped_user values
+('', 'invmap3', Password('invmap3'), '2020-01-01');
+flush privileges;
+connect(localhost,invmap3,invmap3,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'invmap3'@'localhost' (using password: YES)
+# Don't allow mapped users with no username.
+insert into mysql.mapped_user values
+('role3', '', Password('role3'), '2020-01-01');
+flush privileges;
+connect(localhost,,foobar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'USER'@'localhost' (using password: YES)
+# Confirm that privileges are enforced for mapped users.
+insert into mysql.mapped_user values
+('role1', 'map3', Password('map3'), '2020-01-01');
+insert into mysql.mapped_user values
+('role2', 'map4', Password('map4'), '0000-00-00');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+map3@localhost	role1@localhost
+show grants;
+Grants for role1@localhost
+GRANT USAGE ON *.* TO 'role1'@'localhost'
+GRANT SELECT ON `test`.`t1` TO 'role1'@'localhost'
+select * from t1;
+i
+1
+select * from t2;
+ERROR 42000: SELECT command denied to user 'role1'@'localhost' for table 't2'
+select user(), current_user();
+user()	current_user()
+map4@localhost	role2@localhost
+show grants;
+Grants for role2@localhost
+GRANT USAGE ON *.* TO 'role2'@'localhost'
+GRANT SELECT ON `test`.`t2` TO 'role2'@'localhost'
+select * from t1;
+ERROR 42000: SELECT command denied to user 'role2'@'localhost' for table 't1'
+select * from t2;
+i
+2
+# Confirm that passwords cannot be changed for mapped users.
+set password = password('foobar');
+ERROR 42000: This version of MariaDB doesn't yet support 'CHANGE PASSWORD for mapped users'
+# Confirm that invalid mappings cannot connect.
+insert into mysql.mapped_user values
+('bogusrole', 'bogusmap', Password('bogusmap'), '2020-01-01');
+flush privileges;
+connect(localhost,bogusmap,bugusmap,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'bogusmap'@'localhost' (using password: YES)
+# Test mapped user with 2 valid passwords.
+insert into mysql.mapped_user values
+('role1', 'map1', Password('map1a'), '2020-01-01');
+insert into mysql.mapped_user values
+('role1', 'map1', Password('map1b'), '2020-01-01');
+insert into mysql.mapped_user values
+('role1', 'map1', '', '2020-01-01');
+flush privileges;
+# Fails because password is blank.
+connect(localhost,map1,,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'map1'@'localhost' (using password: NO)
+select user(), current_user();
+user()	current_user()
+map1@localhost	role1@localhost
+select user(), current_user();
+user()	current_user()
+map1@localhost	role1@localhost
+# Confirm that bogus passwords cannot be used.
+connect(localhost,map1,pw2,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'map1'@'localhost' (using password: YES)
+# Test table_statistics with temporary tables (appends mapped user name).
+insert into mysql.mapped_user values
+('role6', 'map6', Password('map6'), '2020-01-01');
+flush privileges;
+select user(), current_user();
+user()	current_user()
+map6@localhost	role6@localhost
+flush table_statistics;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+show table_statistics;
+Table_schema	Table_name	Rows_read	Rows_changed	Rows_changed_x_#indexes
+test	t3	0	16	16
+# Test connection limits per mapped_user.
+insert into mysql.mapped_user values
+('role7', 'map7-1', Password('map7-1'), '2020-01-01');
+insert into mysql.mapped_user values
+('role7', 'map7-2', Password('map7-2'), '2020-01-01');
+flush privileges;
+# The role account exceeds max connections.
+connect(localhost,role7,role7,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 42000: User 'role7' has exceeded the 'max_user_connections' resource (current value: 2)
+# A mapped user account exceeds max connections.
+connect(localhost,map7-1,map7-1,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 42000: User 'map7-1' has exceeded the 'max_user_connections' resource (current value: 2)
+# A second mapped user account exceeds max connections.
+connect(localhost,map7-2,map7-2,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 42000: User 'map7-2' has exceeded the 'max_user_connections' resource (current value: 2)
+# Cleanup.
+drop user role1@localhost;
+drop user role2@localhost;
+drop user role3@localhost;
+drop user role4@localhost;
+drop user role5@localhost;
+drop user role6@localhost;
+drop user role7@localhost;
+delete from mysql.mapped_user;
+flush privileges;
+drop table t1;
+drop table t2;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

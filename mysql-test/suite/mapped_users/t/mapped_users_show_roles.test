@@ -1,0 +1,90 @@
+#
+# Test the mapped_user table
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+--echo # Prepare play-ground
+create user showrole@localhost identified by 'foo';
+grant select on *.* to showrole@localhost;
+
+create user showrole2@localhost identified by 'foo';
+grant select on *.* to showrole2@localhost;
+
+insert into mysql.mapped_user values
+ ('showrole', 'showmapuser1', Password('showmapuser1'), '2020-01-01');
+
+insert into mysql.mapped_user values
+ ('showrole', 'showmapuser2', Password('showmapuser2'), '2020-01-01');
+
+insert into mysql.mapped_user values
+ ('showrole2', 'showmapuser3', Password('showmapuser3'), '2020-01-01');
+
+flush privileges;
+flush user_statistics;
+
+connect (conn1, localhost, showmapuser1, showmapuser1,);
+select current_user();
+select current_user();
+
+connect (conn2, localhost, showmapuser2, showmapuser2,);
+select current_user();
+
+connect (conn3, localhost, showmapuser3, showmapuser3,);
+select current_user();
+
+--echo # Make sure that stats get updated for all actions above, sleeping
+--sleep 1
+
+connection default;
+
+select User, Total_connections, Select_commands,
+       Lost_connections, Access_denied, Empty_queries
+from information_schema.user_statistics
+order by User;
+
+select Role, sum(Total_connections), sum(Select_commands),
+       sum(Lost_connections), sum(Access_denied), sum(Empty_queries)
+from information_schema.user_statistics
+group by Role order by Role;
+
+select User, Total_connections, Select_commands, Lost_connections,
+       Access_denied, Empty_queries
+from information_schema.user_statistics
+where User = 'showmapuser1';
+
+select Role, sum(Total_connections), sum(Select_commands),
+       sum(Lost_connections), sum(Access_denied), sum(Empty_queries)
+from information_schema.user_statistics
+where Role = 'showrole';
+
+select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User;
+
+connection conn1;
+
+select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User;
+
+connect (conn4, localhost, showrole, foo,);
+
+select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User;
+
+--echo # cleanup
+
+connection default;
+disconnect conn1;
+disconnect conn2;
+disconnect conn3;
+disconnect conn4;
+
+drop user showrole@localhost;
+drop user showrole2@localhost;
+delete from mysql.mapped_user;
+flush privileges;
+

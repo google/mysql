@@ -1,0 +1,38 @@
+create table t1 (i int);
+insert into t1 values (1);
+# Be sure that nothing will bother us
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create user role1@localhost;
+insert into mysql.mapped_user values
+('role1', 'mubug1', password('mubug1'), '2020-01-01');
+flush privileges;
+grant select on test.t1 to role1@localhost;
+show grants for role1@localhost;
+Grants for role1@localhost
+GRANT USAGE ON *.* TO 'role1'@'localhost'
+GRANT SELECT ON `test`.`t1` TO 'role1'@'localhost'
+select count(*) from t1;
+flush privileges;
+create user aa@localhost;
+create user zz@localhost;
+flush privileges;
+count(*)
+1
+# cleanup
+drop table t1;
+drop user role1@localhost;
+drop user aa@localhost;
+drop user zz@localhost;
+delete from mysql.mapped_user;
+flush privileges;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

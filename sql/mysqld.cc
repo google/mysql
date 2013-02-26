@@ -554,6 +554,8 @@ ulong max_long_data_size;
 uint internal_tmp_table_max_key_length;
 uint internal_tmp_table_max_key_segments;
 
+my_bool opt_mapped_user;
+
 bool max_user_connections_checking=0;
 /**
   Limit of the total number of prepared statements in the server.
@@ -8800,6 +8802,7 @@ static int mysql_init_variables(void)
   rpl_allow_implicit_commit= 0;
   opt_system_user_table= 0;
   opt_block_user_access= 0;
+  opt_mapped_user= 0;
 #if defined(ENABLED_DEBUG_SYNC)
   opt_debug_sync_timeout= 0;
 #endif /* defined(ENABLED_DEBUG_SYNC) */

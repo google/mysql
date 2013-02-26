@@ -14783,6 +14783,12 @@ option_value_no_option_type:
             }
             if (!(user=(LEX_USER*) thd->calloc(sizeof(LEX_USER))))
               MYSQL_YYABORT;
+            if (thd->security_ctx->uses_mapped_role)
+            {
+              my_error(ER_NOT_SUPPORTED_YET, MYF(0),
+                       "CHANGE PASSWORD for mapped users");
+              MYSQL_YYABORT;
+            }
             user->user= current_user;
             set_var_password *var= new set_var_password(user, $3);
             if (var == NULL)

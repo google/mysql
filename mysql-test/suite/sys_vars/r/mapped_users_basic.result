@@ -1,0 +1,13 @@
+# Check that variable exists and defaults to 0
+select @@global.mapped_users as expect_0;
+expect_0
+0
+# Check that it's not a session variable
+select @@session.mapped_users as 'no session var';
+ERROR HY000: Variable 'mapped_users' is a GLOBAL variable
+# Variable is read only, cannot be changed
+set @@global.mapped_users= 1;
+ERROR HY000: Variable 'mapped_users' is a read only variable
+# Attempt to change on a session level makes no difference
+set @@session.mapped_users= 1;
+ERROR HY000: Variable 'mapped_users' is a read only variable

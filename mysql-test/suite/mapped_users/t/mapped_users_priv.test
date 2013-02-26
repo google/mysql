@@ -1,0 +1,128 @@
+#
+# Test the mapped_user table
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+--echo # Prepare play-ground
+create database foobar;
+create database foobar2;
+
+use foobar2;
+create table f1(i int);
+insert into f1 values (0);
+
+use foobar;
+
+create table t1(i int);
+insert into t1 values (1);
+
+create table t2(i int);
+insert into t2 values (1);
+
+--source include/disable_anon_user.inc
+
+create user rolefoo@localhost identified by 'foo';
+insert into mysql.mapped_user values
+  ('rolefoo', 'mapfoo', password('bar'), '2020-01-01'),
+  ('rolefoo', 'mapfoo2', password('bar'), '2020-01-01');
+flush privileges;
+
+--echo # Test for select, but no insert, update, delete privs
+
+grant select on foobar.t1 to rolefoo@localhost;
+grant select on foobar.t2 to rolefoo@localhost;
+grant insert on foobar.t2 to rolefoo@localhost;
+
+connect (map_conn, localhost, mapfoo, bar, foobar);
+select count(*) from t1;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (0);
+
+--error ER_TABLEACCESS_DENIED_ERROR
+update t1 set i=0 where i=1;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1;
+
+insert into t2 values (0);
+
+--echo # Test for db privs
+
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from foobar2.f1;
+
+--echo # Test for column privs
+
+connection default;
+disconnect map_conn;
+
+create table c1(i int, j int);
+grant select (i) on foobar.c1 to rolefoo@localhost;
+
+connect (map_conn, localhost, mapfoo, bar, foobar);
+
+--error ER_COLUMNACCESS_DENIED_ERROR
+select j from c1;
+
+select i from c1;
+
+--echo # Confirm a mapped user can kill self but not others sharing the role
+
+connect (map_connb, localhost, mapfoo, bar, foobar);
+let $pidb=query_get_value(select connection_id() as id, id, 1);
+
+connection default;
+connect (map_conn2, localhost, mapfoo2, bar, foobar);
+let $pid2=query_get_value(select connection_id() as id, id, 1);
+
+connection default;
+connect (role_conn, localhost, rolefoo, foo, foobar);
+let $pidr=query_get_value(select connection_id() as id, id, 1);
+
+--echo # Can kill same mapped user
+
+connection map_conn;
+--disable_query_log
+eval kill $pidb;
+--enable_query_log
+
+--echo # Cannot kill other mapped user that shares role
+
+--disable_query_log
+--error ER_KILL_DENIED_ERROR,1
+eval kill $pid2;
+--enable_query_log
+
+--echo # Cannot kill base role
+
+--disable_query_log
+--error ER_KILL_DENIED_ERROR,1
+eval kill $pidr;
+--enable_query_log
+
+--echo # wait for kill to get cleaned up
+sleep 1;
+
+--replace_column 1 # 6 #
+SHOW PROCESSLIST;
+
+--echo # Final cleanup
+connection default;
+disconnect map_conn;
+disconnect map_conn2;
+disconnect map_connb;
+
+--echo # This deletes all entries that match mapped_user.User
+delete from mysql.mapped_user where user in ('mapfoo', 'mapfoo2');
+flush privileges;
+select User, Role from mysql.mapped_user;
+
+drop user rolefoo@localhost;
+flush privileges;
+drop database foobar;
+drop database foobar2;
+
+--source include/reenable_anon_user.inc

@@ -2400,23 +2400,29 @@ bool Item_func_user::init(const char *user, const char *host)
 {
   DBUG_ASSERT(fixed == 1);
 
-  // For system threads (e.g. replication SQL thread) user may be empty
-  if (user)
+  /*
+    For system threads (e.g. replication SQL thread) user may be empty.
+    Set the values here to avoid printing junk and referencing
+    uninitialized values later.
+  */
+  if (!user)
+    user= "";
+  if (!host)
+    host= "";
+
+  CHARSET_INFO *cs= str_value.charset();
+  size_t res_length= (strlen(user)+strlen(host)+2) * cs->mbmaxlen;
+
+  if (str_value.alloc((uint) res_length))
   {
-    CHARSET_INFO *cs= str_value.charset();
-    size_t res_length= (strlen(user)+strlen(host)+2) * cs->mbmaxlen;
-
-    if (str_value.alloc((uint) res_length))
-    {
-      null_value=1;
-      return TRUE;
-    }
-
-    res_length=cs->cset->snprintf(cs, (char*)str_value.ptr(), (uint) res_length,
-                                  "%s@%s", user, host);
-    str_value.length((uint) res_length);
-    str_value.mark_as_const();
+    null_value=1;
+    return TRUE;
   }
+
+  res_length=cs->cset->snprintf(cs, (char*)str_value.ptr(), (uint) res_length,
+                                "%s@%s", user, host);
+  str_value.length((uint) res_length);
+  str_value.mark_as_const();
   return FALSE;
 }
 

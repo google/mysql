@@ -1,0 +1,145 @@
+#
+# Test interaction of the mapped_user table with the system_user table
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+
+call mtr.add_suppression("entry .* in mysql.user is ignored because it duplicates entry in mysql.system_user");
+
+--echo # Prepare play-ground
+create table t1 (i int);
+
+insert into t1 values (1);
+
+--source include/disable_anon_user.inc
+
+create user rolefoo@localhost identified by 'foo';
+grant usage on *.* to rolefoo@localhost;
+grant select, insert on *.* to rolefoo@localhost;
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'mapfoo', password('bar'), '2020-01-01');
+flush privileges;
+
+--echo # Check that usual user and mapped user work
+
+connect (role_conn, localhost, rolefoo, foo,);
+select user(), current_user();
+
+connect (map_conn, localhost, mapfoo, bar,);
+select user(), current_user();
+
+--echo # Check that mapped user cannot have role from system_user table
+
+connection default;
+disconnect map_conn;
+disconnect role_conn;
+
+insert into mysql.system_user
+  select * from mysql.user where User = 'rolefoo';
+update mysql.user set User = 'rolefoo_save' where User = 'rolefoo';
+flush privileges;
+
+connect (role_conn, localhost, rolefoo, foo,);
+select user(), current_user();
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (map_conn, localhost, mapfoo, bar,);
+
+--echo # The same should happen when moving user to another table while
+--echo # connection is open.
+
+connection default;
+disconnect role_conn;
+update mysql.system_user set User = 'rolefoo_save' where User = 'rolefoo';
+update mysql.user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+
+connect (role_conn, localhost, rolefoo, foo,);
+select user(), current_user();
+insert into t1 values (2);
+
+connect (map_conn, localhost, mapfoo, bar,);
+select user(), current_user();
+select * from t1;
+
+connection default;
+update mysql.user set User = 'rolefoo_save' where User = 'rolefoo';
+update mysql.system_user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+
+connection role_conn;
+insert into t1 values (3);
+select * from t1;
+
+connection map_conn;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from t1;
+
+--echo # Records exist in both user and system_user tables, still can't have
+--echo # this role.
+
+connection default;
+disconnect map_conn;
+update mysql.user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (map_conn, localhost, mapfoo, bar,);
+
+connection default;
+update mysql.system_user set User = 'rolefoo_save' where User = 'rolefoo';
+flush privileges;
+
+connect (map_conn, localhost, mapfoo, bar,);
+select user(), current_user();
+select * from t1;
+
+connection default;
+update mysql.system_user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+
+connection map_conn;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select user(), current_user();
+
+--echo # Changing roles while connection is open won't work too
+
+connection default;
+disconnect map_conn;
+update mysql.user set User = 'rolefoo2' where User = 'rolefoo';
+update mysql.mapped_user set Role = 'rolefoo2' where User = 'mapfoo';
+flush privileges;
+
+connect (map_conn, localhost, mapfoo, bar,);
+select user(), current_user();
+select * from t1;
+
+connection default;
+update mysql.mapped_user set Role = 'rolefoo' where User = 'mapfoo';
+flush privileges;
+
+connection map_conn;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select user(), current_user();
+
+
+--echo # Cleanup
+
+connection default;
+disconnect map_conn;
+disconnect role_conn;
+drop table t1;
+drop user rolefoo2@localhost;
+delete from mysql.system_user where User = 'rolefoo';
+delete from mysql.mapped_user where user = 'mapfoo';
+flush privileges;
+
+--source include/reenable_anon_user.inc

@@ -1,0 +1,70 @@
+#
+# Test mapped users with old-style passwords
+#
+
+# Requires privileges to be enabled
+--source include/not_embedded.inc
+
+--echo # Prepare play-ground
+select user(), current_user();
+
+--source include/disable_anon_user.inc
+
+create table t1 (i int);
+create table t2 (i int);
+
+insert into t1 values (1);
+insert into t2 values (1);
+
+create user rolefoo@localhost identified by 'bar';
+grant select on test.t1 to rolefoo@localhost;
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'mapfoo', password('bar'), '2020-01-01'),
+  ('rolefoo', 'mapfoo2', password('bar'), '2020-01-01');
+flush privileges;
+
+--echo # Confirm that access control works for the user
+
+connect (role_conn, localhost, rolefoo, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t2;
+
+--echo # Confirm that access control works for the mapped user
+
+connect (foo_conn, localhost, mapfoo, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t2;
+
+--echo # Confirm that access control works for the mapped user
+
+connect (foo2_conn, localhost, mapfoo2, bar,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t2;
+
+connection default;
+disconnect foo2_conn;
+disconnect foo_conn;
+disconnect role_conn;
+
+select User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+
+delete from mysql.mapped_user where user in ('mapfoo', 'mapfoo2');
+flush privileges;
+drop user rolefoo@localhost;
+
+select User, Role from mysql.mapped_user;
+
+drop table t1;
+drop table t2;
+
+--source include/reenable_anon_user.inc

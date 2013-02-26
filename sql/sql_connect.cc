@@ -57,8 +57,8 @@ int get_or_create_user_conn(THD *thd, const char *user,
                             const USER_RESOURCES *mqh)
 {
   int return_val= 0;
-  size_t temp_len, user_len;
-  char temp_user[USER_HOST_BUFF_SIZE];
+  size_t temp_len, user_len, total_temp_len;
+  char temp_user[USER_HOST_BUFF_SIZE + USERNAME_LENGTH + 1];
   struct  user_conn *uc;
 
   DBUG_ASSERT(user != 0);
@@ -67,13 +67,21 @@ int get_or_create_user_conn(THD *thd, const char *user,
 
   user_len= strlen(user);
   temp_len= (strmov(strmov(temp_user, user)+1, host) - temp_user)+1;
+
+  /*
+    total_temp_len is the total length of:
+    user, '\0', host, '\0', priv_user, '\0'
+  */
+  total_temp_len= (strmov(temp_user + temp_len,
+                          thd->main_security_ctx.priv_user) - temp_user) + 1;
+
   mysql_mutex_lock(&LOCK_user_conn);
   if (!(uc = (struct  user_conn *) my_hash_search(&hash_user_connections,
 					       (uchar*) temp_user, temp_len)))
   {
     /* First connection for user; Create a user connection object */
     if (!(uc= ((struct user_conn*)
-	       my_malloc(sizeof(struct user_conn) + temp_len+1,
+	       my_malloc(sizeof(struct user_conn) + total_temp_len,
 			 MYF(MY_WME)))))
     {
       /* MY_WME ensures an error is set in THD. */
@@ -81,7 +89,8 @@ int get_or_create_user_conn(THD *thd, const char *user,
       goto end;
     }
     uc->user=(char*) (uc+1);
-    memcpy(uc->user,temp_user,temp_len+1);
+    memcpy(uc->user, temp_user, total_temp_len);
+    uc->priv_user= (char *) (uc->user + temp_len);
     uc->host= uc->user + user_len +  1;
     uc->len= temp_len;
     uc->connections= uc->questions= uc->updates= uc->conn_per_hour= 0;
@@ -365,7 +374,7 @@ void reset_mqh(LEX_USER *lu, bool get_them= 0)
       USER_CONN *uc=(struct user_conn *)
         my_hash_element(&hash_user_connections, idx);
       if (get_them)
-	get_mqh(uc->user,uc->host,uc);
+        get_mqh(uc->priv_user, uc->host, uc);
       uc->questions=0;
       uc->updates=0;
       uc->conn_per_hour=0;
@@ -670,6 +679,8 @@ static bool increment_count_by_name(const char *name, size_t name_length,
 static bool increment_connection_count(THD* thd, bool use_lock)
 {
   const char *user_string= get_valid_user_string(thd->main_security_ctx.user);
+  const char *role_string= thd->main_security_ctx.priv_user[0]?
+                           thd->main_security_ctx.priv_user : mysql_system_user;
   const char *client_string= get_client_host(thd);
   bool return_value= FALSE;
 
@@ -679,14 +690,14 @@ static bool increment_connection_count(THD* thd, bool use_lock)
   if (use_lock)
     mysql_mutex_lock(&LOCK_global_user_client_stats);
 
-  if (increment_count_by_name(user_string, strlen(user_string), user_string,
+  if (increment_count_by_name(user_string, strlen(user_string), role_string,
                               &global_user_stats, thd))
   {
     return_value= TRUE;
     goto end;
   }
   if (increment_count_by_name(client_string, strlen(client_string),
-                              user_string, &global_client_stats, thd))
+                              role_string, &global_client_stats, thd))
   {
     return_value= TRUE;
     goto end;

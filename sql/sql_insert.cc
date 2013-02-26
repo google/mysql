@@ -2044,6 +2044,7 @@ public:
     thd.security_ctx->user=(char*) delayed_user;
     thd.security_ctx->host=(char*) my_localhost;
     strmake_buf(thd.security_ctx->priv_user, thd.security_ctx->user);
+    thd.security_ctx->uses_mapped_role= false;
     thd.current_tablenr=0;
     thd.set_command(COM_DELAYED_INSERT);
     thd.lex->current_select= 0; 		// for my_message_sql

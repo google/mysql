@@ -1,0 +1,108 @@
+call mtr.add_suppression("entry .* in mysql.user is ignored because it duplicates entry in mysql.system_user");
+# Prepare play-ground
+create table t1 (i int);
+insert into t1 values (1);
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create user rolefoo@localhost identified by 'foo';
+grant usage on *.* to rolefoo@localhost;
+grant select, insert on *.* to rolefoo@localhost;
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo', password('bar'), '2020-01-01');
+flush privileges;
+# Check that usual user and mapped user work
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+# Check that mapped user cannot have role from system_user table
+insert into mysql.system_user
+select * from mysql.user where User = 'rolefoo';
+update mysql.user set User = 'rolefoo_save' where User = 'rolefoo';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+connect(localhost,mapfoo,bar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'mapfoo'@'localhost' (using password: YES)
+# The same should happen when moving user to another table while
+# connection is open.
+update mysql.system_user set User = 'rolefoo_save' where User = 'rolefoo';
+update mysql.user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+rolefoo@localhost	rolefoo@localhost
+insert into t1 values (2);
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+select * from t1;
+i
+1
+2
+update mysql.user set User = 'rolefoo_save' where User = 'rolefoo';
+update mysql.system_user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+insert into t1 values (3);
+select * from t1;
+i
+1
+2
+3
+select * from t1;
+Got one of the listed errors
+# Records exist in both user and system_user tables, still can't have
+# this role.
+update mysql.user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+connect(localhost,mapfoo,bar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'mapfoo'@'localhost' (using password: YES)
+update mysql.system_user set User = 'rolefoo_save' where User = 'rolefoo';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo@localhost
+select * from t1;
+i
+1
+2
+3
+update mysql.system_user set User = 'rolefoo' where User = 'rolefoo_save';
+flush privileges;
+select user(), current_user();
+Got one of the listed errors
+# Changing roles while connection is open won't work too
+update mysql.user set User = 'rolefoo2' where User = 'rolefoo';
+update mysql.mapped_user set Role = 'rolefoo2' where User = 'mapfoo';
+flush privileges;
+select user(), current_user();
+user()	current_user()
+mapfoo@localhost	rolefoo2@localhost
+select * from t1;
+i
+1
+2
+3
+update mysql.mapped_user set Role = 'rolefoo' where User = 'mapfoo';
+flush privileges;
+select user(), current_user();
+Got one of the listed errors
+# Cleanup
+drop table t1;
+drop user rolefoo2@localhost;
+delete from mysql.system_user where User = 'rolefoo';
+delete from mysql.mapped_user where user = 'mapfoo';
+flush privileges;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

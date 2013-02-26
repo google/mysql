@@ -1250,6 +1250,12 @@ static bool check_max_allowed_packet(sys_var *self, THD *thd,  set_var *var)
 }
 
 
+static Sys_var_mybool Sys_mapped_users(
+       "mapped_users",
+       "Use the mapped_user table to map users to roles",
+       READ_ONLY GLOBAL_VAR(opt_mapped_user), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 static Sys_var_ulong Sys_max_allowed_packet(
        "max_allowed_packet",
        "Max packet length to send to or receive from the server",

@@ -1,0 +1,22 @@
+#
+# suite/mapped_users/t/* contain testing of actual effect of the flag.
+# Here we test only that flag exists and it's read-only.
+
+--echo # Check that variable exists and defaults to 0
+
+select @@global.mapped_users as expect_0;
+
+--echo # Check that it's not a session variable
+
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.mapped_users as 'no session var';
+
+--echo # Variable is read only, cannot be changed
+
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+set @@global.mapped_users= 1;
+
+--echo # Attempt to change on a session level makes no difference
+
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+set @@session.mapped_users= 1;

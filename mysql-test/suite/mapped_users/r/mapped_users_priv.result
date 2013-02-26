@@ -1,0 +1,72 @@
+# Prepare play-ground
+create database foobar;
+create database foobar2;
+use foobar2;
+create table f1(i int);
+insert into f1 values (0);
+use foobar;
+create table t1(i int);
+insert into t1 values (1);
+create table t2(i int);
+insert into t2 values (1);
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create user rolefoo@localhost identified by 'foo';
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo', password('bar'), '2020-01-01'),
+('rolefoo', 'mapfoo2', password('bar'), '2020-01-01');
+flush privileges;
+# Test for select, but no insert, update, delete privs
+grant select on foobar.t1 to rolefoo@localhost;
+grant select on foobar.t2 to rolefoo@localhost;
+grant insert on foobar.t2 to rolefoo@localhost;
+select count(*) from t1;
+count(*)
+1
+insert into t1 values (0);
+ERROR 42000: INSERT command denied to user 'rolefoo'@'localhost' for table 't1'
+update t1 set i=0 where i=1;
+ERROR 42000: UPDATE command denied to user 'rolefoo'@'localhost' for table 't1'
+delete from t1;
+ERROR 42000: DELETE command denied to user 'rolefoo'@'localhost' for table 't1'
+insert into t2 values (0);
+# Test for db privs
+select count(*) from foobar2.f1;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 'f1'
+# Test for column privs
+create table c1(i int, j int);
+grant select (i) on foobar.c1 to rolefoo@localhost;
+select j from c1;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for column 'j' in table 'c1'
+select i from c1;
+i
+# Confirm a mapped user can kill self but not others sharing the role
+# Can kill same mapped user
+# Cannot kill other mapped user that shares role
+Got one of the listed errors
+# Cannot kill base role
+Got one of the listed errors
+# wait for kill to get cleaned up
+SHOW PROCESSLIST;
+Id	User	Host	db	Command	Time	State	Info	Progress
+#	mapfoo	localhost	foobar	Query	#	init	SHOW PROCESSLIST	0.000
+# Final cleanup
+# This deletes all entries that match mapped_user.User
+delete from mysql.mapped_user where user in ('mapfoo', 'mapfoo2');
+flush privileges;
+select User, Role from mysql.mapped_user;
+User	Role
+drop user rolefoo@localhost;
+flush privileges;
+drop database foobar;
+drop database foobar2;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

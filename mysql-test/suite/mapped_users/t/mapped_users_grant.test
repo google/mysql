@@ -1,0 +1,462 @@
+#
+# Test the mapped_user table
+#
+
+# Requires privileges to be enabled
+-- source include/not_embedded.inc
+
+--echo # Prepare play-ground
+create table t1 (i int);
+
+insert into t1 values (1);
+
+--source include/disable_anon_user.inc
+
+create user rolefoo@localhost identified by 'foo';
+grant usage on *.* to rolefoo@localhost;
+grant select on *.* to rolefoo@localhost;
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'mapfoo', password('bar'), '2020-01-01'),
+  ('rolefoo', 'dropfoo', password('bar'), '2020-01-01');
+flush privileges;
+
+--echo # uses wrong password
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (bad_conn, localhost, mapfoo, foo,);
+
+connect (role_conn, localhost, rolefoo, foo,);
+select user(), current_user();
+
+connect (drop_conn, localhost, dropfoo, bar,);
+select user(), current_user();
+
+--echo # Confirm that the mapped user can be dropped and not used after a drop
+connection default;
+disconnect drop_conn;
+
+--echo # Must use 'delete' instead
+--error ER_CANNOT_USER
+drop user dropfoo;
+
+delete from mysql.mapped_user where user = 'dropfoo';
+flush privileges;
+
+--echo # Confirm that mapped user cannot be used after a drop
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (drop_conn, localhost, dropfoo, foo,);
+
+--echo # Confirm that mapped user can be used after a create
+connect (foo_conn, localhost, mapfoo, bar,);
+connection foo_conn;
+select user(), current_user();
+
+connection default;
+
+select User, Role from mysql.mapped_user;
+
+--echo # This is a new entry
+insert into mysql.mapped_user values
+  ('rolefoo', 'mapfoo', password('bar1'), '2020-01-01');
+flush privileges;
+
+select User, Role from mysql.mapped_user;
+select distinct User, Role, Password from mysql.mapped_user order by 1, 2, 3;
+
+--echo #
+--echo # All changes in user-level and database-level permissions should be
+--echo # immediately visible to all active connections.
+--echo #
+
+--echo # Set up
+connection default;
+create user role1;
+grant all privileges on test.* to role1;
+insert into mysql.mapped_user values
+  ('role1', 'user1', password('foo'), '2020-01-01');
+flush privileges;
+create database d1;
+create table d1.t1 (n int);
+insert into d1.t1 values (1);
+
+connect (conn1, localhost, user1, foo, );
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+
+--echo # Let's play with user-level permissions
+connection default;
+grant select on *.* to role1;
+connection conn1;
+select * from d1.t1;
+use d1;
+select * from t1;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (2);
+connection default;
+grant insert on *.* to role1;
+connection conn1;
+insert into t1 values (3);
+select * from t1;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1 where n=1;
+connection default;
+grant delete on *.* to role1;
+connection conn1;
+delete from t1 where n=3;
+select * from t1;
+
+connection default;
+revoke insert on *.* from role1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (4);
+
+connection default;
+insert into d1.t1 values (5);
+select * from d1.t1;
+revoke select on *.* from role1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+delete from t1;
+
+connection default;
+select * from d1.t1;
+insert into d1.t1 values (6);
+revoke delete on *.* from role1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1;
+
+connection default;
+select * from d1.t1;
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+--error ER_DBACCESS_DENIED_ERROR
+use d1;
+
+connection default;
+update mysql.user set Select_priv = 'Y' where User = 'role1';
+flush privileges;
+connection conn1;
+select * from d1.t1;
+connection default;
+update mysql.user set Select_priv = 'N' where User = 'role1';
+flush privileges;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from d1.t1;
+
+--echo # Now database-level privileges
+
+connection default;
+grant select on d1.* to role1;
+connection conn1;
+select * from d1.t1;
+use d1;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (7);
+
+connection default;
+grant insert on d1.* to role1;
+connection conn1;
+insert into t1 values (8);
+select * from t1;
+
+connection default;
+update mysql.db set Insert_priv = 'N' where Db = 'd1' and User = 'role1';
+flush privileges;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (9);
+connection default;
+update mysql.db set Insert_priv = 'Y' where Db = 'd1' and User = 'role1';
+flush privileges;
+connection conn1;
+insert into t1 values (10);
+
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1;
+connection default;
+grant delete on d1.* to role1;
+connection conn1;
+delete from t1 where n=6;
+select * from t1;
+
+connection default;
+revoke all on d1.* from role1;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (11);
+--error ER_TABLEACCESS_DENIED_ERROR
+delete from t1;
+
+connection default;
+select Select_priv from mysql.db where Db = 'd1' and User = 'role1';
+insert into mysql.db (Host, Db, User, Select_priv)
+values ('%', 'd1', 'role1', 'Y');
+flush privileges;
+connection conn1;
+select * from t1;
+connection default;
+delete from mysql.db where Db = 'd1' and User = 'role1';
+flush privileges;
+connection conn1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+
+connection default;
+use d1;
+select * from t1;
+
+--echo # When role is changed permissions and user identification should switch
+--echo # properly
+
+create user role2@localhost;
+grant all on *.* to role2@localhost;
+connection conn1;
+select user(), current_user();
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+connection default;
+update mysql.mapped_user set Role = 'role2' where User = 'user1';
+flush privileges;
+connection conn1;
+select user(), current_user();
+select * from t1;
+connection default;
+update mysql.mapped_user set Role = 'role1' where User = 'user1';
+flush privileges;
+connection conn1;
+select user(), current_user();
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+connection default;
+drop user role2@localhost;
+
+--echo # When role behind the mapped user is dropped all user connections should
+--echo # be killed in the middle of the query.
+
+connection default;
+grant all privileges on *.* to role1 with grant option;
+delimiter //;
+create procedure inf_loop()
+sql security invoker
+begin
+  loop_label: loop
+    select * from d1.t1;
+  end loop loop_label;
+end;//
+delimiter ;//
+
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+use d1;
+select * from t1;
+send call inf_loop();
+connection default;
+drop user role1;
+connection conn1;
+--disable_result_log
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+reap;
+--enable_result_log
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
+select * from d1.t1;
+
+--echo # User connections should be killed even if role behind the mapped user
+--echo # was re-created while connection was idle.
+
+connection default;
+create user role1;
+grant all on *.* to role1;
+
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+use d1;
+select * from t1;
+connection default;
+drop user role1;
+create user role1;
+grant all privileges on *.* to role1 with grant option;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from t1;
+
+--echo # When user password is changed through mysql.mapped_user table all user
+--echo # connections should be killed eventually (at the start of next query).
+
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+select * from d1.t1;
+connection default;
+update mysql.mapped_user set Password = password('asdf') where User = 'user1';
+flush privileges;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
+select * from d1.t1;
+
+--echo # When user is deleted from mysql.mapped_user table all user connections
+--echo # should be killed eventually (at the start of the next query).
+
+disconnect conn1;
+connect (conn1, localhost, user1, asdf, );
+select * from d1.t1;
+connection default;
+delete from mysql.mapped_user where User = 'user1';
+flush privileges;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
+select * from d1.t1;
+
+--echo # When role behind mapped user is deleted from mysql.user table all user
+--echo # connections should be killed eventually (at the start of the next query).
+
+connection default;
+insert into mysql.mapped_user values
+  ('role1', 'user1', password('foo'), '2020-01-01');
+flush privileges;
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+select * from d1.t1;
+delete from mysql.user where User = 'role1';
+flush privileges;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
+select * from d1.t1;
+
+--echo # If user connection is idle then it will survive manipulations with the
+--echo # user through mysql.mapped_user table even if after one of
+--echo # 'flush privileges' execution mapped user didn't exist.
+
+connection default;
+create user role1;
+grant all privileges on *.* to role1 with grant option;
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+select * from d1.t1;
+connection default;
+update mysql.mapped_user set User = 'user2' where User = 'user1';
+flush privileges;
+update mysql.mapped_user set User = 'user1' where User = 'user2';
+flush privileges;
+connection conn1;
+select * from d1.t1;
+
+--echo # Creating and dropping mapped user with the same name as real user
+--echo # shouldn't have any impact on that real user connections.
+
+disconnect conn1;
+connect (conn1, localhost, role1, , );
+select * from d1.t1;
+connection default;
+insert into mysql.mapped_user values
+  ('bogus', 'role1', password('foo'), '2020-01-01');
+flush privileges;
+connection conn1;
+select * from d1.t1;
+connection default;
+delete from mysql.mapped_user where user='role1';
+flush privileges;
+connection conn1;
+select * from d1.t1;
+
+--echo # Creation of user with the same name as mapped user should kill all
+--echo # connections from that mapped user eventually (at the start of the next
+--echo # query).
+
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+select * from d1.t1;
+connection default;
+create user user1;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
+select * from d1.t1;
+
+--echo # The same goes about renaming of real user to the same name as mapped
+--echo # user.
+
+connection default;
+drop user user1;
+create user user2;
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+select * from d1.t1;
+connection default;
+rename user user2 to user1;
+connection conn1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from d1.t1;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error 2006,2013
+select * from d1.t1;
+
+--echo # But connection from mapped user will survive if a real user was renamed
+--echo # to the same name as the mapped user and then renamed back to some other
+--echo # name while the connection was idle.
+
+connection default;
+rename user user1 to user2;
+disconnect conn1;
+connect (conn1, localhost, user1, foo, );
+select * from d1.t1;
+connection default;
+rename user user2 to user1;
+rename user user1 to user2;
+connection conn1;
+select * from d1.t1;
+
+--echo # Final cleanup
+
+connection default;
+use test;
+disconnect foo_conn;
+disconnect conn1;
+drop database d1;
+drop user role1;
+drop user user2;
+delete from mysql.mapped_user where user='user1';
+flush privileges;
+drop table t1;
+
+--echo # This deletes all entries that match mapped_user.User
+delete from mysql.mapped_user where user='mapfoo';
+flush privileges;
+select User, Role from mysql.mapped_user;
+
+drop user rolefoo@localhost;
+flush privileges;
+
+--source include/reenable_anon_user.inc

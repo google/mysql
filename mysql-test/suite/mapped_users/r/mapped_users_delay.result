@@ -1,0 +1,58 @@
+show delayed user;
+User	Delay
+make user 'mapfoo' delayed 2000;
+show delayed user;
+User	Delay
+mapfoo	2000
+create user rolefoo@localhost identified by 'foo';
+grant select on *.* to rolefoo@localhost;
+create mapped user mapfoo identified by 'bar' role 'rolefoo';
+select current_user();
+current_user()
+rolefoo@localhost
+select time_to_sec(now()) into @first;
+select time_to_sec(now()) into @second;
+select case when (@second - @first) >= 1 then 1 else 0 end;
+case when (@second - @first) >= 1 then 1 else 0 end
+1
+make user 'mapfoo' delayed 0;
+show delayed user;
+User	Delay
+mapfoo	0
+select current_user();
+current_user()
+rolefoo@localhost
+select time_to_sec(now()) into @first;
+select time_to_sec(now()) into @second;
+select case when (@second - @first) >= 1 then 1 else 0 end;
+case when (@second - @first) >= 1 then 1 else 0 end
+0
+update mysql.user set max_connections=1 where user='rolefoo';
+flush privileges;
+connect(localhost,mapfoo,bar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 42000: User 'mapfoo' has exceeded the 'max_user_connections' resource (current value: 1)
+grant usage on *.* to 'rolefoo'@'localhost' with max_queries_per_minute 2;
+flush privileges;
+select current_user();
+current_user()
+rolefoo@localhost
+show databases;
+Database
+information_schema
+mysql
+test
+show databases;
+ERROR 42000: User 'mapfoo' has exceeded the 'max_questions' resource (current value: 2)
+select current_user();
+current_user()
+root@localhost
+select current_user();
+current_user()
+rolefoo@localhost
+show databases;
+Database
+information_schema
+mysql
+test
+drop mapped user mapfoo;
+drop user rolefoo@localhost;

@@ -3770,7 +3770,7 @@ end_with_restore_list:
     mysqld_list_processes(thd,
 			  (thd->security_ctx->master_access & PROCESS_ACL ?
                            NullS :
-                           thd->security_ctx->priv_user),
+                           thd->security_ctx->user),
                           lex->verbose);
     break;
   case SQLCOM_SHOW_AUTHORS:
@@ -8340,6 +8340,9 @@ void get_default_definer(THD *thd, LEX_USER *definer, bool role)
   definer->password= null_lex_str;
   definer->plugin= empty_lex_str;
   definer->auth= empty_lex_str;
+
+  definer->mapped_role.str= NULL;
+  definer->mapped_role.length= 0;
 }
 
 
@@ -8397,6 +8400,8 @@ LEX_USER *create_definer(THD *thd, LEX_STRING *user_name, LEX_STRING *host_name)
 
   definer->user= *user_name;
   definer->host= *host_name;
+  definer->mapped_role.str= NULL;
+  definer->mapped_role.length= 0;
   definer->password.str= NULL;
   definer->password.length= 0;
 

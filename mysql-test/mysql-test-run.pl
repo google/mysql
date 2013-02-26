@@ -174,6 +174,7 @@ my @DEFAULT_SUITES= qw(
     innodb-
     innodb_fts-
     innodb_zip-
+    mapped_users-
     maria-
     multi_source-
     optimizer_unfixed_bugs-

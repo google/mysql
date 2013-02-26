@@ -1,0 +1,88 @@
+#
+# Test host filter via mysql.user.Host for mapped users
+#
+
+# Requires privileges to be enabled
+--source include/not_embedded.inc
+
+--source include/disable_anon_user.inc
+
+create user rolefoo@localhost identified by 'foo';
+grant select on *.* to rolefoo@localhost;
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'mapfoo', password('bar'), '2020-01-01');
+flush privileges;
+
+connect (role_conn, localhost, rolefoo, foo,);
+
+connect (foo_conn, localhost, mapfoo, bar,);
+connection default;
+disconnect foo_conn;
+disconnect role_conn;
+connection default;
+
+--echo #
+--echo # Fails because connection is not from 172.%
+--echo #
+
+update mysql.user set Host = '172.%' where User = 'rolefoo';
+flush privileges;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (role_conn, localhost, rolefoo, foo,);
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (foo_conn, localhost, mapfoo, bar,);
+
+--echo #
+--echo # OK because connection is from '%'
+--echo #
+
+update mysql.user set Host = '%' where User = 'rolefoo';
+flush privileges;
+
+connect (role_conn, localhost, rolefoo, foo,);
+select 'rolefoo,rolefoo', current_user(), user();
+
+connect (foo_conn, localhost, mapfoo, bar,);
+select 'rolefoo,mapfoo', current_user(), user();
+
+connection default;
+disconnect foo_conn;
+disconnect role_conn;
+
+--echo #
+--echo # OK because connection is from 'localhost'
+--echo #
+
+update mysql.user set Host = 'localhost' where User = 'rolefoo';
+flush privileges;
+
+connect (role_conn, localhost, rolefoo, foo,);
+select 'rolefoo,rolefoo', current_user(), user();
+
+connect (foo_conn, localhost, mapfoo, bar,);
+select 'rolefoo,mapfoo', current_user(), user();
+
+connection default;
+disconnect foo_conn;
+disconnect role_conn;
+
+--echo #
+--echo # Cleanup
+--echo #
+
+connection default;
+
+--echo # This deletes all entries that match mapped_user.User
+delete from mysql.mapped_user where user='mapfoo';
+flush privileges;
+select User, Role from mysql.mapped_user;
+
+drop user rolefoo@'localhost';
+flush privileges;
+
+--source include/reenable_anon_user.inc

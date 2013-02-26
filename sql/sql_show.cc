@@ -2680,7 +2680,7 @@ int fill_schema_processlist(THD* thd, TABLE_LIST* tables, COND* cond)
   DEBUG_SYNC(thd,"fill_schema_processlist_after_unow");
 
   user= thd->security_ctx->master_access & PROCESS_ACL ?
-        NullS : thd->security_ctx->priv_user;
+        NullS : thd->security_ctx->user;
 
   mysql_mutex_lock(&LOCK_thread_count);
 
@@ -2799,6 +2799,11 @@ int fill_schema_processlist(THD* thd, TABLE_LIST* tables, COND* cond)
 
       /* QUERY_ID */
       table->field[14]->store(tmp->query_id, TRUE);
+
+      /* ROLE */
+      val= tmp_sctx->priv_user;
+      table->field[15]->store(val, strlen(val), cs);
+      table->field[15]->set_notnull();
 
       if (schema_table_store_record(thd, table))
       {
@@ -3318,7 +3323,7 @@ static int aggregate_user_stats(HASH *all_user_stats, HASH *agg_user_stats)
   1 - error
 */
 
-int send_user_stats(THD* thd, HASH *all_user_stats, TABLE *table)
+int send_user_stats(THD* thd, HASH *all_user_stats, TABLE *table, bool show_role)
 {
   DBUG_ENTER("send_user_stats");
 
@@ -3329,6 +3334,11 @@ int send_user_stats(THD* thd, HASH *all_user_stats, TABLE *table)
     
     table->field[j++]->store(user_stats->user, user_stats->user_name_length,
                              system_charset_info);
+    if (show_role)
+    {
+      table->field[j++]->store(user_stats->priv_user, strlen(user_stats->priv_user),
+                               system_charset_info);
+    }
     table->field[j++]->store((longlong)user_stats->total_connections,TRUE);
     table->field[j++]->store((longlong)user_stats->concurrent_connections, TRUE);
     table->field[j++]->store((longlong)user_stats->connected_time, TRUE);
@@ -3389,7 +3399,7 @@ int fill_schema_user_stats(THD* thd, TABLE_LIST* tables, COND* cond)
   */
 
   mysql_mutex_lock(&LOCK_global_user_client_stats);
-  result= send_user_stats(thd, &global_user_stats, table) != 0;
+  result= send_user_stats(thd, &global_user_stats, table, true) != 0;
   mysql_mutex_unlock(&LOCK_global_user_client_stats);
 
   DBUG_PRINT("exit", ("result: %d", result));
@@ -3424,7 +3434,7 @@ int fill_schema_client_stats(THD* thd, TABLE_LIST* tables, COND* cond)
   */
 
   mysql_mutex_lock(&LOCK_global_user_client_stats);
-  result= send_user_stats(thd, &global_client_stats, table) != 0;
+  result= send_user_stats(thd, &global_client_stats, table, false) != 0;
   mysql_mutex_unlock(&LOCK_global_user_client_stats);
 
   DBUG_PRINT("exit", ("result: %d", result));
@@ -7506,6 +7516,7 @@ struct schema_table_ref
 ST_FIELD_INFO user_stats_fields_info[]=
 {
   {"USER", USERNAME_CHAR_LENGTH, MYSQL_TYPE_STRING, 0, 0, "User", SKIP_OPEN_TABLE},
+  {"ROLE", USERNAME_CHAR_LENGTH, MYSQL_TYPE_STRING, 0, 0, "Role", SKIP_OPEN_TABLE},
   {"TOTAL_CONNECTIONS", MY_INT32_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONG, 0, 0, "Total_connections",SKIP_OPEN_TABLE},
   {"CONCURRENT_CONNECTIONS", MY_INT32_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONG, 0, 0, "Concurrent_connections",SKIP_OPEN_TABLE},
   {"CONNECTED_TIME", MY_INT32_NUM_DECIMAL_DIGITS, MYSQL_TYPE_LONG, 0, 0, "Connected_time",SKIP_OPEN_TABLE},
@@ -8865,6 +8876,7 @@ ST_FIELD_INFO processlist_fields_info[]=
   {"MEMORY_USED", 7, MYSQL_TYPE_LONG, 0, 0, "Memory_used", SKIP_OPEN_TABLE},
   {"EXAMINED_ROWS", 7, MYSQL_TYPE_LONG, 0, 0, "Examined_rows", SKIP_OPEN_TABLE},
   {"QUERY_ID", 4, MYSQL_TYPE_LONGLONG, 0, 0, 0, SKIP_OPEN_TABLE},
+  {"ROLE", 16, MYSQL_TYPE_STRING, 0, 0, "Role", SKIP_OPEN_TABLE},
   {0, 0, MYSQL_TYPE_STRING, 0, 0, 0, SKIP_OPEN_TABLE}
 };
 

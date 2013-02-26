@@ -1,0 +1,257 @@
+#
+# Test the mapped_user table.
+#
+
+# Requires privileges to be enabled.
+--source include/not_embedded.inc
+
+--echo # Prepare play-ground.
+create table t1 (i int);
+create table t2 (i int);
+
+insert into t1 values (1);
+insert into t2 values (2);
+
+show create table mysql.mapped_user;
+
+--echo # Confirm the variable is displayed.
+show variables like "mapped_users";
+
+--echo # Be sure that nothing will bother us.
+--source include/disable_anon_user.inc
+
+create user role1@localhost;
+create user role2@localhost;
+create user role3@localhost identified by 'role3';
+create user role4@localhost identified by 'role4';
+create user role5@localhost identified by 'role5';
+create user role6@localhost identified by 'role6';
+create user role7@localhost identified by 'role7';
+
+grant select on test.t1 to role1@localhost;
+grant select on test.t2 to role2@localhost;
+grant select on test.t2 to role5@localhost;
+grant all privileges on *.* to role6@localhost;
+grant all privileges on *.* to role7@localhost;
+update mysql.user set max_user_connections=2 where user='role7';
+flush privileges;
+show grants for role1@localhost;
+show grants for role2@localhost;
+
+--echo # Confirm access control works for users.
+
+connect (r1, localhost, role1,,);
+select user(), current_user();
+show grants;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t2;
+
+connect (r2, localhost, role5, role5,);
+select user(), current_user();
+show grants;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+select * from t2;
+
+--echo # Confirm that passwords can be changed for normal users.
+set password = password('foobar');
+
+connection default;
+disconnect r1;
+disconnect r2;
+
+--echo # Cannot use with empty Password.
+
+insert into mysql.mapped_user values
+ ('role1', 'invmap1', '', '2020-01-01');
+flush privileges;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (i1, localhost, invmap1,,);
+
+--echo # Cannot use empty Role.
+
+connection default;
+insert into mysql.mapped_user values
+ ('', 'invmap3', Password('invmap3'), '2020-01-01');
+flush privileges;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (i3, localhost, invmap3, invmap3,);
+
+--echo # Don't allow mapped users with no username.
+
+connection default;
+insert into mysql.mapped_user values
+ ('role3', '', Password('role3'), '2020-01-01');
+flush privileges;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT $USER USER
+--error ER_ACCESS_DENIED_ERROR
+connect (i3, localhost,, foobar,);
+
+--echo # Confirm that privileges are enforced for mapped users.
+
+connection default;
+insert into mysql.mapped_user values
+ ('role1', 'map3', Password('map3'), '2020-01-01');
+
+insert into mysql.mapped_user values
+ ('role2', 'map4', Password('map4'), '0000-00-00');
+flush privileges;
+
+connect (mu1, localhost, map3, map3,);
+connect (mu2, localhost, map4, map4,);
+
+connection mu1;
+select user(), current_user();
+show grants;
+select * from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t2;
+
+connection mu2;
+select user(), current_user();
+show grants;
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from t1;
+select * from t2;
+
+--echo # Confirm that passwords cannot be changed for mapped users.
+
+connection mu2;
+--error ER_NOT_SUPPORTED_YET
+set password = password('foobar');
+
+connection default;
+disconnect mu1;
+disconnect mu2;
+
+--echo # Confirm that invalid mappings cannot connect.
+
+connection default;
+insert into mysql.mapped_user values
+ ('bogusrole', 'bogusmap', Password('bogusmap'), '2020-01-01');
+flush privileges;
+
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (bogus, localhost, bogusmap, bugusmap,);
+
+--echo # Test mapped user with 2 valid passwords.
+
+connection default;
+insert into mysql.mapped_user values
+ ('role1', 'map1', Password('map1a'), '2020-01-01');
+
+insert into mysql.mapped_user values
+ ('role1', 'map1', Password('map1b'), '2020-01-01');
+
+insert into mysql.mapped_user values
+ ('role1', 'map1', '', '2020-01-01');
+flush privileges;
+
+--echo # Fails because password is blank.
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (mp1, localhost, map1,,);
+
+connect (mp2, localhost, map1, map1a,);
+select user(), current_user();
+
+connect (mp3, localhost, map1, map1b,);
+select user(), current_user();
+
+--echo # Confirm that bogus passwords cannot be used.
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_ACCESS_DENIED_ERROR
+connect (mp4, localhost, map1, pw2,);
+
+connection default;
+disconnect mp2;
+disconnect mp3;
+
+--echo # Test table_statistics with temporary tables (appends mapped user name).
+connection default;
+insert into mysql.mapped_user values
+ ('role6', 'map6', Password('map6'), '2020-01-01');
+flush privileges;
+connect (mp6, localhost, map6, map6,);
+select user(), current_user();
+
+flush table_statistics;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+create table t3(a int);
+insert into t3 values (1), (2), (3), (4);
+drop table t3;
+
+show table_statistics;
+connection default;
+disconnect mp6;
+
+--echo # Test connection limits per mapped_user.
+connection default;
+insert into mysql.mapped_user values
+ ('role7', 'map7-1', Password('map7-1'), '2020-01-01');
+insert into mysql.mapped_user values
+ ('role7', 'map7-2', Password('map7-2'), '2020-01-01');
+flush privileges;
+
+--echo # The role account exceeds max connections.
+connect (role7_conn1, localhost, role7, role7);
+connect (role7_conn2, localhost, role7, role7);
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_USER_LIMIT_REACHED
+connect (role7_conn3, localhost, role7, role7);
+
+--echo # A mapped user account exceeds max connections.
+connect (map7-1_conn1, localhost, map7-1, map7-1);
+connect (map7-1_conn2, localhost, map7-1, map7-1);
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_USER_LIMIT_REACHED
+connect (map7-1_conn3, localhost, map7-1, map7-1);
+
+--echo # A second mapped user account exceeds max connections.
+connect (map7-2_conn1, localhost, map7-2, map7-2);
+connect (map7-2_conn2, localhost, map7-2, map7-2);
+--replace_result $MASTER_MYSOCK MASTER_SOCKET $MASTER_MYPORT MASTER_PORT
+--error ER_USER_LIMIT_REACHED
+connect (map7-2_conn3, localhost, map7-2, map7-2);
+
+connection default;
+disconnect role7_conn1;
+disconnect role7_conn2;
+disconnect map7-1_conn1;
+disconnect map7-1_conn2;
+disconnect map7-2_conn1;
+disconnect map7-2_conn2;
+sleep 1;
+
+--echo # Cleanup.
+
+drop user role1@localhost;
+drop user role2@localhost;
+drop user role3@localhost;
+drop user role4@localhost;
+drop user role5@localhost;
+drop user role6@localhost;
+drop user role7@localhost;
+
+delete from mysql.mapped_user;
+flush privileges;
+
+drop table t1;
+drop table t2;
+
+--source include/reenable_anon_user.inc

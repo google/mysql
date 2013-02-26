@@ -1,0 +1,58 @@
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create user rolefoo@localhost identified by 'foo';
+grant select on *.* to rolefoo@localhost;
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo', password('bar'), '2020-01-01');
+flush privileges;
+#
+# Fails because connection is not from 172.%
+#
+update mysql.user set Host = '172.%' where User = 'rolefoo';
+flush privileges;
+connect(localhost,rolefoo,foo,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'rolefoo'@'localhost' (using password: YES)
+connect(localhost,mapfoo,bar,test,MASTER_PORT,MASTER_SOCKET);
+ERROR 28000: Access denied for user 'mapfoo'@'localhost' (using password: YES)
+#
+# OK because connection is from '%'
+#
+update mysql.user set Host = '%' where User = 'rolefoo';
+flush privileges;
+select 'rolefoo,rolefoo', current_user(), user();
+rolefoo,rolefoo	current_user()	user()
+rolefoo,rolefoo	rolefoo@%	rolefoo@localhost
+select 'rolefoo,mapfoo', current_user(), user();
+rolefoo,mapfoo	current_user()	user()
+rolefoo,mapfoo	rolefoo@%	mapfoo@localhost
+#
+# OK because connection is from 'localhost'
+#
+update mysql.user set Host = 'localhost' where User = 'rolefoo';
+flush privileges;
+select 'rolefoo,rolefoo', current_user(), user();
+rolefoo,rolefoo	current_user()	user()
+rolefoo,rolefoo	rolefoo@localhost	rolefoo@localhost
+select 'rolefoo,mapfoo', current_user(), user();
+rolefoo,mapfoo	current_user()	user()
+rolefoo,mapfoo	rolefoo@localhost	mapfoo@localhost
+#
+# Cleanup
+#
+# This deletes all entries that match mapped_user.User
+delete from mysql.mapped_user where user='mapfoo';
+flush privileges;
+select User, Role from mysql.mapped_user;
+User	Role
+drop user rolefoo@'localhost';
+flush privileges;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

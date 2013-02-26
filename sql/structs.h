@@ -198,6 +198,7 @@ typedef struct	st_lex_user {
     else
       l->length= strxmov(l->str= buf, user.str, "@", host.str, NullS) - buf;
   }
+  LEX_STRING mapped_role;
 } LEX_USER;
 
 /*
@@ -241,6 +242,11 @@ typedef struct  user_conn {
      is enabled, resources are counted for each user+host separately).
   */
   char *user;
+  /*
+    Pointer to the priv user, the name from the mysql.user table.  This is used
+    for mapped_users, to remember the entry in the mysql.user table.
+  */
+  char *priv_user;
   /* Pointer to host part of the key. */
   char *host;
   /**

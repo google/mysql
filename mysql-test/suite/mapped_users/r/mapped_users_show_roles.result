@@ -1,0 +1,84 @@
+# Prepare play-ground
+create user showrole@localhost identified by 'foo';
+grant select on *.* to showrole@localhost;
+create user showrole2@localhost identified by 'foo';
+grant select on *.* to showrole2@localhost;
+insert into mysql.mapped_user values
+('showrole', 'showmapuser1', Password('showmapuser1'), '2020-01-01');
+insert into mysql.mapped_user values
+('showrole', 'showmapuser2', Password('showmapuser2'), '2020-01-01');
+insert into mysql.mapped_user values
+('showrole2', 'showmapuser3', Password('showmapuser3'), '2020-01-01');
+flush privileges;
+flush user_statistics;
+select current_user();
+current_user()
+showrole@localhost
+select current_user();
+current_user()
+showrole@localhost
+select current_user();
+current_user()
+showrole@localhost
+select current_user();
+current_user()
+showrole2@localhost
+# Make sure that stats get updated for all actions above, sleeping
+select User, Total_connections, Select_commands,
+Lost_connections, Access_denied, Empty_queries
+from information_schema.user_statistics
+order by User;
+User	Total_connections	Select_commands	Lost_connections	Access_denied	Empty_queries
+root	1	0	0	0	0
+showmapuser1	1	2	0	0	0
+showmapuser2	1	1	0	0	0
+showmapuser3	1	1	0	0	0
+select Role, sum(Total_connections), sum(Select_commands),
+sum(Lost_connections), sum(Access_denied), sum(Empty_queries)
+from information_schema.user_statistics
+group by Role order by Role;
+Role	sum(Total_connections)	sum(Select_commands)	sum(Lost_connections)	sum(Access_denied)	sum(Empty_queries)
+root	1	1	0	0	0
+showrole	2	3	0	0	0
+showrole2	1	1	0	0	0
+select User, Total_connections, Select_commands, Lost_connections,
+Access_denied, Empty_queries
+from information_schema.user_statistics
+where User = 'showmapuser1';
+User	Total_connections	Select_commands	Lost_connections	Access_denied	Empty_queries
+showmapuser1	1	2	0	0	0
+select Role, sum(Total_connections), sum(Select_commands),
+sum(Lost_connections), sum(Access_denied), sum(Empty_queries)
+from information_schema.user_statistics
+where Role = 'showrole';
+Role	sum(Total_connections)	sum(Select_commands)	sum(Lost_connections)	sum(Access_denied)	sum(Empty_queries)
+showrole	2	3	0	0	0
+select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User;
+User	Host	db	Command	State	Info	Role
+root	localhost	test	Query	Filling schema table	select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User	root
+showmapuser1	localhost	test	Sleep		NULL	showrole
+showmapuser2	localhost	test	Sleep		NULL	showrole
+showmapuser3	localhost	test	Sleep		NULL	showrole2
+select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User;
+User	Host	db	Command	State	Info	Role
+showmapuser1	localhost	test	Query	Filling schema table	select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User	showrole
+select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User;
+User	Host	db	Command	State	Info	Role
+showrole	localhost	test	Query	Filling schema table	select User, Host, db, Command, State, Info, Role
+from information_schema.processlist
+order by User	showrole
+# cleanup
+drop user showrole@localhost;
+drop user showrole2@localhost;
+delete from mysql.mapped_user;
+flush privileges;

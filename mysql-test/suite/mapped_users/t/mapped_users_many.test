@@ -1,0 +1,317 @@
+#
+# Test
+#   user and mapped user name have same value
+#   mapped user entries have:
+#     name  role  password
+#     same  same  same -> create raises error
+#     same  same  diff -> OK
+#     same  diff  same -> create raises error
+#     same  diff  diff -> password determines role
+#     diff  same  same -> name determines role
+#     diff  same  diff -> name determines role
+#     diff  diff  diff -> name determine role
+#
+
+# Requires privileges to be enabled
+--source include/not_embedded.inc
+
+--echo # Prepare play-ground
+select user(), current_user();
+
+--source include/disable_anon_user.inc
+
+create table t1 (i int);
+create table t2 (i int);
+
+insert into t1 values (1);
+insert into t2 values (1);
+
+create user rolefoo@localhost identified by 'bar';
+create user rolefoo2@localhost identified by 'bar';
+create user rolefoodup@localhost identified by 'bar';
+
+grant select on test.t1 to rolefoo@localhost;
+grant select on test.t1 to rolefoodup@localhost;
+grant select on test.t2 to rolefoo2@localhost;
+
+--echo # Confirm use of mysql.user entry when mysql.mapped_user
+--echo # entry has the same name.
+
+--echo # Test mysql.user entries are checked first;
+
+insert into mysql.mapped_user values
+  ('bogus', 'rolefoo', password('bar'), '2020-01-01');
+flush privileges;
+connect (same_conn, localhost, rolefoo, bar,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect same_conn;
+
+--echo # Test mapped user entries have:
+--echo #   name  role  password
+--echo #   same  same  same -> create raises error
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'same_mu', password('bar'), '2020-01-01');
+flush privileges;
+
+connect (same_conn, localhost, same_mu, bar,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect same_conn;
+
+--echo # Test mapped user entries have:
+--echo #   name  role  password
+--echo #   same  same  diff -> OK, sql_acl code retries until match found
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'mu1', password('bar1'), '2020-01-01'),
+  ('rolefoo', 'mu1', password('bar2'), '2020-01-01'),
+  ('rolefoo', 'mu1', password('bar3'), '2020-01-01'),
+  ('rolefoo', 'mu1', password('bar4'), '2020-01-01');
+flush privileges;
+
+connect (mu1_conn,localhost,mu1,bar1,test);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+connect (mu1_conn,localhost,mu1,bar2,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+connect (mu1_conn, localhost, mu1, bar3,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+connect (mu1_conn, localhost, mu1, bar4,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect mu1_conn;
+
+--echo # Test mapped user entries have:
+--echo #   name  role  password
+--echo #   same  diff  same -> create raises error
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'sds', password('bar3'), '2020-01-01');
+flush privileges;
+
+--echo # Create duplicate, error;
+--error ER_DUP_ENTRY
+insert into mysql.mapped_user values
+  ('rolefoodup', 'sds', password('bar3'), '2020-01-01');
+
+connect (sds_conn, localhost, sds, bar3,);
+select user(), current_user();
+select count(*) from t1;
+connection default;
+disconnect sds_conn;
+
+--echo # Test mapped user entries have:
+--echo #   name  role  password
+--echo #   same  diff  diff -> password determines role
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'sdd', password('bar5'), '2020-01-01'),
+  ('rolefoo2', 'sdd', password('bar6'), '2020-01-01');
+flush privileges;
+
+connect (sdd_conn, localhost, sdd, bar5,);
+select user(), current_user();
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+connection default;
+disconnect sdd_conn;
+
+connect (sdd_conn, localhost, sdd, bar6,);
+select user(), current_user();
+select count(*) from t2;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t1;
+connection default;
+disconnect sdd_conn;
+
+--echo # Test mapped user entries have:
+--echo #   name  role  password
+--echo #   diff  same  same -> name determines role
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'dss1', password('bar7'), '2020-01-01'),
+  ('rolefoo', 'dss2', password('bar7'), '2020-01-01');
+flush privileges;
+
+connect (dss_conn, localhost, dss1, bar7,);
+select user(), current_user();
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+connection default;
+disconnect dss_conn;
+
+connect (dss_conn, localhost, dss2, bar7,);
+select user(), current_user();
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+connection default;
+disconnect dss_conn;
+
+--echo # Test mapped user entries have:
+--echo #   name  role  password
+--echo #   diff  same  diff -> name determines role
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'dsd1', password('bar8'), '2020-01-01'),
+  ('rolefoo', 'dsd2', password('bar9'), '2020-01-01');
+flush privileges;
+
+connect (dsd_conn, localhost, dsd1, bar8,);
+select user(), current_user();
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+connection default;
+disconnect dsd_conn;
+
+connect (dsd_conn, localhost, dsd2, bar9,);
+select user(), current_user();
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+connection default;
+disconnect dsd_conn;
+
+--echo # Test mapped user entries have:
+--echo #   name  role  password
+--echo #   diff  diff  diff -> name determine role
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'ddd1', password('bar8'), '2020-01-01'),
+  ('rolefoo2', 'ddd2', password('bar9'), '2020-01-01');
+flush privileges;
+
+connect (ddd_conn, localhost, ddd1, bar8,);
+select user(), current_user();
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+connection default;
+disconnect ddd_conn;
+
+connect (ddd_conn, localhost, ddd2, bar9,);
+select user(), current_user();
+select count(*) from t2;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t1;
+connection default;
+disconnect ddd_conn;
+
+--echo # Check that automatic user permissions update works with mapped users
+--echo # with the same name but different passwords.
+
+insert into mysql.mapped_user values
+  ('rolefoo', 'user1', password('foo1'), '2020-01-01'),
+  ('rolefoo2', 'user1', password('foo2'), '2020-01-01');
+flush privileges;
+
+connect (conn_foo, localhost, user1, foo1, );
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t2;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (2);
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t2 values (2);
+connect (conn_foo2, localhost, user1, foo2, );
+select count(*) from t2;
+--error ER_TABLEACCESS_DENIED_ERROR
+select count(*) from t1;
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (3);
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t2 values (3);
+
+connection default;
+grant insert on test.t1 to rolefoo2@localhost;
+grant insert on test.t2 to rolefoo@localhost;
+connection conn_foo;
+insert into t2 values (4);
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t1 values (4);
+connection conn_foo2;
+insert into t1 values (5);
+--error ER_TABLEACCESS_DENIED_ERROR
+insert into t2 values (5);
+connection default;
+select * from t1;
+select * from t2;
+
+--echo # Automatic connection drops should respect password difference too.
+
+rename user rolefoo@localhost to rolefoo_copy@localhost;
+connection conn_foo;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from t1;
+connection conn_foo2;
+select * from t2;
+
+connection default;
+rename user rolefoo_copy@localhost to rolefoo@localhost;
+disconnect conn_foo;
+connect (conn_foo, localhost, user1, foo1, );
+select * from t1;
+connection default;
+rename user rolefoo2@localhost to rolefoo2_copy@localhost;
+connection conn_foo2;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from t2;
+connection conn_foo;
+select * from t1;
+
+connection default;
+rename user rolefoo2_copy@localhost to rolefoo2@localhost;
+disconnect conn_foo2;
+connect (conn_foo2, localhost, user1, foo2, );
+select * from t2;
+connection default;
+delete from mysql.mapped_user where user='user1';
+flush privileges;
+connection conn_foo;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from t1;
+connection conn_foo2;
+# Errors "MySQL server has gone away" or "Lost connection to MySQL server"
+--error ER_QUERY_INTERRUPTED,2006,2013
+select * from t2;
+
+connection default;
+disconnect conn_foo;
+disconnect conn_foo2;
+
+--echo # cleanup
+connection default;
+drop user rolefoo@localhost;
+drop user rolefoo2@localhost;
+drop user rolefoodup@localhost;
+delete from mysql.mapped_user;
+flush privileges;
+
+select User, Role from mysql.mapped_user;
+
+drop table t1;
+drop table t2;
+
+--source include/reenable_anon_user.inc

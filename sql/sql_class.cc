@@ -3829,6 +3829,7 @@ void Security_context::init()
   host= user= ip= external_user= 0;
   host_or_ip= "connecting host";
   priv_user[0]= priv_host[0]= proxy_user[0]= priv_role[0]= '\0';
+  uses_mapped_role= false;
   master_access= 0;
   is_system_user= false;
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
@@ -3871,6 +3872,7 @@ void Security_context::skip_grants()
   host_or_ip= (char *)"";
   master_access= ~NO_ACCESS;
   *priv_user= *priv_host= '\0';
+  uses_mapped_role= false;
 }
 
 

@@ -1122,6 +1122,17 @@ public:
   char   *external_user;
   /* points to host if host is available, otherwise points to ip */
   const char *host_or_ip;
+
+  /*
+    When TRUE:
+      - user authenticated with a role account.
+      - user == name from mapped_user table.
+      - priv_user == name from user table.
+      - In this case, priv_user is the role name and password authentication
+        used values from the mapped_user table.
+  */
+  bool uses_mapped_role;
+
   ulong master_access;                 /* Global privileges from mysql.user */
   ulong db_access;                     /* Privileges for current db */
   uint64_t access_ver;                 /* Version of privileges remembered in

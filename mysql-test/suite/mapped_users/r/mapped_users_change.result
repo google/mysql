@@ -1,0 +1,126 @@
+# Prepare play-ground
+select user(), current_user();
+user()	current_user()
+root@localhost	root@localhost
+create table mysql.user_bak like mysql.user;
+insert into mysql.user_bak select * from mysql.user where User = '';
+delete from mysql.user where User = '';
+create table mysql.db_bak like mysql.db;
+insert into mysql.db_bak select * from mysql.db where User = '';
+delete from mysql.db where User = '';
+flush privileges;
+create table t1 (i int);
+create table t2 (i int);
+insert into t1 values (1);
+insert into t2 values (1);
+create user rolefoo@localhost identified by 'bar';
+create user rolefoo2@localhost identified by 'bar';
+insert into mysql.mapped_user values
+('rolefoo', 'mapfoo', password('bar'), '2020-01-01'),
+('rolefoo2', 'mapfoo2', password('bar'), '2020-01-01');
+flush privileges;
+grant select on test.t1 to rolefoo@localhost;
+grant select on test.t2 to rolefoo2@localhost;
+# from user to user
+select user(), current_user(), 'before change to rolefoo';
+user()	current_user()	before change to rolefoo
+root@localhost	root@localhost	before change to rolefoo
+change user to rolefoo
+select user(), current_user(), 'after change to rolefoo';
+user()	current_user()	after change to rolefoo
+rolefoo@localhost	rolefoo@localhost	after change to rolefoo
+show grants;
+Grants for rolefoo@localhost
+GRANT USAGE ON *.* TO 'rolefoo'@'localhost' IDENTIFIED BY PASSWORD '*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+GRANT SELECT ON `test`.`t1` TO 'rolefoo'@'localhost'
+use test;
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+# from user to mapped user
+select user(), current_user(), 'before change to mapfoo';
+user()	current_user()	before change to mapfoo
+root@localhost	root@localhost	before change to mapfoo
+change user to rolefoo
+select user(), current_user(), 'after change to mapfoo';
+user()	current_user()	after change to mapfoo
+mapfoo@localhost	rolefoo@localhost	after change to mapfoo
+show grants;
+Grants for rolefoo@localhost
+GRANT USAGE ON *.* TO 'rolefoo'@'localhost' IDENTIFIED BY PASSWORD '*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+GRANT SELECT ON `test`.`t1` TO 'rolefoo'@'localhost'
+use test;
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+# from mapped user to user
+select user(), current_user(), 'before change to rolefoo2';
+user()	current_user()	before change to rolefoo2
+mapfoo@localhost	rolefoo@localhost	before change to rolefoo2
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+change user to rolefoo2
+select user(), current_user(), 'after change to rolefoo2';
+user()	current_user()	after change to rolefoo2
+rolefoo2@localhost	rolefoo2@localhost	after change to rolefoo2
+show grants;
+Grants for rolefoo2@localhost
+GRANT USAGE ON *.* TO 'rolefoo2'@'localhost' IDENTIFIED BY PASSWORD '*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+GRANT SELECT ON `test`.`t2` TO 'rolefoo2'@'localhost'
+use test;
+select count(*) from t2;
+count(*)
+1
+select count(*) from t1;
+ERROR 42000: SELECT command denied to user 'rolefoo2'@'localhost' for table 't1'
+# from mapped user to mapped user
+select user(), current_user(), 'before change to mapfoo2';
+user()	current_user()	before change to mapfoo2
+mapfoo@localhost	rolefoo@localhost	before change to mapfoo2
+select count(*) from t1;
+count(*)
+1
+select count(*) from t2;
+ERROR 42000: SELECT command denied to user 'rolefoo'@'localhost' for table 't2'
+change user to mapfoo2
+select user(), current_user(), 'after change to mapfoo2';
+user()	current_user()	after change to mapfoo2
+mapfoo2@localhost	rolefoo2@localhost	after change to mapfoo2
+show grants;
+Grants for rolefoo2@localhost
+GRANT USAGE ON *.* TO 'rolefoo2'@'localhost' IDENTIFIED BY PASSWORD '*E8D46CE25265E545D225A8A6F1BAF642FEBEE5CB'
+GRANT SELECT ON `test`.`t2` TO 'rolefoo2'@'localhost'
+use test;
+select count(*) from t2;
+count(*)
+1
+select count(*) from t1;
+ERROR 42000: SELECT command denied to user 'rolefoo2'@'localhost' for table 't1'
+# confirm that change password fails for mapped users
+select user(), current_user(), 'before set password';
+user()	current_user()	before set password
+mapfoo@localhost	rolefoo@localhost	before set password
+# must fail
+set password = password('foobar');
+ERROR 42000: This version of MariaDB doesn't yet support 'CHANGE PASSWORD for mapped users'
+# cleanup
+drop user rolefoo@localhost;
+drop user rolefoo2@localhost;
+delete from mysql.mapped_user where user in ('mapfoo', 'mapfoo2');
+flush privileges;
+select User, Role from mysql.mapped_user;
+User	Role
+drop table t1;
+drop table t2;
+insert into mysql.db select * from mysql.db_bak;
+drop table mysql.db_bak;
+insert into mysql.user select * from mysql.user_bak;
+drop table mysql.user_bak;
+flush privileges;

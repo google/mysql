@@ -66,7 +66,7 @@
 let $table= processlist;
 #
 # columns of the information_schema table e.g. to use in a select.
-let $columns= ID, USER, HOST, DB, COMMAND, TIME, STATE, INFO, TIME_MS, STAGE, MAX_STAGE, PROGRESS, MEMORY_USED, EXAMINED_ROWS, QUERY_ID;
+let $columns= ID, USER, HOST, DB, COMMAND, TIME, STATE, INFO, TIME_MS, STAGE, MAX_STAGE, PROGRESS, MEMORY_USED, EXAMINED_ROWS, QUERY_ID, ROLE;
 #
 # Where clause for an update.
 let $update_where= WHERE id=1 ;
