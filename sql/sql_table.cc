@@ -2840,7 +2840,10 @@ mysql_prepare_create_table(THD *thd, HA_CREATE_INFO *create_info,
 	  sql_field->charset=		(dup_field->charset ?
 					 dup_field->charset :
 					 create_info->default_table_charset);
-	  sql_field->length=		dup_field->char_length;
+	  if (sql_field->sql_type == MYSQL_TYPE_ENUM)
+	    sql_field->length=		dup_field->length;
+	  else
+	    sql_field->length=		dup_field->char_length;
           sql_field->pack_length=	dup_field->pack_length;
           sql_field->key_length=	dup_field->key_length;
 	  sql_field->decimals=		dup_field->decimals;
