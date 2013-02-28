@@ -2611,3 +2611,24 @@ unlock tables;
 drop table t1,t2;
 create table t1;
 ERROR 42000: A table must have at least 1 column
+# Regression test for https://mariadb.atlassian.net/browse/MDEV-4215
+drop table if exists t1;
+drop table if exists t2;
+create table t1 (e enum('one', 'two'));
+insert into t1 values ('one');
+create table t2 (e enum('one', 'two')) as select * from t1;
+select * from t2;
+e
+one
+select * from t2 union all select * from t2;
+e
+one
+one
+alter table t2 engine=MyISAM;
+select * from t2 union all select * from t2;
+e
+one
+one
+drop table t1;
+drop table t2;
+# End of https://mariadb.atlassian.net/browse/MDEV-4215
