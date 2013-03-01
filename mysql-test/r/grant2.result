@@ -764,7 +764,7 @@ n
 10
 drop user user1;
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 create user user1;
 grant all privileges on *.* to user1 with grant option;
 select * from d1.t1;
@@ -775,7 +775,7 @@ drop user user1;
 create user user1;
 grant all privileges on *.* to user1 with grant option;
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from d1.t1;
 n
 8
@@ -783,7 +783,7 @@ n
 rename user user1 to user2;
 rename user user2 to user1;
 select * from d1.t1;
-ERROR HY000: MySQL server has gone away
+Got one of the listed errors
 select * from d1.t1;
 n
 8
