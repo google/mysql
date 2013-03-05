@@ -974,7 +974,7 @@ connection default;
 drop user user1;
 connection conn1;
 --disable_result_log
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2013
 reap;
 --enable_result_log
 # Errors "MySQL server has gone away" or "Lost connection to MySQL server"
