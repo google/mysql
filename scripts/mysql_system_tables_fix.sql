@@ -601,5 +601,25 @@ ALTER TABLE db MODIFY Trigger_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT
 
 UPDATE user SET Trigger_priv=Super_priv WHERE @hadTriggerPriv = 0;
 
+# Convert all tables to InnoDB. Note: not all tables are mentioned below
+# because some of them already have ALTER statements above of the form
+# ALTER TABLE ... MODIFY ... ENGINE=InnoDB. These statements will already do
+# the job of changing storage engines, so we won't do that here again.
+ALTER TABLE plugin ENGINE=InnoDB;
+ALTER TABLE servers ENGINE=InnoDB;
+ALTER TABLE help_topic ENGINE=InnoDB;
+ALTER TABLE help_category ENGINE=InnoDB;
+ALTER TABLE help_relation ENGINE=InnoDB;
+ALTER TABLE help_keyword ENGINE=InnoDB;
+ALTER TABLE time_zone_name ENGINE=InnoDB;
+ALTER TABLE time_zone ENGINE=InnoDB;
+ALTER TABLE time_zone_transition ENGINE=InnoDB;
+ALTER TABLE time_zone_transition_type ENGINE=InnoDB;
+ALTER TABLE time_zone_leap_second ENGINE=InnoDB;
+ALTER TABLE proc ENGINE=InnoDB;
+ALTER TABLE event ENGINE=InnoDB;
+ALTER TABLE ndb_binlog_index ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS system_user LIKE user;
 ALTER TABLE system_user comment='System user accounts and their global privileges';
+ALTER TABLE system_user ENGINE=InnoDB;
