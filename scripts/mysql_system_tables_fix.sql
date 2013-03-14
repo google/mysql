@@ -623,3 +623,6 @@ ALTER TABLE ndb_binlog_index ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS system_user LIKE user;
 ALTER TABLE system_user comment='System user accounts and their global privileges';
 ALTER TABLE system_user ENGINE=InnoDB;
+
+ALTER TABLE mapped_user ENGINE=InnoDB;
+
