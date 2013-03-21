@@ -694,6 +694,7 @@ pthread_mutex_t LOCK_mysql_create_db, LOCK_Acl, LOCK_open, LOCK_thread_count,
 	        LOCK_global_system_variables,
 		LOCK_user_conn, LOCK_slave_list, LOCK_active_mi,
                 LOCK_connection_count;
+pthread_mutex_t LOCK_cleanup;
 /**
   The below lock protects access to two global server variables:
   max_prepared_stmt_count and prepared_stmt_count. These variables
@@ -732,11 +733,12 @@ char *opt_logname, *opt_slow_logname;
 /* Static variables */
 
 static volatile sig_atomic_t kill_in_progress;
+static volatile sig_atomic_t cleanup_done;
 #ifdef HAVE_STACK_TRACE_ON_SEGV
 static my_bool opt_do_pstack;
 #endif /* HAVE_STACK_TRACE_ON_SEGV */
 static my_bool opt_bootstrap, opt_myisam_log;
-static int cleanup_done;
+static my_bool cleanup_started;
 static ulong opt_specialflag, opt_myisam_block_size;
 static char *opt_update_logname, *opt_binlog_index_name;
 static char *opt_tc_heuristic_recover;
@@ -1307,8 +1309,15 @@ extern "C" void unireg_abort(int exit_code)
 void clean_up(bool print_message)
 {
   DBUG_PRINT("exit",("clean_up"));
-  if (cleanup_done++)
+  pthread_mutex_lock(&LOCK_cleanup);
+  if (cleanup_started)
+  {
+    pthread_mutex_unlock(&LOCK_cleanup);
     return; /* purecov: inspected */
+  }
+  else
+    cleanup_started= true;
+  pthread_mutex_unlock(&LOCK_cleanup);
 
   stop_handle_manager();
   release_ddl_log();
@@ -1414,6 +1423,9 @@ void clean_up(bool print_message)
   (void) pthread_mutex_lock(&LOCK_thread_count);
   DBUG_PRINT("quit", ("got thread count lock"));
   ready_to_exit=1;
+
+  cleanup_done= 1;
+
   /* do the broadcast inside the lock to ensure that my_end() is not called */
   (void) pthread_cond_broadcast(&COND_thread_count);
   (void) pthread_mutex_unlock(&LOCK_thread_count);
@@ -1495,6 +1507,7 @@ static void clean_up_mutexes()
   (void) pthread_cond_destroy(&COND_thread_cache);
   (void) pthread_cond_destroy(&COND_flush_thread_cache);
   (void) pthread_cond_destroy(&COND_manager);
+  (void) pthread_mutex_destroy(&LOCK_cleanup);
 }
 
 #endif /*EMBEDDED_LIBRARY*/
@@ -3520,6 +3533,7 @@ static int init_thread_environment()
 #endif
   (void) pthread_mutex_init(&LOCK_server_started, MY_MUTEX_INIT_FAST);
   (void) pthread_cond_init(&COND_server_started,NULL);
+  (void) pthread_mutex_init(&LOCK_cleanup, MY_MUTEX_INIT_FAST);
   sp_cache_init();
 #ifdef HAVE_EVENT_SCHEDULER
   Events::init_mutexes();
@@ -7741,6 +7755,7 @@ static int mysql_init_variables(void)
   opt_bootstrap= opt_myisam_log= 0;
   mqh_used= 0;
   kill_in_progress= 0;
+  cleanup_started= 0;
   cleanup_done= 0;
   defaults_argc= 0;
   defaults_argv= 0;
