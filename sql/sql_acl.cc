@@ -8778,9 +8778,14 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
       {
         if (error)
         {
-          /* Most probable 'deleted record'. */
-          DBUG_PRINT("info",("scan error: %d", error));
-          continue;
+          if (error == HA_ERR_RECORD_DELETED)
+          {
+            DBUG_PRINT("info",("scan error: %d", error));
+            continue;
+          }
+          table->file->print_error(error, MYF(0));
+          result= -1;
+          break;
         }
         host= safe_str(get_field(thd->mem_root, host_field));
         user= safe_str(get_field(thd->mem_root, user_field));
