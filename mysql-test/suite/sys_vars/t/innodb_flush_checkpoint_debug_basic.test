@@ -1,5 +1,5 @@
 --source include/have_debug.inc
---source include/have_xtradb.inc
+--source include/have_innodb.inc
 
 SELECT @@global.innodb_flush_checkpoint_debug;
 SET @@global.innodb_flush_checkpoint_debug=1;
