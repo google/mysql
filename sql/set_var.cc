@@ -517,7 +517,9 @@ static sys_var_const            sys_protocol_version(&vars, "protocol_version",
                                                      &protocol_version);
 static sys_var_thd_ulong	sys_read_buff_size(&vars, "read_buffer_size",
 					   &SV::read_buff_size);
-static sys_var_opt_readonly	sys_readonly(&vars, "read_only", &opt_readonly);
+static sys_var_server_readonly	sys_readonly(&vars, "read_only", &opt_readonly);
+static sys_var_server_readonly	sys_disk_quota_exceeded(&vars, "disk_quota_exceeded",
+                                                        &opt_disk_quota_exceeded);
 static sys_var_thd_ulong	sys_read_rnd_buff_size(&vars, "read_rnd_buffer_size",
 					       &SV::read_rnd_buff_size);
 static sys_var_thd_ulong	sys_div_precincrement(&vars, "div_precision_increment",
@@ -4239,11 +4241,11 @@ bool sys_var_trust_routine_creators::update(THD *thd, set_var *var)
   return sys_var_bool_ptr::update(thd, var);
 }
 
-bool sys_var_opt_readonly::update(THD *thd, set_var *var)
+bool sys_var_server_readonly::update(THD *thd, set_var *var)
 {
   bool result;
 
-  DBUG_ENTER("sys_var_opt_readonly::update");
+  DBUG_ENTER("sys_var_server_readonly::update");
 
   /* Prevent self dead-lock */
   if (thd->locked_tables || thd->active_transaction())
@@ -4293,7 +4295,7 @@ bool sys_var_opt_readonly::update(THD *thd, set_var *var)
   if ((result= make_global_read_lock_block_commit(thd)))
     goto end_with_read_lock;
 
-  /* Change the opt_readonly system variable, safe because the lock is held */
+  /* Change the system variable, safe because the lock is held */
   result= sys_var_bool_ptr::update(thd, var);
 
 end_with_read_lock:

@@ -2000,6 +2000,7 @@ extern my_bool opt_safe_show_db, opt_local_infile, opt_myisam_use_mmap;
 extern my_bool opt_slave_compressed_protocol, use_temp_pool;
 extern ulong slave_exec_mode_options;
 extern my_bool opt_readonly, lower_case_file_system;
+extern my_bool opt_disk_quota_exceeded;
 extern my_bool opt_enable_named_pipe, opt_sync_frm, opt_allow_suspicious_udfs;
 extern my_bool opt_secure_auth;
 extern char* opt_secure_file_priv;
@@ -2010,6 +2011,11 @@ extern uint opt_crash_binlog_innodb;
 extern char *shared_memory_base_name, *mysqld_unix_port;
 extern my_bool opt_enable_shared_memory;
 extern char *default_tz_name;
+
+inline bool server_is_writable()
+{ return !(opt_readonly || opt_disk_quota_exceeded); }
+void issue_server_not_writable_error(); // defined/documented in mysqld.cc
+
 #endif /* MYSQL_SERVER */
 #if defined MYSQL_SERVER || defined INNODB_COMPATIBILITY_HOOKS
 extern my_bool opt_large_pages;

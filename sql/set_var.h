@@ -1209,16 +1209,15 @@ public:
 
 
 /**
-  Handler for setting the system variable --read-only.
+  Handler for setting the system variables read_only and disk_quota_exceeded
 */
 
-class sys_var_opt_readonly :public sys_var_bool_ptr
+class sys_var_server_readonly :public sys_var_bool_ptr
 {
 public:
-  sys_var_opt_readonly(sys_var_chain *chain, const char *name_arg, 
-                       my_bool *value_arg) :
+  sys_var_server_readonly(sys_var_chain *chain, const char *name_arg,
+                          my_bool *value_arg) :
     sys_var_bool_ptr(chain, name_arg, value_arg) {};
-  ~sys_var_opt_readonly() {};
   bool update(THD *thd, set_var *var);
 };
 

@@ -1176,11 +1176,11 @@ int ha_commit_trans(THD *thd, bool all)
     }
 
     if (rw_trans &&
-        opt_readonly &&
+        !server_is_writable() &&
         !(thd->security_ctx->master_access & SUPER_ACL) &&
         !thd->slave_thread)
     {
-      my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+      issue_server_not_writable_error();
       ha_rollback_trans(thd, all);
       error= 1;
       goto end;

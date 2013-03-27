@@ -526,6 +526,7 @@ extern const char *opt_ndb_distribution;
 extern enum ndb_distribution opt_ndb_distribution_id;
 #endif
 my_bool opt_readonly, use_temp_pool, relay_log_purge;
+my_bool opt_disk_quota_exceeded= 0;
 my_bool opt_sync_frm, opt_allow_suspicious_udfs;
 my_bool opt_secure_auth= 0;
 char* opt_secure_file_priv= 0;
@@ -9079,6 +9080,23 @@ static int get_options(int *argc,char **argv)
     max_long_data_size= global_system_variables.max_allowed_packet;
 
   return 0;
+}
+
+/*
+  Issue the appropriate error when a command is prevented from running because the
+  server is not writable.  Should be called only if server_is_writable() returns
+  false.
+ */
+void issue_server_not_writable_error()
+{
+  if (opt_disk_quota_exceeded)
+  {
+    my_error(ER_DISK_FULL, MYF(0), "quota exceeded");
+  }
+  else
+  {
+    my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+  }
 }
 
 

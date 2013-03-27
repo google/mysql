@@ -1,0 +1,48 @@
+DROP TABLE IF EXISTS table_11733 ;
+grant CREATE, SELECT, DROP on *.* to test@localhost;
+set global disk_quota_exceeded=0;
+create table table_11733 (a int) engine=InnoDb;
+BEGIN;
+insert into table_11733 values(11733);
+set global disk_quota_exceeded=1;
+select @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+1
+select * from table_11733 ;
+a
+11733
+COMMIT;
+ERROR HY000: Disk full (quota exceeded); waiting for someone to free some space...
+set global disk_quota_exceeded=0;
+drop table table_11733 ;
+drop user test@localhost;
+GRANT CREATE, SELECT, DROP ON *.* TO test@localhost;
+CREATE TABLE t1(a INT) ENGINE=INNODB;
+INSERT INTO t1 VALUES (0), (1);
+SET GLOBAL disk_quota_exceeded=1;
+SELECT * FROM t1;
+a
+0
+1
+BEGIN;
+SELECT * FROM t1;
+a
+0
+1
+COMMIT;
+SET GLOBAL disk_quota_exceeded=0;
+FLUSH TABLES WITH READ LOCK;
+SELECT * FROM t1;
+a
+0
+1
+BEGIN;
+SELECT * FROM t1;
+a
+0
+1
+COMMIT;
+UNLOCK TABLES;
+DROP TABLE t1;
+DROP USER test@localhost;
+echo End of 5.1 tests 
