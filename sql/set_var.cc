@@ -563,9 +563,6 @@ static sys_var_const            sys_pid_file(&vars, "pid_file",
 static sys_var_const_os         sys_plugin_dir(&vars, "plugin_dir",
                                                OPT_GLOBAL, SHOW_CHAR,
                                                (uchar*) opt_plugin_dir);
-static sys_var_const            sys_port(&vars, "port",
-                                         OPT_GLOBAL, SHOW_CHAR_PTR,
-                                         (uchar*) &mysqld_ports_str);
 static sys_var_thd_ulong        sys_preload_buff_size(&vars, "preload_buffer_size",
                                               &SV::preload_buff_size);
 static sys_var_const            sys_protocol_version(&vars, "protocol_version",
@@ -644,9 +641,23 @@ static sys_var_bool_ptr sys_update_connection_privs(&vars, "update_connection_pr
 
 static sys_var_thd_ulong	sys_range_alloc_block_size(&vars, "range_alloc_block_size",
 						   &SV::range_alloc_block_size);
-static sys_var_const            sys_repl_port(&vars, "repl_port",
-                                              OPT_GLOBAL, SHOW_INT,
-                                              (uchar*) &mysqld_repl_port);
+
+static uchar *get_sys_repl_port(THD *thd)
+{
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+
+  char *str_repl_port = (char *)thd->alloc(MY_INT64_NUM_DECIMAL_DIGITS+1);
+  my_snprintf(str_repl_port, MY_INT64_NUM_DECIMAL_DIGITS, "%u",
+              mysqld_repl_port);
+  return (uchar *)str_repl_port;
+}
+
+static sys_var_readonly sys_repl_port(&vars, "repl_port",
+                                      OPT_GLOBAL, SHOW_CHAR,
+                                      get_sys_repl_port);
+
 static sys_var_thd_ulong	sys_query_alloc_block_size(&vars, "query_alloc_block_size",
 						   &SV::query_alloc_block_size,
 						   0, fix_thd_mem_root);
@@ -855,8 +866,19 @@ static sys_var_thd_ulonglong	sys_tmp_table_size(&vars, "tmp_table_size",
 static sys_var_bool_ptr  sys_timed_mutexes(&vars, "timed_mutexes",
                                     &timed_mutexes);
 static sys_var_const_str	sys_version(&vars, "version", server_version);
-static sys_var_const_str	sys_version_comment(&vars, "version_comment",
-                                            MYSQL_COMPILATION_COMMENT);
+
+uchar *get_sys_version_comment(THD *thd)
+{
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+  return (uchar *)server_version_comment;
+}
+
+static sys_var_readonly sys_version_comment(&vars, "version_comment",
+                                            OPT_GLOBAL, SHOW_CHAR,
+                                            get_sys_version_comment);
+
 static sys_var_const_str	sys_version_compile_machine(&vars, "version_compile_machine",
                                                     MACHINE_TYPE);
 static sys_var_const_str	sys_version_compile_os(&vars, "version_compile_os",
@@ -1003,6 +1025,10 @@ sys_identity(&vars, "identity", sys_var::SESSION_VARIABLE_IN_BINLOG);
 static sys_var_thd_lc_time_names
 sys_lc_time_names(&vars, "lc_time_names", sys_var::SESSION_VARIABLE_IN_BINLOG);
 
+static sys_var_bool_ptr sys_hide_sensitive_information(&vars,
+                                                     "hide_sensitive_information",
+                                                     &opt_hide_sensitive_information);
+
 /*
   insert_id should *not* be marked as written to the binlog (i.e., it
   should *not* have binlog_status==SESSION_VARIABLE_IN_BINLOG),
@@ -1046,21 +1072,58 @@ sys_var_thd_ulong               sys_group_concat_max_len(&vars, "group_concat_ma
 sys_var_thd_time_zone sys_time_zone(&vars, "time_zone",
                                     sys_var::SESSION_VARIABLE_IN_BINLOG);
 
-/* Global read-only variable containing hostname */
-static sys_var_const_str        sys_hostname(&vars, "hostname", glob_hostname);
+/* Retrieve the hostname only if the user is allowed to see it. */
+static uchar *get_sys_hostname(THD *thd)
+{
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+  return (uchar *)glob_hostname;
+}
+
+static sys_var_readonly sys_hostname(&vars, "hostname", OPT_GLOBAL,
+                                     SHOW_CHAR, get_sys_hostname);
+
+static uchar *get_sys_port(THD *thd)
+{
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+  return (uchar *)mysqld_ports_str;
+}
+
+static sys_var_readonly sys_port(&vars, "port", OPT_GLOBAL,
+                                 SHOW_CHAR, get_sys_port);
 
 #ifndef EMBEDDED_LIBRARY
-static sys_var_const_str_ptr    sys_repl_report_host(&vars, "report_host", &report_host);
 static sys_var_const_str_ptr    sys_repl_report_user(&vars, "report_user", &report_user);
 static sys_var_const_str_ptr    sys_repl_report_password(&vars, "report_password", &report_password);
 
-static uchar *slave_get_report_port(THD *thd)
+static uchar *get_sys_repl_report_host(THD *thd)
 {
-  thd->sys_var_tmp.long_value= report_port;
-  return (uchar*) &thd->sys_var_tmp.long_value;
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+  return (uchar *)report_host;
 }
 
-static sys_var_readonly    sys_repl_report_port(&vars, "report_port", OPT_GLOBAL, SHOW_LONG, slave_get_report_port);
+static sys_var_readonly sys_repl_report_host(&vars, "report_host", OPT_GLOBAL,
+                                             SHOW_CHAR, get_sys_repl_report_host);
+
+static uchar *get_sys_repl_report_port(THD *thd)
+{
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+
+  char *str_report_port = (char *)thd->alloc(MY_INT64_NUM_DECIMAL_DIGITS+1);
+  my_snprintf(str_report_port, MY_INT64_NUM_DECIMAL_DIGITS, "%u",
+              report_port);
+  return (uchar*)str_report_port;
+}
+
+static sys_var_readonly sys_repl_report_port(&vars, "report_port", OPT_GLOBAL,
+                                             SHOW_CHAR, get_sys_repl_report_port);
 
 #endif
 
@@ -1138,12 +1201,34 @@ static sys_var_readonly         sys_myisam_mmap_size(&vars, "myisam_mmap_size",
 static sys_var_const sys_var_httpd(&vars, "httpd",
                                    OPT_GLOBAL, SHOW_BOOL,
                                    (uchar*) &httpd);
-static sys_var_const sys_var_httpd_bind_address(&vars, "httpd_bind_address",
-                                                OPT_GLOBAL, SHOW_CHAR_PTR,
-                                                (uchar*) &httpd_bind_addr_str);
-static sys_var_const sys_var_httpd_port(&vars, "httpd_port",
-                                        OPT_GLOBAL, SHOW_INT,
-                                        (uchar*) &httpd_port);
+
+static uchar *get_sys_httpd_bind_address(THD *thd)
+{
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+  return (uchar *)httpd_bind_addr_str;
+}
+
+static sys_var_readonly sys_var_httpd_bind_address(&vars, "httpd_bind_address",
+                                                   OPT_GLOBAL, SHOW_CHAR,
+                                                   get_sys_httpd_bind_address);
+
+static uchar *get_sys_httpd_port(THD *thd)
+{
+  if(opt_hide_sensitive_information
+     && !(thd->security_ctx->master_access & SUPER_ACL))
+    return (uchar *)hidden_information;
+
+  char *str_httpd_port = (char *)thd->alloc(MY_INT64_NUM_DECIMAL_DIGITS+1);
+  my_snprintf(str_httpd_port, MY_INT64_NUM_DECIMAL_DIGITS, "%u", httpd_port);
+  return (uchar *)str_httpd_port;
+}
+
+static sys_var_readonly sys_var_httpd_port(&vars, "httpd_port",
+                                           OPT_GLOBAL, SHOW_CHAR,
+                                           get_sys_httpd_port);
+
 static sys_var_bool_ptr sys_var_httpd_trust_clients(&vars,
                                                     "httpd_trust_clients",
                                                     &httpd_trust_clients);

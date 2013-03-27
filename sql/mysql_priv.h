@@ -764,6 +764,8 @@ typedef Comp_creator* (*chooser_compare_func_creator)(bool invert);
 #include "item.h"
 extern my_decimal decimal_zero;
 
+extern const char *hidden_information;
+
 /* sql_parse.cc */
 void free_items(Item *item);
 void cleanup_items(Item *item);
@@ -1913,6 +1915,7 @@ extern uint mysql_data_home_len;
 
 extern MYSQL_PLUGIN_IMPORT char  *mysql_data_home;
 extern char server_version[SERVER_VERSION_LENGTH];
+extern const char *server_version_comment;
 extern MYSQL_PLUGIN_IMPORT char mysql_real_data_home[];
 extern char mysql_unpacked_real_data_home[];
 
@@ -2086,6 +2089,7 @@ extern my_bool opt_system_user_table;
 extern long opt_block_user_access;
 extern ulonglong limit_tmp_disk_space;
 extern my_bool opt_restrict_bka_to_googlestats;
+extern my_bool opt_hide_sensitive_information;
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;

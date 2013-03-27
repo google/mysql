@@ -284,6 +284,8 @@ extern "C" sig_handler handle_fatal_signal(int sig);
 
 #include <welcome_copyright_notice.h> // ORACLE_WELCOME_COPYRIGHT_NOTICE
 
+const char *hidden_information = "(hidden)";
+
 const char *show_comp_option_name[]= {"YES", "NO", "DISABLED"};
 /*
   WARNING: When adding new SQL modes don't forget to update the
@@ -672,6 +674,7 @@ const char *opt_date_time_formats[3];
 uint mysql_data_home_len;
 char mysql_data_home_buff[2], *mysql_data_home=mysql_real_data_home;
 char server_version[SERVER_VERSION_LENGTH];
+const char *server_version_comment = MYSQL_COMPILATION_COMMENT;
 char *mysqld_unix_port, *opt_mysql_tmpdir;
 const char **errmesg;			/**< Error messages */
 const char *myisam_recover_options_str="OFF";
@@ -782,6 +785,8 @@ char *master_ssl_ca, *master_ssl_capath, *master_ssl_cipher;
 char *opt_logname, *opt_slow_logname, *opt_audit_logname;
 char *opt_deprecated_engines;
 char *opt_sql_logname;
+
+my_bool opt_hide_sensitive_information = 0;
 
 /* Static variables */
 
@@ -6392,7 +6397,8 @@ enum options_mysqld
   OPT_ALLOW_DEFAULT_MRR_BKA,
   OPT_MAPPED_USERS,
   OPT_NO_LOCAL_INFILE_IF_REPL,
-  OPT_RPL_DISALLOW_TEMP_TABLES
+  OPT_RPL_DISALLOW_TEMP_TABLES,
+  OPT_HIDE_SENSITIVE_INFORMATION
 };
 
 
@@ -8144,6 +8150,11 @@ thread is in the relay logs.",
    "will result in events being written to the binlog.",
    &global_system_variables.rpl_disallow_temp_tables,
    0, 0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
+  {"hide-sensitive-information", OPT_HIDE_SENSITIVE_INFORMATION,
+   "Hide potentially sensitive information about the server such as various "
+   "client and server IP addresses, and version_comment.",
+   &opt_hide_sensitive_information,
+   &opt_hide_sensitive_information, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 

@@ -1,0 +1,306 @@
+# This is a test of the hide_sensitive_information mode which hides potentially
+# sensitive host, port, and version from non-SUPER clients.
+
+# Grab the version command field, so that it can be replaced with a
+# deterministic string in tests.
+let $VERSION_COMMENT= `SELECT IFNULL(@@version_comment, "@@@")`;
+
+# Grab the server host name and port numbers, so that they can be replaced
+# with a deterministic string in tests.
+let $SERVER_HOST=                `SELECT @@hostname`;
+let $SERVER_PORT=                `SELECT @@port`;
+let $SERVER_REPORT_HOST=         `SELECT IFNULL(@@report_host, "@@@")`;
+let $SERVER_REPORT_PORT=         `SELECT IFNULL(@@report_port, "@@@")`;
+let $SERVER_HTTPD_BIND_ADDRESS=  `SELECT IFNULL(@@httpd_bind_address, "@@@")`;
+let $SERVER_HTTPD_PORT=          `SELECT IFNULL(@@httpd_port, "@@@")`;
+let $SERVER_REPL_PORT=           `SELECT IFNULL(@@repl_port, "@@@")`;
+
+# Grab the client hostname that the test client is connecting from, so that
+# it can be replaced with a deterministic string in tests.
+let $CLIENT_HOST= `SELECT Host FROM information_schema.processlist WHERE Id = CONNECTION_ID()`;
+
+--echo #
+--echo # Preparation: Set up a non-SUPER user.
+--echo #
+CREATE USER non_super;
+GRANT SELECT, PROCESS ON *.* TO non_super;
+connect (non_super, localhost, non_super,,);
+
+--echo #
+--echo # Test that the default is correct and the variable is visible.
+--echo #
+connection default;
+
+--echo # Test that we show up in SHOW GLOBAL VARIABLES.
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+
+--echo # Test that we show up correctly in I_S.
+SELECT * FROM information_schema.global_variables
+  WHERE variable_name LIKE 'hide_sensitive_information';
+
+--echo # Test that we show up in @@-variables, un-scoped.
+SELECT @@hide_sensitive_information;
+
+--echo # Test that we show up in @@-variables, globally scoped.
+SELECT @@global.hide_sensitive_information;
+
+--echo #
+--echo # Test that we can set the variable ON with SET GLOBAL.
+--echo #
+connection default;
+SET GLOBAL hide_sensitive_information = 1;
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+SELECT @@hide_sensitive_information;
+SELECT @@global.hide_sensitive_information;
+
+--echo #
+--echo # Test that we can set the variable OFF with SET GLOBAL.
+--echo #
+connection default;
+SET GLOBAL hide_sensitive_information = 0;
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+SELECT @@hide_sensitive_information;
+SELECT @@global.hide_sensitive_information;
+
+--echo #
+--echo # Test that setting the variable within a session fails; as we expect
+--echo # the variable to be GLOBAL-scope only.
+--echo #
+connection default;
+--error ER_GLOBAL_VARIABLE
+SET SESSION hide_sensitive_information = 0;
+--error ER_GLOBAL_VARIABLE
+SET @@hide_sensitive_information = 0;
+
+--echo #
+--echo # Test that the 'hostname' and 'port' variables are read-only as they
+--echo # should be, since this feature changes their behavior in sys_var lists.
+--echo #
+
+--echo # Test that 'hostname' is read-only as it should be.
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+SET GLOBAL hostname = "foo";
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+SET SESSION hostname = "foo";
+
+--echo # Test that 'port' is read-only as it should be.
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+SET GLOBAL port = 12345;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+SET SESSION port = 12345;
+
+--echo #
+--echo # Test that the default non-hiding behavior works.
+--echo #
+
+--echo # Disable hide_sensitive_information.
+connection default;
+SET GLOBAL hide_sensitive_information = 0;
+
+--echo # Test that nothing is hidden for the SUPER user.
+connection default;
+
+--replace_result $VERSION_COMMENT VERSION_COMMENT
+SHOW GLOBAL VARIABLES LIKE 'version_comment';
+--replace_result $VERSION_COMMENT VERSION_COMMENT
+SHOW SESSION VARIABLES LIKE 'version_comment';
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT * FROM information_schema.processlist;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+
+--replace_result $SERVER_REPORT_HOST SERVER_REPORT_HOST
+SHOW GLOBAL VARIABLES LIKE 'report_host';
+--replace_result $SERVER_REPORT_HOST SERVER_REPORT_HOST
+SHOW SESSION VARIABLES LIKE 'report_host';
+
+--replace_result $SERVER_REPORT_PORT SERVER_REPORT_PORT
+SHOW GLOBAL VARIABLES LIKE 'report_port';
+--replace_result $SERVER_REPORT_PORT SERVER_REPORT_PORT
+SHOW SESSION VARIABLES LIKE 'report_port';
+
+--replace_result $SERVER_HTTPD_BIND_ADDRESS SERVER_HTTPD_BIND_ADDRESS
+SHOW GLOBAL VARIABLES LIKE 'httpd_bind_address';
+--replace_result $SERVER_HTTPD_BIND_ADDRESS SERVER_HTTPD_BIND_ADDRESS
+SHOW SESSION VARIABLES LIKE 'httpd_bind_address';
+
+--replace_result $SERVER_HTTPD_PORT SERVER_HTTPD_PORT
+SHOW GLOBAL VARIABLES LIKE 'httpd_port';
+--replace_result $SERVER_HTTPD_PORT SERVER_HTTPD_PORT
+SHOW SESSION VARIABLES LIKE 'httpd_port';
+
+--replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
+SHOW GLOBAL VARIABLES LIKE 'repl_port';
+--replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
+SHOW SESSION VARIABLES LIKE 'repl_port';
+
+--echo # Test that nothing is hidden for non-SUPER users.
+connection non_super;
+
+--replace_result $VERSION_COMMENT VERSION_COMMENT
+SHOW GLOBAL VARIABLES LIKE 'version_comment';
+--replace_result $VERSION_COMMENT VERSION_COMMENT
+SHOW SESSION VARIABLES LIKE 'version_comment';
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT * FROM information_schema.processlist;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+
+--replace_result $SERVER_REPORT_HOST SERVER_REPORT_HOST
+SHOW GLOBAL VARIABLES LIKE 'report_host';
+--replace_result $SERVER_REPORT_HOST SERVER_REPORT_HOST
+SHOW SESSION VARIABLES LIKE 'report_host';
+
+--replace_result $SERVER_REPORT_PORT SERVER_REPORT_PORT
+SHOW GLOBAL VARIABLES LIKE 'report_port';
+--replace_result $SERVER_REPORT_PORT SERVER_REPORT_PORT
+SHOW SESSION VARIABLES LIKE 'report_port';
+
+--replace_result $SERVER_HTTPD_BIND_ADDRESS SERVER_HTTPD_BIND_ADDRESS
+SHOW GLOBAL VARIABLES LIKE 'httpd_bind_address';
+--replace_result $SERVER_HTTPD_BIND_ADDRESS SERVER_HTTPD_BIND_ADDRESS
+SHOW SESSION VARIABLES LIKE 'httpd_bind_address';
+
+--replace_result $SERVER_HTTPD_PORT SERVER_HTTPD_PORT
+SHOW GLOBAL VARIABLES LIKE 'httpd_port';
+--replace_result $SERVER_HTTPD_PORT SERVER_HTTPD_PORT
+SHOW SESSION VARIABLES LIKE 'httpd_port';
+
+--replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
+SHOW GLOBAL VARIABLES LIKE 'repl_port';
+--replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
+SHOW SESSION VARIABLES LIKE 'repl_port';
+
+--echo #
+--echo # Test that hiding works. Instead of the sensitive information, we
+--echo # should see "(hidden)" when connected as a non-SUPER user.
+--echo #
+
+--echo # Enable hide_sensitive_information.
+connection default;
+SET GLOBAL hide_sensitive_information = 1;
+
+--echo # Test that nothing is hidden for the SUPER user.
+connection default;
+
+--replace_result $VERSION_COMMENT VERSION_COMMENT
+SHOW GLOBAL VARIABLES LIKE 'version_comment';
+--replace_result $VERSION_COMMENT VERSION_COMMENT
+SHOW SESSION VARIABLES LIKE 'version_comment';
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT * FROM information_schema.processlist;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+
+--replace_result $SERVER_REPORT_HOST SERVER_REPORT_HOST
+SHOW GLOBAL VARIABLES LIKE 'report_host';
+--replace_result $SERVER_REPORT_HOST SERVER_REPORT_HOST
+SHOW SESSION VARIABLES LIKE 'report_host';
+
+--replace_result $SERVER_REPORT_PORT SERVER_REPORT_PORT
+SHOW GLOBAL VARIABLES LIKE 'report_port';
+--replace_result $SERVER_REPORT_PORT SERVER_REPORT_PORT
+SHOW SESSION VARIABLES LIKE 'report_port';
+
+--replace_result $SERVER_HTTPD_BIND_ADDRESS SERVER_HTTPD_BIND_ADDRESS
+SHOW GLOBAL VARIABLES LIKE 'httpd_bind_address';
+--replace_result $SERVER_HTTPD_BIND_ADDRESS SERVER_HTTPD_BIND_ADDRESS
+SHOW SESSION VARIABLES LIKE 'httpd_bind_address';
+
+--replace_result $SERVER_HTTPD_PORT SERVER_HTTPD_PORT
+SHOW GLOBAL VARIABLES LIKE 'httpd_port';
+--replace_result $SERVER_HTTPD_PORT SERVER_HTTPD_PORT
+SHOW SESSION VARIABLES LIKE 'httpd_port';
+
+--replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
+SHOW GLOBAL VARIABLES LIKE 'repl_port';
+--replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
+SHOW SESSION VARIABLES LIKE 'repl_port';
+
+--echo # Test that sensitive information is hidden for non-SUPER users.
+--echo # The results of these tests should all be "(hidden)" anyway, so
+--echo # no result replacement is necessary for the hidden strings.
+connection non_super;
+
+SHOW GLOBAL VARIABLES LIKE 'version_comment';
+SHOW SESSION VARIABLES LIKE 'version_comment';
+
+--replace_column 1 <Id> 6 <Time>
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id> 6 <Time>
+SELECT * FROM information_schema.processlist;
+
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+SHOW SESSION VARIABLES LIKE 'hostname';
+
+SHOW GLOBAL VARIABLES LIKE 'port';
+SHOW SESSION VARIABLES LIKE 'port';
+
+SHOW GLOBAL VARIABLES LIKE 'report_host';
+SHOW SESSION VARIABLES LIKE 'report_host';
+
+SHOW GLOBAL VARIABLES LIKE 'report_port';
+SHOW SESSION VARIABLES LIKE 'report_port';
+
+SHOW GLOBAL VARIABLES LIKE 'httpd_bind_address';
+SHOW SESSION VARIABLES LIKE 'httpd_bind_address';
+
+SHOW GLOBAL VARIABLES LIKE 'httpd_port';
+SHOW SESSION VARIABLES LIKE 'httpd_port';
+
+SHOW GLOBAL VARIABLES LIKE 'repl_port';
+SHOW SESSION VARIABLES LIKE 'repl_port';
+
+--echo #
+--echo # Clean up: Set the variable back to the default.
+--echo #
+connection default;
+SET GLOBAL hide_sensitive_information = 0;
+
+--echo #
+--echo # Clean up: Drop the non-SUPER user we created.
+--echo #
+DROP USER non_super;
