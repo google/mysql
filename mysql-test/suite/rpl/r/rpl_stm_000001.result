@@ -17,6 +17,7 @@ abandoning
 abandonment
 abandons
 stop slave;
+include/wait_for_slave_to_stop.inc
 set password for root@"localhost" = password('foo');
 start slave;
 set password for root@"localhost" = password('');

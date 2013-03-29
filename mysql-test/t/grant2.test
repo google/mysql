@@ -959,7 +959,7 @@ set password = password('qwerty');
 select * from d1.t1;
 connection conn1;
 --disable_result_log
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2006,2013
 reap;
 --enable_result_log
 # Errors "MySQL server has gone away" or "Lost connection to MySQL server"
@@ -977,7 +977,7 @@ connection default;
 drop user user1;
 connection conn1;
 --disable_result_log
---error ER_QUERY_INTERRUPTED,2013
+--error ER_QUERY_INTERRUPTED,2006,2013
 reap;
 --enable_result_log
 # Errors "MySQL server has gone away" or "Lost connection to MySQL server"
@@ -998,7 +998,7 @@ connection default;
 rename user user1 to user2;
 connection conn1;
 --disable_result_log
---error ER_QUERY_INTERRUPTED
+--error ER_QUERY_INTERRUPTED,2006,2013
 reap;
 --enable_result_log
 # Errors "MySQL server has gone away" or "Lost connection to MySQL server"
@@ -1030,7 +1030,7 @@ connection default;
 drop user user1;
 connection conn1;
 # Errors "MySQL server has gone away" or "Lost connection to MySQL server"
---error 2006,2013
+--error ER_QUERY_INTERRUPTED,2006,2013
 select * from d1.t1;
 
 # User connections should be killed even if user was re-created while
@@ -1047,7 +1047,7 @@ create user user1;
 grant all privileges on *.* to user1 with grant option;
 connection conn1;
 # Errors "MySQL server has gone away" or "Lost connection to MySQL server"
---error 2006,2013
+--error ER_QUERY_INTERRUPTED,2006,2013
 select * from d1.t1;
 
 # The same as above but with rename of the user to another name and back.

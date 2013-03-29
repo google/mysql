@@ -18,6 +18,7 @@ select * from t1 limit 10;
 #
 sync_slave_with_master;
 stop slave;
+--source include/wait_for_slave_to_stop.inc
 connection master;
 set password for root@"localhost" = password('foo');
 connection slave;

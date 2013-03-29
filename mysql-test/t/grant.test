@@ -1420,7 +1420,7 @@ drop user mysqluser1@localhost;
 --connection bug36544_con1
 --echo # The connection would be either dead or it should not be able to
 --echo # access to any of the stored routines.
---error ER_QUERY_INTERRUPTED,2006  # = "MySQL server has gone away"
+--error ER_QUERY_INTERRUPTED,2006,2013  # = "MySQL server has gone away"
 call mysqltest1.p1();
 # Error "MySQL server has gone away" or "Lost connection to MySQL server"
 --error 2006,2013
@@ -1494,7 +1494,7 @@ rename user mysqluser1@localhost to mysqluser10@localhost;
 --connection bug36544_con2
 --echo # The connection cold be alive but should not be able to
 --echo # access to any of the stored routines or tables.
---error ER_QUERY_INTERRUPTED,2006  # = "MySQL server has gone away"
+--error ER_QUERY_INTERRUPTED,2006,2013  # = "MySQL server has gone away"
 call mysqltest1.p1();
 # Error "MySQL server has gone away" or "Lost connection to MySQL server"
 --error 2006,2013

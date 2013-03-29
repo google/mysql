@@ -16,6 +16,7 @@ Aaron
 Ababa
 Ababa
 STOP SLAVE;
+include/wait_for_slave_to_stop.inc
 SET PASSWORD FOR root@"localhost" = PASSWORD('foo');
 START SLAVE;
 SET PASSWORD FOR root@"localhost" = PASSWORD('');

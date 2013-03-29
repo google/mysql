@@ -13,6 +13,7 @@ save_master_pos;
 connection slave;
 sync_with_master;
 STOP SLAVE;
+--source include/wait_for_slave_to_stop.inc
 connection master;
 SET PASSWORD FOR root@"localhost" = PASSWORD('foo');
 connection slave;
