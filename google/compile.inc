@@ -20,7 +20,7 @@ ${SRC_DIR}/configure \
   --host=${GNU_TARGET} \
   --enable-assembler \
   --enable-local-infile \
-  --disable-profiling \
+  --enable-profiling \
   --with-big-tables \
   --without-manager \
   --with-extra-charsets=all \
