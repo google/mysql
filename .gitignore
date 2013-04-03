@@ -101,10 +101,9 @@ google-perftools-1.8.3/tcmalloc_minimal_debug_unittest
 google-perftools-1.8.3/tcmalloc_minimal_large_unittest
 google-perftools-1.8.3/tcmalloc_minimal_unittest
 google-perftools-1.8.3/thread_dealloc_unittest
-include/config.h
-include/config.h.in
 include/link_sources
 include/my_config.h
+include/my_config.h.in
 include/mysql_version.h
 include/mysqld_ername.h
 include/mysqld_error.h
