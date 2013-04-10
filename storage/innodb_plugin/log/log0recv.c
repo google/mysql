@@ -3028,6 +3028,11 @@ recv_recovery_from_checkpoint_start_func(
 
 			/* The group does not contain enough log: probably
 			an archived log file was missing or corrupt */
+			ut_print_timestamp(stderr);
+			fprintf(stderr, " InnoDB: Error: the group does not "
+					"contain enough log, probably an "
+					"archived log file was missing or "
+					"corrupt.");
 
 			return(DB_ERROR);
 		}
@@ -3041,6 +3046,11 @@ recv_recovery_from_checkpoint_start_func(
 			/* The group did not contain enough log: an archived
 			log file was missing or invalid, or the log group
 			was corrupt */
+			ut_print_timestamp(stderr);
+			fprintf(stderr, " InnoDB: Error: the group does not "
+					"contain enough log, probably an "
+					"archived log file was missing or "
+					"corrupt.");
 
 			return(DB_ERROR);
 		}

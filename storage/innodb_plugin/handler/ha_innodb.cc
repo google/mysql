@@ -794,10 +794,15 @@ convert_error_code_to_mysql(
 				    "drop extra constraints and try "
 				    "again", DICT_FK_MAX_RECURSIVE_LOAD);
 
-		/* fall through */
+		return(-1);
 
 	case DB_ERROR:
+		ut_print_timestamp(stderr);
+		fprintf(stderr, " InnoDB: Error: DB_ERROR\n");
+		return(HA_ERR_INTERNAL_ERROR); /* unspecified error */
 	default:
+		ut_print_timestamp(stderr);
+		fprintf(stderr, " InnoDB: Unspecified error %d.", error);
 		return(-1); /* unspecified error */
 
 	case DB_DUPLICATE_KEY:
@@ -906,6 +911,10 @@ convert_error_code_to_mysql(
 #endif /* HA_ERR_TOO_MANY_CONCURRENT_TRXS */
 	case DB_UNSUPPORTED:
 		return(HA_ERR_UNSUPPORTED);
+
+	case DB_INVALID_COLUMN_NAME:
+	case DB_INVALID_COLUMN_TYPE:
+		return(HA_WRONG_CREATE_OPTION);
 	}
 }
 
@@ -6226,6 +6235,7 @@ create_table_def(
 				"the table with an appropriate "
 				"column type.",
 				table->name, (char*) field->field_name);
+			error = DB_INVALID_COLUMN_TYPE;
 			goto err_col;
 		}
 
@@ -6286,11 +6296,11 @@ create_table_def(
 		if (dict_col_name_is_reserved(field->field_name)){
 			my_error(ER_WRONG_COLUMN_NAME, MYF(0),
 				 field->field_name);
+			error = DB_INVALID_COLUMN_NAME;
 err_col:
 			dict_mem_table_free(table);
 			trx_commit_for_mysql(trx);
 
-			error = DB_ERROR;
 			goto error_ret;
 		}
 

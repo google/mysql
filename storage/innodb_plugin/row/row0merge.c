@@ -2409,6 +2409,10 @@ row_merge_rename_tables(
 
 	if (!dict_table_rename_in_cache(old_table, tmp_name, FALSE)
 	    || !dict_table_rename_in_cache(new_table, old_name, FALSE)) {
+		ut_print_timestamp(stderr);
+		fprintf(stderr, " InnoDB: Error: Failed to rename table for "
+				"old_name: %s, new_name: %s, tmp_name: %s\n",
+				old_name, new_table->name, tmp_name);
 
 		err = DB_ERROR;
 		goto err_exit;

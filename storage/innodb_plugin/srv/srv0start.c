@@ -1234,7 +1234,8 @@ innobase_start_or_create_for_mysql(void)
 			fil_path_to_mysql_datadir, os_proc_get_number());
 		srv_monitor_file = fopen(srv_monitor_file_name, "w+");
 		if (!srv_monitor_file) {
-			fprintf(stderr, "InnoDB: unable to create %s: %s\n",
+			ut_print_timestamp(stderr);
+			fprintf(stderr, "  InnoDB: unable to create %s: %s\n",
 				srv_monitor_file_name, strerror(errno));
 			return(DB_ERROR);
 		}
@@ -1242,6 +1243,8 @@ innobase_start_or_create_for_mysql(void)
 		srv_monitor_file_name = NULL;
 		srv_monitor_file = os_file_create_tmpfile();
 		if (!srv_monitor_file) {
+			ut_print_timestamp(stderr);
+			fprintf(stderr, "  InnoDB: unable to create tmpfile\n");
 			return(DB_ERROR);
 		}
 	}
@@ -1250,6 +1253,8 @@ innobase_start_or_create_for_mysql(void)
 
 	srv_dict_tmpfile = os_file_create_tmpfile();
 	if (!srv_dict_tmpfile) {
+		ut_print_timestamp(stderr);
+		fprintf(stderr, "  InnoDB: unable to create tmpfile\n");
 		return(DB_ERROR);
 	}
 
@@ -1257,6 +1262,8 @@ innobase_start_or_create_for_mysql(void)
 
 	srv_misc_tmpfile = os_file_create_tmpfile();
 	if (!srv_misc_tmpfile) {
+		ut_print_timestamp(stderr);
+		fprintf(stderr, "  InnoDB: unable to create tmpfile\n");
 		return(DB_ERROR);
 	}
 
@@ -1264,7 +1271,8 @@ innobase_start_or_create_for_mysql(void)
 	we'll emit a message telling the user that this parameter
 	is now deprecated. */
 	if (srv_n_file_io_threads != 4) {
-		fprintf(stderr, "InnoDB: Warning:"
+		ut_print_timestamp(stderr);
+		fprintf(stderr, "  InnoDB: Warning:"
 			" innodb_file_io_threads is deprecated."
 			" Please use innodb_read_io_threads and"
 			" innodb_write_io_threads instead\n");

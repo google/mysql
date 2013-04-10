@@ -2780,7 +2780,8 @@ error_exit2:
 	ut_free(buf2);
 
 	if (!ret) {
-		fputs("InnoDB: Error: could not write the first page"
+		ut_print_timestamp(stderr);
+		fputs(" InnoDB: Error: could not write the first page"
 		      " to tablespace ", stderr);
 		ut_print_filename(stderr, path);
 		putc('\n', stderr);
@@ -2791,7 +2792,8 @@ error_exit2:
 	ret = os_file_flush(file);
 
 	if (!ret) {
-		fputs("InnoDB: Error: file flush of tablespace ", stderr);
+		ut_print_timestamp(stderr);
+		fputs(" InnoDB: Error: file flush of tablespace ", stderr);
 		ut_print_filename(stderr, path);
 		fputs(" failed\n", stderr);
 		err = DB_ERROR;
@@ -2803,6 +2805,11 @@ error_exit2:
 	success = fil_space_create(path, space_id, flags, FIL_TABLESPACE);
 
 	if (!success) {
+		ut_print_timestamp(stderr);
+		fputs(" InnoDB: Error: file space create of tablespace ",
+		      stderr);
+		ut_print_filename(stderr, path);
+		fputs(" failed\n", stderr);
 		err = DB_ERROR;
 		goto error_exit2;
 	}
@@ -3503,8 +3510,9 @@ fil_file_readdir_next_file(
 			return(ret);
 		}
 
+		ut_print_timestamp(stderr);
 		fprintf(stderr,
-			"InnoDB: Error: os_file_readdir_next_file()"
+			" InnoDB: Error: os_file_readdir_next_file()"
 			" returned -1 in\n"
 			"InnoDB: directory %s\n"
 			"InnoDB: Crash recovery may have failed"
@@ -3543,7 +3551,9 @@ fil_load_single_table_tablespaces(void)
 	dir = os_file_opendir(fil_path_to_mysql_datadir, TRUE);
 
 	if (dir == NULL) {
-
+		ut_print_timestamp(stderr);
+		fprintf(stderr, " InnoDB: Error: os_file_opendir returned NULL "
+                                "for %s\n", fil_path_to_mysql_datadir);
 		return(DB_ERROR);
 	}
 
@@ -3618,7 +3628,8 @@ next_file_item:
 			}
 
 			if (0 != os_file_closedir(dbdir)) {
-				fputs("InnoDB: Warning: could not"
+				ut_print_timestamp(stderr);
+				fputs(" InnoDB: Warning: could not"
 				      " close database directory ", stderr);
 				ut_print_filename(stderr, dbpath);
 				putc('\n', stderr);
@@ -3636,6 +3647,7 @@ next_datadir_item:
 	mem_free(dbpath);
 
 	if (0 != os_file_closedir(dir)) {
+		ut_print_timestamp(stderr);
 		fprintf(stderr,
 			"InnoDB: Error: could not close MySQL datadir\n");
 

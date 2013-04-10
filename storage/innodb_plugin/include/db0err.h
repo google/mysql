@@ -99,6 +99,12 @@ enum db_err {
 					maximum allowed depth */
 	DB_TABLE_IN_FK_CHECK,		/* table is being used in foreign
 					key check */
+	DB_INVALID_COLUMN_NAME,		/* table cannot be created because
+					one or more columns uses a reserved
+					name */
+	DB_INVALID_COLUMN_TYPE,		/* table cannot be created because
+					one or more columns have an
+					unrecognized type */
 
 	/* The following are partial failure codes */
 	DB_FAIL = 1000,

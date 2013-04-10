@@ -264,6 +264,9 @@ dict_build_table_def_step(
 		dict_hdr_get_new_id(NULL, NULL, &space);
 
 		if (UNIV_UNLIKELY(space == ULINT_UNDEFINED)) {
+			ut_print_timestamp(stderr);
+			fprintf(stderr, "  InnoDB: Error: Failed to get a new "
+					"space id.\n");
 			return(DB_ERROR);
 		}
 

@@ -2168,6 +2168,9 @@ row_upd_clust_step(
 		success = btr_pcur_restore_position(BTR_MODIFY_LEAF, pcur,
 						    mtr);
 		if (!success) {
+			ut_print_timestamp(stderr);
+			fprintf(stderr, "  InnoDB: Error: "
+					"btr_pcur_restore_position failed.\n");
 			err = DB_ERROR;
 
 			mtr_commit(mtr);

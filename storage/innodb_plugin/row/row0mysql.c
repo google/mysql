@@ -2500,6 +2500,10 @@ row_discard_tablespace_for_mysql(
 			trx->error_state = DB_SUCCESS;
 			trx_general_rollback_for_mysql(trx, NULL);
 			trx->error_state = DB_SUCCESS;
+			ut_print_timestamp(stderr);
+			fprintf(stderr, " InnoDB: Error: fil_discard_tablespace "
+					"was not successful for %s\n",
+					table->name);
 
 			err = DB_ERROR;
 		} else {
@@ -2634,8 +2638,8 @@ row_import_tablespace_for_mysql(
 		table->ibd_file_missing = FALSE;
 		table->tablespace_discarded = FALSE;
 	} else {
+		ut_print_timestamp(stderr);
 		if (table->ibd_file_missing) {
-			ut_print_timestamp(stderr);
 			fputs("  InnoDB: cannot find or open in the"
 			      " database directory the .ibd file of\n"
 			      "InnoDB: table ", stderr);
@@ -2643,6 +2647,10 @@ row_import_tablespace_for_mysql(
 			fputs("\n"
 			      "InnoDB: in ALTER TABLE ... IMPORT TABLESPACE\n",
 			      stderr);
+		} else {
+			fprintf(stderr, "  InnoDB: file_open_single_table_"
+					"tablespace failed for %s, but the "
+					"ibd file is not missing\n", name);
 		}
 
 		err = DB_ERROR;
@@ -3164,8 +3172,8 @@ check_next_foreign:
 
 		added = row_add_table_to_background_drop_list(table->name);
 
+		ut_print_timestamp(stderr);
 		if (added) {
-			ut_print_timestamp(stderr);
 			fputs("  InnoDB: Warning: MySQL is"
 			      " trying to drop table ", stderr);
 			ut_print_name(stderr, trx, TRUE, table->name);
@@ -3181,6 +3189,9 @@ check_next_foreign:
 			err = DB_SUCCESS;
 		} else {
 			/* The table is already in the background drop list */
+			fprintf(stderr, "  InnoDB: Error: Table %s is already "
+					"in the background drop list\n",
+				table->name);
 			err = DB_ERROR;
 		}
 
@@ -3200,6 +3211,7 @@ check_next_foreign:
 
 		added = row_add_table_to_background_drop_list(table_name);
 
+		ut_print_timestamp(stderr);
 		if (added) {
 			ut_print_timestamp(stderr);
 			fputs("  InnoDB: You are trying to drop table ",
@@ -3218,6 +3230,9 @@ check_next_foreign:
 			err = DB_SUCCESS;
 		} else {
 			/* The table is already in the background drop list */
+			fprintf(stderr, "  InnoDB: Error: Table %s is already "
+					"in the background drop list\n",
+				table->name);
 			err = DB_ERROR;
 		}
 
@@ -4039,6 +4054,10 @@ end:
 			trx->error_state = DB_SUCCESS;
 			trx_general_rollback_for_mysql(trx, NULL);
 			trx->error_state = DB_SUCCESS;
+			ut_print_timestamp(stderr);
+			fprintf(stderr, "  Innodb: Error: "
+					"dict_table_rename_in_cache failed for "
+					"%s to %s\n", table->name, new_name);
 			err = DB_ERROR;
 			goto funct_exit;
 		}
