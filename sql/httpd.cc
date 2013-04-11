@@ -646,7 +646,8 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
       break;
 
 #ifdef HAVE_SYS_UN_H
-    if (FD_ISSET(httpd_unix_sock, &readFDs))
+    if (httpd_unix_sock != INVALID_SOCKET &&
+        FD_ISSET(httpd_unix_sock, &readFDs))
     {
       sock= httpd_unix_sock;
       flags= httpd_unix_flags;
