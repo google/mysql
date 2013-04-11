@@ -1634,6 +1634,14 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
     }
   }
 
+  if (schema_is_restricted_for_sctx(new_db_name->str, sctx))
+  {
+    my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
+             sctx->priv_user, sctx->priv_host,
+             new_db_name->str);
+    DBUG_RETURN(TRUE);
+  }
+
   if (is_schema_db(new_db_name->str, new_db_name->length))
   {
     /* Switch the current database to INFORMATION_SCHEMA. */

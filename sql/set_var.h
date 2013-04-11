@@ -1288,6 +1288,26 @@ public:
   bool is_readonly() const;
 };
 
+class sys_var_restricted_schemas :public sys_var
+{
+public:
+  sys_var_restricted_schemas(sys_var_chain *chain, const char *name_arg)
+    :sys_var(name_arg)
+  { chain_sys_var(chain); }
+  bool check(THD *thd, set_var *var)
+  { return 0; }
+  bool update_str(const char *value);
+  bool update(THD *thd, set_var *var);
+  void set_default(THD *thd, enum_var_type type);
+  SHOW_TYPE show_type() { return SHOW_CHAR; }
+  uchar *value_ptr(THD *thd, enum_var_type type, LEX_STRING *base);
+  bool check_update_type(Item_result type)
+  {
+    return type != STRING_RESULT; /* Only accept strings */
+  }
+  bool check_default(enum_var_type type) { return 0; }
+};
+
 /****************************************************************************
   Classes for parsing of the SET command
 ****************************************************************************/
@@ -1506,6 +1526,8 @@ uchar* find_named(I_List<NAMED_LIST> *list, const char *name, uint length,
 
 extern sys_var_str sys_var_general_log_path, sys_var_slow_log_path;
 extern sys_var_str sys_var_audit_log_path;
+
+extern sys_var_restricted_schemas sys_restricted_schemas;
 
 /* key_cache functions */
 KEY_CACHE *get_key_cache(LEX_STRING *cache_name);

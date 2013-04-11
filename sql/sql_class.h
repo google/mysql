@@ -823,6 +823,9 @@ public:
   */
   bool uses_role;
 
+  /* The user's ACL is from the system_user table */
+  bool is_system_user;
+
   /* The host privilege we are using */
   char   priv_host[MAX_HOSTNAME];
   /* points to host if host is available, otherwise points to ip */

@@ -2091,6 +2091,13 @@ extern ulonglong limit_tmp_disk_space;
 extern my_bool opt_restrict_bka_to_googlestats;
 extern my_bool opt_hide_sensitive_information;
 
+extern MEM_ROOT restricted_schemas_mem_root;
+extern rw_lock_t LOCK_restricted_schemas;
+extern char *restricted_schemas_str;
+extern List<char> restricted_schemas;
+extern bool schema_is_restricted_for_sctx(const char *schema,
+                                          Security_context *sctx);
+
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;
 extern MYSQL_SQL_LOG mysql_sql_log;

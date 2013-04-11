@@ -788,6 +788,11 @@ char *opt_sql_logname;
 
 my_bool opt_hide_sensitive_information = 0;
 
+rw_lock_t LOCK_restricted_schemas;
+MEM_ROOT restricted_schemas_mem_root;
+char *restricted_schemas_str;
+List<char> restricted_schemas;
+
 /* Static variables */
 
 static volatile sig_atomic_t kill_in_progress;
@@ -1611,6 +1616,7 @@ static void clean_up_mutexes()
   (void) pthread_mutex_destroy(&LOCK_mysql_create_db);
   (void) pthread_mutex_destroy(&LOCK_lock_db);
   (void) pthread_mutex_destroy(&LOCK_Acl);
+  (void) rwlock_destroy(&LOCK_restricted_schemas);
   (void) rwlock_destroy(&LOCK_grant);
   (void) pthread_mutex_destroy(&LOCK_open);
   (void) pthread_mutex_destroy(&LOCK_thread_count);
@@ -3832,6 +3838,7 @@ static int init_thread_environment()
   (void) my_rwlock_init(&LOCK_sys_init_connect, NULL);
   (void) my_rwlock_init(&LOCK_sys_init_slave, NULL);
   (void) my_rwlock_init(&LOCK_grant, NULL);
+  (void) my_rwlock_init(&LOCK_restricted_schemas, NULL);
   (void) pthread_cond_init(&COND_thread_count,NULL);
   (void) pthread_cond_init(&COND_refresh,NULL);
   (void) pthread_cond_init(&COND_global_read_lock,NULL);
@@ -4501,6 +4508,8 @@ a file name for --log-bin-index option", opt_binlog_index_name);
     locked_in_memory=0;
 
   ft_init_stopwords();
+
+  sys_restricted_schemas.update_str((const char *)restricted_schemas_str);
 
   init_max_user_conn();
   init_update_queries();
@@ -6398,7 +6407,8 @@ enum options_mysqld
   OPT_MAPPED_USERS,
   OPT_NO_LOCAL_INFILE_IF_REPL,
   OPT_RPL_DISALLOW_TEMP_TABLES,
-  OPT_HIDE_SENSITIVE_INFORMATION
+  OPT_HIDE_SENSITIVE_INFORMATION,
+  OPT_RESTRICTED_SCHEMAS
 };
 
 
@@ -8155,6 +8165,14 @@ thread is in the relay logs.",
    "client and server IP addresses, and version_comment.",
    &opt_hide_sensitive_information,
    &opt_hide_sensitive_information, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"restricted-schemas", OPT_RESTRICTED_SCHEMAS,
+   "A comma-delimited list of schemas restricted to access by users with SUPER "
+   "privilege and users from the system_user table only. Non-restricted users must "
+   "still have valid GRANTs to perform the operations against these schemas. "
+   "For instance, a (non-SUPER non-system_user) user may have global SELECT "
+   "privileges, but will still not be able to access the schemas listed.",
+   &restricted_schemas_str,
+   &restricted_schemas_str, 0, GET_STR_ALLOC, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -9064,6 +9082,8 @@ static int mysql_init_variables(void)
 #if !defined(my_pthread_setprio) && !defined(HAVE_PTHREAD_SETSCHEDPARAM)
   opt_specialflag |= SPECIAL_NO_PRIOR;
 #endif
+
+  init_alloc_root(&restricted_schemas_mem_root, 1024, 0);
 
 #if defined(__WIN__) || defined(__NETWARE__)
   /* Allow Win32 and NetWare users to move MySQL anywhere */
@@ -10312,6 +10332,44 @@ void refresh_status(THD *thd)
   pthread_mutex_unlock(&LOCK_thread_count);
 }
 
+bool restricted_schema_used(const char *schema)
+{
+  bool restricted = false;
+
+  rw_rdlock(&LOCK_restricted_schemas);
+
+  for(List_iterator<char> it(restricted_schemas); char *this_schema= it++;)
+  {
+    if (strcmp(this_schema, schema) == 0)
+    {
+      restricted= true;
+      break;
+    }
+  }
+
+  rw_unlock(&LOCK_restricted_schemas);
+  return restricted;
+}
+
+bool schema_is_restricted_for_sctx(const char *schema, Security_context *sctx)
+{
+  /* Users with SUPER privilege are always allowed. */
+  if(sctx->master_access & SUPER_ACL)
+    return false;
+
+  /* Users from the system_user table are always allowed. */
+  if(sctx->is_system_user)
+    return false;
+
+  /*
+    If a restricted schema is used and we've made it this far, the user will
+    be denied access, since they are not SUPER or a system_user.
+  */
+  if(restricted_schema_used(schema))
+    return true;
+
+  return false;
+}
 
 /*****************************************************************************
   Instantiate variables for missing storage engines

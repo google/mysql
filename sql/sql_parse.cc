@@ -5768,6 +5768,13 @@ check_access(THD *thd, ulong want_access, const char *db, ulong *save_priv,
     DBUG_RETURN(TRUE);				/* purecov: tested */
   }
 
+  if (db && (db != any_db) && schema_is_restricted_for_sctx(db, sctx))
+  {
+    my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
+             sctx->priv_user, sctx->priv_host, db);
+    DBUG_RETURN(TRUE);
+  }
+
   if (schema_db)
   {
     if ((!(sctx->master_access & FILE_ACL) && (want_access & FILE_ACL)) ||
@@ -5956,6 +5963,14 @@ check_table_access(THD *thd, ulong want_access,TABLE_LIST *tables,
       sctx= tables->security_ctx;
     else
       sctx= backup_ctx;
+
+    if (schema_is_restricted_for_sctx(tables->get_db_name(), sctx))
+    {
+      my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
+               sctx->priv_user, sctx->priv_host,
+               tables->get_db_name());
+      goto deny;
+    }
 
     if (tables->schema_table && 
         (want_access & ~(SELECT_ACL | EXTRA_ACL | FILE_ACL)))

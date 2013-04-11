@@ -1237,6 +1237,84 @@ static sys_var_const sys_var_httpd_socket(&vars, "httpd_socket",
                                           (uchar*) &httpd_unix_port);
 #endif
 
+sys_var_restricted_schemas sys_restricted_schemas(&vars, "restricted_schemas");
+
+static void restricted_schemas_parse_comma_list(const char *orig_string, List<char> *list)
+{
+  char *comma_string = my_strdup(orig_string, MYF(0));
+  char *next= comma_string;
+  char *item= next;
+
+  while ((item= strsep(&next, ",")) != NULL)
+  {
+    /* Trim leading space */
+    while(*item && my_isspace(&my_charset_bin, *item))
+      item++;
+
+    /* Trim trailing space */
+    for(char *end= (item+strlen(item)-1); end > item && my_isspace(&my_charset_bin, *end);)
+    {
+      (*end--)= 0;
+    }
+
+    /* Skip empty strings */
+    if (!*item)
+      continue;
+
+    list->push_back(strdup_root(&restricted_schemas_mem_root, item),
+                    &restricted_schemas_mem_root);
+  }
+
+  my_free(comma_string, MYF(0));
+}
+
+bool sys_var_restricted_schemas::update_str(const char *value)
+{
+  rw_wrlock(&LOCK_restricted_schemas);
+
+  restricted_schemas.empty();
+  free_root(&restricted_schemas_mem_root, MYF(0));
+
+  if(value)
+  {
+    restricted_schemas_parse_comma_list(value, &restricted_schemas);
+  }
+
+  rw_unlock(&LOCK_restricted_schemas);
+
+  return 0;
+};
+
+bool sys_var_restricted_schemas::update(THD *thd, set_var *var)
+{
+  return update_str(var->value->str_value.ptr());
+}
+
+void sys_var_restricted_schemas::set_default(THD *thd, enum_var_type type)
+{
+  rw_wrlock(&LOCK_restricted_schemas);
+  restricted_schemas.empty();
+  rw_unlock(&LOCK_restricted_schemas);
+};
+
+uchar *sys_var_restricted_schemas::value_ptr(THD *thd, enum_var_type type, LEX_STRING *base)
+{
+  String tmp;
+
+  rw_rdlock(&LOCK_restricted_schemas);
+  for(List_iterator<char> it(restricted_schemas); char *str= it++;)
+  {
+    tmp.append(str);
+    tmp.append(",");
+  }
+  rw_unlock(&LOCK_restricted_schemas);
+
+  /* Remove the trailing comma, if present */
+  if(tmp.length() > 0) tmp.chop();
+
+  return (uchar*) thd->strmake(tmp.ptr(), tmp.length());
+}
+
 bool sys_var::check(THD *thd, set_var *var)
 {
   var->save_result.ulonglong_value= var->value->val_int();

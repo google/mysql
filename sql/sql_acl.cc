@@ -1464,6 +1464,8 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
     DBUG_RETURN(0);
   }
 
+  sctx->is_system_user= false;
+
   VOID(pthread_mutex_lock(&acl_cache->lock));
 
   if (sctx->current_user && opt_proxy_user &&
@@ -1474,6 +1476,10 @@ int acl_getroot(THD *thd, USER_RESOURCES  *mqh,
   } else {
     acl_user= find_sys_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
                                    passwd, passwd_len, &res);
+
+    if (res == 0) /* A system user was found. */
+      sctx->is_system_user= true;
+
     if (res == 1)
     {
       acl_user= find_user_passwd(thd, sctx->user, sctx->host, sctx->ip,
@@ -1709,6 +1715,7 @@ bool acl_getroot_no_password(Security_context *sctx, char *user, char *host,
   sctx->ip= ip;
   sctx->host_or_ip= host ? host : (ip ? ip : "");
   sctx->uses_role= false;
+  sctx->is_system_user= false;
 
   if (!initialized)
   {
@@ -1776,6 +1783,17 @@ bool acl_update_user_access(THD *thd)
                                sctx->priv_user[0]? sctx->user: sctx->priv_user,
                                sctx->host, sctx->ip,
                                sctx->salt, sctx->salt_len, &res);
+
+  /*
+    If the user was found as a system user, set is_system_user. If not, they
+    may still be a normal user, so we'll continue, but ensure that the
+    is_system_user flag is reset to false here as early as possible.
+  */
+  if (res == 0)
+    sctx->is_system_user= true;
+  else
+    sctx->is_system_user= false;
+
   if (res == 1)
   {
     acl_user= find_user_salt(thd,
@@ -1841,7 +1859,9 @@ bool acl_update_user_access(THD *thd)
 unlock_and_reset_user:
   VOID(pthread_mutex_unlock(&acl_cache->lock));
 
+  /* Revoke all access and kill the user's connection. */
   sctx->master_access= sctx->db_access= 0;
+  sctx->is_system_user= false;
   thd->killed= THD::KILL_CONNECTION;
   DBUG_RETURN(TRUE);
 }
@@ -5294,6 +5314,9 @@ bool check_grant_db(THD *thd,const char *db)
   char helping [NAME_LEN+USERNAME_LENGTH+2];
   uint len;
   bool error= TRUE;
+
+  if(schema_is_restricted_for_sctx(db, sctx))
+    return error;
 
   len= (uint) (strmov(strmov(helping, sctx->priv_user) + 1, db) - helping) + 1;
 
