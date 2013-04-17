@@ -1059,7 +1059,7 @@ rename user user1 to user2;
 rename user user2 to user1;
 connection conn1;
 # Errors "MySQL server has gone away" or "Lost connection to MySQL server"
---error 2006,2013
+--error ER_QUERY_INTERRUPTED,2006,2013
 select * from d1.t1;
 
 # When user is deleted from mysql.user table all user connections should be
