@@ -1,0 +1,280 @@
+#
+# Testing FILE privilege
+#
+GRANT ALL PRIVILEGES ON *.* TO user@localhost;
+REVOKE FILE ON *.* FROM user@localhost;
+SELECT user();
+user()
+user@localhost
+CREATE TABLE t1 (a INT NOT NULL) ENGINE=CONNECT TABLE_TYPE=MySQL OPTION_LIST='host=localhost,user=root1,port=PORT';
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+SELECT user();
+user()
+root@localhost
+CREATE TABLE t1remote (a INT NOT NULL);
+INSERT INTO t1remote VALUES (10),(20),(30);
+CREATE TABLE t1 (a INT NOT NULL) ENGINE=CONNECT TABLE_TYPE=MySQL TABNAME=t1remote OPTION_LIST='host=localhost,user=root,port=PORT';
+SELECT * FROM t1;
+a
+10
+20
+30
+SELECT user();
+user()
+user@localhost
+SELECT * FROM t1;
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+INSERT INTO t1 VALUES ('xxx');
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+DELETE FROM t1 WHERE a='xxx';
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+UPDATE t1 SET a='yyy' WHERE a='xxx';
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+TRUNCATE TABLE t1;
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+ALTER TABLE t1 READONLY=1;
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+CREATE VIEW v1 AS SELECT * FROM t1;
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+# Testing a VIEW created with FILE privileges but accessed with no FILE
+SELECT user();
+user()
+root@localhost
+CREATE VIEW v1 AS SELECT * FROM t1;
+SELECT user();
+user()
+user@localhost
+SELECT * FROM v1;
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+INSERT INTO v1 VALUES (2);
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+UPDATE v1 SET a=123;
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+DELETE FROM v1;
+ERROR 28000: Access denied for user 'user'@'localhost' (using password: NO)
+SELECT user();
+user()
+root@localhost
+DROP VIEW v1;
+DROP TABLE t1, t1remote;
+DROP USER user@localhost;
+#
+# Testing FILE privileges done
+#
+CREATE TABLE t1 (a int, b char(10));
+INSERT INTO t1 VALUES (NULL,NULL),(0,'test00'),(1,'test01'),(2,'test02'),(3,'test03');
+SELECT * FROM t1;
+a	b
+NULL	NULL
+0	test00
+1	test01
+2	test02
+3	test03
+#
+# Testing errors
+#
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root1,port=PORT';
+ERROR HY000: (1045) Access denied for user 'root1'@'localhost' (using password: NO)
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL DBNAME='unknown' TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+ERROR HY000: (1049) Unknown database 'unknown'
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL OPTION_LIST='host=localhost,user=root,port=PORT' DBNAME='unknown' TABNAME='t1';
+ERROR HY000: (1049) Unknown database 'unknown'
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='unknown' OPTION_LIST='host=localhost,user=root,port=PORT';
+ERROR HY000: (1146) Table 'test.unknown' doesn't exist [SHOW FULL COLUMNS FROM unknown FROM test]
+SHOW CREATE TABLE t2;
+ERROR 42S02: Table 'test.t2' doesn't exist
+CREATE TABLE t2 (x int, y char(10)) ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `x` int(11) DEFAULT NULL,
+  `y` char(10) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`=MYSQL `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+ERROR HY000: Got error 174 '(1054) Unknown column 'x' in 'field list' [SELECT `x`, `y` FROM `t1`]' from CONNECT
+DROP TABLE t2;
+ALTER TABLE t1 RENAME t1backup;
+SELECT * FROM t2;
+ERROR 42S02: Table 'test.t2' doesn't exist
+ALTER TABLE t1backup RENAME t1;
+#
+# Testing SELECT, etc.
+#
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` int(11) DEFAULT NULL,
+  `b` varchar(10) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a	b
+NULL	NULL
+0	test00
+1	test01
+2	test02
+3	test03
+DROP TABLE t2;
+CREATE TABLE t2 (a int, b char(10)) ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` int(11) DEFAULT NULL,
+  `b` char(10) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`=MYSQL `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a	b
+NULL	NULL
+0	test00
+1	test01
+2	test02
+3	test03
+DROP TABLE t2;
+CREATE TABLE t2 (a INT NOT NULL, b CHAR(10) NOT NULL) ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` int(11) NOT NULL,
+  `b` char(10) NOT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`=MYSQL `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a	b
+0	
+0	test00
+1	test01
+2	test02
+3	test03
+DROP TABLE t2;
+CREATE TABLE t2 (a char(10), b int) ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` char(10) DEFAULT NULL,
+  `b` int(11) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`=MYSQL `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a	b
+NULL	NULL
+0	0
+1	0
+2	0
+3	0
+DROP TABLE t2;
+DROP TABLE t1;
+#
+# Testing numeric data types
+#
+CREATE TABLE t1 (a smallint);
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` smallint(6) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` smallint(6) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a
+DROP TABLE t2, t1;
+CREATE TABLE t1 (a mediumint);
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` mediumint(9) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` int(9) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a
+DROP TABLE t2, t1;
+CREATE TABLE t1 (a int);
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` int(11) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` int(11) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a
+DROP TABLE t2, t1;
+CREATE TABLE t1 (a bigint);
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` bigint(20) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` bigint(20) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a
+DROP TABLE t2, t1;
+#
+# Testing character data types
+#
+CREATE TABLE t1 (a char(10));
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` char(10) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` varchar(10) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a
+DROP TABLE t2, t1;
+CREATE TABLE t1 (a varchar(10));
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` varchar(10) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` varchar(10) DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a
+DROP TABLE t2, t1;
+#
+# Testing binary data types
+#
+#
+# Testing temporal data types
+#
+CREATE TABLE t1 (a date);
+CREATE TABLE t2 ENGINE=CONNECT TABLE_TYPE=MYSQL TABNAME='t1' OPTION_LIST='host=localhost,user=root,port=PORT';
+SHOW CREATE TABLE t1;
+Table	Create Table
+t1	CREATE TABLE `t1` (
+  `a` date DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SHOW CREATE TABLE t2;
+Table	Create Table
+t2	CREATE TABLE `t2` (
+  `a` date DEFAULT NULL
+) ENGINE=CONNECT DEFAULT CHARSET=latin1 `TABLE_TYPE`='MYSQL' `TABNAME`='t1' `OPTION_LIST`='host=localhost,user=root,port=PORT'
+SELECT * FROM t2;
+a
+DROP TABLE t2, t1;

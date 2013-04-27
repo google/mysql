@@ -43,7 +43,8 @@ typedef enum _thd_wait_type_e {
   THD_WAIT_BINLOG= 8,
   THD_WAIT_GROUP_COMMIT= 9,
   THD_WAIT_SYNC= 10,
-  THD_WAIT_LAST= 11
+  THD_WAIT_NET= 11,
+  THD_WAIT_LAST= 12
 } thd_wait_type;
 extern struct thd_wait_service_st {
   void (*thd_wait_begin_func)(void*, int);
@@ -51,14 +52,6 @@ extern struct thd_wait_service_st {
 } *thd_wait_service;
 void thd_wait_begin(void* thd, int wait_type);
 void thd_wait_end(void* thd);
-#include <mysql/service_thread_scheduler.h>
-struct scheduler_functions;
-extern struct my_thread_scheduler_service {
-  int (*set)(struct scheduler_functions *scheduler);
-  int (*reset)();
-} *my_thread_scheduler_service;
-int my_thread_scheduler_set(struct scheduler_functions *scheduler);
-int my_thread_scheduler_reset();
 #include <mysql/service_progress_report.h>
 extern struct progress_report_service_st {
   void (*thd_progress_init_func)(void* thd, unsigned int max_stage);
@@ -266,8 +259,8 @@ typedef struct st_mysql_server_auth_info
   unsigned int user_name_length;
   const char *auth_string;
   unsigned long auth_string_length;
-  char authenticated_as[48 +1];
-  char external_user[512];
+  char authenticated_as[512 +1];
+  char external_user[512 +1];
   int password_used;
   const char *host_or_ip;
   unsigned int host_or_ip_length;

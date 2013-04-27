@@ -59,6 +59,8 @@ C_MODE_START
 #include "../mysys/my_static.h"			// For soundex_map
 C_MODE_END
 #include "sql_show.h"                           // append_identifier
+#include <sql_repl.h>
+#include "sql_statistics.h"
 
 /**
    @todo Remove this. It is not safe to use a shared String object.
@@ -470,6 +472,82 @@ void Item_func_aes_decrypt::fix_length_and_dec()
    set_persist_maybe_null(1);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+
+const char *histogram_types[] =
+           {"SINGLE_PREC_HB", "DOUBLE_PREC_HB", 0};
+static TYPELIB hystorgam_types_typelib=
+  { array_elements(histogram_types),
+    "histogram_types",
+    histogram_types, NULL};
+const char *representation_by_type[]= {"%.3f", "%.5f"};
+
+String *Item_func_decode_histogram::val_str(String *str)
+{
+  DBUG_ASSERT(fixed == 1);
+  char buff[STRING_BUFFER_USUAL_SIZE];
+  String *res, tmp(buff, sizeof(buff), &my_charset_bin);
+  int type;
+
+  tmp.length(0);
+  if (!(res= args[1]->val_str(&tmp)) ||
+      (type= find_type(res->c_ptr_safe(),
+                       &hystorgam_types_typelib, MYF(0))) <= 0)
+  {
+    null_value= 1;
+    return 0;
+  }
+  type--;
+
+  tmp.length(0);
+  if (!(res= args[0]->val_str(&tmp)))
+  {
+    null_value= 1;
+    return 0;
+  }
+  if (type == DOUBLE_PREC_HB && res->length() % 2 != 0)
+    res->length(res->length() - 1); // one byte is unused
+
+  double prev= 0.0;
+  uint i;
+  str->length(0);
+  char numbuf[32];
+  const uchar *p= (uchar*)res->c_ptr();
+  for (i= 0; i < res->length(); i++)
+  {
+    double val;
+    switch (type)
+    {
+    case SINGLE_PREC_HB:
+      val= p[i] / ((double)((1 << 8) - 1));
+      break;
+    case DOUBLE_PREC_HB:
+      val= ((uint16 *)(p + i))[0] / ((double)((1 << 16) - 1));
+      i++;
+      break;
+    default:
+      val= 0;
+      DBUG_ASSERT(0);
+    }
+    /* show delta with previous value */
+    int size= my_snprintf(numbuf, sizeof(numbuf),
+                          representation_by_type[type], val - prev);
+    str->append(numbuf, size);
+    str->append(",");
+    prev= val;
+  }
+  /* show delta with max */
+  int size= my_snprintf(numbuf, sizeof(numbuf),
+                        representation_by_type[type], 1.0 - prev);
+  str->append(numbuf, size);
+
+  null_value=0;
+  return str;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
 
 /**
   Concatenate args with the following premises:
@@ -2460,38 +2538,16 @@ String *Item_func_elt::val_str(String *str)
 }
 
 
-void Item_func_make_set::split_sum_func(THD *thd, Item **ref_pointer_array,
-					List<Item> &fields)
-{
-  item->split_sum_func2(thd, ref_pointer_array, fields, &item, TRUE);
-  Item_str_func::split_sum_func(thd, ref_pointer_array, fields);
-}
-
-
 void Item_func_make_set::fix_length_and_dec()
 {
-  uint32 char_length= arg_count - 1; /* Separators */
+  uint32 char_length= arg_count - 2; /* Separators */
 
-  if (agg_arg_charsets_for_string_result(collation, args, arg_count))
+  if (agg_arg_charsets_for_string_result(collation, args + 1, arg_count - 1))
     return;
   
-  for (uint i=0 ; i < arg_count ; i++)
+  for (uint i=1 ; i < arg_count ; i++)
     char_length+= args[i]->max_char_length();
   fix_char_length(char_length);
-  used_tables_cache|=	  item->used_tables();
-  not_null_tables_cache&= item->not_null_tables();
-  const_item_cache&=	  item->const_item();
-  with_sum_func= with_sum_func || item->with_sum_func;
-  with_field= with_field || item->with_field;
-}
-
-
-void Item_func_make_set::update_used_tables()
-{
-  Item_func::update_used_tables();
-  item->update_used_tables();
-  used_tables_cache|=item->used_tables();
-  const_item_cache&=item->const_item();
 }
 
 
@@ -2500,15 +2556,15 @@ String *Item_func_make_set::val_str(String *str)
   DBUG_ASSERT(fixed == 1);
   ulonglong bits;
   bool first_found=0;
-  Item **ptr=args;
+  Item **ptr=args+1;
   String *result=&my_empty_string;
 
-  bits=item->val_int();
-  if ((null_value=item->null_value))
+  bits=args[0]->val_int();
+  if ((null_value=args[0]->null_value))
     return NULL;
 
-  if (arg_count < 64)
-    bits &= ((ulonglong) 1 << arg_count)-1;
+  if (arg_count < 65)
+    bits &= ((ulonglong) 1 << (arg_count-1))-1;
 
   for (; bits; bits >>= 1, ptr++)
   {
@@ -2545,39 +2601,6 @@ String *Item_func_make_set::val_str(String *str)
     }
   }
   return result;
-}
-
-
-Item *Item_func_make_set::transform(Item_transformer transformer, uchar *arg)
-{
-  DBUG_ASSERT(!current_thd->stmt_arena->is_stmt_prepare());
-
-  Item *new_item= item->transform(transformer, arg);
-  if (!new_item)
-    return 0;
-
-  /*
-    THD::change_item_tree() should be called only if the tree was
-    really transformed, i.e. when a new item has been created.
-    Otherwise we'll be allocating a lot of unnecessary memory for
-    change records at each execution.
-  */
-  if (item != new_item)
-    current_thd->change_item_tree(&item, new_item);
-  return Item_str_func::transform(transformer, arg);
-}
-
-
-void Item_func_make_set::print(String *str, enum_query_type query_type)
-{
-  str->append(STRING_WITH_LEN("make_set("));
-  item->print(str, query_type);
-  if (arg_count)
-  {
-    str->append(',');
-    print_args(str, 0, query_type);
-  }
-  str->append(')');
 }
 
 
@@ -2719,6 +2742,46 @@ String *Item_func_repeat::val_str(String *str)
 err:
   null_value=1;
   return 0;
+}
+
+
+void Item_func_binlog_gtid_pos::fix_length_and_dec()
+{
+  collation.set(system_charset_info);
+  max_length= MAX_BLOB_WIDTH;
+  maybe_null= 1;
+}
+
+
+String *Item_func_binlog_gtid_pos::val_str(String *str)
+{
+  DBUG_ASSERT(fixed == 1);
+#ifndef HAVE_REPLICATION
+  null_value= 0;
+  str->copy("", 0, system_charset_info);
+  return str;
+#else
+  String name_str, *name;
+  longlong pos;
+
+  if (args[0]->null_value || args[1]->null_value)
+    goto err;
+
+  name= args[0]->val_str(&name_str);
+  pos= args[1]->val_int();
+
+  if (pos < 0 || pos > UINT_MAX32)
+    goto err;
+
+  if (gtid_state_from_binlog_pos(name->c_ptr_safe(), (uint32)pos, str))
+    goto err;
+  null_value= 0;
+  return str;
+
+err:
+  null_value= 1;
+  return NULL;
+#endif  /* !HAVE_REPLICATION */
 }
 
 
@@ -2987,7 +3050,7 @@ String *Item_func_conv_charset::val_str(String *str)
     return null_value ? 0 : &str_value;
   String *arg= args[0]->val_str(str);
   uint dummy_errors;
-  if (!arg)
+  if (args[0]->null_value)
   {
     null_value=1;
     return 0;
@@ -3414,7 +3477,7 @@ String* Item_func_inet_ntoa::val_str(String* str)
 
     Also return null if n > 255.255.255.255
   */
-  if ((null_value= (args[0]->null_value || n > (ulonglong) LL(4294967295))))
+  if ((null_value= (args[0]->null_value || n > 0xffffffff)))
     return 0;					// Null value
 
   str->set_charset(collation.collation);
@@ -4671,11 +4734,16 @@ null:
 
 void Item_dyncol_get::print(String *str, enum_query_type query_type)
 {
+  /* see create_func_dyncol_get */
+  DBUG_ASSERT(str->length() >= 5);
+  DBUG_ASSERT(strncmp(str->ptr() + str->length() - 5, "cast(", 5) == 0);
+
+  str->length(str->length() - 5);    // removing "cast("
   str->append(STRING_WITH_LEN("column_get("));
   args[0]->print(str, query_type);
   str->append(',');
   args[1]->print(str, query_type);
-  str->append(')');
+  /* let the parent cast item add " as <type>)" */
 }
 
 
