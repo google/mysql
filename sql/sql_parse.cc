@@ -5775,6 +5775,15 @@ check_access(THD *thd, ulong want_access, const char *db, ulong *save_priv,
     DBUG_RETURN(TRUE);
   }
 
+  if (opt_require_super_for_mysql_schema_ddl
+      && db && (db != any_db) && !strcmp(db, "mysql")
+      && (want_access & ~(SELECT_ACL|INSERT_ACL|UPDATE_ACL|DELETE_ACL|EXTRA_ACL))
+      && !(sctx->master_access & SUPER_ACL))
+  {
+    my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
+    DBUG_RETURN(TRUE);
+  }
+
   if (schema_db)
   {
     if ((!(sctx->master_access & FILE_ACL) && (want_access & FILE_ACL)) ||
@@ -5969,6 +5978,15 @@ check_table_access(THD *thd, ulong want_access,TABLE_LIST *tables,
       my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
                sctx->priv_user, sctx->priv_host,
                tables->get_db_name());
+      goto deny;
+    }
+
+    if (opt_require_super_for_mysql_schema_ddl
+        && (strcmp(tables->get_db_name(), "mysql") == 0)
+        && (want_access & ~(SELECT_ACL|INSERT_ACL|UPDATE_ACL|DELETE_ACL|EXTRA_ACL))
+        && !(sctx->master_access & SUPER_ACL))
+    {
+      my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
       goto deny;
     }
 

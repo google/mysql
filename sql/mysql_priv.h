@@ -2098,6 +2098,8 @@ extern List<char> restricted_schemas;
 extern bool schema_is_restricted_for_sctx(const char *schema,
                                           Security_context *sctx);
 
+extern my_bool opt_require_super_for_mysql_schema_ddl;
+
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;
 extern MYSQL_SQL_LOG mysql_sql_log;

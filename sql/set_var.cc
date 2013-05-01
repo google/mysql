@@ -753,6 +753,10 @@ static sys_var_ulonglong_ptr sys_limit_tmp_disk_space(&vars,
                                         "limit_tmp_disk_space",
                                         &limit_tmp_disk_space);
 
+static sys_var_bool_ptr sys_require_super_for_mysql_schema_ddl(&vars,
+                          "require_super_for_mysql_schema_ddl",
+                          &opt_require_super_for_mysql_schema_ddl);
+
 #ifdef HAVE_THR_SETCONCURRENCY
 /* purecov: begin tested */
 static sys_var_const    sys_thread_concurrency(&vars, "thread_concurrency",

@@ -793,6 +793,8 @@ MEM_ROOT restricted_schemas_mem_root;
 char *restricted_schemas_str;
 List<char> restricted_schemas;
 
+my_bool opt_require_super_for_mysql_schema_ddl = 0;
+
 /* Static variables */
 
 static volatile sig_atomic_t kill_in_progress;
@@ -6408,7 +6410,8 @@ enum options_mysqld
   OPT_NO_LOCAL_INFILE_IF_REPL,
   OPT_RPL_DISALLOW_TEMP_TABLES,
   OPT_HIDE_SENSITIVE_INFORMATION,
-  OPT_RESTRICTED_SCHEMAS
+  OPT_RESTRICTED_SCHEMAS,
+  OPT_REQUIRE_SUPER_FOR_MYSQL_SCHEMA_DDL
 };
 
 
@@ -8173,6 +8176,15 @@ thread is in the relay logs.",
    "privileges, but will still not be able to access the schemas listed.",
    &restricted_schemas_str,
    &restricted_schemas_str, 0, GET_STR_ALLOC, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"require-super-for-mysql-schema-ddl", OPT_REQUIRE_SUPER_FOR_MYSQL_SCHEMA_DDL,
+   "Require SUPER privilege for any DDL commands against the 'mysql' schema, which "
+   "contains the system/privilege tables. This will restrict non-SUPER users that "
+   "have global CREATE, DROP, or ALTER privileges from manipulating the structure of "
+   "tables in the 'mysql' schema while still allowing such users to manipulate the "
+   "contents of the tables using DML commands.",
+   &opt_require_super_for_mysql_schema_ddl,
+   &opt_require_super_for_mysql_schema_ddl,
+   0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
