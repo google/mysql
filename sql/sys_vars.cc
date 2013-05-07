@@ -2458,6 +2458,16 @@ static Sys_var_ulong Sys_reserved_super_connections(
        VALID_RANGE(0, 50), DEFAULT(10), BLOCK_SIZE(1),
        NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0), ON_UPDATE(0));
 
+static Sys_var_mybool Sys_require_super_for_mysql_schema_ddl(
+       "require_super_for_mysql_schema_ddl",
+       "Require SUPER privilege for any DDL commands against the 'mysql' schema, which "
+       "contains the system/privilege tables. This will restrict non-SUPER users that "
+       "have global CREATE, DROP, or ALTER privileges from manipulating the structure of "
+       "tables in the 'mysql' schema while still allowing such users to manipulate the "
+       "contents of the tables using DML commands.",
+       GLOBAL_VAR(opt_require_super_for_mysql_schema_ddl), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 static Sys_var_mybool Sys_update_connection_privs(
        "update_connection_privs",
        "When ON automatically update user-level and db-level privileges "

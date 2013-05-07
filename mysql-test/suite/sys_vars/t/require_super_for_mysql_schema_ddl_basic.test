@@ -1,0 +1,180 @@
+#
+# Test for the require_super_for_mysql_schema_ddl variable.
+#
+
+# This test should be skipped for embedded, as it relies on permissions.
+--source include/not_embedded.inc
+
+--echo #
+--echo # Preparation
+--echo #
+
+# Set up a user with all privileges except SUPER.
+
+CREATE USER non_super;
+GRANT ALL ON *.* to non_super;
+REVOKE SUPER ON *.* from non_super;
+
+--echo # Set up test table for the tests to use in order to be stable.
+connection default;
+CREATE TABLE mysql.t (id INT NOT NULL, PRIMARY KEY(id));
+INSERT INTO mysql.t (id) VALUES (1);
+
+# Create connections for our 'non_super' user.
+
+connect (non_super, localhost, non_super,,);
+
+--echo #
+--echo # Test the variable itself.
+--echo #
+connection default;
+
+--echo # Make sure it can remember its value.
+SET GLOBAL require_super_for_mysql_schema_ddl = ON;
+SHOW GLOBAL VARIABLES LIKE 'require_super_for_mysql_schema_ddl';
+SELECT @@global.require_super_for_mysql_schema_ddl;
+
+--echo # Make sure it does not allow session scope.
+
+--error ER_GLOBAL_VARIABLE
+SET SESSION require_super_for_mysql_schema_ddl = OFF;
+
+--error ER_GLOBAL_VARIABLE
+SET @@session.require_super_for_mysql_schema_ddl = OFF;
+
+--echo # Nothing should have changed (should still be ON from above).
+SELECT @@global.require_super_for_mysql_schema_ddl;
+
+--echo # Set back to default, which should be OFF.
+SET GLOBAL require_super_for_mysql_schema_ddl = DEFAULT;
+SELECT @@global.require_super_for_mysql_schema_ddl;
+
+--echo # Try some funky values.
+--echo # Invalid types should return an error and not change the value.
+--error ER_WRONG_VALUE_FOR_VAR
+SET GLOBAL require_super_for_mysql_schema_ddl = "";
+SELECT @@global.require_super_for_mysql_schema_ddl;
+
+--echo # Setting NULL return an error and not change the value.
+--error ER_WRONG_VALUE_FOR_VAR
+SET GLOBAL require_super_for_mysql_schema_ddl = NULL;
+SELECT @@global.require_super_for_mysql_schema_ddl;
+
+--echo #
+--echo # Test that the functionality works.
+--echo #
+
+--echo # Test non-SUPER users without require_super_for_mysql_schema_ddl.
+connection non_super;
+
+--echo # All access to 'mysql' should succeed.
+USE mysql;
+SELECT * FROM t;
+INSERT INTO t (id) VALUES (2);
+UPDATE t SET id = 3 WHERE id = 2;
+DELETE FROM t WHERE id = 3;
+SHOW TABLES LIKE 't';
+SHOW CREATE TABLE t;
+CREATE TABLE x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE x ADD j INT NOT NULL AFTER i;
+RENAME TABLE x TO y;
+DROP TABLE y;
+
+USE test;
+SELECT * FROM mysql.t;
+INSERT INTO mysql.t (id) VALUES (2);
+UPDATE mysql.t SET id = 3 WHERE id = 2;
+DELETE FROM mysql.t WHERE id = 3;
+SHOW TABLES FROM mysql LIKE 't';
+SHOW CREATE TABLE mysql.t;
+CREATE TABLE mysql.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE mysql.x ADD j INT NOT NULL AFTER i;
+RENAME TABLE mysql.x TO mysql.y;
+DROP TABLE mysql.y;
+
+--echo # Enable require_super_for_mysql_schema_ddl.
+connection default;
+SET GLOBAL require_super_for_mysql_schema_ddl = ON;
+
+--echo # Test SUPER users with require_super_for_mysql_schema_ddl.
+connection default;
+
+--echo # All access to 'mysql' should succeed.
+USE mysql;
+SELECT * FROM t;
+INSERT INTO t (id) VALUES (2);
+UPDATE t SET id = 3 WHERE id = 2;
+DELETE FROM t WHERE id = 3;
+SHOW TABLES LIKE 't';
+SHOW CREATE TABLE t;
+CREATE TABLE x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE x ADD j INT NOT NULL AFTER i;
+RENAME TABLE x TO y;
+RENAME TABLE y TO x;
+DROP TABLE x;
+
+USE test;
+SELECT * FROM mysql.t;
+INSERT INTO mysql.t (id) VALUES (2);
+UPDATE mysql.t SET id = 3 WHERE id = 2;
+DELETE FROM mysql.t WHERE id = 3;
+SHOW TABLES FROM mysql LIKE 't';
+SHOW CREATE TABLE mysql.t;
+CREATE TABLE mysql.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE mysql.x ADD j INT NOT NULL AFTER i;
+RENAME TABLE mysql.x TO mysql.y;
+RENAME TABLE mysql.y TO mysql.x;
+DROP TABLE mysql.x;
+
+--echo # Test non-SUPER users with require_super_for_mysql_schema_ddl.
+connection non_super;
+
+--echo # DML access to 'mysql' should succeed.
+USE mysql;
+SELECT * FROM t;
+INSERT INTO t (id) VALUES (2);
+UPDATE t SET id = 3 WHERE id = 2;
+DELETE FROM t WHERE id = 3;
+SHOW TABLES LIKE 't';
+SHOW CREATE TABLE t;
+
+USE test;
+SELECT * FROM mysql.t;
+INSERT INTO mysql.t (id) VALUES (2);
+UPDATE mysql.t SET id = 3 WHERE id = 2;
+DELETE FROM mysql.t WHERE id = 3;
+SHOW TABLES FROM mysql LIKE 't';
+SHOW CREATE TABLE mysql.t;
+
+--echo # DDL access to 'mysql' should fail.
+USE test;
+
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+CREATE TABLE mysql.x (i INT NOT NULL, PRIMARY KEY (i));
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+ALTER TABLE mysql.t ADD s CHAR(10);
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+RENAME TABLE mysql.t TO mysql.t_fail;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+DROP TABLE mysql.t;
+
+USE mysql;
+
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+CREATE TABLE x (i INT NOT NULL, PRIMARY KEY (i));
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+ALTER TABLE t ADD s CHAR(10);
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+RENAME TABLE t TO t_fail;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+DROP TABLE t;
+
+--echo #
+--echo # Cleanup
+--echo #
+
+disconnect non_super;
+connection default;
+SET GLOBAL require_super_for_mysql_schema_ddl = DEFAULT;
+DROP USER non_super;
+DROP TABLE mysql.t;

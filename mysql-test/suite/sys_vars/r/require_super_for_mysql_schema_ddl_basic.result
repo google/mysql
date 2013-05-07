@@ -1,0 +1,197 @@
+#
+# Preparation
+#
+CREATE USER non_super;
+GRANT ALL ON *.* to non_super;
+REVOKE SUPER ON *.* from non_super;
+# Set up test table for the tests to use in order to be stable.
+CREATE TABLE mysql.t (id INT NOT NULL, PRIMARY KEY(id));
+INSERT INTO mysql.t (id) VALUES (1);
+#
+# Test the variable itself.
+#
+# Make sure it can remember its value.
+SET GLOBAL require_super_for_mysql_schema_ddl = ON;
+SHOW GLOBAL VARIABLES LIKE 'require_super_for_mysql_schema_ddl';
+Variable_name	Value
+require_super_for_mysql_schema_ddl	ON
+SELECT @@global.require_super_for_mysql_schema_ddl;
+@@global.require_super_for_mysql_schema_ddl
+1
+# Make sure it does not allow session scope.
+SET SESSION require_super_for_mysql_schema_ddl = OFF;
+ERROR HY000: Variable 'require_super_for_mysql_schema_ddl' is a GLOBAL variable and should be set with SET GLOBAL
+SET @@session.require_super_for_mysql_schema_ddl = OFF;
+ERROR HY000: Variable 'require_super_for_mysql_schema_ddl' is a GLOBAL variable and should be set with SET GLOBAL
+# Nothing should have changed (should still be ON from above).
+SELECT @@global.require_super_for_mysql_schema_ddl;
+@@global.require_super_for_mysql_schema_ddl
+1
+# Set back to default, which should be OFF.
+SET GLOBAL require_super_for_mysql_schema_ddl = DEFAULT;
+SELECT @@global.require_super_for_mysql_schema_ddl;
+@@global.require_super_for_mysql_schema_ddl
+0
+# Try some funky values.
+# Invalid types should return an error and not change the value.
+SET GLOBAL require_super_for_mysql_schema_ddl = "";
+ERROR 42000: Variable 'require_super_for_mysql_schema_ddl' can't be set to the value of ''
+SELECT @@global.require_super_for_mysql_schema_ddl;
+@@global.require_super_for_mysql_schema_ddl
+0
+# Setting NULL return an error and not change the value.
+SET GLOBAL require_super_for_mysql_schema_ddl = NULL;
+ERROR 42000: Variable 'require_super_for_mysql_schema_ddl' can't be set to the value of 'NULL'
+SELECT @@global.require_super_for_mysql_schema_ddl;
+@@global.require_super_for_mysql_schema_ddl
+0
+#
+# Test that the functionality works.
+#
+# Test non-SUPER users without require_super_for_mysql_schema_ddl.
+# All access to 'mysql' should succeed.
+USE mysql;
+SELECT * FROM t;
+id
+1
+INSERT INTO t (id) VALUES (2);
+UPDATE t SET id = 3 WHERE id = 2;
+DELETE FROM t WHERE id = 3;
+SHOW TABLES LIKE 't';
+Tables_in_mysql (t)
+t
+SHOW CREATE TABLE t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE x ADD j INT NOT NULL AFTER i;
+RENAME TABLE x TO y;
+DROP TABLE y;
+USE test;
+SELECT * FROM mysql.t;
+id
+1
+INSERT INTO mysql.t (id) VALUES (2);
+UPDATE mysql.t SET id = 3 WHERE id = 2;
+DELETE FROM mysql.t WHERE id = 3;
+SHOW TABLES FROM mysql LIKE 't';
+Tables_in_mysql (t)
+t
+SHOW CREATE TABLE mysql.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE mysql.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE mysql.x ADD j INT NOT NULL AFTER i;
+RENAME TABLE mysql.x TO mysql.y;
+DROP TABLE mysql.y;
+# Enable require_super_for_mysql_schema_ddl.
+SET GLOBAL require_super_for_mysql_schema_ddl = ON;
+# Test SUPER users with require_super_for_mysql_schema_ddl.
+# All access to 'mysql' should succeed.
+USE mysql;
+SELECT * FROM t;
+id
+1
+INSERT INTO t (id) VALUES (2);
+UPDATE t SET id = 3 WHERE id = 2;
+DELETE FROM t WHERE id = 3;
+SHOW TABLES LIKE 't';
+Tables_in_mysql (t)
+t
+SHOW CREATE TABLE t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE x ADD j INT NOT NULL AFTER i;
+RENAME TABLE x TO y;
+RENAME TABLE y TO x;
+DROP TABLE x;
+USE test;
+SELECT * FROM mysql.t;
+id
+1
+INSERT INTO mysql.t (id) VALUES (2);
+UPDATE mysql.t SET id = 3 WHERE id = 2;
+DELETE FROM mysql.t WHERE id = 3;
+SHOW TABLES FROM mysql LIKE 't';
+Tables_in_mysql (t)
+t
+SHOW CREATE TABLE mysql.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE mysql.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE mysql.x ADD j INT NOT NULL AFTER i;
+RENAME TABLE mysql.x TO mysql.y;
+RENAME TABLE mysql.y TO mysql.x;
+DROP TABLE mysql.x;
+# Test non-SUPER users with require_super_for_mysql_schema_ddl.
+# DML access to 'mysql' should succeed.
+USE mysql;
+SELECT * FROM t;
+id
+1
+INSERT INTO t (id) VALUES (2);
+UPDATE t SET id = 3 WHERE id = 2;
+DELETE FROM t WHERE id = 3;
+SHOW TABLES LIKE 't';
+Tables_in_mysql (t)
+t
+SHOW CREATE TABLE t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+USE test;
+SELECT * FROM mysql.t;
+id
+1
+INSERT INTO mysql.t (id) VALUES (2);
+UPDATE mysql.t SET id = 3 WHERE id = 2;
+DELETE FROM mysql.t WHERE id = 3;
+SHOW TABLES FROM mysql LIKE 't';
+Tables_in_mysql (t)
+t
+SHOW CREATE TABLE mysql.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+# DDL access to 'mysql' should fail.
+USE test;
+CREATE TABLE mysql.x (i INT NOT NULL, PRIMARY KEY (i));
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+ALTER TABLE mysql.t ADD s CHAR(10);
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+RENAME TABLE mysql.t TO mysql.t_fail;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+DROP TABLE mysql.t;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+USE mysql;
+CREATE TABLE x (i INT NOT NULL, PRIMARY KEY (i));
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+ALTER TABLE t ADD s CHAR(10);
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+RENAME TABLE t TO t_fail;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+DROP TABLE t;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+#
+# Cleanup
+#
+SET GLOBAL require_super_for_mysql_schema_ddl = DEFAULT;
+DROP USER non_super;
+DROP TABLE mysql.t;

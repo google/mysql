@@ -5441,6 +5441,15 @@ check_access(THD *thd, ulong want_access, const char *db, ulong *save_priv,
 
   if ((db != NULL) && (db != any_db))
   {
+    if (opt_require_super_for_mysql_schema_ddl
+        && !strcmp(db, "mysql")
+        && (want_access & ~(SELECT_ACL|INSERT_ACL|UPDATE_ACL|DELETE_ACL))
+        && !(sctx->master_access & SUPER_ACL))
+    {
+      my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
+      DBUG_RETURN(TRUE);
+    }
+
     /*
       Check if this is reserved database, like information schema or
       performance schema
@@ -5869,6 +5878,15 @@ check_table_access(THD *thd, ulong requirements,TABLE_LIST *tables,
       continue;
 
     thd->security_ctx= sctx;
+
+    if (opt_require_super_for_mysql_schema_ddl
+        && (strcmp(tables->get_db_name(), "mysql") == 0)
+        && (want_access & ~(SELECT_ACL|INSERT_ACL|UPDATE_ACL|DELETE_ACL))
+        && !(sctx->master_access & SUPER_ACL))
+    {
+      my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
+      goto deny;
+    }
 
     if (opt_system_user_table &&
         !strcmp(tables->get_db_name(), "mysql") &&
