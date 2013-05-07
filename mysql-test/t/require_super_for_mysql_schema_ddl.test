@@ -2,6 +2,9 @@
 # Test for the require_super_for_mysql_schema_ddl variable.
 #
 
+# This test should be skipped for embedded, as it relies on permissions.
+--source include/not_embedded.inc
+
 --echo #
 --echo # Preparation
 --echo #
