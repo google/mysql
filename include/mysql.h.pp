@@ -672,3 +672,4 @@ my_bool mysql_autocommit(MYSQL * mysql, my_bool auto_mode);
 my_bool mysql_more_results(MYSQL *mysql);
 int mysql_next_result(MYSQL *mysql);
 void mysql_close(MYSQL *sock);
+void mysql_shutdown_connection(MYSQL *sock);

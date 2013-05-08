@@ -832,6 +832,7 @@ my_bool STDCALL mysql_autocommit(MYSQL * mysql, my_bool auto_mode);
 my_bool STDCALL mysql_more_results(MYSQL *mysql);
 int STDCALL mysql_next_result(MYSQL *mysql);
 void STDCALL mysql_close(MYSQL *sock);
+void STDCALL mysql_shutdown_connection(MYSQL *sock);
 
 
 /* status return codes */

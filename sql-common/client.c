@@ -2819,6 +2819,16 @@ void STDCALL mysql_close(MYSQL *mysql)
   DBUG_VOID_RETURN;
 }
 
+void STDCALL mysql_shutdown_connection(MYSQL *mysql)
+{
+  DBUG_ENTER("mysql_shutdown_connection");
+  if (mysql)
+  {
+    shutdown(mysql->net.vio->sd, SHUT_RDWR);
+  }
+  DBUG_VOID_RETURN;
+}
+
 
 static my_bool cli_read_query_result(MYSQL *mysql)
 {
