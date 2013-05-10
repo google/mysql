@@ -20,6 +20,9 @@
 
 class THD;
 
+bool schema_is_restricted_for_sctx(const char *schema,
+                                   Security_context *sctx);
+
 int mysql_create_db(THD *thd, char *db, HA_CREATE_INFO *create, bool silent);
 bool mysql_alter_db(THD *thd, const char *db, HA_CREATE_INFO *create);
 bool mysql_rm_db(THD *thd,char *db,bool if_exists, bool silent);

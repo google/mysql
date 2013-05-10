@@ -1,0 +1,481 @@
+#
+# Preparation
+#
+CREATE USER non_super;
+GRANT ALL ON *.* to non_super;
+REVOKE SUPER ON *.* from non_super;
+INSERT INTO mysql.system_user SELECT * FROM mysql.user WHERE user = "non_super";
+UPDATE mysql.system_user SET user = "system_user" WHERE user = "non_super";
+FLUSH PRIVILEGES;
+CREATE DATABASE a;
+CREATE TABLE a.t (s char(100) not null);
+INSERT INTO a.t (s) VALUES ("a");
+CREATE DATABASE b;
+CREATE TABLE b.t (s char(100) not null);
+INSERT INTO b.t (s) VALUES ("b");
+#
+# Test the variable itself.
+#
+# Make sure it can remember its value.
+SET GLOBAL restricted_schemas = "a";
+SHOW GLOBAL VARIABLES LIKE 'restricted_schemas';
+Variable_name	Value
+restricted_schemas	a
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+a
+# Make sure it does not allow session scope.
+SET SESSION restricted_schemas = "b";
+ERROR HY000: Variable 'restricted_schemas' is a GLOBAL variable and should be set with SET GLOBAL
+SET @@session.restricted_schemas = "c";
+ERROR HY000: Variable 'restricted_schemas' is a GLOBAL variable and should be set with SET GLOBAL
+# Nothing should have changed (should still be 'a' from above).
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+a
+# Set back to default.
+SET GLOBAL restricted_schemas = DEFAULT;
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+
+# Try some funky values.
+# Invalid types should return an error and not change the value.
+SET GLOBAL restricted_schemas = 1;
+ERROR 42000: Incorrect argument type to variable 'restricted_schemas'
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+
+# Setting NULL should be empty.
+SET GLOBAL restricted_schemas = NULL;
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+
+# Just blanks should be empty.
+SET GLOBAL restricted_schemas = " ";
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+
+# Empty should be empty.
+SET GLOBAL restricted_schemas = "";
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+
+# Commas without values should be empty.
+SET GLOBAL restricted_schemas = ",";
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+
+# Spaces should all be removed.
+SET GLOBAL restricted_schemas = "a, b, c";
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+a,b,c
+# Even funky whitespace should all be removed.
+SET GLOBAL restricted_schemas = " \ta , b\n , c  ";
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+a,b,c
+# Default should be empty.
+SET GLOBAL restricted_schemas = DEFAULT;
+SELECT @@global.restricted_schemas;
+@@global.restricted_schemas
+
+#
+# Test that the functionality works.
+#
+# Test non-SUPER users without restricted_schemas.
+USE a;
+SELECT * FROM a.t;
+s
+a
+SHOW TABLES FROM a;
+Tables_in_a
+t
+SHOW CREATE TABLE a.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+a	t
+b	t
+# Enable 'a' and 'c' as restricted schemas.
+SET GLOBAL restricted_schemas = "a,c";
+# Test SUPER users with restricted_schemas. Everything should succeed.
+# Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+s
+a
+SHOW TABLES FROM a;
+Tables_in_a
+t
+SHOW CREATE TABLE a.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+# Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+# SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+a	t
+b	t
+# Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+# Test non-SUPER users with restricted_schemas.
+# Access to 'a' should fail.
+USE a;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SELECT * FROM a.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SHOW TABLES FROM a;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SHOW CREATE TABLE a.t;
+ERROR 42000: SHOW command denied to user 'non_super'@'localhost' for table 't'
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+ALTER TABLE a.t ADD j INT NOT NULL AFTER s;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+RENAME TABLE a.t TO a.x;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+DROP TABLE a.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+# Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+# SELECT from information_schema should succeed and return only
+# tables from b.
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+b	t
+# Access to 'c' should fail.
+CREATE DATABASE c;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+ALTER DATABASE c CHARACTER SET = utf8;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+DROP DATABASE c;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+# Check system user with restricted_schemas.
+# Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+s
+a
+SHOW TABLES FROM a;
+Tables_in_a
+t
+SHOW CREATE TABLE a.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+# Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+# SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+a	t
+b	t
+# Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+# Restrict access to 'a' and 'b' and 'c'.
+SET GLOBAL restricted_schemas = "a,b,c";
+# Test SUPER users with restricted_schemas. Everything should succeed.
+# Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+s
+a
+SHOW TABLES FROM a;
+Tables_in_a
+t
+SHOW CREATE TABLE a.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+# Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+# SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+a	t
+b	t
+# Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+# Test non-SUPER users with restricted_schemas.
+# Access to 'a' should fail.
+USE a;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SELECT * FROM a.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SHOW TABLES FROM a;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SHOW CREATE TABLE a.t;
+ERROR 42000: SHOW command denied to user 'non_super'@'localhost' for table 't'
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+ALTER TABLE a.t ADD j INT NOT NULL AFTER s;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+RENAME TABLE a.t TO a.x;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+DROP TABLE a.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+# Access to 'b' should fail.
+USE b;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'b'
+SELECT * FROM b.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'b'
+SHOW TABLES FROM b;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'b'
+SHOW CREATE TABLE b.t;
+ERROR 42000: SHOW command denied to user 'non_super'@'localhost' for table 't'
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'b'
+ALTER TABLE b.t ADD j INT NOT NULL AFTER s;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'b'
+RENAME TABLE b.t TO b.x;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'b'
+DROP TABLE b.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'b'
+# SELECT from information_schema should succeed and return empty list.
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+# Access to 'c' should fail.
+CREATE DATABASE c;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+ALTER DATABASE c CHARACTER SET = utf8;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+DROP DATABASE c;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+# Check system user with restricted_schemas.
+# Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+s
+a
+SHOW TABLES FROM a;
+Tables_in_a
+t
+SHOW CREATE TABLE a.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+# Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+# SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+a	t
+b	t
+# Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+#
+# Cleanup
+#
+SET GLOBAL restricted_schemas = DEFAULT;
+DROP USER non_super;
+DELETE FROM mysql.system_user WHERE user="system_user";
+DROP DATABASE a;
+DROP DATABASE b;
+FLUSH PRIVILEGES;

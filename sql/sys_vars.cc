@@ -2391,6 +2391,22 @@ static Sys_var_mybool Sys_readonly(
        NO_MUTEX_GUARD, NOT_IN_BINLOG,
        ON_CHECK(check_read_only), ON_UPDATE(fix_read_only));
 
+static Sys_var_charptr_list Sys_restricted_schemas(
+       "restricted_schemas",
+       "A comma-delimited list of schemas restricted to access by users with "
+       "SUPER privilege and users from the system_user table only. "
+       "Non-restricted users must still have valid GRANTs to perform the "
+       "operations against these schemas. For instance, a (non-SUPER "
+       "non-system_user) user may have global SELECT privileges, but will "
+       "still not be able to access the schemas listed.",
+       GLOBAL_VAR(restricted_schemas_str), CMD_LINE(REQUIRED_ARG),
+       IN_SYSTEM_CHARSET, DEFAULT(0));
+
+export bool is_restricted_schema(const char *str)
+{
+  return Sys_restricted_schemas.exists(str);
+}
+
 // Small lower limit to be able to test MRR
 static Sys_var_ulong Sys_read_rnd_buff_size(
        "read_rnd_buffer_size",

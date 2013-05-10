@@ -503,6 +503,166 @@ public:
   { return type != STRING_RESULT; }
 };
 
+/**
+  Store a list of char* strings. The list is normally parsed from a comma-
+  delimited list provided from the user.  On read through value_ptr, the list
+  is reconstructed from the stored list, with commas added. The original string
+  provided by update is left stored in the global variable and managed by the
+  methods from Sys_var_charptr which we inherit.
+
+  The list is assumed to be quite small or searched infrequently; no effort is
+  made to search large lists efficiently.
+
+  Backing store: List<char> + MEM_ROOT
+
+  @note
+  Much like Sys_var_charptr, this class can only handle GLOBAL variables.
+*/
+class Sys_var_charptr_list: public Sys_var_charptr
+{
+  MEM_ROOT mem_root;
+  rw_lock_t list_lock;
+  List<char> list;
+  bool list_initialized;
+
+public:
+  Sys_var_charptr_list(const char *name_arg,
+          const char *comment, int flag_args, ptrdiff_t off, size_t size,
+          CMD_LINE getopt,
+          enum charset_enum is_os_charset_arg,
+          const char *def_val, PolyLock *lock=0,
+          enum binlog_status_enum binlog_status_arg=VARIABLE_NOT_IN_BINLOG,
+          on_check_function on_check_func=0,
+          on_update_function on_update_func=0,
+          const char *substitute=0)
+    : Sys_var_charptr(name_arg, comment, flag_args, off, sizeof(char*),
+                      getopt, is_os_charset_arg, def_val, lock, binlog_status_arg,
+                      on_check_func, on_update_func, substitute),
+      list_initialized(false)
+  {
+    /*
+      The type of the returned value is a char*, which is a SHOW_CHAR, rather
+      than the normal Sys_var_charptr which returns char**, a SHOW_CHAR_PTR,
+      so we need to override show_val_type.
+    */
+    *const_cast<SHOW_TYPE*>(&show_val_type)= SHOW_CHAR;
+    my_rwlock_init(&list_lock, NULL);
+    init_alloc_root(&mem_root, 1024, 1024, 0);
+  }
+  ~Sys_var_charptr_list()
+  {
+    free_root(&mem_root, MYF(0));
+    rwlock_destroy(&list_lock);
+  }
+private:
+  void parse_comma_string(const char *value)
+  {
+    char *comma_string = my_strdup(value, MYF(0));
+    char *next= comma_string;
+    char *item= next;
+
+    while ((item= strsep(&next, ",")) != NULL)
+    {
+      /* Trim leading space */
+      while (*item && my_isspace(&my_charset_bin, *item))
+        item++;
+
+      /* Trim trailing space */
+      for (char *end= (item+strlen(item)-1); end > item && my_isspace(&my_charset_bin, *end);)
+      {
+        (*end--)= 0;
+      }
+
+      /* Skip empty strings */
+      if (!*item)
+        continue;
+
+      list.push_back(strdup_root(&mem_root, item), &mem_root);
+    }
+
+    my_free(comma_string);
+    list_initialized= true;
+  }
+public:
+  char *create_comma_string(THD *thd)
+  {
+    String tmp;
+
+    rw_rdlock(&list_lock);
+    for (List_iterator<char> it(list); char *str= it++;)
+    {
+      tmp.append(str);
+      tmp.append(",");
+    }
+    rw_unlock(&list_lock);
+
+    /* Remove the trailing comma, if present */
+    if (tmp.length() > 0) tmp.chop();
+
+    return thd->strmake(tmp.ptr(), tmp.length());
+  }
+  /*
+    On startup, global_update is not called to initially set the value,
+    and there isn't really a convenient place to do so. Instead, we will
+    check for initialization at read time, and if the list is not yet
+    initialized, populate it from the global variable once.
+  */
+  inline void initialize_from_global_var()
+  {
+    if(!list_initialized && global_var(char *))
+    {
+      parse_comma_string(global_var(char *));
+    }
+  }
+  uchar *global_value_ptr(THD *thd, LEX_STRING *base)
+  {
+    initialize_from_global_var();
+    return (uchar *)create_comma_string(thd);
+  }
+  bool global_update(THD *thd, set_var *var)
+  {
+    Sys_var_charptr::global_update(thd, var);
+
+    rw_wrlock(&list_lock);
+
+    /*
+      Emptying the list frees the List bookkeeping information (mainly
+      the list_node objects) but does not free the allocated strings.
+      They will be freed by free_root.
+    */
+    list.empty();
+    free_root(&mem_root, MYF(0));
+
+    if (global_var(char*))
+    {
+      parse_comma_string(global_var(char*));
+    }
+
+    rw_unlock(&list_lock);
+
+    return false;
+  }
+  void global_save_default(THD *thd, set_var *var)
+  {
+    Sys_var_charptr::global_save_default(thd, var);
+  }
+  bool exists(const char *str)
+  {
+    bool found = false;
+    initialize_from_global_var();
+    rw_rdlock(&list_lock);
+    for (List_iterator<char> it(list); char *cur= it++;)
+    {
+      if (strcmp(cur, str) == 0)
+      {
+        found= true;
+        break;
+      }
+    }
+    rw_unlock(&list_lock);
+    return found;
+  }
+};
 
 class Sys_var_proxy_user: public sys_var
 {

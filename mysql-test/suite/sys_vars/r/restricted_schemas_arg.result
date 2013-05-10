@@ -1,0 +1,155 @@
+#
+# Preparation
+#
+# Set up a user with all privileges except SUPER.
+CREATE USER non_super;
+GRANT ALL ON *.* to non_super;
+REVOKE SUPER ON *.* from non_super;
+# Create databases 'a' and 'b' and a simple table 't' in each. We will also
+# use database 'c' below, but it intentionally does not exist.
+CREATE DATABASE a;
+CREATE TABLE a.t (s char(100) not null);
+INSERT INTO a.t (s) VALUES ("a");
+CREATE DATABASE b;
+CREATE TABLE b.t (s char(100) not null);
+INSERT INTO b.t (s) VALUES ("b");
+# Create connections for our 'non_super' user.
+#
+# Test that the functionality works.
+#
+# Test SUPER users with restricted_schemas. Everything should succeed.
+# Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+s
+a
+SHOW TABLES FROM a;
+Tables_in_a
+t
+SHOW CREATE TABLE a.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+# Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+# Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+# Test non-SUPER users with restricted_schemas.
+# Access to 'a' should fail.
+USE a;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SELECT * FROM a.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SHOW TABLES FROM a;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+SHOW CREATE TABLE a.t;
+ERROR 42000: SHOW command denied to user 'non_super'@'localhost' for table 't'
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+ALTER TABLE a.t ADD j INT NOT NULL AFTER s;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+RENAME TABLE a.t TO a.x;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+DROP TABLE a.t;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'a'
+# Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+s
+b
+SHOW TABLES FROM b;
+Tables_in_b
+t
+SHOW CREATE TABLE b.t;
+Table	Create Table
+t	CREATE TABLE `t` (
+  `s` char(100) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+Table	Create Table
+x	CREATE TABLE `x` (
+  `i` int(11) NOT NULL,
+  `j` int(11) NOT NULL,
+  PRIMARY KEY (`i`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+# SELECT from information_schema should succeed and return tables
+# only from b.
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema in ("a", "b");
+table_schema	table_name
+b	t
+# Access to 'c' should fail.
+CREATE DATABASE c;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+ALTER DATABASE c CHARACTER SET = utf8;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+DROP DATABASE c;
+ERROR 42000: Access denied for user 'non_super'@'%' to database 'c'
+#
+# Test that the option can be changed at run-time.
+#
+# Set to a new value.
+SET GLOBAL restricted_schemas = "a,b,c";
+SHOW GLOBAL VARIABLES LIKE 'restricted_schemas';
+Variable_name	Value
+restricted_schemas	a,b,c
+# Set to empty.
+SET GLOBAL restricted_schemas = "";
+SHOW GLOBAL VARIABLES LIKE 'restricted_schemas';
+Variable_name	Value
+restricted_schemas	
+#
+# Cleanup
+#
+# Set the variable back to its startup value.
+SET GLOBAL restricted_schemas = "a,c";
+# Remove the non-super user.
+DROP USER non_super;
+# Remove the databases created.
+DROP DATABASE a;
+DROP DATABASE b;
+FLUSH PRIVILEGES;

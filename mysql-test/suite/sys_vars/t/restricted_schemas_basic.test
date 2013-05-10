@@ -1,0 +1,415 @@
+#
+# Test for the restricted_schemas variable.
+#
+
+# This test should be skipped for embedded, as it relies on permissions.
+--source include/not_embedded.inc
+
+--echo #
+--echo # Preparation
+--echo #
+
+# Set up a user with all privileges except SUPER.
+
+CREATE USER non_super;
+GRANT ALL ON *.* to non_super;
+REVOKE SUPER ON *.* from non_super;
+
+# We need to have a system_user user with the same non-SUPER privileges, but
+# we don't have GRANT, so we'll cheat a bit and copy from the user table.
+
+INSERT INTO mysql.system_user SELECT * FROM mysql.user WHERE user = "non_super";
+UPDATE mysql.system_user SET user = "system_user" WHERE user = "non_super";
+
+# Reload privileges so the system_user addition takes effect.
+
+FLUSH PRIVILEGES;
+
+# Create databases 'a' and 'b' and a simple table 't' in each. We will also
+# use database 'c' below, but it intentionally does not exist.
+
+CREATE DATABASE a;
+CREATE TABLE a.t (s char(100) not null);
+INSERT INTO a.t (s) VALUES ("a");
+
+CREATE DATABASE b;
+CREATE TABLE b.t (s char(100) not null);
+INSERT INTO b.t (s) VALUES ("b");
+
+# Create connections for our 'non_super' and 'system_user' users.
+
+connect (non_super, localhost, non_super,,);
+connect (system_user, localhost, system_user,,);
+
+--echo #
+--echo # Test the variable itself.
+--echo #
+connection default;
+
+--echo # Make sure it can remember its value.
+SET GLOBAL restricted_schemas = "a";
+SHOW GLOBAL VARIABLES LIKE 'restricted_schemas';
+SELECT @@global.restricted_schemas;
+
+--echo # Make sure it does not allow session scope.
+
+--error ER_GLOBAL_VARIABLE
+SET SESSION restricted_schemas = "b";
+
+--error ER_GLOBAL_VARIABLE
+SET @@session.restricted_schemas = "c";
+
+--echo # Nothing should have changed (should still be 'a' from above).
+SELECT @@global.restricted_schemas;
+
+--echo # Set back to default.
+SET GLOBAL restricted_schemas = DEFAULT;
+SELECT @@global.restricted_schemas;
+
+--echo # Try some funky values.
+--echo # Invalid types should return an error and not change the value.
+--error ER_WRONG_TYPE_FOR_VAR
+SET GLOBAL restricted_schemas = 1;
+SELECT @@global.restricted_schemas;
+
+--echo # Setting NULL should be empty.
+SET GLOBAL restricted_schemas = NULL;
+SELECT @@global.restricted_schemas;
+
+--echo # Just blanks should be empty.
+SET GLOBAL restricted_schemas = " ";
+SELECT @@global.restricted_schemas;
+
+--echo # Empty should be empty.
+SET GLOBAL restricted_schemas = "";
+SELECT @@global.restricted_schemas;
+
+--echo # Commas without values should be empty.
+SET GLOBAL restricted_schemas = ",";
+SELECT @@global.restricted_schemas;
+
+--echo # Spaces should all be removed.
+SET GLOBAL restricted_schemas = "a, b, c";
+SELECT @@global.restricted_schemas;
+
+--echo # Even funky whitespace should all be removed.
+SET GLOBAL restricted_schemas = " \ta , b\n , c  ";
+SELECT @@global.restricted_schemas;
+
+--echo # Default should be empty.
+SET GLOBAL restricted_schemas = DEFAULT;
+SELECT @@global.restricted_schemas;
+
+--echo #
+--echo # Test that the functionality works.
+--echo #
+
+--echo # Test non-SUPER users without restricted_schemas.
+connection non_super;
+USE a;
+SELECT * FROM a.t;
+SHOW TABLES FROM a;
+SHOW CREATE TABLE a.t;
+USE b;
+SELECT * FROM b.t;
+SHOW TABLES FROM b;
+SHOW CREATE TABLE b.t;
+SELECT table_schema, table_name
+  FROM information_schema.tables
+  WHERE table_schema in ("a", "b");
+
+--echo # Enable 'a' and 'c' as restricted schemas.
+connection default;
+SET GLOBAL restricted_schemas = "a,c";
+
+--echo # Test SUPER users with restricted_schemas. Everything should succeed.
+connection default;
+
+--echo # Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+SHOW TABLES FROM a;
+SHOW CREATE TABLE a.t;
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+
+--echo # Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+SHOW TABLES FROM b;
+SHOW CREATE TABLE b.t;
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+
+--echo # SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+  FROM information_schema.tables
+  WHERE table_schema in ("a", "b");
+
+--echo # Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+
+--echo # Test non-SUPER users with restricted_schemas.
+connection non_super;
+
+--echo # Access to 'a' should fail.
+--error ER_DBACCESS_DENIED_ERROR
+USE a;
+
+--error ER_DBACCESS_DENIED_ERROR
+SELECT * FROM a.t;
+
+--error ER_DBACCESS_DENIED_ERROR
+SHOW TABLES FROM a;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+SHOW CREATE TABLE a.t;
+
+--error ER_DBACCESS_DENIED_ERROR
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+
+--error ER_DBACCESS_DENIED_ERROR
+ALTER TABLE a.t ADD j INT NOT NULL AFTER s;
+
+--error ER_DBACCESS_DENIED_ERROR
+RENAME TABLE a.t TO a.x;
+
+--error ER_DBACCESS_DENIED_ERROR
+DROP TABLE a.t;
+
+--echo # Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+SHOW TABLES FROM b;
+SHOW CREATE TABLE b.t;
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+
+--echo # SELECT from information_schema should succeed and return only
+--echo # tables from b.
+SELECT table_schema, table_name
+  FROM information_schema.tables
+  WHERE table_schema in ("a", "b");
+
+--echo # Access to 'c' should fail.
+--error ER_DBACCESS_DENIED_ERROR
+CREATE DATABASE c;
+
+--error ER_DBACCESS_DENIED_ERROR
+ALTER DATABASE c CHARACTER SET = utf8;
+
+--error ER_DBACCESS_DENIED_ERROR
+DROP DATABASE c;
+
+--echo # Check system user with restricted_schemas.
+connection system_user;
+
+--echo # Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+SHOW TABLES FROM a;
+SHOW CREATE TABLE a.t;
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+
+--echo # Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+SHOW TABLES FROM b;
+SHOW CREATE TABLE b.t;
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+
+--echo # SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+  FROM information_schema.tables
+  WHERE table_schema in ("a", "b");
+
+--echo # Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+
+--echo # Restrict access to 'a' and 'b' and 'c'.
+connection default;
+SET GLOBAL restricted_schemas = "a,b,c";
+
+--echo # Test SUPER users with restricted_schemas. Everything should succeed.
+connection default;
+
+--echo # Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+SHOW TABLES FROM a;
+SHOW CREATE TABLE a.t;
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+
+--echo # Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+SHOW TABLES FROM b;
+SHOW CREATE TABLE b.t;
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+
+--echo # SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+  FROM information_schema.tables
+  WHERE table_schema in ("a", "b");
+
+--echo # Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+
+--echo # Test non-SUPER users with restricted_schemas.
+connection non_super;
+
+--echo # Access to 'a' should fail.
+--error ER_DBACCESS_DENIED_ERROR
+USE a;
+
+--error ER_DBACCESS_DENIED_ERROR
+SELECT * FROM a.t;
+
+--error ER_DBACCESS_DENIED_ERROR
+SHOW TABLES FROM a;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+SHOW CREATE TABLE a.t;
+
+--error ER_DBACCESS_DENIED_ERROR
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+
+--error ER_DBACCESS_DENIED_ERROR
+ALTER TABLE a.t ADD j INT NOT NULL AFTER s;
+
+--error ER_DBACCESS_DENIED_ERROR
+RENAME TABLE a.t TO a.x;
+
+--error ER_DBACCESS_DENIED_ERROR
+DROP TABLE a.t;
+
+--echo # Access to 'b' should fail.
+--error ER_DBACCESS_DENIED_ERROR
+USE b;
+
+--error ER_DBACCESS_DENIED_ERROR
+SELECT * FROM b.t;
+
+--error ER_DBACCESS_DENIED_ERROR
+SHOW TABLES FROM b;
+
+--error ER_TABLEACCESS_DENIED_ERROR
+SHOW CREATE TABLE b.t;
+
+--error ER_DBACCESS_DENIED_ERROR
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+
+--error ER_DBACCESS_DENIED_ERROR
+ALTER TABLE b.t ADD j INT NOT NULL AFTER s;
+
+--error ER_DBACCESS_DENIED_ERROR
+RENAME TABLE b.t TO b.x;
+
+--error ER_DBACCESS_DENIED_ERROR
+DROP TABLE b.t;
+
+--echo # SELECT from information_schema should succeed and return empty list.
+SELECT table_schema, table_name
+  FROM information_schema.tables
+  WHERE table_schema in ("a", "b");
+
+--echo # Access to 'c' should fail.
+--error ER_DBACCESS_DENIED_ERROR
+CREATE DATABASE c;
+
+--error ER_DBACCESS_DENIED_ERROR
+ALTER DATABASE c CHARACTER SET = utf8;
+
+--error ER_DBACCESS_DENIED_ERROR
+DROP DATABASE c;
+
+--echo # Check system user with restricted_schemas.
+connection system_user;
+
+--echo # Access to 'a' should succeed.
+USE a;
+SELECT * FROM a.t;
+SHOW TABLES FROM a;
+SHOW CREATE TABLE a.t;
+CREATE TABLE a.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE a.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE a.x;
+RENAME TABLE a.x TO a.y;
+RENAME TABLE a.y TO a.x;
+DROP TABLE a.x;
+
+--echo # Access to 'b' should succeed.
+USE b;
+SELECT * FROM b.t;
+SHOW TABLES FROM b;
+SHOW CREATE TABLE b.t;
+CREATE TABLE b.x (i INT NOT NULL, PRIMARY KEY (i));
+ALTER TABLE b.x ADD j INT NOT NULL AFTER i;
+SHOW CREATE TABLE b.x;
+RENAME TABLE b.x TO b.y;
+RENAME TABLE b.y TO b.x;
+DROP TABLE b.x;
+
+--echo # SELECT from information_schema should succeed and return table list.
+SELECT table_schema, table_name
+  FROM information_schema.tables
+  WHERE table_schema in ("a", "b");
+
+--echo # Access to 'c' should succeed.
+CREATE DATABASE c;
+ALTER DATABASE c CHARACTER SET = utf8;
+DROP DATABASE c;
+
+--echo #
+--echo # Cleanup
+--echo #
+
+disconnect non_super;
+disconnect system_user;
+connection default;
+SET GLOBAL restricted_schemas = DEFAULT;
+DROP USER non_super;
+DELETE FROM mysql.system_user WHERE user="system_user";
+DROP DATABASE a;
+DROP DATABASE b;
+
+FLUSH PRIVILEGES;
+

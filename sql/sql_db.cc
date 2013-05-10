@@ -536,6 +536,37 @@ CHARSET_INFO *get_default_db_collation(THD *thd, const char *db_name)
   return db_info.default_table_charset;
 }
 
+/*
+  It would be more proper to add this extern in sys_vars.h and include that
+  in this file, but sys_vars.h is currently only included in sys_vars.cc.
+  Several functions are defined in sys_vars.h which are used only from
+  sys_vars.cc, and including them in other .cc files will cause compilation
+  failure with -Werror due to those functions not being used. In addition,
+  sys_vars.h defines several overly generic macros, such as DEFAULT, which
+  are problematic to define widely.
+*/
+extern bool is_restricted_schema(const char *str); /* sys_vars.cc */
+
+bool schema_is_restricted_for_sctx(const char *schema, Security_context *sctx)
+{
+  /* Users with SUPER privilege are always allowed. */
+  if (sctx->master_access & SUPER_ACL)
+    return false;
+
+  /* Users from the system_user table are always allowed. */
+  if (sctx->is_system_user)
+    return false;
+
+  /*
+    If a restricted schema is used and we've made it this far, the user will
+    be denied access, since they are not SUPER or a system_user.
+  */
+  if (is_restricted_schema(schema))
+    return true;
+
+  return false;
+}
+
 
 /*
   Create a database
@@ -1435,6 +1466,14 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
     }
   }
   DBUG_PRINT("enter",("name: '%s'", new_db_name->str));
+
+  if (schema_is_restricted_for_sctx(new_db_name->str, sctx))
+  {
+    my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
+             sctx->priv_user, sctx->priv_host,
+             new_db_name->str);
+    DBUG_RETURN(TRUE);
+  }
 
   if (is_infoschema_db(new_db_name->str, new_db_name->length))
   {

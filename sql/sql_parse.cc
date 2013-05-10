@@ -5450,6 +5450,23 @@ check_access(THD *thd, ulong want_access, const char *db, ulong *save_priv,
       DBUG_RETURN(TRUE);
     }
 
+    if (schema_is_restricted_for_sctx(db, sctx))
+    {
+      // SELECT access may be checked also when e.g. querying
+      // information_schema.tables. In that case if we fail immediately here
+      // we'll fail the whole statement. But if we gracefully return then
+      // per-table permissions will be checked later and whatever is
+      // inaccessible (due to being restricted or otherwise) will be excluded
+      // from output, but the statement itself will succeed. And that is the
+      // behavior we want.
+      if (want_access == SELECT_ACL)
+	DBUG_RETURN(FALSE);
+
+      my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
+               sctx->priv_user, sctx->priv_host, db);
+      DBUG_RETURN(TRUE);
+    }
+
     /*
       Check if this is reserved database, like information schema or
       performance schema
@@ -5885,6 +5902,14 @@ check_table_access(THD *thd, ulong requirements,TABLE_LIST *tables,
         && !(sctx->master_access & SUPER_ACL))
     {
       my_error(ER_SPECIFIC_ACCESS_DENIED_ERROR, MYF(0), "SUPER");
+      goto deny;
+    }
+
+    if (schema_is_restricted_for_sctx(tables->get_db_name(), sctx))
+    {
+      my_error(ER_DBACCESS_DENIED_ERROR, MYF(0),
+               sctx->priv_user, sctx->priv_host,
+               tables->get_db_name());
       goto deny;
     }
 
