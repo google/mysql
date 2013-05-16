@@ -626,6 +626,7 @@ char *mysqld_unix_port, *opt_mysql_tmpdir;
 ulong thread_handling;
 
 char *restricted_schemas_str;
+char *restricted_variables_str;
 
 /** name of reference on left expression in rewritten IN subquery */
 const char *in_left_expr_name= "<left expr>";

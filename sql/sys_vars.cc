@@ -2407,6 +2407,19 @@ export bool is_restricted_schema(const char *str)
   return Sys_restricted_schemas.exists(str);
 }
 
+static Sys_var_charptr_list Sys_restricted_variables(
+       "restricted_variables",
+       "A comma-delimited list of variables whose visibility is restricted "
+       "to users with SUPER privilege. Non-SUPER users will see the variables "
+       "masked as \"(hidden)\" in SHOW VARIABLES and SELECT @@variable.",
+       GLOBAL_VAR(restricted_variables_str), CMD_LINE(REQUIRED_ARG),
+       IN_SYSTEM_CHARSET, DEFAULT(0));
+
+export bool is_restricted_variable(const char *str)
+{
+  return Sys_restricted_variables.exists(str);
+}
+
 // Small lower limit to be able to test MRR
 static Sys_var_ulong Sys_read_rnd_buff_size(
        "read_rnd_buffer_size",

@@ -5784,6 +5784,16 @@ void Item_user_var_as_out_param::print_for_load(THD *thd, String *str)
   append_identifier(thd, str, name.str, name.length);
 }
 
+/*
+  It would be more proper to add this extern in sys_vars.h and include that
+  in this file, but sys_vars.h is currently only included in sys_vars.cc.
+  Several functions are defined in sys_vars.h which are used only from
+  sys_vars.cc, and including them in other .cc files will cause compilation
+  failure with -Werror due to those functions not being used. In addition,
+  sys_vars.h defines several overly generic macros, such as DEFAULT, which
+  are problematic to define widely.
+*/
+extern bool is_restricted_variable(const char *str); /* sys_vars.cc */
 
 Item_func_get_system_var::
 Item_func_get_system_var(sys_var *var_arg, enum_var_type var_type_arg,
@@ -5900,6 +5910,11 @@ void Item_func_get_system_var::print(String *str, enum_query_type query_type)
 
 enum Item_result Item_func_get_system_var::result_type() const
 {
+  /* Force restricted variables to return a string by default. */
+  if (is_restricted_variable(var->name.str)
+      && !(current_thd->security_ctx->master_access & SUPER_ACL))
+    return STRING_RESULT;
+
   switch (var->show_type())
   {
     case SHOW_BOOL:
@@ -5927,6 +5942,11 @@ enum Item_result Item_func_get_system_var::result_type() const
 
 enum_field_types Item_func_get_system_var::field_type() const
 {
+  /* Force restricted variables to return a string by default. */
+  if (is_restricted_variable(var->name.str)
+      && !(current_thd->security_ctx->master_access & SUPER_ACL))
+    return MYSQL_TYPE_VARCHAR;
+
   switch (var->show_type())
   {
     case SHOW_BOOL:
@@ -5964,6 +5984,16 @@ longlong Item_func_get_system_var::val_int()
                       return 0;
                     }
                   });
+
+  /*
+    Restricted variables should use val_str, but val_int may be called when
+    a query contains a more specific cast, such as @@var + 0. If val_int is
+    called for a restricted variable, return 0 as a safe value instead.
+  */
+  if (is_restricted_variable(var->name.str)
+      && !(thd->security_ctx->master_access & SUPER_ACL))
+    return 0;
+
   if (cache_present && thd->query_id == used_query_id)
   {
     if (cache_present & GET_SYS_VAR_CACHE_LONG)
@@ -6005,6 +6035,21 @@ String* Item_func_get_system_var::val_str(String* str)
 {
   THD *thd= current_thd;
 
+  /*
+    For restricted variables, return the string "(hidden)" to hide the value
+    of the variable. Normally this will be called regardless of the claimed
+    type of the original variable, as we override the variable type to string
+    for restricted variables. However, there are cases where val_real or
+    val_int may be called directly; so they must also return safe values.
+  */
+  if (is_restricted_variable(var->name.str)
+      && !(thd->security_ctx->master_access & SUPER_ACL))
+  {
+    str= &cached_strval;
+    str->append("(hidden)");
+    return str;
+  }
+
   if (cache_present && thd->query_id == used_query_id)
   {
     if (cache_present & GET_SYS_VAR_CACHE_STRING)
@@ -6041,6 +6086,15 @@ String* Item_func_get_system_var::val_str(String* str)
 double Item_func_get_system_var::val_real()
 {
   THD *thd= current_thd;
+
+  /*
+    Restricted variables should use val_str, but val_real may be called when
+    a query contains a more specific cast, such as @@var + 0.0. If val_real
+    is called for a restricted variable, return 0.0 as a safe value instead.
+  */
+  if (is_restricted_variable(var->name.str)
+      && !(thd->security_ctx->master_access & SUPER_ACL))
+    return 0.0;
 
   if (cache_present && thd->query_id == used_query_id)
   {

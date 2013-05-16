@@ -1,0 +1,213 @@
+#
+# Test for the restricted_variables variable.
+#
+
+# This test should be skipped for embedded, as it relies on permissions.
+--source include/not_embedded.inc
+
+# Grab the server host name and port number, so that they can be replaced
+# with a deterministic string in tests.
+let $SERVER_HOST= `SELECT @@hostname`;
+let $SERVER_PORT= `SELECT @@port`;
+
+--echo #
+--echo # Preparation: Set up a non-SUPER user.
+--echo #
+CREATE USER non_super;
+GRANT SELECT ON *.* TO non_super;
+connect (non_super, localhost, non_super,,);
+
+--echo #
+--echo # Test the variable itself.
+--echo #
+connection default;
+
+--echo # Make sure it can remember its value.
+SET GLOBAL restricted_variables = "a";
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+SELECT @@global.restricted_variables;
+
+--echo # Make sure it does not allow session scope.
+
+--error ER_GLOBAL_VARIABLE
+SET SESSION restricted_variables = "b";
+
+--error ER_GLOBAL_VARIABLE
+SET @@session.restricted_variables = "c";
+
+--echo # Nothing should have changed (should still be 'a' from above).
+SELECT @@global.restricted_variables;
+
+--echo # Set back to default.
+SET GLOBAL restricted_variables = DEFAULT;
+SELECT @@global.restricted_variables;
+
+--echo # Try some funky values.
+--echo # Invalid types should return an error and not change the value.
+--error ER_WRONG_TYPE_FOR_VAR
+SET GLOBAL restricted_variables = 1;
+SELECT @@global.restricted_variables;
+
+--echo # Setting NULL should be empty.
+SET GLOBAL restricted_variables = NULL;
+SELECT @@global.restricted_variables;
+
+--echo # Just blanks should be empty.
+SET GLOBAL restricted_variables = " ";
+SELECT @@global.restricted_variables;
+
+--echo # Empty should be empty.
+SET GLOBAL restricted_variables = "";
+SELECT @@global.restricted_variables;
+
+--echo # Commas without values should be empty.
+SET GLOBAL restricted_variables = ",";
+SELECT @@global.restricted_variables;
+
+--echo # Spaces should all be removed.
+SET GLOBAL restricted_variables = "a, b, c";
+SELECT @@global.restricted_variables;
+
+--echo # Even funky whitespace should all be removed.
+SET GLOBAL restricted_variables = " \ta , b\n , c  ";
+SELECT @@global.restricted_variables;
+
+--echo # Default should be empty.
+SET GLOBAL restricted_variables = DEFAULT;
+SELECT @@global.restricted_variables;
+
+--echo #
+--echo # Test that with no variables restricted, nothing is hidden.
+--echo #
+
+--echo # Test that nothing is hidden for SUPER users.
+connection default;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SELECT @@port, @@global.port;
+
+--echo # Test that nothing is hidden for non-SUPER users.
+connection non_super;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SELECT @@port, @@global.port;
+
+--echo #
+--echo # Test that the variables are hidden correctly.
+--echo #
+
+--echo # Restrict hostname and port.
+connection default;
+SET GLOBAL restricted_variables = "hostname,port";
+
+--echo # Test that nothing is hidden for SUPER users.
+connection default;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SELECT @@port, @@global.port;
+
+--echo # Test that hostname and port are hidden for non-SUPER users.
+connection non_super;
+
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+SHOW SESSION VARIABLES LIKE 'hostname';
+SELECT @@hostname, @@global.hostname;
+
+SHOW GLOBAL VARIABLES LIKE 'port';
+SHOW SESSION VARIABLES LIKE 'port';
+SELECT @@port, @@global.port;
+
+--echo # Test that values can't be exposed through clever querying.
+connection non_super;
+
+SELECT @@hostname + 0;
+SELECT @@hostname + 0.0;
+SELECT CONCAT("foo", @@hostname, "bar");
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@global.hostname = '$SERVER_HOST';
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@hostname = '$SERVER_HOST';
+
+SELECT @@port + 0;
+SELECT @@port + 0.0;
+SELECT CONCAT("foo", @@port, "bar");
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@global.port = '$SERVER_PORT';
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@port = '$SERVER_PORT';
+
+--echo #
+--echo # Clean up: Set the variable back to the default and verify.
+--echo #
+connection default;
+SET GLOBAL restricted_variables = DEFAULT;
+
+--echo # Test that nothing is hidden for SUPER users.
+connection default;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SELECT @@port, @@global.port;
+
+--echo # Test that nothing is hidden for non-SUPER users.
+connection non_super;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SELECT @@port, @@global.port;
+
+--echo #
+--echo # Clean up: Drop the non-SUPER user we created.
+--echo #
+connection default;
+disconnect non_super;
+DROP USER non_super;

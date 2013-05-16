@@ -2937,14 +2937,14 @@ void remove_status_vars(SHOW_VAR *list)
 }
 
 
-
 static bool show_status_array(THD *thd, const char *wild,
                               SHOW_VAR *variables,
                               enum enum_var_type value_type,
                               struct system_status_var *status_var,
                               const char *prefix, TABLE *table,
                               bool ucase_names,
-                              COND *cond)
+                              COND *cond,
+                              bool (*check_hidden_func)(const char *))
 {
   my_aligned_storage<SHOW_VAR_FUNC_BUFF_SIZE, MY_ALIGNOF(long)> buffer;
   char * const buff= buffer.data;
@@ -2957,6 +2957,7 @@ static bool show_status_array(THD *thd, const char *wild,
   enum_check_fields save_count_cuted_fields= thd->count_cuted_fields;
   bool res= FALSE;
   CHARSET_INFO *charset= system_charset_info;
+  bool user_is_super= ((thd->security_ctx->master_access & SUPER_ACL) != 0);
   DBUG_ENTER("show_status_array");
 
   thd->count_cuted_fields= CHECK_FIELD_WARN;
@@ -3015,7 +3016,8 @@ static bool show_status_array(THD *thd, const char *wild,
     if (show_type == SHOW_ARRAY)
     {
       show_status_array(thd, wild, (SHOW_VAR *) var->value, value_type,
-                        status_var, name_buffer, table, ucase_names, cond);
+                        status_var, name_buffer, table, ucase_names, cond,
+                        check_hidden_func);
     }
     else
     {
@@ -3028,6 +3030,15 @@ static bool show_status_array(THD *thd, const char *wild,
         const char *pos, *end;                  // We assign a lot of const's
 
         mysql_mutex_lock(&LOCK_global_system_variables);
+
+        if(!user_is_super
+           && check_hidden_func
+           && check_hidden_func(name_buffer))
+        {
+          pos= "(hidden)";
+          end= strend(pos);
+          goto variable_filled;
+        }
 
         if (show_type == SHOW_SYS)
         {
@@ -3129,6 +3140,8 @@ static bool show_status_array(THD *thd, const char *wild,
           DBUG_ASSERT(0);
           break;
         }
+
+variable_filled:
         table->field[1]->store(pos, (uint32) (end - pos), charset);
         thd->count_cuted_fields= CHECK_FIELD_IGNORE;
         table->field[1]->set_notnull();
@@ -7263,6 +7276,16 @@ int fill_open_tables(THD *thd, TABLE_LIST *tables, COND *cond)
   DBUG_RETURN(0);
 }
 
+/*
+  It would be more proper to add this extern in sys_vars.h and include that
+  in this file, but sys_vars.h is currently only included in sys_vars.cc.
+  Several functions are defined in sys_vars.h which are used only from
+  sys_vars.cc, and including them in other .cc files will cause compilation
+  failure with -Werror due to those functions not being used. In addition,
+  sys_vars.h defines several overly generic macros, such as DEFAULT, which
+  are problematic to define widely.
+*/
+extern bool is_restricted_variable(const char *str); /* sys_vars.cc */
 
 int fill_variables(THD *thd, TABLE_LIST *tables, COND *cond)
 {
@@ -7285,7 +7308,7 @@ int fill_variables(THD *thd, TABLE_LIST *tables, COND *cond)
   mysql_rwlock_rdlock(&LOCK_system_variables_hash);
   res= show_status_array(thd, wild, enumerate_sys_vars(thd, sorted_vars, option_type),
                          option_type, NULL, "", tables->table,
-                         upper_case_names, partial_cond);
+                         upper_case_names, partial_cond, &is_restricted_variable);
   mysql_rwlock_unlock(&LOCK_system_variables_hash);
   DBUG_RETURN(res);
 }
@@ -7333,7 +7356,7 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
   res= show_status_array(thd, wild,
                          (SHOW_VAR *)all_status_vars.buffer,
                          option_type, tmp1, "", tables->table,
-                         upper_case_names, partial_cond);
+                         upper_case_names, partial_cond, NULL);
   mysql_mutex_unlock(&LOCK_status);
   DBUG_RETURN(res);
 }

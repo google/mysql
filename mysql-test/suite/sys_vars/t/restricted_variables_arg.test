@@ -1,0 +1,88 @@
+#
+# Test for the restricted_variables variable, using command-line options.
+#
+
+# This test should be skipped for embedded, as it relies on permissions.
+--source include/not_embedded.inc
+
+--echo # Grab the server host name and port number, so that they can be replaced
+--echo # with a deterministic string in tests.
+let $SERVER_HOST= `SELECT @@hostname`;
+let $SERVER_PORT= `SELECT @@port`;
+
+--echo #
+--echo # Preparation: Set up a non-SUPER user.
+--echo #
+CREATE USER non_super;
+GRANT SELECT ON *.* TO non_super;
+connect (non_super, localhost, non_super,,);
+
+--echo #
+--echo # Test the variable itself.
+--echo #
+connection default;
+
+--echo # Test that the value specified on the command-line works.
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+
+--echo #
+--echo # Test that the variables are hidden correctly.
+--echo #
+
+--echo # The command-line option specified to restrict hostname and port.
+
+--echo # Test that nothing is hidden for SUPER users.
+connection default;
+
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+--replace_result $SERVER_HOST SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW GLOBAL VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+--replace_result $SERVER_PORT SERVER_PORT
+SELECT @@port, @@global.port;
+
+--echo # Test that hostname and port are hidden for non-SUPER users.
+connection non_super;
+
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+SHOW SESSION VARIABLES LIKE 'hostname';
+SELECT @@hostname, @@global.hostname;
+
+SHOW GLOBAL VARIABLES LIKE 'port';
+SHOW SESSION VARIABLES LIKE 'port';
+SELECT @@port, @@global.port;
+
+--echo #
+--echo # Test that the option can be changed at run-time.
+--echo #
+
+--echo # Set to a new value.
+connection default;
+
+SET GLOBAL restricted_variables = "a,b,c";
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+
+--echo # Set to empty.
+connection default;
+
+SET GLOBAL restricted_variables = "";
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+
+--echo #
+--echo # Clean up
+--echo #
+connection default;
+
+--echo # Set the variable back to its startup value.
+SET GLOBAL restricted_variables = "hostname,port";
+
+--echo # Drop the non-super user we created.
+disconnect non_super;
+DROP USER non_super;

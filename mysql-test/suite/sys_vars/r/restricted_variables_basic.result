@@ -1,0 +1,233 @@
+#
+# Preparation: Set up a non-SUPER user.
+#
+CREATE USER non_super;
+GRANT SELECT ON *.* TO non_super;
+#
+# Test the variable itself.
+#
+# Make sure it can remember its value.
+SET GLOBAL restricted_variables = "a";
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+Variable_name	Value
+restricted_variables	a
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+a
+# Make sure it does not allow session scope.
+SET SESSION restricted_variables = "b";
+ERROR HY000: Variable 'restricted_variables' is a GLOBAL variable and should be set with SET GLOBAL
+SET @@session.restricted_variables = "c";
+ERROR HY000: Variable 'restricted_variables' is a GLOBAL variable and should be set with SET GLOBAL
+# Nothing should have changed (should still be 'a' from above).
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+a
+# Set back to default.
+SET GLOBAL restricted_variables = DEFAULT;
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+
+# Try some funky values.
+# Invalid types should return an error and not change the value.
+SET GLOBAL restricted_variables = 1;
+ERROR 42000: Incorrect argument type to variable 'restricted_variables'
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+
+# Setting NULL should be empty.
+SET GLOBAL restricted_variables = NULL;
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+
+# Just blanks should be empty.
+SET GLOBAL restricted_variables = " ";
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+
+# Empty should be empty.
+SET GLOBAL restricted_variables = "";
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+
+# Commas without values should be empty.
+SET GLOBAL restricted_variables = ",";
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+
+# Spaces should all be removed.
+SET GLOBAL restricted_variables = "a, b, c";
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+a,b,c
+# Even funky whitespace should all be removed.
+SET GLOBAL restricted_variables = " \ta , b\n , c  ";
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+a,b,c
+# Default should be empty.
+SET GLOBAL restricted_variables = DEFAULT;
+SELECT @@global.restricted_variables;
+@@global.restricted_variables
+
+#
+# Test that with no variables restricted, nothing is hidden.
+#
+# Test that nothing is hidden for SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+SERVER_HOST	SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SELECT @@port, @@global.port;
+@@port	@@global.port
+SERVER_PORT	SERVER_PORT
+# Test that nothing is hidden for non-SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+SERVER_HOST	SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SELECT @@port, @@global.port;
+@@port	@@global.port
+SERVER_PORT	SERVER_PORT
+#
+# Test that the variables are hidden correctly.
+#
+# Restrict hostname and port.
+SET GLOBAL restricted_variables = "hostname,port";
+# Test that nothing is hidden for SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+SERVER_HOST	SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SELECT @@port, @@global.port;
+@@port	@@global.port
+SERVER_PORT	SERVER_PORT
+# Test that hostname and port are hidden for non-SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	(hidden)
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	(hidden)
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+(hidden)	(hidden)
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	(hidden)
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	(hidden)
+SELECT @@port, @@global.port;
+@@port	@@global.port
+(hidden)	(hidden)
+# Test that values can't be exposed through clever querying.
+SELECT @@hostname + 0;
+@@hostname + 0
+0
+SELECT @@hostname + 0.0;
+@@hostname + 0.0
+0
+SELECT CONCAT("foo", @@hostname, "bar");
+CONCAT("foo", @@hostname, "bar")
+foo(hidden)bar
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@global.hostname = '$SERVER_HOST';
+should_be_0
+0
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@hostname = '$SERVER_HOST';
+should_be_0
+0
+SELECT @@port + 0;
+@@port + 0
+0
+SELECT @@port + 0.0;
+@@port + 0.0
+0.0
+SELECT CONCAT("foo", @@port, "bar");
+CONCAT("foo", @@port, "bar")
+foo(hidden)bar
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@global.port = '$SERVER_PORT';
+should_be_0
+0
+SELECT COUNT(*) AS should_be_0 FROM DUAL WHERE @@port = '$SERVER_PORT';
+should_be_0
+0
+#
+# Clean up: Set the variable back to the default and verify.
+#
+SET GLOBAL restricted_variables = DEFAULT;
+# Test that nothing is hidden for SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+SERVER_HOST	SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SELECT @@port, @@global.port;
+@@port	@@global.port
+SERVER_PORT	SERVER_PORT
+# Test that nothing is hidden for non-SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+SERVER_HOST	SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SELECT @@port, @@global.port;
+@@port	@@global.port
+SERVER_PORT	SERVER_PORT
+#
+# Clean up: Drop the non-SUPER user we created.
+#
+DROP USER non_super;

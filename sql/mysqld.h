@@ -243,6 +243,7 @@ extern char *opt_deprecated_engines;
 extern my_bool opt_require_super_for_mysql_schema_ddl;
 
 extern char *restricted_schemas_str;
+extern char *restricted_variables_str;
 
 /*
   THR_MALLOC is a key which will be used to set/get MEM_ROOT** for a thread,

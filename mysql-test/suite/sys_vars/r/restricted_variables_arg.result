@@ -1,0 +1,76 @@
+# Grab the server host name and port number, so that they can be replaced
+# with a deterministic string in tests.
+#
+# Preparation: Set up a non-SUPER user.
+#
+CREATE USER non_super;
+GRANT SELECT ON *.* TO non_super;
+#
+# Test the variable itself.
+#
+# Test that the value specified on the command-line works.
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+Variable_name	Value
+restricted_variables	hostname,port
+#
+# Test that the variables are hidden correctly.
+#
+# The command-line option specified to restrict hostname and port.
+# Test that nothing is hidden for SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	SERVER_HOST
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+SERVER_HOST	SERVER_HOST
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	SERVER_PORT
+SELECT @@port, @@global.port;
+@@port	@@global.port
+SERVER_PORT	SERVER_PORT
+# Test that hostname and port are hidden for non-SUPER users.
+SHOW GLOBAL VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	(hidden)
+SHOW SESSION VARIABLES LIKE 'hostname';
+Variable_name	Value
+hostname	(hidden)
+SELECT @@hostname, @@global.hostname;
+@@hostname	@@global.hostname
+(hidden)	(hidden)
+SHOW GLOBAL VARIABLES LIKE 'port';
+Variable_name	Value
+port	(hidden)
+SHOW SESSION VARIABLES LIKE 'port';
+Variable_name	Value
+port	(hidden)
+SELECT @@port, @@global.port;
+@@port	@@global.port
+(hidden)	(hidden)
+#
+# Test that the option can be changed at run-time.
+#
+# Set to a new value.
+SET GLOBAL restricted_variables = "a,b,c";
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+Variable_name	Value
+restricted_variables	a,b,c
+# Set to empty.
+SET GLOBAL restricted_variables = "";
+SHOW GLOBAL VARIABLES LIKE 'restricted_variables';
+Variable_name	Value
+restricted_variables	
+#
+# Clean up
+#
+# Set the variable back to its startup value.
+SET GLOBAL restricted_variables = "hostname,port";
+# Drop the non-super user we created.
+DROP USER non_super;
