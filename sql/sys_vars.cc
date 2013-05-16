@@ -3831,6 +3831,12 @@ static Sys_var_ulonglong Sys_group_concat_max_len(
        SESSION_VAR(group_concat_max_len), CMD_LINE(REQUIRED_ARG),
        VALID_RANGE(4, SIZE_T_MAX), DEFAULT(1024), BLOCK_SIZE(1));
 
+static Sys_var_mybool Sys_hide_sensitive_information(
+       "hide_sensitive_information",
+       "Hide potentially sensitive information, such as client IP addresses.",
+       GLOBAL_VAR(hide_sensitive_information), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 static char *glob_hostname_ptr;
 static Sys_var_charptr Sys_hostname(
        "hostname", "Server host name",

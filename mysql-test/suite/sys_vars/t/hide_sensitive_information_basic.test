@@ -1,0 +1,169 @@
+#
+# Test for the hide_sensitive_information variable.
+#
+
+# This test should be skipped for embedded, as it relies on permissions.
+--source include/not_embedded.inc
+
+# Grab the client hostname that the test client is connecting from, so that
+# it can be replaced with a deterministic string in tests.
+let $CLIENT_HOST= `SELECT Host FROM information_schema.processlist WHERE Id = CONNECTION_ID()`;
+
+--echo #
+--echo # Preparation: Set up a non-SUPER user.
+--echo #
+CREATE USER non_super;
+GRANT SELECT, PROCESS ON *.* TO non_super;
+connect (non_super, localhost, non_super,,);
+
+--echo #
+--echo # Test that the default is correct and the variable is visible.
+--echo #
+connection default;
+
+--echo # Test that we show up in SHOW GLOBAL VARIABLES.
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+
+--echo # Test that we show up correctly in I_S.
+SELECT * FROM information_schema.global_variables
+  WHERE variable_name LIKE 'hide_sensitive_information';
+
+--echo # Test that we show up in @@-variables, un-scoped.
+SELECT @@hide_sensitive_information;
+
+--echo # Test that we show up in @@-variables, globally scoped.
+SELECT @@global.hide_sensitive_information;
+
+--echo #
+--echo # Test that we can set the variable ON with SET GLOBAL.
+--echo #
+connection default;
+SET GLOBAL hide_sensitive_information = ON;
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+SELECT @@hide_sensitive_information;
+SELECT @@global.hide_sensitive_information;
+
+--echo #
+--echo # Test that we can set the variable OFF with SET GLOBAL.
+--echo #
+connection default;
+SET GLOBAL hide_sensitive_information = OFF;
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+SELECT @@hide_sensitive_information;
+SELECT @@global.hide_sensitive_information;
+
+--echo #
+--echo # Test that setting the variable within a session fails; as we expect
+--echo # the variable to be GLOBAL-scope only.
+--echo #
+connection default;
+--error ER_GLOBAL_VARIABLE
+SET SESSION hide_sensitive_information = OFF;
+--error ER_GLOBAL_VARIABLE
+SET @@hide_sensitive_information = OFF;
+
+--echo #
+--echo # Test that the default non-hiding behavior works.
+--echo #
+
+--echo # Disable hide_sensitive_information.
+connection default;
+SET GLOBAL hide_sensitive_information = OFF;
+
+--echo # Test that nothing is hidden for the SUPER user.
+connection default;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT id, user, host FROM information_schema.processlist;
+
+SELECT 1 as make_sure_query_is_finished;
+
+--echo # Test that nothing is hidden for non-SUPER users.
+connection non_super;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT id, user, host FROM information_schema.processlist;
+
+SELECT 1 as make_sure_query_is_finished;
+
+--echo #
+--echo # Test that hiding works. Instead of the sensitive information, we
+--echo # should see "(hidden)" when connected as a non-SUPER user.
+--echo #
+
+--echo # Enable hide_sensitive_information.
+connection default;
+SET GLOBAL hide_sensitive_information = ON;
+
+--echo # Test that nothing is hidden for the SUPER user.
+connection default;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT id, user, host FROM information_schema.processlist;
+
+SELECT 1 as make_sure_query_is_finished;
+
+--echo # Test that sensitive information is hidden for non-SUPER users.
+--echo # The results of these tests should all be "(hidden)" anyway, so
+--echo # no result replacement is necessary for the hidden strings.
+connection non_super;
+
+--replace_column 1 <Id> 6 <Time>
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id>
+SELECT id, user, host FROM information_schema.processlist;
+
+SELECT 1 as make_sure_query_is_finished;
+
+--echo #
+--echo # Clean up: Set the variable back to the default and verify.
+--echo #
+connection default;
+SET GLOBAL hide_sensitive_information = OFF;
+
+--echo # Test that nothing is hidden for the SUPER user.
+connection default;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT id, user, host FROM information_schema.processlist;
+
+SELECT 1 as make_sure_query_is_finished;
+
+--echo # Test that nothing is hidden for non-SUPER users.
+connection non_super;
+
+--replace_column 1 <Id> 6 <Time>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SHOW PROCESSLIST;
+
+--replace_column 1 <Id>
+--replace_result $CLIENT_HOST CLIENT_HOST
+SELECT id, user, host FROM information_schema.processlist;
+
+--echo #
+--echo # Clean up: Drop the non-SUPER user we created.
+--echo #
+connection default;
+disconnect non_super;
+DROP USER non_super;

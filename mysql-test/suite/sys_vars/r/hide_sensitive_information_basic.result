@@ -1,0 +1,149 @@
+#
+# Preparation: Set up a non-SUPER user.
+#
+CREATE USER non_super;
+GRANT SELECT, PROCESS ON *.* TO non_super;
+#
+# Test that the default is correct and the variable is visible.
+#
+# Test that we show up in SHOW GLOBAL VARIABLES.
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+Variable_name	Value
+hide_sensitive_information	OFF
+# Test that we show up correctly in I_S.
+SELECT * FROM information_schema.global_variables
+WHERE variable_name LIKE 'hide_sensitive_information';
+VARIABLE_NAME	VARIABLE_VALUE
+HIDE_SENSITIVE_INFORMATION	OFF
+# Test that we show up in @@-variables, un-scoped.
+SELECT @@hide_sensitive_information;
+@@hide_sensitive_information
+0
+# Test that we show up in @@-variables, globally scoped.
+SELECT @@global.hide_sensitive_information;
+@@global.hide_sensitive_information
+0
+#
+# Test that we can set the variable ON with SET GLOBAL.
+#
+SET GLOBAL hide_sensitive_information = ON;
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+Variable_name	Value
+hide_sensitive_information	ON
+SELECT @@hide_sensitive_information;
+@@hide_sensitive_information
+1
+SELECT @@global.hide_sensitive_information;
+@@global.hide_sensitive_information
+1
+#
+# Test that we can set the variable OFF with SET GLOBAL.
+#
+SET GLOBAL hide_sensitive_information = OFF;
+SHOW GLOBAL VARIABLES LIKE 'hide_sensitive_information';
+Variable_name	Value
+hide_sensitive_information	OFF
+SELECT @@hide_sensitive_information;
+@@hide_sensitive_information
+0
+SELECT @@global.hide_sensitive_information;
+@@global.hide_sensitive_information
+0
+#
+# Test that setting the variable within a session fails; as we expect
+# the variable to be GLOBAL-scope only.
+#
+SET SESSION hide_sensitive_information = OFF;
+ERROR HY000: Variable 'hide_sensitive_information' is a GLOBAL variable and should be set with SET GLOBAL
+SET @@hide_sensitive_information = OFF;
+ERROR HY000: Variable 'hide_sensitive_information' is a GLOBAL variable and should be set with SET GLOBAL
+#
+# Test that the default non-hiding behavior works.
+#
+# Disable hide_sensitive_information.
+SET GLOBAL hide_sensitive_information = OFF;
+# Test that nothing is hidden for the SUPER user.
+SHOW PROCESSLIST;
+Id	User	Host	db	Command	Time	State	Info	Progress
+<Id>	root	CLIENT_HOST	test	Query	<Time>	init	SHOW PROCESSLIST	0.000
+<Id>	non_super	CLIENT_HOST	test	Sleep	<Time>		NULL	0.000
+SELECT id, user, host FROM information_schema.processlist;
+id	user	host
+<Id>	non_super	CLIENT_HOST
+<Id>	root	CLIENT_HOST
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
+# Test that nothing is hidden for non-SUPER users.
+SHOW PROCESSLIST;
+Id	User	Host	db	Command	Time	State	Info	Progress
+<Id>	root	CLIENT_HOST	test	Sleep	<Time>		NULL	0.000
+<Id>	non_super	CLIENT_HOST	test	Query	<Time>	init	SHOW PROCESSLIST	0.000
+SELECT id, user, host FROM information_schema.processlist;
+id	user	host
+<Id>	non_super	CLIENT_HOST
+<Id>	root	CLIENT_HOST
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
+#
+# Test that hiding works. Instead of the sensitive information, we
+# should see "(hidden)" when connected as a non-SUPER user.
+#
+# Enable hide_sensitive_information.
+SET GLOBAL hide_sensitive_information = ON;
+# Test that nothing is hidden for the SUPER user.
+SHOW PROCESSLIST;
+Id	User	Host	db	Command	Time	State	Info	Progress
+<Id>	root	CLIENT_HOST	test	Query	<Time>	init	SHOW PROCESSLIST	0.000
+<Id>	non_super	CLIENT_HOST	test	Sleep	<Time>		NULL	0.000
+SELECT id, user, host FROM information_schema.processlist;
+id	user	host
+<Id>	non_super	CLIENT_HOST
+<Id>	root	CLIENT_HOST
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
+# Test that sensitive information is hidden for non-SUPER users.
+# The results of these tests should all be "(hidden)" anyway, so
+# no result replacement is necessary for the hidden strings.
+SHOW PROCESSLIST;
+Id	User	Host	db	Command	Time	State	Info	Progress
+<Id>	root	(hidden)	test	Sleep	<Time>		NULL	0.000
+<Id>	non_super	(hidden)	test	Query	<Time>	init	SHOW PROCESSLIST	0.000
+SELECT id, user, host FROM information_schema.processlist;
+id	user	host
+<Id>	non_super	(hidden)
+<Id>	root	(hidden)
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
+#
+# Clean up: Set the variable back to the default and verify.
+#
+SET GLOBAL hide_sensitive_information = OFF;
+# Test that nothing is hidden for the SUPER user.
+SHOW PROCESSLIST;
+Id	User	Host	db	Command	Time	State	Info	Progress
+<Id>	root	CLIENT_HOST	test	Query	<Time>	init	SHOW PROCESSLIST	0.000
+<Id>	non_super	CLIENT_HOST	test	Sleep	<Time>		NULL	0.000
+SELECT id, user, host FROM information_schema.processlist;
+id	user	host
+<Id>	non_super	CLIENT_HOST
+<Id>	root	CLIENT_HOST
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
+# Test that nothing is hidden for non-SUPER users.
+SHOW PROCESSLIST;
+Id	User	Host	db	Command	Time	State	Info	Progress
+<Id>	root	CLIENT_HOST	test	Sleep	<Time>		NULL	0.000
+<Id>	non_super	CLIENT_HOST	test	Query	<Time>	init	SHOW PROCESSLIST	0.000
+SELECT id, user, host FROM information_schema.processlist;
+id	user	host
+<Id>	non_super	CLIENT_HOST
+<Id>	root	CLIENT_HOST
+#
+# Clean up: Drop the non-SUPER user we created.
+#
+DROP USER non_super;

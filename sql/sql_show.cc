@@ -2280,7 +2280,12 @@ void mysqld_list_processes(THD *thd,const char *user, bool verbose)
         thd_info->user= thd->strdup(tmp_sctx->user ? tmp_sctx->user :
                                     (tmp->system_thread ?
                                      "system user" : "unauthenticated user"));
-	if (tmp->peer_port && (tmp_sctx->host || tmp_sctx->ip) &&
+        if (hide_sensitive_information
+            && !(thd->security_ctx->master_access & SUPER_ACL))
+        {
+          thd_info->host= hidden_information;
+        }
+        else if (tmp->peer_port && (tmp_sctx->host || tmp_sctx->ip) &&
             thd->security_ctx->host_or_ip[0])
 	{
 	  if ((thd_info->host= (char*) thd->alloc(LIST_PROCESS_HOST_LEN+1)))
@@ -2662,7 +2667,13 @@ int fill_schema_processlist(THD* thd, TABLE_LIST* tables, COND* cond)
             (tmp->system_thread ? "system user" : "unauthenticated user");
       table->field[1]->store(val, strlen(val), cs);
       /* HOST */
-      if (tmp->peer_port && (tmp_sctx->host || tmp_sctx->ip) &&
+      if (hide_sensitive_information
+          && !(thd->security_ctx->master_access & SUPER_ACL))
+      {
+        table->field[2]->store(hidden_information,
+                               strlen(hidden_information), cs);
+      }
+      else if (tmp->peer_port && (tmp_sctx->host || tmp_sctx->ip) &&
           thd->security_ctx->host_or_ip[0])
       {
         char host[LIST_PROCESS_HOST_LEN + 1];
@@ -3035,7 +3046,7 @@ static bool show_status_array(THD *thd, const char *wild,
            && check_hidden_func
            && check_hidden_func(name_buffer))
         {
-          pos= "(hidden)";
+          pos= hidden_information;
           end= strend(pos);
           goto variable_filled;
         }

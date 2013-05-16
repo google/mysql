@@ -6046,7 +6046,7 @@ String* Item_func_get_system_var::val_str(String* str)
       && !(thd->security_ctx->master_access & SUPER_ACL))
   {
     str= &cached_strval;
-    str->append("(hidden)");
+    str->append(hidden_information);
     return str;
   }
 

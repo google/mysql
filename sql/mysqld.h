@@ -245,6 +245,10 @@ extern my_bool opt_require_super_for_mysql_schema_ddl;
 extern char *restricted_schemas_str;
 extern char *restricted_variables_str;
 
+extern bool hide_sensitive_information;
+
+extern const char * const hidden_information;
+
 /*
   THR_MALLOC is a key which will be used to set/get MEM_ROOT** for a thread,
   using my_pthread_setspecific_ptr()/my_thread_getspecific_ptr().
