@@ -741,6 +741,7 @@ int mysql_stmt_next_result_start(int *ret, MYSQL_STMT *stmt);
 int mysql_stmt_next_result_cont(int *ret, MYSQL_STMT *stmt, int status);
 void mysql_close_slow_part(MYSQL *mysql);
 void mysql_close(MYSQL *sock);
+void mysql_shutdown_connection(MYSQL *sock);
 int mysql_close_start(MYSQL *sock);
 int mysql_close_cont(MYSQL *sock, int status);
 my_socket mysql_get_socket(const MYSQL *mysql);
