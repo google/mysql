@@ -1251,12 +1251,9 @@ int _my_b_seq_read(register IO_CACHE *info, uchar *Buffer, size_t Count)
       Count -= length;
       Buffer += length;
 
-      /*
-	 added the line below to make
-	 DBUG_ASSERT(pos_in_file==info->end_of_file) pass.
-	 otherwise this does not appear to be needed
-      */
       pos_in_file += length;
+      if (length < max_length)
+        info->end_of_file= pos_in_file;
       goto read_append_buffer;
     }
   }
@@ -1781,7 +1778,11 @@ int my_b_flush_io_cache(IO_CACHE *info,
       else
       {
 	info->end_of_file+=(info->write_pos-info->append_read_pos);
+        /*
+          This check seem to race with other file operations.
+
 	DBUG_ASSERT(info->end_of_file == mysql_file_tell(info->file, MYF(0)));
+        */
       }
 
       info->append_read_pos=info->write_pos=info->write_buffer;

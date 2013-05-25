@@ -94,7 +94,12 @@ my_off_t my_b_append_tell(IO_CACHE* info)
   */
   mysql_mutex_lock(&info->append_buffer_lock);
 
-#ifndef DBUG_OFF
+  /*
+    It looks like this check doesn't play nicely with file truncations
+    happening outside of mysqld. Disable this for now.
+   */
+#if 0
+/*#ifndef DBUG_OFF*/
   /*
     Make sure EOF is where we think it is. Note that we cannot just use
     my_tell() because we have a reader thread that could have left the

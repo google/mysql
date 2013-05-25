@@ -147,6 +147,14 @@ connection server_1;
 DROP TABLE t1,t2;
 --source include/save_master_gtid.inc
 
+# sync each slave with it's master to make sure DROP TABLE has propagated
+connection server_1;
+sync_slave_with_master server_2;
+connection server_2;
+sync_slave_with_master server_3;
+connection server_3;
+sync_slave_with_master server_4;
+
 --echo *** A few more checks for BINLOG_GTID_POS function ***
 --let $valid_binlog_name = query_get_value(SHOW BINARY LOGS,Log_name,1)
 --error ER_WRONG_PARAMCOUNT_TO_NATIVE_FCT

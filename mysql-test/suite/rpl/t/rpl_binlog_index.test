@@ -189,8 +189,7 @@ DROP TABLE t1;
 --source include/relocate_binlogs.inc
 
 --echo # remove tmpdir
---remove_files_wildcard $tmpdir *
---rmdir $tmpdir
+--exec rm -rf $tmpdir
 
 --echo # restarted with previous slave settings
 --let $rpl_server_parameters=--log-bin=$slave_datadir/slave-bin --relay-log=$slave_datadir/slave-relay-bin --relay-log-index=$slave_datadir/slave-relay-bin.index

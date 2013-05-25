@@ -35,7 +35,7 @@ RESET MASTER;
 SET GLOBAL gtid_slave_pos= '0-2-10';
 CHANGE MASTER TO master_host = '127.0.0.1', master_port = SERVER_MYPORT_2,
 master_user= 'root', master_use_gtid=CURRENT_POS;
-START SLAVE;
+include/start_slave.inc
 INSERT INTO t1 VALUES (11);
 SET sql_log_bin= 0;
 CALL mtr.add_suppression("which is not in the master's binlog. Since the master's binlog contains GTIDs with higher sequence numbers, it probably means that the slave has diverged");

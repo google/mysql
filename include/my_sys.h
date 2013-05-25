@@ -516,13 +516,13 @@ extern my_error_reporter my_charset_error_reporter;
 #define my_b_EOF INT_MIN
 
 #define my_b_read(info,Buffer,Count) \
-  ((info)->read_pos + (Count) <= (info)->read_end ?\
+  ((ssize_t)(Count) <= (info)->read_end - (info)->read_pos ?\
    (memcpy(Buffer,(info)->read_pos,(size_t) (Count)), \
     ((info)->read_pos+=(Count)),0) :\
    (*(info)->read_function)((info),Buffer,Count))
 
 #define my_b_write(info,Buffer,Count) \
- ((info)->write_pos + (Count) <=(info)->write_end ?\
+ ((ssize_t)(Count) <= (info)->write_end - (info)->write_pos ?\
   (memcpy((info)->write_pos, (Buffer), (size_t)(Count)),\
    ((info)->write_pos+=(Count)),0) : \
    (*(info)->write_function)((info),(uchar *)(Buffer),(Count)))

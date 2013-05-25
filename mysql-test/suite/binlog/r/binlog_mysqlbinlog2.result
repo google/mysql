@@ -665,8 +665,6 @@ COMMIT
 /*!*/;
 DELIMITER ;
 DELIMITER /*!*/;
-BEGIN
-/*!*/;
 DELIMITER ;
 # End of log file
 ROLLBACK /* added by mysqlbinlog */;
