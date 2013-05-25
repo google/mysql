@@ -102,7 +102,8 @@ int my_copystat(const char *from, const char *to, int MyFlags)
     return 1;
 
   /* Copy modes */
-  if (chmod(to, statbuf.st_mode & 07777))
+  if ((statbuf_to.st_mode & 07777) != (statbuf.st_mode & 07777) &&
+      chmod(to, statbuf.st_mode & 07777))
   {
     my_errno= errno;
     if (MyFlags & (MY_FAE+MY_WME))
@@ -121,7 +122,8 @@ int my_copystat(const char *from, const char *to, int MyFlags)
     gid= -1;
   else
     gid= statbuf.st_gid;
-  if (chown(to, statbuf.st_uid, gid))
+  if ((gid != (gid_t) -1 || statbuf.st_uid != statbuf_to.st_uid) &&
+      chown(to, statbuf.st_uid, gid))
   {
     my_errno= errno;
     if (MyFlags & (MY_FAE+MY_WME))

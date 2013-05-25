@@ -105,14 +105,7 @@ int my_copy(const char *from, const char *to, myf MyFlags)
 
     if (MyFlags & MY_HOLD_ORIGINAL_MODES && !new_file_stat)
 	DBUG_RETURN(0);			/* File copyed but not stat */
-    /* Copy modes */
-    if (chmod(to, stat_buff.st_mode & 07777))
-    {
-      my_errno= errno;
-      if (MyFlags & (MY_FAE+MY_WME))
-        my_error(EE_CHANGE_PERMISSIONS, MYF(ME_BELL+ME_WAITTANG), from, errno);
-      goto err;
-    }
+
 #if !defined(__WIN__) && !defined(__NETWARE__)
     /* Refresh the new_stat_buff */
     if (!my_stat((char*) to, &new_stat_buff, MYF(0)))
@@ -121,12 +114,23 @@ int my_copy(const char *from, const char *to, myf MyFlags)
       goto err;
     }
 
+    /* Copy modes */
+    if ((stat_buff.st_mode & 07777) != (new_stat_buff.st_mode & 07777) &&
+        chmod(to, stat_buff.st_mode & 07777))
+    {
+      my_errno= errno;
+      if (MyFlags & (MY_FAE+MY_WME))
+        my_error(EE_CHANGE_PERMISSIONS, MYF(ME_BELL+ME_WAITTANG), from, errno);
+      goto err;
+    }
+
     /* Copy ownership */
     if (stat_buff.st_gid == new_stat_buff.st_gid)
       gid= -1;
     else
       gid= stat_buff.st_gid;
-    if (chown(to, stat_buff.st_uid, gid))
+    if ((gid != (gid_t) -1 || stat_buff.st_uid != new_stat_buff.st_uid) &&
+        chown(to, stat_buff.st_uid, gid))
     {
       my_errno= errno;
       if (MyFlags & (MY_FAE+MY_WME))
