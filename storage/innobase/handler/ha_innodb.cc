@@ -4361,6 +4361,16 @@ ha_innobase::max_supported_keys() const
 }
 
 /****************************************************************//**
+Returns the maximum number of key parts.
+@return	MAX_REF_PARTS */
+UNIV_INTERN
+uint
+ha_innobase::max_supported_key_parts() const
+{
+	return(MAX_REF_PARTS);
+}
+
+/****************************************************************//**
 Returns the maximum key length.
 @return	maximum supported key length, in bytes */
 UNIV_INTERN
@@ -7409,7 +7419,7 @@ ha_innobase::update_row(
                   byte. */
 
 		upd_buf_size = table->s->stored_rec_length +
-                  table->s->max_key_length + MAX_REF_PARTS_OLD * 3;
+                  table->s->max_key_length + MAX_REF_PARTS * 3;
 		upd_buf = (uchar*) my_malloc(upd_buf_size, MYF(MY_WME));
 		if (upd_buf == NULL) {
 			upd_buf_size = 0;

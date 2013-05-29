@@ -559,6 +559,34 @@ show create table t2c;
 
 DROP TABLE t1,t2,t2c,t2i;
 
+--echo
+--echo Test >32 key parts
+--echo
+
+CREATE TABLE t1 (
+  a  INT, b  INT, c  INT, d  INT,
+  e  INT, f  INT, g  INT, h  INT,
+  i  INT, j  INT, k  INT, l  INT,
+  m  INT, n  INT, o  INT, p  INT,
+  q  INT, r  INT, s  INT, t  INT,
+  u  INT, v  INT, w  INT, x  INT,
+  y  INT, z  INT, aa INT, bb INT,
+  cc INT, dd INT, ee INT, ff INT,
+  gg INT, hh INT, ii INT, jj INT,
+  PRIMARY KEY (a),
+  INDEX (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,aa,bb,cc,dd,ee,ff,gg,hh,ii,jj))
+  ENGINE=InnoDB;
+
+INSERT INTO t1 VALUES
+(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2),
+(3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3),
+(4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4);
+
+SELECT count(*) FROM t1;
+SELECT a, e, i, m, q, u, y, cc, gg FROM t1 ORDER BY a DESC;
+DROP TABLE t1;
+
 --disable_query_log
 eval SET GLOBAL innodb_file_format=$innodb_file_format_orig;
 eval SET GLOBAL innodb_file_format_max=$innodb_file_format_max_orig;
