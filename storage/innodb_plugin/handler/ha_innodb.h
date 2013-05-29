@@ -127,6 +127,7 @@ class ha_innobase: public handler
 	Table_flags table_flags() const;
 	ulong index_flags(uint idx, uint part, bool all_parts) const;
 	uint max_supported_keys() const;
+	uint max_supported_key_parts() const;
 	uint max_supported_key_length() const;
 	uint max_supported_key_part_length() const;
 	const key_map* keys_to_use_for_scanning();

@@ -1318,3 +1318,34 @@ DROP TABLE t1;
 DROP TABLE t1_purge, t2_purge, t3_purge, t4_purge;
 DROP TABLE t12637786;
 DROP TABLE t12963823;
+
+Test >16 key parts
+
+CREATE TABLE t1 (
+a  INT, b  INT, c  INT, d  INT,
+e  INT, f  INT, g  INT, h  INT,
+i  INT, j  INT, k  INT, l  INT,
+m  INT, n  INT, o  INT, p  INT,
+q  INT, r  INT, s  INT, t  INT,
+u  INT, v  INT, w  INT, x  INT,
+y  INT, z  INT, aa INT, bb INT,
+cc INT, dd INT, ee INT, ff INT,
+gg INT, hh INT, ii INT, jj INT,
+PRIMARY KEY (a),
+INDEX (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,aa,bb,cc,dd,ee,ff,gg,hh,ii,jj))
+ENGINE=InnoDB;
+INSERT INTO t1 VALUES
+(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2),
+(3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3),
+(4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4);
+SELECT count(*) FROM t1;
+count(*)
+4
+SELECT a, e, i, m, q, u, y, cc, gg FROM t1 ORDER BY a DESC;
+a	e	i	m	q	u	y	cc	gg
+4	4	4	4	4	4	4	4	4
+3	3	3	3	3	3	3	3	3
+2	2	2	2	2	2	2	2	2
+1	1	1	1	1	1	1	1	1
+DROP TABLE t1;
