@@ -615,10 +615,13 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
   int flags;
 
   FD_ZERO(&clientFDs);
-  FD_SET(httpd_sock, &clientFDs);
+  if (httpd_sock != INVALID_SOCKET)
+  {
+    FD_SET(httpd_sock, &clientFDs);
 #ifdef HAVE_FCNTL
-  httpd_flags= fcntl(httpd_sock, F_GETFL, 0);
+    httpd_flags= fcntl(httpd_sock, F_GETFL, 0);
 #endif
+  }
 #ifdef HAVE_SYS_UN_H
   if (httpd_unix_sock != INVALID_SOCKET)
   {
@@ -654,7 +657,7 @@ pthread_handler_t handle_httpd_connections(void *arg __attribute__((unused)))
     }
     else
 #endif
-    if (FD_ISSET(httpd_sock, &readFDs))
+    if (httpd_sock != INVALID_SOCKET && FD_ISSET(httpd_sock, &readFDs))
     {
       sock= httpd_sock;
       flags= httpd_flags;
