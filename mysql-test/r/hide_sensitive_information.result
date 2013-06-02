@@ -133,6 +133,9 @@ repl_port	SERVER_REPL_PORT
 SHOW SESSION VARIABLES LIKE 'repl_port';
 Variable_name	Value
 repl_port	SERVER_REPL_PORT
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
 # Test that nothing is hidden for non-SUPER users.
 SHOW GLOBAL VARIABLES LIKE 'version_comment';
 Variable_name	Value
@@ -190,6 +193,9 @@ repl_port	SERVER_REPL_PORT
 SHOW SESSION VARIABLES LIKE 'repl_port';
 Variable_name	Value
 repl_port	SERVER_REPL_PORT
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
 #
 # Test that hiding works. Instead of the sensitive information, we
 # should see "(hidden)" when connected as a non-SUPER user.
@@ -253,6 +259,9 @@ repl_port	SERVER_REPL_PORT
 SHOW SESSION VARIABLES LIKE 'repl_port';
 Variable_name	Value
 repl_port	SERVER_REPL_PORT
+SELECT 1 as make_sure_query_is_finished;
+make_sure_query_is_finished
+1
 # Test that sensitive information is hidden for non-SUPER users.
 # The results of these tests should all be "(hidden)" anyway, so
 # no result replacement is necessary for the hidden strings.

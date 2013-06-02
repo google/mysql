@@ -148,6 +148,8 @@ SHOW GLOBAL VARIABLES LIKE 'repl_port';
 --replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
 SHOW SESSION VARIABLES LIKE 'repl_port';
 
+SELECT 1 as make_sure_query_is_finished;
+
 --echo # Test that nothing is hidden for non-SUPER users.
 connection non_super;
 
@@ -198,6 +200,8 @@ SHOW SESSION VARIABLES LIKE 'httpd_port';
 SHOW GLOBAL VARIABLES LIKE 'repl_port';
 --replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
 SHOW SESSION VARIABLES LIKE 'repl_port';
+
+SELECT 1 as make_sure_query_is_finished;
 
 --echo #
 --echo # Test that hiding works. Instead of the sensitive information, we
@@ -258,6 +262,8 @@ SHOW SESSION VARIABLES LIKE 'httpd_port';
 SHOW GLOBAL VARIABLES LIKE 'repl_port';
 --replace_result $SERVER_REPL_PORT SERVER_REPL_PORT
 SHOW SESSION VARIABLES LIKE 'repl_port';
+
+SELECT 1 as make_sure_query_is_finished;
 
 --echo # Test that sensitive information is hidden for non-SUPER users.
 --echo # The results of these tests should all be "(hidden)" anyway, so
