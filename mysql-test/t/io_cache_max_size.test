@@ -1,10 +1,6 @@
 # This is based on main.checksum_io_cache, and is simply designed
 # to cause a large enough IO_CACHE to be generated.
 
-# NOTE: The io_cache_max_size option specified is that large because
-# the test framework runs a query which uses an IO_CACHE approximately
-# that large.
-
 --disable_query_log
 call mtr.add_suppression("try to repair it");
 --enable_query_log

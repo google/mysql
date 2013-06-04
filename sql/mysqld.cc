@@ -6447,7 +6447,7 @@ each time the SQL thread starts.",
    "If an IO Cache grows to greater than this size (in bytes), it will kill "
    "the query responsible.",
    &io_cache_max_size, &io_cache_max_size, 0,
-   GET_ULONG, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+   GET_ULL, REQUIRED_ARG, 0, 0, (longlong) ULONGLONG_MAX, 0, 0, 0},
   {"language", 'L',
    "Client error messages in given language. May be given as a full path.",
    &language_ptr, &language_ptr, 0, GET_STR, REQUIRED_ARG,
@@ -9049,14 +9049,6 @@ mysqld_get_one_option(int optid,
   case (int) OPT_SKIP_SHOW_DB:
     opt_skip_show_db=1;
     opt_specialflag|=SPECIAL_SKIP_SHOW_DB;
-    break;
-  case OPT_IO_CACHE_MAX_SIZE:
-    if (max_binlog_size != 0 && io_cache_max_size < max_binlog_size)
-    {
-      sql_perror("Can't start server: io_cache_max_size is smaller than "
-                 "max_binlog_size");
-      return 1;
-    }
     break;
   case (int) OPT_WANT_CORE:
     test_flags |= TEST_CORE_ON_SIGNAL;

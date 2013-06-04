@@ -527,6 +527,11 @@ typedef struct st_io_cache		/* Used when cacheing files */
   my_off_t (*direct_seek)(File, my_off_t, int, myf);
   my_off_t (*direct_tell)(File, myf);
   my_bool checksummed;
+
+  /*
+    Maximum allowed size of this IO_CACHE. Unlimited, if 0.
+  */
+  my_off_t max_size;
 } IO_CACHE;
 
 typedef int (*qsort2_cmp)(const void *, const void *, const void *);

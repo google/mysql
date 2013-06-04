@@ -71,7 +71,22 @@ static void my_aiowait(my_aio_result *result);
 #define IO_ROUND_UP(X) (((X)+IO_SIZE-1) & ~(IO_SIZE-1))
 #define IO_ROUND_DN(X) ( (X)            & ~(IO_SIZE-1))
 
-ulong io_cache_max_size;
+ulonglong io_cache_max_size;
+
+static my_bool ensure_below_size_limit(IO_CACHE* info,
+                                       my_off_t bytes_to_be_written) {
+  if (info->max_size &&
+      my_b_tell(info) + bytes_to_be_written > info->max_size)
+  {
+      fprintf(stderr, "ERROR: IO Cache exceeded maximum size of %llu bytes\n",
+              (ulonglong) info->max_size);
+      my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), (ulonglong) info->max_size);
+      info->error= -1;
+      return FALSE;
+  }
+  return TRUE;
+}
+
 /*
   Setup internal pointers inside IO_CACHE
 
@@ -187,6 +202,8 @@ int init_io_cache(IO_CACHE *info, File file, size_t cachesize,
   info->direct_seek = &my_seek;
   info->direct_tell = &my_tell;
   info->checksummed = 0;
+
+  info->max_size= 0;
 
   if (file >= 0)
   {
@@ -1547,12 +1564,9 @@ int _my_b_write(register IO_CACHE *info, const uchar *Buffer, size_t Count)
       }
       info->seek_not_done=0;
     }
-    if (io_cache_max_size > 0 && my_b_tell(info) > io_cache_max_size)
-    {
-      fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
-      my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
-      return info->error= -1;
-    }
+    if (!ensure_below_size_limit(info, 0))
+      return -1;
+
     if (info->direct_write(info->file, Buffer, length, info->myflags | MY_NABP))
       return info->error= -1;
 
@@ -1613,12 +1627,9 @@ int my_b_append(register IO_CACHE *info, const uchar *Buffer, size_t Count)
     unlock_append_buffer(info);
     return 1;
   }
-  if (io_cache_max_size > 0 && my_b_tell(info) > io_cache_max_size)
-  {
-    fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
-    my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
-    return info->error= -1;
-  }
+  if (!ensure_below_size_limit(info, 0))
+    return -1;
+
   if (Count >= IO_SIZE)
   {					/* Fill first intern buffer */
     length=Count & (size_t) ~(IO_SIZE-1);
@@ -1674,12 +1685,8 @@ int my_block_write(register IO_CACHE *info, const uchar *Buffer, size_t Count,
   DBUG_ASSERT(!info->share);
 #endif
 
-  if (io_cache_max_size > 0 && pos + Count > io_cache_max_size)
-  {
-    fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
-    my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
-    return info->error= -1;
-  }
+  if (!ensure_below_size_limit(info, 0))
+    return -1;
 
   if (pos < info->pos_in_file)
   {
@@ -1793,13 +1800,9 @@ int my_b_flush_io_cache(IO_CACHE *info,
       info->write_end= (info->write_buffer+info->buffer_length-
 			((pos_in_file+length) & (IO_SIZE-1)));
 
-      if (io_cache_max_size > 0 && my_b_tell(info) > io_cache_max_size)
-      {
-        fprintf(stderr, "ERROR: IO Cache exceeded maximum size\n");
-        my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), io_cache_max_size);
-        info->error= -1;
-        DBUG_RETURN(info->error);
-      }
+      if (!ensure_below_size_limit(info, 0))
+        DBUG_RETURN(-1);
+
       if (info->direct_write(info->file,info->write_buffer,length,
 		   info->myflags | MY_NABP))
 	info->error= -1;

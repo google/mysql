@@ -1,0 +1,1 @@
+--audit-log=auditlog --audit-log-tables=alltables --io_cache_max_size=1

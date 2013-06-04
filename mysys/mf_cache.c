@@ -20,6 +20,7 @@
 #include "my_static.h"
 #include "mysys_err.h"
 
+extern ulonglong io_cache_max_size;
 my_bool opt_checksum_temp_files= FALSE;
 
 	/*
@@ -107,6 +108,7 @@ my_bool real_open_cached_file(IO_CACHE *cache)
       cache->checksummed = 1;
       cache->direct_tell = &chksum_tell;
     }
+    cache->max_size= io_cache_max_size;
   }
   DBUG_RETURN(error);
 }
