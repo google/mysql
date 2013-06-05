@@ -80,7 +80,7 @@ static my_bool ensure_below_size_limit(IO_CACHE* info,
   {
       fprintf(stderr, "ERROR: IO Cache exceeded maximum size of %llu bytes\n",
               (ulonglong) info->max_size);
-      my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME), (ulonglong) info->max_size);
+      my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME));
       info->error= -1;
       return FALSE;
   }
@@ -1532,6 +1532,9 @@ int _my_b_write(register IO_CACHE *info, const uchar *Buffer, size_t Count)
 {
   size_t rest_length,length;
 
+  if (!ensure_below_size_limit(info, Count))
+    return -1;
+
   if (info->pos_in_file+info->buffer_length > info->end_of_file)
   {
     my_errno=errno=EFBIG;
@@ -1564,8 +1567,6 @@ int _my_b_write(register IO_CACHE *info, const uchar *Buffer, size_t Count)
       }
       info->seek_not_done=0;
     }
-    if (!ensure_below_size_limit(info, 0))
-      return -1;
 
     if (info->direct_write(info->file, Buffer, length, info->myflags | MY_NABP))
       return info->error= -1;
@@ -1606,6 +1607,9 @@ int my_b_append(register IO_CACHE *info, const uchar *Buffer, size_t Count)
 {
   size_t rest_length,length;
 
+  if (!ensure_below_size_limit(info, Count))
+    return -1;
+
 #ifdef THREAD
   /*
     Assert that we cannot come here with a shared cache. If we do one
@@ -1627,8 +1631,6 @@ int my_b_append(register IO_CACHE *info, const uchar *Buffer, size_t Count)
     unlock_append_buffer(info);
     return 1;
   }
-  if (!ensure_below_size_limit(info, 0))
-    return -1;
 
   if (Count >= IO_SIZE)
   {					/* Fill first intern buffer */
@@ -1677,6 +1679,12 @@ int my_block_write(register IO_CACHE *info, const uchar *Buffer, size_t Count,
   size_t length;
   int error=0;
 
+  if (pos + Count > my_b_tell(info)) {
+    my_off_t excess = pos + Count - my_b_tell(info);
+    if (!ensure_below_size_limit(info, excess))
+      return -1;
+  }
+
 #ifdef THREAD
   /*
     Assert that we cannot come here with a shared cache. If we do one
@@ -1684,9 +1692,6 @@ int my_block_write(register IO_CACHE *info, const uchar *Buffer, size_t Count,
   */
   DBUG_ASSERT(!info->share);
 #endif
-
-  if (!ensure_below_size_limit(info, 0))
-    return -1;
 
   if (pos < info->pos_in_file)
   {
@@ -1768,6 +1773,9 @@ int my_b_flush_io_cache(IO_CACHE *info,
 
     if ((length=(size_t) (info->write_pos - info->write_buffer)))
     {
+      if (!ensure_below_size_limit(info, length))
+        DBUG_RETURN(-1);
+
 #ifdef THREAD
       /*
         In case of a shared I/O cache with a writer we do direct write
@@ -1799,9 +1807,6 @@ int my_b_flush_io_cache(IO_CACHE *info,
 	info->pos_in_file+=length;
       info->write_end= (info->write_buffer+info->buffer_length-
 			((pos_in_file+length) & (IO_SIZE-1)));
-
-      if (!ensure_below_size_limit(info, 0))
-        DBUG_RETURN(-1);
 
       if (info->direct_write(info->file,info->write_buffer,length,
 		   info->myflags | MY_NABP))
