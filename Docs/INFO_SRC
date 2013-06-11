@@ -1,8 +1,8 @@
-revision-id: igor@askmonty.org-20130423035522-w8b8rz72zdav0p7r
-date: 2013-04-22 20:55:22 -0700
-build-date: 2013-04-23 06:14:01 +0200
-revno: 3744
+revision-id: sergii@pisem.net-20130610064025-makoe3xkewwwky8j
+date: 2013-06-10 08:40:25 +0200
+build-date: 2013-06-10 09:12:21 +0200
+revno: 3761
 branch-nick: 10.0
 
 
-MySQL source 10.0.2
+MySQL source 10.0.3

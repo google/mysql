@@ -37,7 +37,9 @@ Master_info::Master_info(LEX_STRING *connection_name_arg,
    checksum_alg_before_fd(BINLOG_CHECKSUM_ALG_UNDEF),
    connect_retry(DEFAULT_CONNECT_RETRY), inited(0), abort_slave(0),
    slave_running(0), slave_run_id(0), sync_counter(0),
-   heartbeat_period(0), received_heartbeats(0), master_id(0), using_gtid(0)
+   heartbeat_period(0), received_heartbeats(0), master_id(0),
+   using_gtid(USE_GTID_NO), events_queued_since_last_gtid(0),
+   gtid_reconnect_event_skip_count(0), gtid_event_seen(false)
 {
   host[0] = 0; user[0] = 0; password[0] = 0;
   ssl_ca[0]= 0; ssl_capath[0]= 0; ssl_cert[0]= 0;
@@ -147,13 +149,34 @@ void Master_info::clear_in_memory_info(bool all)
   }
 }
 
+
+const char *
+Master_info::using_gtid_astext(enum enum_using_gtid arg)
+{
+  switch (arg)
+  {
+  case USE_GTID_NO:
+    return "No";
+  case USE_GTID_SLAVE_POS:
+    return "Slave_Pos";
+  default:
+    DBUG_ASSERT(arg == USE_GTID_CURRENT_POS);
+    return "Current_Pos";
+  }
+}
+
+
 void init_master_log_pos(Master_info* mi)
 {
   DBUG_ENTER("init_master_log_pos");
 
   mi->master_log_name[0] = 0;
   mi->master_log_pos = BIN_LOG_HEADER_SIZE;             // skip magic number
-  mi->using_gtid= false;
+  mi->using_gtid= Master_info::USE_GTID_NO;
+  mi->gtid_current_pos.reset();
+  mi->events_queued_since_last_gtid= 0;
+  mi->gtid_reconnect_event_skip_count= 0;
+  mi->gtid_event_seen= false;
 
   /* Intentionally init ssl_verify_server_cert to 0, no option available  */
   mi->ssl_verify_server_cert= 0;
@@ -481,7 +504,15 @@ file '%s')", fname);
         while (!init_strvar_from_file(buf, sizeof(buf), &mi->file, 0))
         {
           if (0 == strncmp(buf, STRING_WITH_LEN("using_gtid=")))
-            mi->using_gtid= (0 != atoi(buf + sizeof("using_gtid")));
+          {
+            int val= atoi(buf + sizeof("using_gtid"));
+            if (val == Master_info::USE_GTID_CURRENT_POS)
+              mi->using_gtid= Master_info::USE_GTID_CURRENT_POS;
+            else if (val == Master_info::USE_GTID_SLAVE_POS)
+              mi->using_gtid= Master_info::USE_GTID_SLAVE_POS;
+            else
+              mi->using_gtid= Master_info::USE_GTID_NO;
+          }
         }
       }
     }
@@ -723,10 +754,11 @@ bool check_master_connection_name(LEX_STRING *name)
 */
 
 void create_logfile_name_with_suffix(char *res_file_name, size_t length,
-                             const char *info_file, bool append,
-                             LEX_STRING *suffix)
+                                     const char *info_file, bool append,
+                                     LEX_STRING *suffix)
 {
-  char buff[MAX_CONNECTION_NAME+1], res[MAX_CONNECTION_NAME+1], *p;
+  char buff[MAX_CONNECTION_NAME+1],
+    res[MAX_CONNECTION_NAME * MAX_FILENAME_MBWIDTH+1], *p;
 
   p= strmake(res_file_name, info_file, length);
   /* If not empty suffix and there is place left for some part of the suffix */
@@ -739,8 +771,6 @@ void create_logfile_name_with_suffix(char *res_file_name, size_t length,
 
     /* Create null terminated string */
     strmake(buff, suffix->str, suffix->length);
-    /* Convert to lower case */
-    my_casedn_str(system_charset_info, buff);
     /* Convert to characters usable in a file name */
     res_length= strconvert(system_charset_info, buff,
                            &my_charset_filename, res, sizeof(res), &errors);
@@ -856,7 +886,7 @@ bool Master_info_index::init_all_master_info()
 {
   int thread_mask;
   int err_num= 0, succ_num= 0; // The number of success read Master_info
-  char sign[MAX_CONNECTION_NAME];
+  char sign[MAX_CONNECTION_NAME+1];
   File index_file_nr;
   DBUG_ENTER("init_all_master_info");
 
@@ -908,11 +938,14 @@ bool Master_info_index::init_all_master_info()
     lock_slave_threads(mi);
     init_thread_mask(&thread_mask,mi,0 /*not inverse*/);
 
-    create_logfile_name_with_suffix(buf_master_info_file, sizeof(buf_master_info_file),
-                            master_info_file, 0, &connection_name);
+    create_logfile_name_with_suffix(buf_master_info_file,
+                                    sizeof(buf_master_info_file),
+                                    master_info_file, 0,
+                                    &mi->cmp_connection_name);
     create_logfile_name_with_suffix(buf_relay_log_info_file,
-                            sizeof(buf_relay_log_info_file),
-                            relay_log_info_file, 0, &connection_name);
+                                    sizeof(buf_relay_log_info_file),
+                                    relay_log_info_file, 0,
+                                    &mi->cmp_connection_name);
     if (global_system_variables.log_warnings > 1)
       sql_print_information("Reading Master_info: '%s'  Relay_info:'%s'",
                             buf_master_info_file, buf_relay_log_info_file);

@@ -332,8 +332,8 @@ INCLUDE(cmake/abi_check.cmake)
 INCLUDE(cmake/tags.cmake)
 
 IF(WIN32)
-  ADD_SUBDIRECTORY(win/packaging)
   ADD_SUBDIRECTORY(win/upgrade_wizard)
+  ADD_SUBDIRECTORY(win/packaging)
 ENDIF()
 
 CONFIGURE_FILE(config.h.cmake   ${CMAKE_BINARY_DIR}/include/my_config.h)
@@ -344,6 +344,18 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/sql/sql_builtin.cc.in
     ${CMAKE_BINARY_DIR}/sql/sql_builtin.cc)
 CONFIGURE_FILE(
     ${CMAKE_SOURCE_DIR}/cmake/info_macros.cmake.in ${CMAKE_BINARY_DIR}/info_macros.cmake @ONLY)
+
+IF(DEB)
+  CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/debian/mariadb-server-10.0.files.in
+    ${CMAKE_SOURCE_DIR}/debian/mariadb-server-10.0.files)
+  CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/debian/dist/Debian/mariadb-server-10.0.files.in
+    ${CMAKE_SOURCE_DIR}/debian/dist/Debian/mariadb-server-10.0.files)
+  CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/debian/dist/Ubuntu/mariadb-server-10.0.files.in
+    ${CMAKE_SOURCE_DIR}/debian/dist/Ubuntu/mariadb-server-10.0.files)
+ENDIF(DEB)
 
 # Handle the "INFO_*" files.
 INCLUDE(${CMAKE_BINARY_DIR}/info_macros.cmake)
