@@ -1,0 +1,46 @@
+# Set up
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+create user super_user;
+grant super,select,insert,update,delete on *.* to super_user;
+# Testing normal user
+## Check disconnect on sleep
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as normal_reconnected;
+normal_reconnected
+1
+## checking will not disconnect when runnning a query
+select sleep(5);
+sleep(5)
+0
+select 1 as still_connected;
+still_connected
+1
+select 1 as normal_reconnect;
+normal_reconnect
+1
+## Check will not disconnect on short sleep
+select 1 as normal_still_connected;
+normal_still_connected
+1
+# Testing with super user
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_still_be_connected;
+should_still_be_connected
+1
+# Testing with root user
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_still_be_connected;
+should_still_be_connected
+1
+# Clean up
+drop user normal_user;
+drop user super_user;

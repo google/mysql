@@ -1732,6 +1732,13 @@ void add_diff_to_status(STATUS_VAR *to_var, STATUS_VAR *from_var,
 void THD::awake(killed_state state_to_set)
 {
   DBUG_ENTER("THD::awake");
+  awake_timed(state_to_set, WAIT_FOR_KILL_TRY_TIMES, SECONDS_TO_WAIT_FOR_KILL);
+  DBUG_VOID_RETURN;
+}
+
+void THD::awake_timed(killed_state state_to_set, ulong tries, ulong time_to_wait)
+{
+  DBUG_ENTER("THD::awake_timed");
   DBUG_PRINT("enter", ("this: %p current_thd: %p", this, current_thd));
   THD_CHECK_SENTRY(this);
   mysql_mutex_assert_owner(&LOCK_thd_data);
@@ -1808,8 +1815,8 @@ void THD::awake(killed_state state_to_set)
     */
     if (mysys_var->current_cond && mysys_var->current_mutex)
     {
-      uint i;
-      for (i= 0; i < WAIT_FOR_KILL_TRY_TIMES * SECONDS_TO_WAIT_FOR_KILL; i++)
+      uint i= 0;
+      do
       {
         int ret= mysql_mutex_trylock(mysys_var->current_mutex);
         mysql_cond_broadcast(mysys_var->current_cond);
@@ -1819,8 +1826,10 @@ void THD::awake(killed_state state_to_set)
           mysql_mutex_unlock(mysys_var->current_mutex);
           break;
         }
-        my_sleep(1000000L / WAIT_FOR_KILL_TRY_TIMES);
-      }
+        if (tries > 0)
+          my_sleep(1000000L / tries);
+        ++i;
+      } while (i < tries * time_to_wait);
     }
     mysql_mutex_unlock(&mysys_var->mutex);
   }

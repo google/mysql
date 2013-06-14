@@ -1,0 +1,8 @@
+--source include/not_embedded.inc
+
+--echo 'sniper_ignore_unauthenticated test'
+####################################################################
+#   Checking existence                                             #
+####################################################################
+SELECT COUNT(@@GLOBAL.sniper_ignore_unauthenticated);
+--echo 1 Expected

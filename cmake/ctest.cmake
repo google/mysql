@@ -9,6 +9,8 @@ MACRO (MY_ADD_TESTS)
   MYSQL_PARSE_ARGUMENTS(ARG "LINK_LIBRARIES;EXT" "" ${ARGN})
 
   INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include
+                      ${CMAKE_SOURCE_DIR}/sql
+                      ${CMAKE_SOURCE_DIR}/regex
                       ${CMAKE_SOURCE_DIR}/unittest/mytap)
 
   IF (NOT ARG_EXT)

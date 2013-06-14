@@ -1,0 +1,5 @@
+'sniper_idle_timeout test'
+SELECT COUNT(@@GLOBAL.sniper_idle_timeout);
+COUNT(@@GLOBAL.sniper_idle_timeout)
+1
+1 Expected

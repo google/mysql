@@ -2800,6 +2800,7 @@ public:
   }
   void close_active_vio();
 #endif
+  void awake_timed(killed_state state_to_set, ulong tries, ulong time_to_wait);
   void awake(killed_state state_to_set);
  
   /** Disconnect the associated communication endpoint. */

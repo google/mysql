@@ -90,6 +90,9 @@
 
 #include "rpl_handler.h"
 
+#include "sniper.h"
+#include "sniper_modules.h"
+
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
@@ -371,6 +374,10 @@ static mysql_cond_t COND_thread_cache, COND_flush_thread_cache;
 static DYNAMIC_ARRAY all_options;
 
 /* Global variables */
+
+#ifndef EMBEDDED_LIBRARY
+static Sniper *sniper;
+#endif
 
 bool opt_enable_fulltext_index_creation= true;
 bool opt_bin_log, opt_bin_log_used=0, opt_ignore_builtin_innodb= 0;
@@ -1901,6 +1908,12 @@ static void __cdecl kill_server(int sig_ptr)
 #endif
 
   close_connections();
+#ifndef EMBEDDED_LIBRARY
+  if (sniper_active)
+  {
+    delete sniper;
+  }
+#endif
   if (sig != MYSQL_KILL_SIGNAL &&
       sig != 0)
     unireg_abort(1);				/* purecov: inspected */
@@ -5657,6 +5670,21 @@ int mysqld_main(int argc, char **argv)
     setbuf(stderr, NULL);
     FreeConsole();				// Remove window
   }
+#endif
+
+#ifndef EMBEDDED_LIBRARY
+  sniper_active= sniper_active||sniper_idle_timeout;
+  if (sniper_active)
+  {
+    sniper= new Sniper(sniper_check_period);
+    sniper->register_global_check(new Sniper_module_priv_ignore(SUPER_ACL));
+    if (sniper_ignore_unauthenticated)
+      sniper->register_global_check(new Sniper_module_unauthenticated());
+    if (sniper_idle_timeout)
+      sniper->register_periodic_check(new Sniper_module_idle(sniper_idle_timeout));
+    sniper->start();
+  }
+
 #endif
 
   /*

@@ -64,6 +64,9 @@
 #include "opt_range.h"
 #include "rpl_parallel.h"
 
+#include "sniper.h"
+#include "sniper_modules.h"
+
 /*
   The rule for this file: everything should be 'static'. When a sys_var
   variable or a function from this file is - in very rare cases - needed
@@ -2635,6 +2638,32 @@ static Sys_var_charptr Sys_socket(
        "socket", "Socket file to use for connection",
        READ_ONLY GLOBAL_VAR(mysqld_unix_port), CMD_LINE(REQUIRED_ARG),
        IN_FS_CHARSET, DEFAULT(0));
+
+#ifndef EMBEDDED_LIBRARY
+
+static Sys_var_mybool Sys_sniper_active(
+       "sniper", "Enable sniping support",
+       READ_ONLY GLOBAL_VAR(sniper_active), CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+
+static Sys_var_mybool Sys_sniper_ignore_unauthenticated(
+       "sniper_ignore_unauthenticated", "Do not snipe connections if the "
+                                         "user is currently unauthenticated.",
+       READ_ONLY GLOBAL_VAR(sniper_ignore_unauthenticated),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+
+static Sys_var_uint Sys_sniper_check_period(
+       "sniper_check_period", "Time between successive runs of the sniper in "
+                             "seconds",
+       READ_ONLY GLOBAL_VAR(sniper_check_period), CMD_LINE(OPT_ARG),
+       VALID_RANGE(1, UINT_MAX32), DEFAULT(60), BLOCK_SIZE(1));
+
+static Sys_var_uint Sys_sniper_idle_timeout(
+       "sniper_idle_timeout", "Time which a connection should be allowed to "
+                             "stay idle before being possibly sniped",
+       READ_ONLY GLOBAL_VAR(sniper_idle_timeout), CMD_LINE(OPT_ARG),
+       VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1));
+
+#endif
 
 static Sys_var_mybool Sys_super_to_set_timestamp(
        "super_to_set_timestamp",

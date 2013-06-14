@@ -1,0 +1,5 @@
+'sniper_check_period test'
+SELECT COUNT(@@GLOBAL.sniper_check_period);
+COUNT(@@GLOBAL.sniper_check_period)
+1
+1 Expected

@@ -80,6 +80,11 @@ SET (SQL_SOURCE
                transaction.cc sys_vars.cc sql_truncate.cc datadict.cc
                sql_reload.cc sql_cmd.h item_inetfunc.cc
 
+               sniper.cc
+               sniper.h
+               sniper_modules.cc
+               sniper_modules.h
+
                # added in MariaDB:
                sql_explain.h sql_explain.cc
                sql_lifo_buffer.h sql_join_cache.h sql_join_cache.cc

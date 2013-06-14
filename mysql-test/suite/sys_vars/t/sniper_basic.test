@@ -1,0 +1,8 @@
+--source include/not_embedded.inc
+
+--echo 'sniper test'
+####################################################################
+#   Checking existence                                             #
+####################################################################
+SELECT COUNT(@@GLOBAL.sniper);
+--echo 1 Expected

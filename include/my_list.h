@@ -34,6 +34,7 @@ extern LIST *list_reverse(LIST *root);
 extern void list_free(LIST *root,unsigned int free_data);
 extern unsigned int list_length(LIST *);
 extern int list_walk(LIST *,list_walk_action action,unsigned char * argument);
+extern int list_sum(LIST *,list_walk_action action,unsigned char * argument);
 
 #define list_rest(a) ((a)->next)
 #define list_push(a,b) (a)=list_cons((b),(a))

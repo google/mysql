@@ -1,0 +1,8 @@
+--source include/not_embedded.inc
+
+--echo 'sniper_check_period test'
+####################################################################
+#   Checking existence                                             #
+####################################################################
+SELECT COUNT(@@GLOBAL.sniper_check_period);
+--echo 1 Expected

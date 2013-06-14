@@ -4772,6 +4772,7 @@ sub extract_warning_lines ($$) {
      qr/missing DBUG_RETURN/,
      qr/Attempting backtrace/,
      qr/Assertion .* failed/,
+     qr/Sniper: Attempting to kill THD id=[0-9]+/,
     );
   # These are taken from the include/mtr_warnings.sql global suppression
   # list. They occur delayed, so they can be parsed during shutdown rather

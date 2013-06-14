@@ -1,0 +1,5 @@
+'sniper test'
+SELECT COUNT(@@GLOBAL.sniper);
+COUNT(@@GLOBAL.sniper)
+1
+1 Expected

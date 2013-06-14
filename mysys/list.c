@@ -112,3 +112,14 @@ int list_walk(LIST *list, list_walk_action action, uchar* argument)
   }
   return 0;
 }
+
+int list_sum(LIST *list, list_walk_action action, uchar* argument)
+{
+  int sum=0;
+  while (list)
+  {
+    sum+=(*action)(list->data, argument);
+    list=list_rest(list);
+  }
+  return sum;
+}

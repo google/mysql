@@ -1,0 +1,5 @@
+'sniper_ignore_unauthenticated test'
+SELECT COUNT(@@GLOBAL.sniper_ignore_unauthenticated);
+COUNT(@@GLOBAL.sniper_ignore_unauthenticated)
+1
+1 Expected
