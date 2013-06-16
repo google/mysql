@@ -385,6 +385,7 @@ TYPELIB thread_handling_typelib=
 
 const char *first_keyword= "first", *binary_keyword= "BINARY";
 const char *my_localhost= "localhost", *delayed_user= "DELAYED";
+const char *opt_unix_socket_hostname= my_localhost;
 #if SIZEOF_OFF_T > 4 && defined(BIG_TABLES)
 #define GET_HA_ROWS GET_ULL
 #else
@@ -5377,7 +5378,7 @@ pthread_handler_t handle_connections_sockets(void *arg __attribute__((unused)))
       continue;
     }
     if (sock == unix_sock)
-      thd->security_ctx->host=(char*) my_localhost;
+      thd->security_ctx->host= my_strdup(opt_unix_socket_hostname, MYF(0));
 
     create_new_thread(thd);
   }
@@ -5918,7 +5919,8 @@ enum options_mysqld
   OPT_RPL_ALLOW_IMPLICIT_COMMIT,
   OPT_SYSTEM_USER_TABLE,
   OPT_DEPRECATED_ENGINES,
-  OPT_BLOCK_USER_ACCESS
+  OPT_BLOCK_USER_ACCESS,
+  OPT_UNIX_SOCKET_HOSTNAME
 };
 
 
@@ -7451,6 +7453,11 @@ thread is in the relay logs.",
    "granted to any user from mysql.user table.",
    &opt_block_user_access, &opt_block_user_access,
    0, GET_ULONG, REQUIRED_ARG, 0, 0, 0xFFFFFFFFUL, 0, 1, 0},
+  {"unix-socket-hostname", OPT_UNIX_SOCKET_HOSTNAME,
+   "The hostname to use while authenticating users connected through "
+   "unix socket.",
+   &opt_unix_socket_hostname, &opt_unix_socket_hostname,
+   0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
