@@ -2824,7 +2824,11 @@ void STDCALL mysql_shutdown_connection(MYSQL *mysql)
   DBUG_ENTER("mysql_shutdown_connection");
   if (mysql)
   {
-    shutdown(mysql->net.vio->sd, SHUT_RDWR);
+    const Vio *vio = mysql->net.vio;
+    if (vio)
+    {
+        shutdown(vio->sd, SHUT_RDWR);
+    }
   }
   DBUG_VOID_RETURN;
 }
