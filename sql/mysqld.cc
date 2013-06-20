@@ -5673,7 +5673,10 @@ int mysqld_main(int argc, char **argv)
 #endif
 
 #ifndef EMBEDDED_LIBRARY
-  sniper_active= sniper_active||sniper_idle_timeout;
+  sniper_active= sniper_active
+      || sniper_idle_timeout
+      || sniper_connectionless
+      || sniper_long_query_timeout;
   if (sniper_active)
   {
     sniper= new Sniper(sniper_check_period);
@@ -5682,6 +5685,11 @@ int mysqld_main(int argc, char **argv)
       sniper->register_global_check(new Sniper_module_unauthenticated());
     if (sniper_idle_timeout)
       sniper->register_periodic_check(new Sniper_module_idle(sniper_idle_timeout));
+    if (sniper_connectionless)
+      sniper->register_periodic_check(new Sniper_module_connectionless());
+    if (sniper_long_query_timeout)
+      sniper->register_periodic_check(
+          new Sniper_module_long_query(sniper_long_query_timeout));
     sniper->start();
   }
 

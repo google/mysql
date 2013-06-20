@@ -1,0 +1,106 @@
+# Tests for the connectionless sniper
+#
+# This doesn't work on the embedded version because the code is only compiled
+# on the non-embedded version.
+
+--source include/not_embedded.inc
+
+let $sniper_kills=1;
+--source include/sniper_used.inc
+
+--echo # Set up
+
+create table ids (id int);
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+create user super_user;
+grant super,select,insert,update,delete on *.* to super_user;
+
+connect (normal_con, localhost, normal_user,,);
+connect (super_con, localhost, super_user,,);
+connect (root_con, localhost, root,,);
+
+--disable_reconnect
+
+connection normal_con;
+--echo # Testing normal user
+
+--echo # Check will allow normal queries
+insert into ids VALUES(CONNECTION_ID());
+--send select sleep(10) as should_work;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+
+connection normal_con;
+--reap
+
+--echo # Check cleanup on disconnect
+--send select sleep(10) as should_fail;
+
+connection default;
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+sudden_close normal_con;
+
+connection normal_con;
+--error 2013
+--reap
+
+connection default;
+delete from ids;
+disconnect normal_con;
+
+connection super_con;
+--echo # Testing super user
+insert into ids VALUES(CONNECTION_ID());
+--send select sleep(10) as should_work;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+sudden_close super_con;
+
+connection super_con;
+--echo # it should have gone away but no sniping
+--error 2013
+--reap
+
+connection default;
+delete from ids;
+disconnect super_con;
+
+connection root_con;
+--echo # Testing root user
+insert into ids VALUES(CONNECTION_ID());
+--send select sleep(10) as should_work;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+
+sudden_close root_con;
+
+connection root_con;
+--echo # it should have gone away but no sniping
+--error 2013
+--reap
+
+
+connection default;
+delete from ids;
+disconnect root_con;
+
+--echo # Clean up
+drop table ids;
+drop user normal_user;
+drop user super_user;

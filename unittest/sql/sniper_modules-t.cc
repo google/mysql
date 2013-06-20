@@ -41,6 +41,8 @@ public:
 class THD
 {
 public:
+  bool connected;
+  bool is_connected() {return connected;};
   enum enum_server_command cmd;
   Security_context *security_ctx;
   enum enum_thread_type system_thread;

@@ -1,0 +1,71 @@
+# Tests for the long query sniper
+#
+# This doesn't work on the embedded version because the code is only compiled
+# on the non-embedded version.
+
+--source include/not_embedded.inc
+
+let $sniper_kills=1;
+--source include/sniper_used.inc
+
+--echo # Set up
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+create user super_user;
+grant super,select,insert,update,delete on *.* to super_user;
+
+connect (normal_con, localhost, normal_user,,);
+connect (super_con, localhost, super_user,,);
+connect (root_con, localhost, root,,);
+
+connection normal_con;
+--echo # Testing normal user
+
+--disable_reconnect
+--echo ## Check no disconnect on sleep
+select 1 as should_be_1;
+--sleep 5
+# We expect the server to be gone.
+select 1 as should_not_error;
+--enable_reconnect
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# Since this is a query it shouldn't be sniped.
+--echo ## checking will disconnect when runnning a query
+--error 2013
+select sleep(5) as should_error;
+--enable_reconnect
+select 1 as normal_reconnect;
+
+--disable_reconnect
+# We expect to be able to sleep if it is for less then the timeout.
+--echo ## Check will not disconnect on short sleep
+select sleep(1) as should_work;
+select 1 as normal_still_connected;
+--enable_reconnect
+
+connection super_con;
+--echo # Testing with super user
+--disable_reconnect
+select 1 as should_be_1;
+select sleep(5) as should_work;
+select 1 as should_still_be_connected;
+--enable_reconnect
+
+# Make sure that root is not sniped.
+connection root_con;
+--echo # Testing with root user
+--disable_reconnect
+select 1 as should_be_1;
+select sleep(5) as should_work;
+select 1 as should_still_be_connected;
+--enable_reconnect
+
+--echo # Clean up
+connection default;
+disconnect normal_con;
+disconnect super_con;
+disconnect root_con;
+drop user normal_user;
+drop user super_user;

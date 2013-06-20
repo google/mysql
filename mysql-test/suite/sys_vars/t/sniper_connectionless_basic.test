@@ -1,0 +1,8 @@
+--source include/not_embedded.inc
+
+--echo 'sniper_connectionless test'
+####################################################################
+#   Checking existence                                             #
+####################################################################
+SELECT COUNT(@@GLOBAL.sniper_connectionless);
+--echo 1 Expected

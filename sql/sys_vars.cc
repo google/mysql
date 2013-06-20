@@ -2663,6 +2663,18 @@ static Sys_var_uint Sys_sniper_idle_timeout(
        READ_ONLY GLOBAL_VAR(sniper_idle_timeout), CMD_LINE(OPT_ARG),
        VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1));
 
+static Sys_var_uint Sys_sniper_long_query_timeout(
+       "sniper_long_query_timeout", "Time which a connection should be "
+                                   "allowed to continue running a single "
+                                   "query before being possibly sniped",
+       READ_ONLY GLOBAL_VAR(sniper_long_query_timeout), CMD_LINE(OPT_ARG),
+       VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1));
+
+static Sys_var_mybool Sys_sniper_connectionless(
+    "sniper_connectionless", "Enable sniping of connectionless threads",
+    READ_ONLY GLOBAL_VAR(sniper_connectionless),
+    CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+
 #endif
 
 static Sys_var_mybool Sys_super_to_set_timestamp(

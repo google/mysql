@@ -348,6 +348,7 @@ enum enum_commands {
   Q_SYNC_WITH_MASTER,
   Q_SYNC_SLAVE_WITH_MASTER,
   Q_ERROR,
+  Q_SUDDEN_CLOSE,
   Q_SEND,		    Q_REAP,
   Q_DIRTY_CLOSE,	    Q_REPLACE, Q_REPLACE_COLUMN,
   Q_PING,		    Q_EVAL, 
@@ -410,6 +411,7 @@ const char *command_names[]=
   "sync_with_master",
   "sync_slave_with_master",
   "error",
+  "sudden_close",
   "send",
   "reap",
   "dirty_close",
@@ -5712,6 +5714,38 @@ void do_close_connection(struct st_command *command)
   DBUG_VOID_RETURN;
 }
 
+void do_sudden_close(struct st_command *command)
+{
+  DBUG_ENTER("do_sudden_close");
+  struct st_connection *con;
+  static DYNAMIC_STRING ds_connection;
+  const struct command_arg sudden_close_args[] = {
+    { "connection_name", ARG_STRING, TRUE, &ds_connection,
+      "Name of the connection to close." }
+  };
+  check_command_args(command, command->first_argument,
+                     sudden_close_args,
+                     sizeof(sudden_close_args)/sizeof(struct command_arg),
+                     ' ');
+
+  DBUG_PRINT("enter",("connection name: '%s'", ds_connection.str));
+
+  if (!(con= find_connection_by_name(ds_connection.str)))
+    die("connection '%s' not found in connection pool", ds_connection.str);
+
+  DBUG_PRINT("info", ("Closing connection %s", con->name));
+#ifdef EMBEDDED_LIBRARY
+  die("Not Implemented for Embedded");
+  return;
+#endif
+  mysql_shutdown_connection(con->mysql);
+  if (con->util_mysql)
+  {
+    mysql_shutdown_connection(con->util_mysql);
+  }
+  DBUG_VOID_RETURN;
+}
+
 
 /*
   Connect to a server doing several retries if needed.
@@ -9228,6 +9262,8 @@ int main(int argc, char **argv)
         do_connect(command);
         break;
       case Q_CONNECTION: select_connection(command); break;
+      case Q_SUDDEN_CLOSE:
+        do_sudden_close(command); break;
       case Q_DISCONNECT:
       case Q_DIRTY_CLOSE:
 	do_close_connection(command); break;

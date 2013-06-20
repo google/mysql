@@ -1,0 +1,52 @@
+# Set up
+create table ids (id int);
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+create user super_user;
+grant super,select,insert,update,delete on *.* to super_user;
+# Testing normal user
+# Check will allow normal queries
+insert into ids VALUES(CONNECTION_ID());
+select sleep(10) as should_work;;
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+should_be_1
+1
+should_work
+0
+# Check cleanup on disconnect
+select sleep(10) as should_fail;;
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+should_be_1
+1
+ERROR HY000: Lost connection to MySQL server during query
+delete from ids;
+# Testing super user
+insert into ids VALUES(CONNECTION_ID());
+select sleep(10) as should_work;;
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+should_be_1
+1
+# it should have gone away but no sniping
+ERROR HY000: Lost connection to MySQL server during query
+delete from ids;
+# Testing root user
+insert into ids VALUES(CONNECTION_ID());
+select sleep(10) as should_work;;
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+should_be_1
+1
+# it should have gone away but no sniping
+ERROR HY000: Lost connection to MySQL server during query
+delete from ids;
+# Clean up
+drop table ids;
+drop user normal_user;
+drop user super_user;

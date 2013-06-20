@@ -1,0 +1,5 @@
+'sniper_connectionless test'
+SELECT COUNT(@@GLOBAL.sniper_connectionless);
+COUNT(@@GLOBAL.sniper_connectionless)
+1
+1 Expected
