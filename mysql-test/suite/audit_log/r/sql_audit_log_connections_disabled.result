@@ -1,0 +1,5 @@
+select 1 as should_be_1;
+should_be_1
+1
+# We expect to see 0 connections here:
+0

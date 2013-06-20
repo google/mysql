@@ -972,6 +972,9 @@ static sys_var_const sys_audit_log_connections(&vars, "audit_log_connections",
                                                OPT_GLOBAL, SHOW_BOOL,
                                                (uchar*)
                                                &opt_audit_log_connections);
+static sys_var_const sys_audit_log_remote_connections(&vars, "audit_log_remote_connections",
+                                                      OPT_GLOBAL, SHOW_BOOL,
+                                                      (uchar*) &opt_audit_log_remote_connections);
 static sys_var_const sys_audit_log_super(&vars, "audit_log_super",
                                          OPT_GLOBAL, SHOW_BOOL,
                                          (uchar*) &opt_audit_log_super);

@@ -1,0 +1,6 @@
+select 1 as should_be_1;
+should_be_1
+1
+# We expect to see 2 connections here; one is 'default', and the other
+# is mtr's internal connection:
+2

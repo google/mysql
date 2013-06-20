@@ -256,8 +256,14 @@ end:
   DBUG_RETURN(error);
 }
 
-#endif /* NO_EMBEDDED_ACCESS_CHECKS */
+static bool connection_is_remote(THD *thd)
+{
+  Vio *vio= thd->net.vio;
+  return vio->type == VIO_TYPE_TCPIP
+    && (vio->local.sin_addr.s_addr != vio->remote.sin_addr.s_addr);
+}
 
+#endif /* !NO_EMBEDDED_ACCESS_CHECKS */
 
 /**
   Check if user exist and password supplied is correct.
@@ -424,10 +430,12 @@ check_user(THD *thd, enum enum_server_command command,
 
       /*
         Log the command before authentication checks, so that the user can
-        check the log for the tried login tried and also to detect
-        break-in attempts.
+        check the log for the tried login, and also to detect break-in
+        attempts.
       */
-      if (opt_audit_log_connections)
+      if (opt_audit_log_connections
+          || (opt_audit_log_remote_connections && connection_is_remote(thd)))
+      {
         audit_log_print(thd, command,
                         (thd->main_security_ctx.priv_user ==
                          thd->main_security_ctx.user ?
@@ -436,6 +444,7 @@ check_user(THD *thd, enum enum_server_command command,
                         thd->main_security_ctx.user,
                         thd->main_security_ctx.host_or_ip,
                         db ? db : (char*) "");
+      }
 
       general_log_print(thd, command,
                         (thd->main_security_ctx.priv_user ==
@@ -516,7 +525,8 @@ check_user(THD *thd, enum enum_server_command command,
                     thd->main_security_ctx.user,
                     thd->main_security_ctx.host_or_ip,
                     passwd_len ? ER(ER_YES) : ER(ER_NO));
-  if (opt_audit_log_connections)
+  if (opt_audit_log_connections
+      || (opt_audit_log_remote_connections && connection_is_remote(thd)))
     audit_log_print(thd, COM_CONNECT, ER(ER_ACCESS_DENIED_ERROR),
                     thd->main_security_ctx.user,
                     thd->main_security_ctx.host_or_ip,
