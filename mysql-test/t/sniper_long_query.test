@@ -5,7 +5,7 @@
 
 --source include/not_embedded.inc
 
-let $sniper_kills=1;
+let $sniper_kills=3;
 --source include/sniper_used.inc
 
 --echo # Set up
@@ -60,6 +60,65 @@ connection root_con;
 select 1 as should_be_1;
 select sleep(5) as should_work;
 select 1 as should_still_be_connected;
+--enable_reconnect
+
+connection default;
+--echo # Test can change timout
+--echo # test longer timeout
+set @@global.sniper_long_query_timeout=7;
+
+connection normal_con;
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# Since this is a query it shouldn't be sniped.
+--echo ## checking will disconnect when runnning a query
+--error 2013
+select sleep(10) as should_error;
+--enable_reconnect
+select 1 as normal_reconnect;
+
+--disable_reconnect
+# We expect to be able to sleep if it is for less then the timeout.
+--echo ## Check will not disconnect on short sleep
+select sleep(5) as should_work;
+select 1 as normal_still_connected;
+--enable_reconnect
+
+connection default;
+--echo # test no timeout
+set @@global.sniper_long_query_timeout=0;
+
+connection normal_con;
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# Since this is a query it shouldn't be sniped.
+--echo ## checking will disconnect when runnning a query
+select sleep(10) as should_work;
+--enable_reconnect
+select 1 as normal_reconnect;
+
+connection default;
+--echo # test normal timeout
+set @@global.sniper_long_query_timeout=3;
+
+connection normal_con;
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# Since this is a query it shouldn't be sniped.
+--echo ## checking will disconnect when runnning a query
+--error 2013
+select sleep(5) as should_error;
+--enable_reconnect
+select 1 as normal_reconnect;
+
+--disable_reconnect
+# We expect to be able to sleep if it is for less then the timeout.
+--echo ## Check will not disconnect on short sleep
+select sleep(1) as should_work;
+select 1 as normal_still_connected;
 --enable_reconnect
 
 --echo # Clean up

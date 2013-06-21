@@ -5,7 +5,7 @@
 
 --source include/not_embedded.inc
 
-let $sniper_kills=1;
+let $sniper_kills=2;
 --source include/sniper_used.inc
 
 --echo # Set up
@@ -95,10 +95,89 @@ connection root_con;
 --error 2013
 --reap
 
-
 connection default;
 delete from ids;
 disconnect root_con;
+
+--echo # Turn off the sniper.
+connection default;
+set @@global.sniper_connectionless=0;
+connect (normal_con, localhost, normal_user,,);
+
+connection normal_con;
+--echo # Testing normal user
+
+--echo # Check will allow normal queries
+insert into ids VALUES(CONNECTION_ID());
+--send select sleep(10) as should_work;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+
+connection normal_con;
+--reap
+
+--echo # Check doesn't cleanup on disconnect
+--send select sleep(10) as should_fail;
+
+connection default;
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+sudden_close normal_con;
+
+connection normal_con;
+--echo # shouldn't have been sniped.
+--error 2013
+--reap
+
+connection default;
+delete from ids;
+disconnect normal_con;
+
+--echo # Turn on the sniper.
+connection default;
+set @@global.sniper_connectionless=1;
+connect (normal_con, localhost, normal_user,,);
+
+connection normal_con;
+--echo # Testing normal user
+
+--echo # Check will allow normal queries
+insert into ids VALUES(CONNECTION_ID());
+--send select sleep(10) as should_work;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID ;
+
+connection normal_con;
+--reap
+
+--echo # Check does cleanup on disconnect
+--send select sleep(10) as should_fail;
+
+connection default;
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+sudden_close normal_con;
+
+connection normal_con;
+--echo # shouldn't have been sniped.
+--error 2013
+--reap
+
+connection default;
+delete from ids;
+disconnect normal_con;
 
 --echo # Clean up
 drop table ids;

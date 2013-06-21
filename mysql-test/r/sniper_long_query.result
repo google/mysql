@@ -47,6 +47,55 @@ should_work
 select 1 as should_still_be_connected;
 should_still_be_connected
 1
+# Test can change timout
+# test longer timeout
+set @@global.sniper_long_query_timeout=7;
+select 1 as normal_reconnected;
+normal_reconnected
+1
+## checking will disconnect when runnning a query
+select sleep(10) as should_error;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as normal_reconnect;
+normal_reconnect
+1
+## Check will not disconnect on short sleep
+select sleep(5) as should_work;
+should_work
+0
+select 1 as normal_still_connected;
+normal_still_connected
+1
+# test no timeout
+set @@global.sniper_long_query_timeout=0;
+select 1 as normal_reconnected;
+normal_reconnected
+1
+## checking will disconnect when runnning a query
+select sleep(10) as should_work;
+should_work
+0
+select 1 as normal_reconnect;
+normal_reconnect
+1
+# test normal timeout
+set @@global.sniper_long_query_timeout=3;
+select 1 as normal_reconnected;
+normal_reconnected
+1
+## checking will disconnect when runnning a query
+select sleep(5) as should_error;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as normal_reconnect;
+normal_reconnect
+1
+## Check will not disconnect on short sleep
+select sleep(1) as should_work;
+should_work
+0
+select 1 as normal_still_connected;
+normal_still_connected
+1
 # Clean up
 drop user normal_user;
 drop user super_user;

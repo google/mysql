@@ -41,6 +41,51 @@ should_be_1
 select 1 as should_still_be_connected;
 should_still_be_connected
 1
+# Testing with longer timeout
+set @@global.sniper_idle_timeout=5;
+select 1 as reconnect_it;
+reconnect_it
+1
+## Check disconnect on longer sleep
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as normal_reconnected;
+normal_reconnected
+1
+## Check will not disconnect on short sleep
+select 1 as normal_still_connected;
+normal_still_connected
+1
+# check will turn off.
+set @@global.sniper_idle_timeout=0;
+## Check wont disconnect on longer sleep
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_work;
+should_work
+1
+select 1 as normal_reconnected;
+normal_reconnected
+1
+# Testing will turn back on
+set @@global.sniper_idle_timeout=3;
+## Check disconnect on longer sleep
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as normal_reconnected;
+normal_reconnected
+1
+## Check will not disconnect on short sleep
+select 1 as normal_still_connected;
+normal_still_connected
+1
 # Clean up
 drop user normal_user;
 drop user super_user;

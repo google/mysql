@@ -31,27 +31,27 @@ void Sniper::init()
 
 Sniper::~Sniper()
 {
+  clean_up();
+}
+
+static int call_shutdown(void *mod, void *nothing)
+{
+  ((Sniper_module*)mod)->shutdown();
+  return FALSE;
+}
+void Sniper::clean_up()
+{
   pthread_mutex_lock(&LOCK_startup);
   real_stop(FALSE);
   pthread_mutex_lock(&LOCK_register);
-  delete_list(global_checks);
-  delete_list(periodic_checks);
+  list_walk(global_checks, (list_walk_action)(&call_shutdown),NULL);
+  list_free(global_checks, FALSE);
+  global_checks= NULL;
+  list_walk(periodic_checks, (list_walk_action)(&call_shutdown),NULL);
+  list_free(periodic_checks, FALSE);
+  periodic_checks= NULL;
   pthread_mutex_unlock(&LOCK_register);
   pthread_mutex_unlock(&LOCK_startup);
-}
-
-// Needed because the list_free method assumes that the data was allocated
-// using my_malloc, which this wasn't as it was made by using new.
-void Sniper::delete_list(LIST *lst)
-{
-  LIST *next;
-  while (lst)
-  {
-    delete (Sniper_module*)(lst->data);
-    next= lst->next;
-    my_free(lst);
-    lst= next;
-  }
 }
 
 void Sniper::start()
@@ -99,6 +99,7 @@ void Sniper::real_stop(bool should_lock)
 void Sniper::set_period(uint new_period)
 {
   pthread_mutex_lock(&LOCK_periodic);
+  sql_print_information("Sniper: check period set to %i",new_period);
   if (new_period == 0)
   {
     if (period == 0)
@@ -129,22 +130,38 @@ end:
   return;
 }
 
+static int list_contains_callback(void *data, void *want)
+{
+  return data==want;
+}
+inline static bool list_contains(LIST *list, void* data)
+{
+  return list_walk(list,(list_walk_action)(&list_contains_callback),
+                   (uchar*)data);
+}
+
 sniper_module_id Sniper::register_global_check(Sniper_module *module)
 {
-  sql_print_information("Sniper: %s (%s) registered as a global_check to Sniper.",
-                        module->name, module->description);
   pthread_mutex_lock(&LOCK_register);
-  list_push(global_checks, module);
+  if (!list_contains(global_checks,module))
+  {
+    list_push(global_checks, module);
+    sql_print_information("Sniper: %s (%s) registered as a global_check to "
+                          "Sniper.", module->name, module->description);
+  }
   pthread_mutex_unlock(&LOCK_register);
   return (sniper_module_id)module;
 }
 
 sniper_module_id Sniper::register_periodic_check(Sniper_module *module)
 {
-  sql_print_information("Sniper: %s (%s) registered as a periodic_check to Sniper.",
-                        module->name, module->description);
   pthread_mutex_lock(&LOCK_register);
-  list_push(periodic_checks, module);
+  if (!list_contains(periodic_checks, module))
+  {
+    list_push(periodic_checks, module);
+    sql_print_information("Sniper: %s (%s) registered as a periodic_check to "
+                          "Sniper.", module->name, module->description);
+  }
   if (periodic_checks != NULL)
   {
     pthread_mutex_unlock(&LOCK_register);
@@ -288,14 +305,14 @@ void Sniper::shoot(THD *target_thd)
 
 static int walk_action_global(void *data, void *arg)
 {
-  return !((Sniper_module*)data)->should_snipe((THD*)arg);
+  return !((Sniper_module*)data)->does_approve((THD*)arg);
 }
 
 static int walk_action_periodic(void *data, void *arg)
 {
   THD *target_thd= (THD*)arg;
   Sniper_module *mod= (Sniper_module*)data;
-  if (mod->should_snipe(target_thd))
+  if (mod->does_approve(target_thd))
   {
     sql_print_information("Sniper: THD id=%lu approved for sniping by "
                           "%s (%s).", target_thd->thread_id, mod->name,

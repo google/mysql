@@ -375,10 +375,6 @@ static DYNAMIC_ARRAY all_options;
 
 /* Global variables */
 
-#ifndef EMBEDDED_LIBRARY
-static Sniper *sniper;
-#endif
-
 bool opt_enable_fulltext_index_creation= true;
 bool opt_bin_log, opt_bin_log_used=0, opt_ignore_builtin_innodb= 0;
 my_bool opt_log, opt_slow_log, debug_assert_if_crashed_table= 0, opt_help= 0;
@@ -1908,12 +1904,6 @@ static void __cdecl kill_server(int sig_ptr)
 #endif
 
   close_connections();
-#ifndef EMBEDDED_LIBRARY
-  if (sniper_active)
-  {
-    delete sniper;
-  }
-#endif
   if (sig != MYSQL_KILL_SIGNAL &&
       sig != 0)
     unireg_abort(1);				/* purecov: inspected */
@@ -2049,6 +2039,11 @@ void clean_up(bool print_message)
   else
     cleanup_started= true;
   mysql_mutex_unlock(&LOCK_cleanup);
+
+#ifndef EMBEDDED_LIBRARY
+  sniper.stop();
+  sniper.clean_up();
+#endif
 
 #ifdef HAVE_REPLICATION
   // We must call end_slave() as clean_up may have been called during startup
@@ -5420,6 +5415,42 @@ static void test_lc_time_sz()
 }
 #endif//DBUG_OFF
 
+#ifndef EMBEDDED_LIBRARY
+static void setup_sniper()
+{
+  sniper_active= sniper_active
+      || sniper_idle_timeout
+      || sniper_connectionless
+      || sniper_long_query_timeout;
+  sniper_module_priv_ignore.set_ignored_privs(SUPER_ACL);
+  sniper.register_global_check(&sniper_module_priv_ignore);
+  if (sniper_ignore_unauthenticated)
+  {
+    sniper.register_global_check(&sniper_module_unauthenticated);
+  }
+  if (sniper_idle_timeout)
+  {
+    sniper_module_idle.set_timeout(sniper_idle_timeout);
+    sniper.register_periodic_check(&sniper_module_idle);
+  }
+  if (sniper_connectionless)
+  {
+    sniper.register_periodic_check(&sniper_module_connectionless);
+  }
+  if (sniper_long_query_timeout)
+  {
+    sniper_module_long_query.set_max_time(sniper_long_query_timeout);
+    sniper.register_periodic_check(&sniper_module_long_query);
+  }
+  sniper.set_period(sniper_check_period);
+
+  if (sniper_active)
+  {
+    sniper.start();
+  }
+}
+#endif
+
 
 #ifdef __WIN__
 int win_main(int argc, char **argv)
@@ -5673,26 +5704,8 @@ int mysqld_main(int argc, char **argv)
 #endif
 
 #ifndef EMBEDDED_LIBRARY
-  sniper_active= sniper_active
-      || sniper_idle_timeout
-      || sniper_connectionless
-      || sniper_long_query_timeout;
-  if (sniper_active)
-  {
-    sniper= new Sniper(sniper_check_period);
-    sniper->register_global_check(new Sniper_module_priv_ignore(SUPER_ACL));
-    if (sniper_ignore_unauthenticated)
-      sniper->register_global_check(new Sniper_module_unauthenticated());
-    if (sniper_idle_timeout)
-      sniper->register_periodic_check(new Sniper_module_idle(sniper_idle_timeout));
-    if (sniper_connectionless)
-      sniper->register_periodic_check(new Sniper_module_connectionless());
-    if (sniper_long_query_timeout)
-      sniper->register_periodic_check(
-          new Sniper_module_long_query(sniper_long_query_timeout));
-    sniper->start();
-  }
-
+  if (!opt_bootstrap)
+    setup_sniper();
 #endif
 
   /*

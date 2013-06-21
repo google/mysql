@@ -2641,39 +2641,114 @@ static Sys_var_charptr Sys_socket(
 
 #ifndef EMBEDDED_LIBRARY
 
+static bool sniper_set_activity(sys_var *self, THD *thd, enum_var_type type)
+{
+  // the variable has already been updated.
+  if (sniper_active)
+    sniper.start();
+  else
+    sniper.stop();
+  return FALSE;
+}
+
 static Sys_var_mybool Sys_sniper_active(
        "sniper", "Enable sniping support",
-       READ_ONLY GLOBAL_VAR(sniper_active), CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+       GLOBAL_VAR(sniper_active), CMD_LINE(OPT_ARG), DEFAULT(FALSE),
+       NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+       ON_UPDATE(sniper_set_activity));
 
-static Sys_var_mybool Sys_sniper_ignore_unauthenticated(
-       "sniper_ignore_unauthenticated", "Do not snipe connections if the "
-                                         "user is currently unauthenticated.",
-       READ_ONLY GLOBAL_VAR(sniper_ignore_unauthenticated),
-       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+static bool sniper_set_period(sys_var *self, THD *thd, enum_var_type type)
+{
+  sniper.set_period(sniper_check_period);
+  return false;
+}
 
 static Sys_var_uint Sys_sniper_check_period(
        "sniper_check_period", "Time between successive runs of the sniper in "
                              "seconds",
-       READ_ONLY GLOBAL_VAR(sniper_check_period), CMD_LINE(OPT_ARG),
-       VALID_RANGE(1, UINT_MAX32), DEFAULT(60), BLOCK_SIZE(1));
+       GLOBAL_VAR(sniper_check_period), CMD_LINE(OPT_ARG),
+       VALID_RANGE(1, UINT_MAX32), DEFAULT(60), BLOCK_SIZE(1),
+       NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+       ON_UPDATE(sniper_set_period));
+
+static bool sniper_set_unauthenticated(sys_var *self, THD *thd,
+                                       enum_var_type type)
+{
+  if (sniper_ignore_unauthenticated)
+    sniper.register_global_check(&sniper_module_unauthenticated);
+  else
+    sniper.unregister_global_check(&sniper_module_unauthenticated);
+  return FALSE;
+}
+
+static Sys_var_mybool Sys_sniper_ignore_unauthenticated(
+       "sniper_ignore_unauthenticated", "Do not snipe connections if the "
+                                         "user is currently unauthenticated.",
+       GLOBAL_VAR(sniper_ignore_unauthenticated),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE),
+       NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+       ON_UPDATE(sniper_set_unauthenticated));
+
+static bool sniper_set_idle(sys_var *self, THD *thd, enum_var_type type)
+{
+  if (sniper_idle_timeout)
+  {
+    sniper_module_idle.set_timeout(sniper_idle_timeout);
+    sniper.register_periodic_check(&sniper_module_idle);
+  }
+  else
+    sniper.unregister_periodic_check(&sniper_module_idle);
+  return FALSE;
+}
 
 static Sys_var_uint Sys_sniper_idle_timeout(
        "sniper_idle_timeout", "Time which a connection should be allowed to "
                              "stay idle before being possibly sniped",
-       READ_ONLY GLOBAL_VAR(sniper_idle_timeout), CMD_LINE(OPT_ARG),
-       VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1));
+       GLOBAL_VAR(sniper_idle_timeout), CMD_LINE(OPT_ARG),
+       VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1),
+       NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+       ON_UPDATE(sniper_set_idle));
+
+static bool sniper_set_long_query_timeout(sys_var *self, THD *thd,
+                                          enum_var_type type)
+{
+  if (sniper_long_query_timeout)
+  {
+    sniper_module_long_query.set_max_time(sniper_long_query_timeout);
+    sniper.register_periodic_check(&sniper_module_long_query);
+  }
+  else
+    sniper.unregister_periodic_check(&sniper_module_long_query);
+  return FALSE;
+}
 
 static Sys_var_uint Sys_sniper_long_query_timeout(
        "sniper_long_query_timeout", "Time which a connection should be "
                                    "allowed to continue running a single "
                                    "query before being possibly sniped",
-       READ_ONLY GLOBAL_VAR(sniper_long_query_timeout), CMD_LINE(OPT_ARG),
-       VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1));
+       GLOBAL_VAR(sniper_long_query_timeout), CMD_LINE(OPT_ARG),
+       VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1),
+       NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+       ON_UPDATE(sniper_set_long_query_timeout));
+
+static bool sniper_set_connectionless(sys_var *self, THD *thd,
+                                      enum_var_type type)
+{
+  if (sniper_connectionless)
+  {
+    sniper.register_periodic_check(&sniper_module_connectionless);
+  }
+  else
+    sniper.unregister_periodic_check(&sniper_module_connectionless);
+  return FALSE;
+}
 
 static Sys_var_mybool Sys_sniper_connectionless(
     "sniper_connectionless", "Enable sniping of connectionless threads",
-    READ_ONLY GLOBAL_VAR(sniper_connectionless),
-    CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+    GLOBAL_VAR(sniper_connectionless),
+    CMD_LINE(OPT_ARG), DEFAULT(FALSE),
+    NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+    ON_UPDATE(sniper_set_connectionless));
 
 #endif
 

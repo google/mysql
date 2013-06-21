@@ -14,7 +14,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
 MY_ADD_TESTS(my_apc LINK_LIBRARIES mysys EXT cc)
-MY_ADD_TESTS(sniper_modules LINK_LIBRARIES sql EXT cc)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/sql
                     ${CMAKE_SOURCE_DIR}/include

@@ -5,6 +5,14 @@
 #include "sniper.h"
 #include "sniper_modules.h"
 #include "mysql_com.h"
+#include "sql_acl.h"
+
+Sniper sniper;
+Sniper_module_idle sniper_module_idle(0);
+Sniper_module_connectionless sniper_module_connectionless;
+Sniper_module_unauthenticated sniper_module_unauthenticated;
+Sniper_module_long_query sniper_module_long_query(0);
+Sniper_module_priv_ignore sniper_module_priv_ignore(SUPER_ACL);
 
 bool sniper_ignore_unauthenticated;
 bool sniper_connectionless;

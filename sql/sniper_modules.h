@@ -6,7 +6,6 @@
 #include "sql_class.h"
 #include "sniper.h"
 
-
 extern bool sniper_connectionless;
 extern bool sniper_ignore_unauthenticated;
 extern uint sniper_idle_timeout;
@@ -23,6 +22,13 @@ public:
                     "permissions given."),
        ignored(ignored_privs) {};
   virtual bool should_snipe(THD *target_thd);
+
+  void set_ignored_privs(ulong ignored_privs)
+  {
+    config_enter();
+    ignored= ignored_privs;
+    config_exit();
+  }
 };
 
 class Sniper_module_idle :public Sniper_module
@@ -36,6 +42,13 @@ public:
                     "for more the given number of seconds."),
        max_time(timeout) {};
   virtual bool should_snipe(THD *target_thd);
+
+  void set_timeout(uint timeout)
+  {
+    config_enter();
+    max_time= timeout;
+    config_exit();
+  }
 };
 
 class Sniper_module_connectionless :public Sniper_module
@@ -71,6 +84,20 @@ public:
                     "time."),
       max_time(time) {};
   virtual bool should_snipe(THD *target_thd);
+
+  void set_max_time(uint time)
+  {
+    config_enter();
+    max_time= time;
+    config_exit();
+  }
 };
+
+extern Sniper sniper;
+extern Sniper_module_idle sniper_module_idle;
+extern Sniper_module_connectionless sniper_module_connectionless;
+extern Sniper_module_unauthenticated sniper_module_unauthenticated;
+extern Sniper_module_long_query sniper_module_long_query;
+extern Sniper_module_priv_ignore sniper_module_priv_ignore;
 
 #endif  // SNIPER_MODULES_INCLUDED

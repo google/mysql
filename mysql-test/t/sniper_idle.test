@@ -5,7 +5,7 @@
 
 --source include/not_embedded.inc
 
-let $sniper_kills=2;
+let $sniper_kills=4;
 --source include/sniper_used.inc
 
 --echo # Set up
@@ -45,6 +45,7 @@ select 1 as normal_reconnect;
 --sleep 1
 select 1 as normal_still_connected;
 --enable_reconnect
+# The sniper will be called on normal once more in here
 
 connection super_con;
 --echo # Testing with super user
@@ -61,6 +62,65 @@ connection root_con;
 select 1 as should_be_1;
 --sleep 5
 select 1 as should_still_be_connected;
+--enable_reconnect
+
+--echo # Testing with longer timeout
+connection default;
+set @@global.sniper_idle_timeout=5;
+
+connection normal_con;
+select 1 as reconnect_it;
+--disable_reconnect
+--echo ## Check disconnect on longer sleep
+select 1 as should_be_1;
+--sleep 7
+# We expect the server to be gone.
+--error 2006
+select 1 as should_error;
+--enable_reconnect
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# We expect to be able to sleep if it is for less then the timeout.
+--echo ## Check will not disconnect on short sleep
+--sleep 5
+select 1 as normal_still_connected;
+--enable_reconnect
+
+connection default;
+--echo # check will turn off.
+set @@global.sniper_idle_timeout=0;
+
+connection normal_con;
+--disable_reconnect
+--echo ## Check wont disconnect on longer sleep
+select 1 as should_be_1;
+--sleep 7
+# We expect the server to be gone.
+select 1 as should_work;
+--enable_reconnect
+select 1 as normal_reconnected;
+
+--echo # Testing will turn back on
+connection default;
+set @@global.sniper_idle_timeout=3;
+
+connection normal_con;
+--disable_reconnect
+--echo ## Check disconnect on longer sleep
+select 1 as should_be_1;
+--sleep 7
+# We expect the server to be gone.
+--error 2006
+select 1 as should_error;
+--enable_reconnect
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# We expect to be able to sleep if it is for less then the timeout.
+--echo ## Check will not disconnect on short sleep
+--sleep 1
+select 1 as normal_still_connected;
 --enable_reconnect
 
 --echo # Clean up

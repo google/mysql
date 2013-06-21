@@ -1,0 +1,71 @@
+# This was run with --sniper-idle-timeout=3
+# Set up
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+# initially on.
+select @@global.sniper as should_be_1;
+should_be_1
+1
+## Testing normal user
+### Check disconnect on sleep
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as normal_reconnected;
+normal_reconnected
+1
+### checking will not disconnect when runnning a query
+select sleep(5);
+sleep(5)
+0
+select 1 as still_connected;
+still_connected
+1
+select 1 as normal_reconnect;
+normal_reconnect
+1
+# sniper off
+set @@global.sniper=0;
+select @@global.sniper as should_be_0;
+should_be_0
+0
+## Testing normal user
+### Check doesn't disconnect on sleep now.
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_work;
+should_work
+1
+select 1 as normal_reconnected;
+normal_reconnected
+1
+# sniper on.
+set @@global.sniper=1;
+select @@global.sniper as should_be_1;
+should_be_1
+1
+## Testing normal user
+### Check disconnect on sleep
+select 1 as should_be_1;
+should_be_1
+1
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as normal_reconnected;
+normal_reconnected
+1
+### checking will not disconnect when runnning a query
+select sleep(5);
+sleep(5)
+0
+select 1 as still_connected;
+still_connected
+1
+select 1 as normal_reconnect;
+normal_reconnect
+1
+# cleanup
+drop user normal_user;

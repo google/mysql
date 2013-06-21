@@ -1,0 +1,85 @@
+# Test for toggling of the sniper
+
+--source include/not_embedded.inc
+
+let $sniper_kills=2;
+--source include/sniper_used.inc
+
+--echo # This was run with --sniper-idle-timeout=3
+--echo # Set up
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+
+connect (normal_con, localhost, normal_user,,);
+
+--echo # initially on.
+select @@global.sniper as should_be_1;
+connection normal_con;
+--echo ## Testing normal user
+
+--disable_reconnect
+--echo ### Check disconnect on sleep
+select 1 as should_be_1;
+--sleep 5
+# We expect the server to be gone.
+--error 2006
+select 1 as should_error;
+--enable_reconnect
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# Since this is a query it shouldn't be sniped.
+--echo ### checking will not disconnect when runnning a query
+select sleep(5);
+select 1 as still_connected;
+--enable_reconnect
+select 1 as normal_reconnect;
+
+--echo # sniper off
+connection default;
+set @@global.sniper=0;
+select @@global.sniper as should_be_0;
+
+connection normal_con;
+--echo ## Testing normal user
+
+--disable_reconnect
+--echo ### Check doesn't disconnect on sleep now.
+select 1 as should_be_1;
+--sleep 5
+# We expect the server to still exist.
+select 1 as should_work;
+--enable_reconnect
+select 1 as normal_reconnected;
+
+--echo # sniper on.
+connection default;
+set @@global.sniper=1;
+select @@global.sniper as should_be_1;
+
+connection normal_con;
+--echo ## Testing normal user
+
+--disable_reconnect
+--echo ### Check disconnect on sleep
+select 1 as should_be_1;
+--sleep 5
+# We expect the server to be gone.
+--error 2006
+select 1 as should_error;
+--enable_reconnect
+select 1 as normal_reconnected;
+
+--disable_reconnect
+# Since this is a query it shouldn't be sniped.
+--echo ### checking will not disconnect when runnning a query
+select sleep(5);
+select 1 as still_connected;
+--enable_reconnect
+select 1 as normal_reconnect;
+
+
+--echo # cleanup
+connection default;
+disconnect normal_con;
+drop user normal_user;

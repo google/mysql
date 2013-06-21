@@ -14,6 +14,8 @@ typedef void * sniper_module_id;
 
 class Sniper_module
 {
+private:
+  pthread_mutex_t LOCK_config;
 public:
   const char *name;
   const char *description;
@@ -21,9 +23,22 @@ public:
   {
     name= module_name;
     description= module_desc;
+    pthread_mutex_init(&LOCK_config, NULL);
   };
   virtual ~Sniper_module() {}
+  virtual void shutdown() {return;}
   virtual bool should_snipe(THD *target_thd) {return FALSE;}
+  bool does_approve(THD *target_thd)
+  {
+    bool res;
+    config_enter();
+    res= should_snipe(target_thd);
+    config_exit();
+    return res;
+  }
+protected:
+  void config_enter() {pthread_mutex_lock  (&LOCK_config);}
+  void config_exit()  {pthread_mutex_unlock(&LOCK_config);}
 };
 
 void *sniper_periodic_thread(void *);
@@ -42,8 +57,9 @@ private:
   pthread_mutex_t LOCK_periodic;
   pthread_cond_t  COND_periodic;
 public:
-  Sniper(uint interval);
+  Sniper(uint interval= 0);
   virtual ~Sniper();
+  void clean_up();
   void start();
   inline void stop() {
     sql_print_information("Sniper: stop called on Sniper");
@@ -57,7 +73,6 @@ public:
   Sniper_module *unregister_global_check(sniper_module_id module);
   Sniper_module *unregister_periodic_check(sniper_module_id module);
 private:
-  static void delete_list(LIST *lst);
   void init();
   void real_stop(bool should_lock);
   friend void *sniper_periodic_thread(void *);
