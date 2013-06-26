@@ -5881,7 +5881,7 @@ void write_audit_record(LEX *lex, THD *thd)
 
 void init_audit_log_filter(const char *comma_list)
 {
-  if (comma_list == NULL || comma_list == '\0')
+  if (comma_list == NULL || *comma_list == '\0')
     return;
   char *buf= strdup(comma_list);
   char *p= buf;
