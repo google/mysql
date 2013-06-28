@@ -1812,6 +1812,7 @@ void st_select_lex_unit::init_query()
   found_rows_for_union= 0;
   insert_table_with_stored_vcol= 0;
   derived= 0;
+  infeasibility_calculated= FALSE;
 }
 
 void st_select_lex::init_query()
@@ -2794,6 +2795,48 @@ LEX::copy_db_to(char **p_db, size_t *p_db_length) const
     return FALSE;
   }
   return thd->copy_db_to(p_db, p_db_length);
+}
+
+void st_select_lex_unit::calculate_hierarchy_infeasibility()
+{
+  if (infeasibility_calculated)
+    return;
+
+  infeasibility.cross_product_rows= 1.0;
+  infeasibility.uses_filesort=  FALSE;
+  infeasibility.uses_temporary= FALSE;
+  for (SELECT_LEX *sl= first_select(); sl; sl= sl->next_select())
+  {
+    if (!(sl->join && sl->join->have_query_plan == JOIN::QEP_AVAILABLE))
+      continue;
+    infeasibility.cross_product_rows  *= sl->join->record_count;
+    infeasibility.uses_temporary |= sl->join->need_tmp;
+    infeasibility.uses_filesort  |= !sl->join->skip_sort_order &&
+                                    !sl->join->no_order &&
+                                    (sl->join->order || sl->join->group_list);
+    for (SELECT_LEX_UNIT *inner= sl->join->select_lex->first_inner_unit();
+         inner;
+         inner= inner->next_unit())
+    {
+      if (!(inner->item && inner->item->eliminated))
+      {
+        inner->calculate_hierarchy_infeasibility();
+        QUERY_INFEASIBILITY *in= &(inner->infeasibility);
+        infeasibility.cross_product_rows *= in->cross_product_rows;
+        infeasibility.uses_temporary|= in->uses_temporary;
+        infeasibility.uses_filesort |= in->uses_filesort;
+      }
+    }
+  }
+  infeasibility_calculated= TRUE;
+}
+
+QUERY_INFEASIBILITY st_select_lex_unit::get_infeasibility()
+{
+  pthread_mutex_lock(&infeasibility_mutex);
+  calculate_hierarchy_infeasibility();
+  pthread_mutex_unlock(&infeasibility_mutex);
+  return infeasibility;
 }
 
 /*

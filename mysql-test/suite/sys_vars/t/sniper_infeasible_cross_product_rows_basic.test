@@ -1,0 +1,8 @@
+--source include/not_embedded.inc
+
+--echo 'sniper_infeasible_cross_product_rows test'
+####################################################################
+#   Checking existence                                             #
+####################################################################
+SELECT COUNT(@@GLOBAL.sniper_infeasible_cross_product_rows);
+--echo 1 Expected

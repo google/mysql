@@ -231,6 +231,13 @@ Sniper_module *Sniper::unregister_periodic_check(sniper_module_id module)
 void *sniper_periodic_thread(void * arg)
 {
   Sniper *snp = (Sniper*)arg;
+  if (my_thread_init())
+  {
+    snp->periodic_running= FALSE;
+    sql_print_error("Sniper: Could not initialize sniper thread");
+    pthread_detach(pthread_self());
+    pthread_exit(NULL);
+  }
   int res;
 
   while (!abort_loop)
@@ -259,6 +266,7 @@ void *sniper_periodic_thread(void * arg)
       break;
     }
   }
+  my_thread_end();
   return NULL;
 }
 

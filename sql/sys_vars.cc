@@ -2750,6 +2750,82 @@ static Sys_var_mybool Sys_sniper_connectionless(
     NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
     ON_UPDATE(sniper_set_connectionless));
 
+static bool sniper_set_infeasible_max_cross_product_rows(sys_var *self,
+                                                         THD *thd,
+                                                         enum_var_type type)
+{
+  if (sniper_infeasible_max_cross_product_rows)
+  {
+    sniper_module_infeasible.set_max_cross_product_rows(
+        sniper_infeasible_max_cross_product_rows);
+    sniper.register_periodic_check(&sniper_module_infeasible);
+  }
+  else
+    sniper.unregister_periodic_check(&sniper_module_infeasible);
+  return FALSE;
+}
+
+static Sys_var_double Sys_sniper_infeasible_cross_product_rows(
+    "sniper_infeasible_cross_product_rows", "Set the maximum 'cross product' "
+                                            "(the product of the number of "
+                                            "rows scanned on each step) a "
+                                            "query may have for it not to be "
+                                            "considered infeasible.",
+    GLOBAL_VAR(sniper_infeasible_max_cross_product_rows),
+    CMD_LINE(OPT_ARG), VALID_RANGE(0.0, DBL_MAX), DEFAULT(0.0),
+    NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+    ON_UPDATE(sniper_set_infeasible_max_cross_product_rows));
+
+static bool sniper_set_infeasible_max_time(sys_var *self, THD *thd,
+                                           enum_var_type type)
+{
+  sniper_module_infeasible.set_max_time(sniper_infeasible_max_time);
+  return FALSE;
+}
+
+static Sys_var_uint Sys_sniper_infeasible_max_time(
+    "sniper_infeasible_max_time", "Set the amount of time in seconds the "
+                                  "infeasible sniper will allow a query to "
+                                  "run before killing it. This is to allow "
+                                  "long queries be served from the cache if "
+                                  "possible or if the turn out to be easier "
+                                  "than anticipated. This defaults to 0.",
+    GLOBAL_VAR(sniper_infeasible_max_time),
+    CMD_LINE(OPT_ARG), VALID_RANGE(0, UINT_MAX32), DEFAULT(0), BLOCK_SIZE(1),
+    NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+    ON_UPDATE(sniper_set_infeasible_max_time));
+
+// These should map to the same as the SNIPER_INFEASIBLE_PLAN_REQUIREMENTS
+// values after the sysvar gets them.
+static const char *sniper_infeasible_secondary_values[]= {
+                                                   "NONE",
+                                                   "FILESORT",
+                                                   "TEMPORARY",
+                                                   "FILESORT_AND_TEMPORARY",
+                                                   "FILESORT_OR_TEMPORARY",
+                                                   0};
+
+static bool sniper_set_infeasible_secondary_requirements(sys_var *self,
+                                                         THD *thd,
+                                                         enum_var_type type)
+{
+  sniper_module_infeasible.set_secondary_requirements(
+      sniper_infeasible_secondary_requirements);
+  return FALSE;
+}
+
+static Sys_var_enum Sys_sniper_infeasible_secondary_requirements(
+    "sniper_infeasible_secondary_requirements",
+    "Set whether the plan for a query must include the use of a filesort "
+    "operation (FILESORT), a temporary table (TEMPORARY), both a filesort "
+    "and a temporary table (FILESORT_AND_TEMPORARY), or at least one of the "
+    "two (FILESORT_OR_TEMPORARY) in order for it to be considered "
+    "infeasible. The default is to not require either opteration (NONE) for "
+    "sniping.", GLOBAL_VAR(sniper_infeasible_secondary_requirements),
+    CMD_LINE(OPT_ARG), sniper_infeasible_secondary_values, DEFAULT(0),
+    NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
+    ON_UPDATE(sniper_set_infeasible_secondary_requirements));
+
 #endif
 
 static Sys_var_mybool Sys_super_to_set_timestamp(

@@ -1,0 +1,151 @@
+# Set up
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+create user super_user;
+grant super,select,insert,update,delete on *.* to super_user;
+# create tables
+create table t1 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t1 (val) values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
+create table t2 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t2 (val) select val from t1 order by id DESC;
+insert into t2 (val) select val from t1 order by id ASC;
+create table t3 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t3 (val) select val from t2 order by id DESC;
+insert into t3 (val) select val from t2 order by id ASC;
+create table t4 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t4 (val) select val from t3 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+# Testing normal user
+# Low cross product (10*20 = 200 < 1000) so the query should succeed.
+select count(*) as works_low_cross, sleep(3) as sleep_time
+from t1 inner join t2;
+works_low_cross	sleep_time
+200	0
+# High cross product (10*20*40 = 8000 > 1000) so the query should fail.
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as reconnect;
+reconnect
+1
+# Testing super user
+# High cross product (10*20*40 = 8000) but has SUPER ACL so the query
+# should succeed. 
+select count(*) as works_high_cross, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3;
+works_high_cross	sleep_time
+8000	0
+# Testing root user
+# High cross product (10*20*40 = 8000) but root user so the query should succeed.
+select count(*) as works_high_cross, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3;
+works_high_cross	sleep_time
+8000	0
+# Test sniper with secondary requirements enabled.
+set @@global.sniper_infeasible_secondary_requirements='FILESORT';
+# High cross product (1280 > 1000) but FILESORT is not used so the
+# query should succeed.
+select count(*) as works_no_filesort, sleep(3) as sleep_time from t4;
+works_no_filesort	sleep_time
+1280	0
+# High cross product (1280 > 1000) using FILESORT so the query should fail.
+# This query would normally take ~12.8 seconds to run.
+select val as fails_with_filesort, sleep(0.01) as sleep_time
+from t4 order by val;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as reconnect;
+reconnect
+1
+set @@global.sniper_infeasible_secondary_requirements='TEMPORARY';
+# High cross product (1280 > 1000) but temporary tables are not used so
+# the query should succeed.
+select count(*) as works_no_temporary, sleep(3) as sleep_time from t4;
+works_no_temporary	sleep_time
+1280	0
+# High cross product (10*20*40 = 8000 > 1000) and temporary tables are
+# used so the query should fail.
+# This query would normally take ~8 seconds to run.
+select t1.val as fails_with_temporary, sleep(0.01) as sleep_time
+from t1 inner join t2 inner join t3 order by t1.id;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as reconnect;
+reconnect
+1
+set @@global.sniper_infeasible_secondary_requirements='FILESORT_OR_TEMPORARY';
+# High cross product (1280 > 1000) with niether temporary tables nor
+# filesort so the query should succeed.
+select count(*) as works_no_temporary from t4;
+works_no_temporary
+1280
+# High cross (10*20*40 = 8000 > 1000) and temporary so should die
+select t1.val as fails_with_temporary, sleep(0.01) as sleep_time
+from t1 inner join t2 inner join t3 order by t1.id;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as reconnect;
+reconnect
+1
+# High cross product (1280 > 1000) using FILESORT so the query should fail.
+# This query would normally take ~6.4 seconds to run.
+select val as fails_with_filesort, sleep(0.005) as sleep_time
+from t4 order by val;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as reconnect;
+reconnect
+1
+set @@global.sniper_infeasible_secondary_requirements='FILESORT_AND_TEMPORARY';
+# High cross product (1280 > 1000) but uses niether temporary tables
+# nor filesort so the query should succeed.
+select count(*) as works_niether, sleep(3) as sleep_time from t4;
+works_niether	sleep_time
+1280	0
+# High cross product (10*20*40 = 8000 > 1000) but only uses temporary
+# tables so should succeed.
+select count(*) as works_with_only_temporary, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3;
+works_with_only_temporary	sleep_time
+8000	0
+# High cross product (1280 > 1000) but only uses filesort so the query
+# should succeed.
+# The queries results are disabled since it would print 1280 lines normally.
+select val as works_with_only_filesort, sleep(0.005) as sleep_time
+from t4 order by val;
+# High cross product (10*20*40 = 8000 > 1000) and uses both temporary
+# tables and filesort so should die.
+# This would normally take 8 seconds to run.
+select t1.val as fails_with_both, sleep(0.001) as sleep_time
+from t1 inner join t2 inner join t3
+order by t1.val;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as reconnect;
+reconnect
+1
+# Test sniper with max time requirements.
+set @@global.sniper_infeasible_max_time=3;
+set @@global.sniper_infeasible_secondary_requirements=NONE;
+# High cross product (1280 > 1000) but only takes 2 seconds to run so
+# the query should succeed.
+select count(*) as works_time, sleep(2) as sleep_time from t4;
+works_time	sleep_time
+1280	0
+# High cross product (1280 > 1000) and takes more than 3 seconds to
+# finish (it would take 5 seconds if it succeeded) so the query should fail.
+select count(*) as fails_time, sleep(5) as sleep_time from t4;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as reconnect;
+reconnect
+1
+# Test setting requirements to illegal values.
+set @@global.sniper_infeasible_secondary_requirements='CATS';
+ERROR 42000: Variable 'sniper_infeasible_secondary_requirements' can't be set to the value of 'CATS'
+# Clean up
+set @@global.sniper_infeasible_max_time=0;
+drop table t1;
+drop table t2;
+drop table t3;
+drop table t4;
+drop user normal_user;
+drop user super_user;

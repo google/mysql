@@ -541,6 +541,13 @@ void create_explain_query(LEX *lex, MEM_ROOT *mem_root);
 void create_explain_query_if_not_exists(LEX *lex, MEM_ROOT *mem_root);
 bool print_explain_query(LEX *lex, THD *thd, String *str);
 
+typedef struct
+{
+  double cross_product_rows;
+  bool uses_filesort;
+  bool uses_temporary;
+} QUERY_INFEASIBILITY;
+
 class st_select_lex_unit: public st_select_lex_node {
 protected:
   TABLE_LIST result_table_list;
@@ -553,8 +560,10 @@ public:
   st_select_lex_unit()
     : union_result(NULL), table(NULL), result(NULL),
       cleaned(false),
-      fake_select_lex(NULL)
+      fake_select_lex(NULL),
+      infeasibility_calculated(false)
   {
+    pthread_mutex_init(&infeasibility_mutex, NULL);
   }
 
 
@@ -653,6 +662,13 @@ public:
 
   int save_union_explain(Explain_query *output);
   int save_union_explain_part2(Explain_query *output);
+
+  QUERY_INFEASIBILITY get_infeasibility();
+private:
+  bool infeasibility_calculated;
+  void calculate_hierarchy_infeasibility();
+  pthread_mutex_t infeasibility_mutex;
+  QUERY_INFEASIBILITY infeasibility;
 };
 
 typedef class st_select_lex_unit SELECT_LEX_UNIT;

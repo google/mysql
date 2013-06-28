@@ -1,0 +1,5 @@
+'sniper_infeasible_secondary_requirements test'
+SELECT COUNT(@@GLOBAL.sniper_infeasible_secondary_requirements);
+COUNT(@@GLOBAL.sniper_infeasible_secondary_requirements)
+1
+1 Expected

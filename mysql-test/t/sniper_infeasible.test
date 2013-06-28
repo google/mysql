@@ -1,0 +1,199 @@
+# Tests for the infeasible sniper
+#
+# This doesn't work on the embedded version because the code is only compiled
+# on the non-embedded version.
+
+--source include/not_embedded.inc
+
+let $sniper_kills=7;
+--source include/sniper_used.inc
+
+--echo # Set up
+
+create user normal_user;
+grant select,insert,update,delete on *.* to normal_user;
+create user super_user;
+grant super,select,insert,update,delete on *.* to super_user;
+
+connect (normal_con, localhost, normal_user,,);
+connect (super_con, localhost, super_user,,);
+connect (root_con, localhost, root,,);
+
+--echo # create tables
+create table t1 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t1 (val) values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
+
+create table t2 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t2 (val) select val from t1 order by id DESC; # 10 rows
+insert into t2 (val) select val from t1 order by id ASC;  # 20 rows
+
+create table t3 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t3 (val) select val from t2 order by id DESC; # 20 rows
+insert into t3 (val) select val from t2 order by id ASC;  # 40 rows
+
+create table t4 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t4 (val) select val from t3 order by id;      # 40   rows
+insert into t4 (val) select val from t4 order by id;      # 80   rows
+insert into t4 (val) select val from t4 order by id;      # 160  rows
+insert into t4 (val) select val from t4 order by id;      # 320  rows
+insert into t4 (val) select val from t4 order by id;      # 640  rows
+insert into t4 (val) select val from t4 order by id;      # 1280 rows
+
+connection normal_con;
+--disable_reconnect
+--echo # Testing normal user
+--echo # Low cross product (10*20 = 200 < 1000) so the query should succeed.
+select count(*) as works_low_cross, sleep(3) as sleep_time
+    from t1 inner join t2;
+
+--echo # High cross product (10*20*40 = 8000 > 1000) so the query should fail.
+--error 2013
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+    from t1 inner join t2 inner join t3;
+--enable_reconnect
+select 1 as reconnect;
+
+connection super_con;
+--disable_reconnect
+--echo # Testing super user
+--echo # High cross product (10*20*40 = 8000) but has SUPER ACL so the query
+--echo # should succeed. 
+select count(*) as works_high_cross, sleep(3) as sleep_time
+    from t1 inner join t2 inner join t3;
+--enable_reconnect
+
+connection root_con;
+--disable_reconnect
+--echo # Testing root user
+--echo # High cross product (10*20*40 = 8000) but root user so the query should succeed.
+select count(*) as works_high_cross, sleep(3) as sleep_time
+    from t1 inner join t2 inner join t3;
+--enable_reconnect
+
+connection default;
+--echo # Test sniper with secondary requirements enabled.
+set @@global.sniper_infeasible_secondary_requirements='FILESORT';
+
+connection normal_con;
+--disable_reconnect
+--echo # High cross product (1280 > 1000) but FILESORT is not used so the
+--echo # query should succeed.
+select count(*) as works_no_filesort, sleep(3) as sleep_time from t4;
+
+--echo # High cross product (1280 > 1000) using FILESORT so the query should fail.
+--echo # This query would normally take ~12.8 seconds to run.
+--error 2013
+select val as fails_with_filesort, sleep(0.01) as sleep_time
+    from t4 order by val;
+--enable_reconnect
+select 1 as reconnect;
+
+connection default;
+set @@global.sniper_infeasible_secondary_requirements='TEMPORARY';
+
+connection normal_con;
+--disable_reconnect
+--echo # High cross product (1280 > 1000) but temporary tables are not used so
+--echo # the query should succeed.
+select count(*) as works_no_temporary, sleep(3) as sleep_time from t4;
+
+--echo # High cross product (10*20*40 = 8000 > 1000) and temporary tables are
+--echo # used so the query should fail.
+--echo # This query would normally take ~8 seconds to run.
+--error 2013
+select t1.val as fails_with_temporary, sleep(0.01) as sleep_time
+    from t1 inner join t2 inner join t3 order by t1.id;
+--enable_reconnect
+select 1 as reconnect;
+
+connection default;
+set @@global.sniper_infeasible_secondary_requirements='FILESORT_OR_TEMPORARY';
+
+connection normal_con;
+--disable_reconnect
+--echo # High cross product (1280 > 1000) with niether temporary tables nor
+--echo # filesort so the query should succeed.
+select count(*) as works_no_temporary from t4;
+
+--echo # High cross (10*20*40 = 8000 > 1000) and temporary so should die
+--error 2013
+select t1.val as fails_with_temporary, sleep(0.01) as sleep_time
+    from t1 inner join t2 inner join t3 order by t1.id;
+--enable_reconnect
+select 1 as reconnect;
+
+--disable_reconnect
+--echo # High cross product (1280 > 1000) using FILESORT so the query should fail.
+--echo # This query would normally take ~6.4 seconds to run.
+--error 2013
+select val as fails_with_filesort, sleep(0.005) as sleep_time
+    from t4 order by val;
+--enable_reconnect
+select 1 as reconnect;
+
+connection default;
+set @@global.sniper_infeasible_secondary_requirements='FILESORT_AND_TEMPORARY';
+
+connection normal_con;
+--disable_reconnect
+--echo # High cross product (1280 > 1000) but uses niether temporary tables
+--echo # nor filesort so the query should succeed.
+select count(*) as works_niether, sleep(3) as sleep_time from t4;
+
+--echo # High cross product (10*20*40 = 8000 > 1000) but only uses temporary
+--echo # tables so should succeed.
+select count(*) as works_with_only_temporary, sleep(3) as sleep_time
+    from t1 inner join t2 inner join t3;
+
+--echo # High cross product (1280 > 1000) but only uses filesort so the query
+--echo # should succeed.
+--echo # The queries results are disabled since it would print 1280 lines normally.
+--disable_result_log
+select val as works_with_only_filesort, sleep(0.005) as sleep_time
+    from t4 order by val;
+--enable_result_log
+
+--echo # High cross product (10*20*40 = 8000 > 1000) and uses both temporary
+--echo # tables and filesort so should die.
+--echo # This would normally take 8 seconds to run.
+--error 2013
+select t1.val as fails_with_both, sleep(0.001) as sleep_time
+    from t1 inner join t2 inner join t3
+    order by t1.val;
+--enable_reconnect
+select 1 as reconnect;
+
+connection default;
+--echo # Test sniper with max time requirements.
+set @@global.sniper_infeasible_max_time=3;
+set @@global.sniper_infeasible_secondary_requirements=NONE;
+
+connection normal_con;
+--disable_reconnect
+--echo # High cross product (1280 > 1000) but only takes 2 seconds to run so
+--echo # the query should succeed.
+select count(*) as works_time, sleep(2) as sleep_time from t4;
+
+--echo # High cross product (1280 > 1000) and takes more than 3 seconds to
+--echo # finish (it would take 5 seconds if it succeeded) so the query should fail.
+--error 2013
+select count(*) as fails_time, sleep(5) as sleep_time from t4;
+--enable_reconnect
+select 1 as reconnect;
+
+connection default;
+--echo # Test setting requirements to illegal values.
+--error 1231
+set @@global.sniper_infeasible_secondary_requirements='CATS';
+--echo # Clean up
+connection default;
+set @@global.sniper_infeasible_max_time=0;
+drop table t1;
+drop table t2;
+drop table t3;
+drop table t4;
+disconnect normal_con;
+disconnect super_con;
+disconnect root_con;
+drop user normal_user;
+drop user super_user;

@@ -915,6 +915,7 @@ bool st_select_lex_unit::cleanup()
         (*ord->item)->walk (&Item::cleanup_processor, 0, 0);
     }
   }
+  infeasibility_calculated= FALSE;
 
   DBUG_RETURN(error);
 }

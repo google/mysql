@@ -5421,7 +5421,8 @@ static void setup_sniper()
   sniper_active= sniper_active
       || sniper_idle_timeout
       || sniper_connectionless
-      || sniper_long_query_timeout;
+      || sniper_long_query_timeout
+      || sniper_infeasible_max_cross_product_rows;
   sniper_module_priv_ignore.set_ignored_privs(SUPER_ACL);
   sniper.register_global_check(&sniper_module_priv_ignore);
   if (sniper_ignore_unauthenticated)
@@ -5441,6 +5442,15 @@ static void setup_sniper()
   {
     sniper_module_long_query.set_max_time(sniper_long_query_timeout);
     sniper.register_periodic_check(&sniper_module_long_query);
+  }
+  if (sniper_infeasible_max_cross_product_rows)
+  {
+    sniper_module_infeasible.set_max_cross_product_rows(
+        sniper_infeasible_max_cross_product_rows);
+    sniper_module_infeasible.set_max_time(sniper_infeasible_max_time);
+    sniper_module_infeasible.set_secondary_requirements(
+        sniper_infeasible_secondary_requirements);
+    sniper.register_periodic_check(&sniper_module_infeasible);
   }
   sniper.set_period(sniper_check_period);
 

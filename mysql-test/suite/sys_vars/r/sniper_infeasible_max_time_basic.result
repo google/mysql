@@ -1,0 +1,5 @@
+'sniper_infeasible_max_time test'
+SELECT COUNT(@@GLOBAL.sniper_infeasible_max_time);
+COUNT(@@GLOBAL.sniper_infeasible_max_time)
+1
+1 Expected
