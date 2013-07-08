@@ -28,6 +28,7 @@
 #include "mem_root_array.h"
 #include "sql_cmd.h"
 #include "sql_alter.h"                // Alter_info
+#include "sniper_structs.h"
 
 /* YACC and LEX Definitions */
 
@@ -2410,7 +2411,9 @@ struct LEX: public Query_tables_list
   LEX_MASTER_INFO mi;				// used by CHANGE MASTER
   LEX_SERVER_OPTIONS server_options;
   LEX_STRING relay_log_connection_name;
+  List<Item> grant_options;
   USER_RESOURCES mqh;
+  SNIPER_SETTINGS sniper_settings; // Used with GRANTing sniper settings
   LEX_RESET_SLAVE reset_slave_info;
   ulonglong type;
   /* The following is used by KILL */

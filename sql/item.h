@@ -2630,6 +2630,11 @@ public:
     return (String*) &str_value;
   }
   my_decimal *val_decimal(my_decimal *);
+  void update_null_value()
+  {
+    DBUG_ASSERT(fixed == 1);
+    null_value= !str_value.length();
+  }
   int save_in_field(Field *field, bool no_conversions);
   enum Item_result result_type () const { return STRING_RESULT; }
   enum_field_types field_type() const { return MYSQL_TYPE_VARCHAR; }
@@ -3047,6 +3052,7 @@ public:
   virtual void fix_length_and_dec()=0;
   void set_result_field(Field *field) { result_field= field; }
   bool is_result_field() { return 1; }
+  virtual void update_null_value();
   void save_in_result_field(bool no_conversions)
   {
     save_in_field(result_field, no_conversions);

@@ -53,6 +53,7 @@
 #include "sql_array.h"
 #include "sql_hset.h"
 #include "sql_repl.h"
+#include "sniper_structs.h"
 
 #include "sql_plugin_compat.h"
 
@@ -74,6 +75,7 @@ enum GrantTable
   GRANT_PROXIES_PRIV,
   GRANT_ROLES_MAPPING,
   GRANT_SYSTEM_USER,
+  GRANT_SNIPER_CONFIGS,
   GRANT_TABLES_MAX                              // preserve as the last entry.
 };
 
@@ -254,6 +256,15 @@ public:
   ulong access;
 };
 
+class SNIPER_CONFIG
+{
+public:
+  acl_host_and_ip host;
+  char* user;
+  uint user_name_length;
+  SNIPER_SETTINGS settings;
+};
+
 /* ACL_HOST is used if no host is specified */
 
 class ACL_HOST :public ACL_ACCESS
@@ -380,7 +391,7 @@ static bool show_proxy_grants (THD *, const char *, const char *,
 static bool show_role_grants(THD *, const char *, const char *,
                              ACL_USER_BASE *, char *, size_t);
 static bool show_global_privileges(THD *, ACL_USER_BASE *,
-                                   bool, char *, size_t);
+                                   bool, SNIPER_SETTINGS *, char *, size_t);
 static bool show_database_privileges(THD *, const char *, const char *,
                                      char *, size_t);
 static bool show_table_and_column_privileges(THD *, const char *, const char *,
@@ -752,9 +763,12 @@ static MEM_ROOT acl_memroot, grant_memroot;
 static bool initialized=0;
 static bool allow_all_hosts=1;
 static HASH acl_check_hosts, column_priv_hash, proc_priv_hash, func_priv_hash;
+static DYNAMIC_ARRAY sniper_configs;
+static HASH sniper_configs_hash;
 static DYNAMIC_ARRAY acl_wild_hosts;
 static Hash_filo<acl_entry> *acl_cache;
 static uint grant_version=0; /* Version of priv tables. incremented by acl_load */
+static const char *calc_ip(const char *ip, long *val, char end);
 static ulong get_access(TABLE *form,uint fieldnr, uint *next_field=0);
 static bool check_is_role(TABLE *form);
 static int acl_compare(ACL_ACCESS *a,ACL_ACCESS *b);
@@ -762,6 +776,17 @@ static ulong get_sort(uint count,...);
 static void init_check_host(void);
 static void rebuild_check_host(void);
 static void rebuild_role_grants(void);
+static void get_settings(SNIPER_SETTINGS *settings, TABLE *table);
+static void init_sniper_configs(void);
+static void rebuild_sniper_configs(void);
+static void sniper_configs_insert(const char *user, const char *host,
+                                  SNIPER_SETTINGS *settings);
+static void sniper_configs_update(const char *user, const char *host,
+                                  SNIPER_SETTINGS *settings);
+static bool load_sniper_configs(THD *thd, TABLE *table,
+                                READ_RECORD *read_record_info);
+static int get_single_setting(SNIPER_SETTINGS *settings, Item *field,
+                              const char *name, bool print_warnings);
 static ACL_USER *find_user_exact(const char *host, const char *user);
 static ACL_USER *find_sys_user_exact(const char *host, const char *user);
 static ACL_USER *find_user_wild(const char *host, const char *user, const char *ip= 0);
@@ -806,7 +831,8 @@ enum enum_acl_lists
   PROC_PRIVILEGES_HASH,
   FUNC_PRIVILEGES_HASH,
   PROXY_USERS_ACL,
-  ROLES_MAPPINGS_HASH
+  ROLES_MAPPINGS_HASH,
+  SNIPER_CONFIGS_HASH
 };
 
 ACL_ROLE::ACL_ROLE(ACL_USER *user, MEM_ROOT *root) : counter(0)
@@ -933,6 +959,272 @@ static bool get_YN_as_bool(Field *field)
   String res(buff,sizeof(buff),&my_charset_latin1);
   field->val_str(&res);
   return res[0] == 'Y' || res[0] == 'y';
+}
+
+
+static int get_single_idle_timeout(SNIPER_SETTINGS *settings, Item *field)
+{
+  if (!field->null_value && !field->is_null())
+  {
+    if (field->result_type() != INT_RESULT)
+      return ER_BAD_OPTION_VALUE;
+    longlong val= field->val_int();
+    if (val < 0 || val > UINT_MAX)
+    {
+      settings->null_setting(SNIPER_SETTINGS::IDLE_TIMEOUT);
+      return ER_BAD_OPTION_VALUE;
+    }
+    settings->add_setting(SNIPER_SETTINGS::IDLE_TIMEOUT);
+    settings->idle_timeout= (uint) val;
+  }
+  else
+    settings->null_setting(SNIPER_SETTINGS::IDLE_TIMEOUT);
+  return FALSE;
+}
+
+static int get_single_long_query_timeout(SNIPER_SETTINGS *settings,
+                                         Item *field)
+{
+  if (!field->null_value && !field->is_null())
+  {
+    if (field->result_type() != INT_RESULT)
+      return ER_BAD_OPTION_VALUE;
+    longlong val= field->val_int();
+    if (val < 0 || val > UINT_MAX)
+    {
+      settings->null_setting(SNIPER_SETTINGS::LONG_QUERY_TIMEOUT);
+      return ER_BAD_OPTION_VALUE;
+    }
+    settings->add_setting(SNIPER_SETTINGS::LONG_QUERY_TIMEOUT);
+    settings->long_query_timeout= (uint) val;
+  }
+  else
+    settings->null_setting(SNIPER_SETTINGS::LONG_QUERY_TIMEOUT);
+  return FALSE;
+}
+
+static int get_single_kill_connectionless(SNIPER_SETTINGS *settings,
+                                          Item *field)
+{
+  if (!field->null_value && !field->is_null())
+  {
+    bool val;
+    if (field->result_type() == STRING_RESULT)
+    {
+      String var;
+      var= *field->val_str(&var);
+      const char *str= var.c_ptr_safe();
+      if (!strcasecmp("ENABLE", str))
+        val= TRUE;
+      else if (!strcasecmp("DISABLE", str))
+        val= FALSE;
+      else
+      {
+        settings->null_setting(SNIPER_SETTINGS::KILL_CONNECTIONLESS);
+        return ER_BAD_OPTION_VALUE;
+      }
+    }
+    else
+      val= (bool) field->val_int();
+    settings->add_setting(SNIPER_SETTINGS::KILL_CONNECTIONLESS);
+    settings->kill_connectionless= val;
+  }
+  else
+    settings->null_setting(SNIPER_SETTINGS::KILL_CONNECTIONLESS);
+  return FALSE;
+}
+
+static int get_single_infeasible_cross_product_rows(SNIPER_SETTINGS *settings,
+                                                    Item *field,
+                                                    bool print_warnings)
+{
+  if (!field->null_value && !field->is_null())
+  {
+    if (field->result_type() == STRING_RESULT ||
+        field->result_type() == TIME_RESULT ||
+        field->result_type() == ROW_RESULT ||
+        field->result_type() == IMPOSSIBLE_RESULT)
+      return ER_BAD_OPTION_VALUE;
+    double val= field->val_real();
+    if (val < 0) // This shouldn't happen.
+    {
+      if (print_warnings)
+        sql_print_warning("Value of %f in infeasible_cross_product_rows "
+                          "column of mysql.sniper_settings table is "
+                          "illegal. Valid values are >= 0.", val);
+      settings->null_setting(SNIPER_SETTINGS::INFEASIBLE_CROSS_PRODUCT_ROWS);
+      return ER_BAD_OPTION_VALUE;
+    }
+    else
+    {
+      settings->add_setting(SNIPER_SETTINGS::INFEASIBLE_CROSS_PRODUCT_ROWS);
+      settings->infeasible_cross_product_rows= val;
+    }
+  }
+  else
+    settings->null_setting(SNIPER_SETTINGS::INFEASIBLE_CROSS_PRODUCT_ROWS);
+  return FALSE;
+}
+
+static int get_single_infeasible_max_time(SNIPER_SETTINGS *settings,
+                                          Item *field)
+{
+  if (!field->null_value && !field->is_null())
+  {
+    if (field->result_type() != INT_RESULT)
+      return ER_BAD_OPTION_VALUE;
+    longlong val= field->val_int();
+    if (val < 0 || val > UINT_MAX)
+    {
+      settings->null_setting(SNIPER_SETTINGS::INFEASIBLE_MAX_TIME);
+      return ER_BAD_OPTION_VALUE;
+    }
+    settings->add_setting(SNIPER_SETTINGS::INFEASIBLE_MAX_TIME);
+    settings->infeasible_max_time= val;
+  }
+  else
+    settings->null_setting(SNIPER_SETTINGS::INFEASIBLE_MAX_TIME);
+  return FALSE;
+}
+
+static int get_single_infeasible_secondary_reqs(SNIPER_SETTINGS *settings,
+                                                Item *field,
+                                                bool print_warnings)
+{
+  if (!field->null_value && !field->is_null())
+  {
+    if (field->result_type() != INT_RESULT &&
+        field->result_type() != STRING_RESULT)
+      return ER_BAD_OPTION_VALUE;
+    int val;
+    if (field->result_type() == STRING_RESULT)
+    {
+      String tmp;
+      tmp= *field->val_str(&tmp);
+      const char *str= tmp.c_ptr_safe();
+      if (strlen(str) == 1) // might just be a number. Use that.
+        val= (int)(str[0] - '0');
+      else if (!strcasecmp("NONE", str))
+        val= REQUIRES_NONE;
+      else if (!strcasecmp("FILESORT", str))
+        val= REQUIRES_FILESORT;
+      else if (!strcasecmp("TEMPORARY", str))
+        val= REQUIRES_TEMPORARY;
+      else if ((!strcasecmp("FILESORT_AND_TEMPORARY", str)) ||
+               (!strcasecmp("TEMPORARY_AND_FILESORT", str)))
+        val= REQUIRES_FILESORT_AND_TEMPORARY;
+      else if ((!strcasecmp("FILESORT_OR_TEMPORARY", str)) ||
+               (!strcasecmp("TEMPORARY_OR_FILESORT", str)))
+        val= REQUIRES_FILESORT_OR_TEMPORARY;
+      else
+        val= ILLEGAL;
+    }
+    else
+      val= field->val_int() - 1;
+    switch(val)
+    {
+    case REQUIRES_NONE:
+      settings->infeasible_secondary_reqs= REQUIRES_NONE;
+      break;
+    case REQUIRES_FILESORT:
+      settings->infeasible_secondary_reqs= REQUIRES_FILESORT;
+      break;
+    case REQUIRES_TEMPORARY:
+      settings->infeasible_secondary_reqs= REQUIRES_TEMPORARY;
+      break;
+    case REQUIRES_FILESORT_AND_TEMPORARY:
+      settings->infeasible_secondary_reqs=
+          REQUIRES_FILESORT_AND_TEMPORARY;
+      break;
+    case REQUIRES_FILESORT_OR_TEMPORARY:
+      settings->infeasible_secondary_reqs=
+          REQUIRES_FILESORT_OR_TEMPORARY;
+      break;
+    default:
+      settings->null_setting(SNIPER_SETTINGS::INFEASIBLE_SECONDARY_REQS);
+      if (print_warnings)
+      {
+        sql_print_warning("Unknown value in infeasible_secondary_requirements "
+                          "column of the mysql.sniper_settings table. "
+                          "Using default value instead.");
+      }
+      return ER_BAD_OPTION_VALUE;
+    }
+    settings->add_setting(SNIPER_SETTINGS::INFEASIBLE_SECONDARY_REQS);
+  }
+  else
+    settings->null_setting(SNIPER_SETTINGS::INFEASIBLE_SECONDARY_REQS);
+  return FALSE;
+}
+
+int get_single_setting(SNIPER_SETTINGS *settings, Item *field,
+                       const char *name, bool print_warnings)
+{
+  if (!strcasecmp("idle_timeout", name))
+    return get_single_idle_timeout(settings, field);
+  else if (!strcasecmp("long_query_timeout", name))
+    return get_single_long_query_timeout(settings, field);
+  else if (!strcasecmp("kill_connectionless", name))
+    return get_single_kill_connectionless(settings, field);
+  else if (!strcasecmp("infeasible_cross_product_rows", name))
+    return get_single_infeasible_cross_product_rows(settings, field, print_warnings);
+  else if (!strcasecmp("infeasible_max_time", name))
+    return get_single_infeasible_max_time(settings, field);
+  else if (!strcasecmp("infeasible_secondary_requirements", name))
+    return get_single_infeasible_secondary_reqs(settings, field, print_warnings);
+  else
+    return ER_UNKNOWN_OPTION;
+}
+
+/**
+  Reads the sniper settings from the current row of the table into the
+  given SNIPER_SETTINGS struct.
+*/
+static void get_settings(SNIPER_SETTINGS *settings, TABLE *table)
+{
+  THD *thd= current_thd;
+  // Start at 2 because fields[0] is Host and fields[1] is User
+  for (uint i= 2; i < table->s->fields; i++)
+  {
+    Item_field *f= new (thd->mem_root) Item_field(table->field[i]);
+    get_single_setting(settings, f, table->field[i]->field_name, TRUE);
+  }
+  return;
+}
+
+static bool load_sniper_configs(THD *thd, TABLE *table,
+                                READ_RECORD *read_record_info)
+{
+  int rr_status;
+  bool check_no_resolve= specialflag & SPECIAL_NO_RESOLVE;
+  while (!(rr_status= read_record_info->read_record(read_record_info)))
+  {
+    SNIPER_CONFIG config;
+    bzero(&config, sizeof(config));
+    update_hostname(&config.host, get_field(&acl_memroot, table->field[0]));
+    config.user= get_field(&acl_memroot, table->field[1]);
+    config.user_name_length= config.user ? strnlen(config.user,
+                                                   USERNAME_LENGTH) : 0;
+    if (check_no_resolve && hostname_requires_resolving(config.host.hostname))
+    {
+      sql_print_warning("'sniper_settings' entry '%s@%s' "
+                        "ignored in --skip-name-resolve mode.",
+                        config.user ? config.user : "",
+                        config.host.hostname ? config.host.hostname : "");
+      continue;
+    }
+    get_settings(&config.settings, table);
+
+    (void) push_dynamic(&sniper_configs, (uchar*)&config);
+  }
+  if (rr_status != READ_RECORD::RR_EOF)
+  {
+    sql_print_error("Failure while reading %s.%s: %d",
+                    table->s->db.str, table->s->table_name.str, rr_status);
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 
@@ -1651,7 +1943,28 @@ static my_bool acl_load_other_acls(THD *thd, TABLE_LIST *tables)
                     "please run mysql_upgrade to create it");
   }
 
+  table= tables[GRANT_SNIPER_CONFIGS].table;
+  (void) my_init_dynamic_array(&sniper_configs, sizeof(SNIPER_CONFIG),
+                               50, 100, MYF(0));
+  if (table)
+  {
+    if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
+      goto end;
+    table->use_all_columns();
+    bool status= load_sniper_configs(thd, table, &read_record_info);
+    end_read_record(&read_record_info);
+    if (status)
+      goto end;
+    freeze_size(&sniper_configs);
+  }
+  else
+  {
+    sql_print_error("Missing system table mysql.sniper_settings; "
+                    "please run mysql_upgrade to create it");
+  }
+
   init_check_host();
+  init_sniper_configs();
 
   return FALSE;
 
@@ -1680,6 +1993,8 @@ void acl_free(bool end)
   delete_dynamic(&acl_proxy_users);
   my_hash_free(&acl_check_hosts);
   my_hash_free(&acl_roles_mappings);
+  delete_dynamic(&sniper_configs);
+  my_hash_free(&sniper_configs_hash);
 
   if (end)
   {
@@ -1726,7 +2041,7 @@ my_bool acl_reload(THD *thd)
 {
   TABLE_LIST *tables= new TABLE_LIST[GRANT_TABLES_MAX];
   DYNAMIC_ARRAY old_acl_hosts, old_acl_users, old_acl_dbs, old_acl_proxy_users;
-  DYNAMIC_ARRAY old_acl_system_users;
+  DYNAMIC_ARRAY old_acl_system_users, old_sniper_configs;
   HASH old_acl_roles, old_acl_roles_mappings;
   MEM_ROOT old_mem;
   my_bool return_val= TRUE;
@@ -1751,6 +2066,7 @@ my_bool acl_reload(THD *thd)
     { old_acl_system_users,   acl_system_users },
     { old_acl_proxy_users,    acl_proxy_users },
     { old_acl_dbs,            acl_dbs },
+    { old_sniper_configs,     sniper_configs }
   };
 
   /*
@@ -1772,6 +2088,9 @@ my_bool acl_reload(THD *thd)
   tables[GRANT_SYSTEM_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                            C_STRING_WITH_LEN("system_user"),
                            "system_user", TL_READ);
+  tables[GRANT_SNIPER_CONFIGS].init_one_table(C_STRING_WITH_LEN("mysql"),
+                              C_STRING_WITH_LEN("sniper_settings"),
+                              "sniper_settings", TL_READ);
   tables[GRANT_HOST].next_local= tables[GRANT_HOST].next_global=
     &tables[GRANT_USER];
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
@@ -1780,18 +2099,22 @@ my_bool acl_reload(THD *thd)
     &tables[GRANT_PROXIES_PRIV];
   tables[GRANT_PROXIES_PRIV].next_local= tables[GRANT_PROXIES_PRIV].next_global=
     &tables[GRANT_ROLES_MAPPING];
+  TABLE_LIST *last_table= &tables[GRANT_ROLES_MAPPING];
   if (opt_system_user_table)
   {
-    tables[GRANT_ROLES_MAPPING].next_local=
-      tables[GRANT_ROLES_MAPPING].next_global= &tables[GRANT_SYSTEM_USER];
+    last_table->next_local= last_table->next_global= &tables[GRANT_SYSTEM_USER];
+    last_table= &tables[GRANT_SYSTEM_USER];
   }
+  last_table->next_local= last_table->next_global=
+    &tables[GRANT_SNIPER_CONFIGS];
   tables[GRANT_HOST].open_type= tables[GRANT_USER].open_type=
     tables[GRANT_DB].open_type= tables[GRANT_PROXIES_PRIV].open_type=
     tables[GRANT_ROLES_MAPPING].open_type= tables[GRANT_SYSTEM_USER].open_type=
-    OT_BASE_ONLY;
+    tables[GRANT_SNIPER_CONFIGS].open_type= OT_BASE_ONLY;
   tables[GRANT_HOST].open_strategy= tables[GRANT_PROXIES_PRIV].open_strategy=
     tables[GRANT_ROLES_MAPPING].open_strategy=
-    tables[GRANT_SYSTEM_USER].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+    tables[GRANT_SYSTEM_USER].open_strategy=
+    tables[GRANT_SNIPER_CONFIGS].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
  
   if (open_and_lock_tables(thd, &tables[GRANT_HOST], FALSE,
                            MYSQL_LOCK_IGNORE_TIMEOUT))
@@ -1808,6 +2131,7 @@ my_bool acl_reload(THD *thd)
 
   acl_cache->clear(0);
   mysql_mutex_lock(&acl_cache->lock);
+  mysql_mutex_lock(&LOCK_sniper_config);
 
   for (uint i= 0; i < array_elements(acl_arrays); i++)
   {
@@ -1834,6 +2158,7 @@ my_bool acl_reload(THD *thd)
   old_mem= acl_memroot;
   delete_dynamic(&acl_wild_hosts);
   my_hash_free(&acl_check_hosts);
+  my_hash_free(&sniper_configs_hash);
 
   if ((return_val= acl_load(thd, tables)))
   {					// Error. Revert to old list
@@ -1849,6 +2174,7 @@ my_bool acl_reload(THD *thd)
     acl_roles_mappings= old_acl_roles_mappings;
     acl_memroot= old_mem;
     init_check_host();
+    init_sniper_configs();
   }
   else
   {
@@ -1860,7 +2186,9 @@ my_bool acl_reload(THD *thd)
     delete_dynamic(&old_acl_proxy_users);
     delete_dynamic(&old_acl_dbs);
     my_hash_free(&old_acl_roles_mappings);
+    delete_dynamic(&old_sniper_configs);
   }
+  mysql_mutex_unlock(&LOCK_sniper_config);
   mysql_mutex_unlock(&acl_cache->lock);
 end:
   close_mysql_tables(thd);
@@ -2172,6 +2500,13 @@ unlock_and_reset_user:
   DBUG_RETURN(TRUE);
 }
 
+static uchar* sniper_config_get_key(SNIPER_CONFIG *buff, size_t *length,
+                                    my_bool not_used __attribute__((unused)))
+{
+  *length= buff->user_name_length;
+  return (uchar*) buff->user;
+}
+
 static void acl_kill_user_threads(THD *thd, ACL_USER *acl_user)
 {
   THD *tmp_thd;
@@ -2319,6 +2654,28 @@ static void acl_update_role(const char *rolename, ulong privileges)
 }
 
 
+static void sniper_configs_update(const char *user, const char *host,
+                                  SNIPER_SETTINGS *settings)
+{
+  mysql_mutex_assert_owner(&LOCK_sniper_config);
+  for (uint i= 0; i < sniper_configs.elements; i++)
+  {
+    SNIPER_CONFIG *config= dynamic_element(&sniper_configs, i, SNIPER_CONFIG*);
+
+    if ((!config->user && !user[0]) ||
+        (config->user && !strcmp(user, config->user)))
+    {
+      if ((!config->host.hostname && !host[0]) ||
+          (config->host.hostname &&
+           !my_strcasecmp(system_charset_info, host, config->host.hostname)))
+      {
+        config->settings.update(settings);
+        break;
+      }
+    }
+  }
+}
+
 static void acl_update_user(THD *thd, const char *user, const char *host,
 			    const char *password, uint password_len,
 			    enum SSL_type ssl_type,
@@ -2405,6 +2762,18 @@ static void acl_insert_role(const char *rolename, ulong privileges)
   my_hash_insert(&acl_roles, (uchar *)entry);
 }
 
+static void sniper_configs_insert(const char *user, const char *host,
+                                  SNIPER_SETTINGS *settings)
+{
+  mysql_mutex_assert_owner(&LOCK_sniper_config);
+  SNIPER_CONFIG config;
+  config.user= *user ? strdup_root(&acl_memroot, user) : 0;
+  update_hostname(&config.host, *host ? strdup_root(&acl_memroot, host): 0);
+  config.user_name_length= strnlen(user, USERNAME_LENGTH);
+  config.settings= *settings;
+  (void) push_dynamic(&sniper_configs, (uchar *)&config);
+  rebuild_sniper_configs();
+}
 
 static void acl_insert_user(const char *user, const char *host,
 			    const char *password, uint password_len,
@@ -2539,6 +2908,51 @@ static void acl_insert_db(const char *user, const char *host, const char *db,
   ++acl_version;
 }
 
+void sniper_settings_get_name(SNIPER_SETTINGS *result, const char *user,
+                              const char *host, bool already_have_lock)
+{
+  result->reset();
+  user= user ? user : "";
+  host= host ? host : "";
+  HASH_SEARCH_STATE state;
+  SNIPER_CONFIG* config;
+  size_t length= strnlen(user, USERNAME_LENGTH);
+
+  if (!already_have_lock)
+    mysql_mutex_lock(&LOCK_sniper_config);
+  else
+    mysql_mutex_assert_owner(&LOCK_sniper_config);
+
+  for (config= (SNIPER_CONFIG*) my_hash_first(&sniper_configs_hash,
+                                              (uchar*) user, length, &state);
+       config;
+       config= (SNIPER_CONFIG*) my_hash_next(&sniper_configs_hash,
+                                             (uchar*) user, length, &state))
+  {
+    const char* chost= config->host.hostname;
+    if ((!chost && !host[0]) ||
+        (chost && !strncmp(chost, host, MAX_HOSTNAME)))
+    {
+      *result= config->settings;
+      goto end;
+    }
+  }
+end:
+  if (!already_have_lock)
+    mysql_mutex_unlock(&LOCK_sniper_config);
+}
+
+/*
+  Try to get an exact match on the priv_user and priv_host attributes
+  and use default if cannot.
+*/
+void sniper_settings_get(SNIPER_SETTINGS *result,
+                         Security_context *ctx,
+                         bool already_have_lock)
+{
+  return sniper_settings_get_name(result, ctx->priv_user, ctx->priv_host,
+                                  already_have_lock);
+}
 
 /*
   Get privilege for a host, user and db combination
@@ -2634,6 +3048,36 @@ exit:
   mysql_mutex_unlock(&acl_cache->lock);
   DBUG_PRINT("exit", ("access: 0x%lx", db_access & host_access));
   DBUG_RETURN(db_access & host_access);
+}
+
+static void init_sniper_configs(void)
+{
+  if (my_hash_init(&sniper_configs_hash, system_charset_info,
+                   sniper_configs.elements, 0, 0,
+                   (my_hash_get_key) sniper_config_get_key, 0, 0))
+  {
+    sql_print_error("Unable to cache sniper configs");
+    return;
+  }
+
+  for (uint i= 0; i < sniper_configs.elements; i++)
+  {
+    SNIPER_CONFIG *config= dynamic_element(&sniper_configs, i, SNIPER_CONFIG*);
+    if (my_hash_insert(&sniper_configs_hash, (uchar*)config))
+    {
+      // Out of memory.
+      sql_print_error("Unable to cache sniper configs");
+      my_hash_free(&sniper_configs_hash);
+      return;
+    }
+  }
+  freeze_size(&sniper_configs_hash.array);
+}
+
+static void rebuild_sniper_configs(void)
+{
+  my_hash_free(&sniper_configs_hash);
+  init_sniper_configs();
 }
 
 /*
@@ -3721,6 +4165,202 @@ end:
   DBUG_RETURN(error);
 }
 
+static void store_single_setting(SNIPER_SETTINGS *settings, Field *f)
+{
+  if (!strcmp("idle_timeout", f->field_name))
+  {
+    if (settings->has_setting(SNIPER_SETTINGS::IDLE_TIMEOUT))
+    {
+      f->set_notnull();
+      f->store((longlong)settings->idle_timeout, TRUE);
+    }
+    else if (settings->is_nulled(SNIPER_SETTINGS::IDLE_TIMEOUT))
+      f->set_null();
+  }
+  else if (!strcmp("long_query_timeout", f->field_name))
+  {
+    if (settings->has_setting(SNIPER_SETTINGS::LONG_QUERY_TIMEOUT))
+    {
+      f->set_notnull();
+      f->store((longlong)settings->long_query_timeout, TRUE);
+    }
+    else if (settings->is_nulled(SNIPER_SETTINGS::LONG_QUERY_TIMEOUT))
+      f->set_null();
+  }
+  else if (!strcmp("kill_connectionless", f->field_name))
+  {
+    if (settings->has_setting(SNIPER_SETTINGS::KILL_CONNECTIONLESS))
+    {
+      f->set_notnull();
+      f->store((settings->kill_connectionless) ? 1 : 0, TRUE);
+    }
+    else if (settings->is_nulled(SNIPER_SETTINGS::KILL_CONNECTIONLESS))
+      f->set_null();
+  }
+  else if (!strcmp("infeasible_cross_product_rows", f->field_name))
+  {
+    if (settings->has_setting(SNIPER_SETTINGS::INFEASIBLE_CROSS_PRODUCT_ROWS))
+    {
+      f->set_notnull();
+      f->store(settings->infeasible_cross_product_rows);
+    }
+    else if (settings->is_nulled(SNIPER_SETTINGS::INFEASIBLE_CROSS_PRODUCT_ROWS))
+      f->set_null();
+  }
+  else if (!strcmp("infeasible_max_time", f->field_name))
+  {
+    if (settings->has_setting(SNIPER_SETTINGS::INFEASIBLE_MAX_TIME))
+    {
+      f->set_notnull();
+      f->store(settings->infeasible_max_time, TRUE);
+    }
+    else if (settings->is_nulled(SNIPER_SETTINGS::INFEASIBLE_MAX_TIME))
+      f->set_null();
+  }
+  else if (!strcmp("infeasible_secondary_requirements", f->field_name))
+  {
+    if (settings->has_setting(SNIPER_SETTINGS::INFEASIBLE_SECONDARY_REQS))
+    {
+      f->set_notnull();
+      switch(settings->infeasible_secondary_reqs)
+      {
+      case REQUIRES_NONE:
+        f->store(STRING_WITH_LEN("NONE"), &my_charset_latin1);
+        break;
+      case REQUIRES_FILESORT:
+        f->store(STRING_WITH_LEN("FILESORT"), &my_charset_latin1);
+        break;
+      case REQUIRES_TEMPORARY:
+        f->store(STRING_WITH_LEN("TEMPORARY"), &my_charset_latin1);
+        break;
+      case REQUIRES_FILESORT_AND_TEMPORARY:
+        f->store(STRING_WITH_LEN("FILESORT_AND_TEMPORARY"),
+                 &my_charset_latin1);
+        break;
+      case REQUIRES_FILESORT_OR_TEMPORARY:
+        f->store(STRING_WITH_LEN("FILESORT_OR_TEMPORARY"),
+                 &my_charset_latin1);
+        break;
+      default:
+        // This should never happen.
+        break;
+      }
+    }
+    else if (settings->is_nulled(SNIPER_SETTINGS::INFEASIBLE_SECONDARY_REQS))
+      f->set_null();
+  }
+  else
+  {
+    // Unknown column. Ignore it for now.
+    return;
+  }
+}
+
+static int replace_sniper_settings_table(THD *thd, TABLE *table,
+                                         LEX_USER &combo, bool revoke_grant)
+{
+  SNIPER_SETTINGS *settings;
+  uchar user_key[MAX_KEY_LENGTH];
+  int old_row_exists= 0;
+  int error= 0;
+  LEX *lex= thd->lex;
+  mysql_mutex_assert_owner(&LOCK_sniper_config);
+
+  if (!lex->sniper_settings.specified_settings &&
+      !lex->sniper_settings.nulled_settings)
+  {
+    // No change to settings.
+    return 0;
+  }
+
+  table->use_all_columns();
+  // Populate record[0] with Host and User for index read.
+  table->field[0]->store(combo.host.str, combo.host.length,
+                         system_charset_info);
+  table->field[1]->store(combo.user.str, combo.user.length,
+                         system_charset_info);
+  // Copy key from record[0] to user_key_buffer
+  key_copy(user_key, table->record[0], table->key_info,
+           table->key_info->key_length);
+
+  // Search by user key, populate record[0] with the record, if found.
+  if (table->file->ha_index_read_idx_map(table->record[0], 0, user_key,
+                                         HA_WHOLE_KEY,
+                                         HA_READ_KEY_EXACT))
+  {
+    // User doesn't exist in the table.
+    if (revoke_grant)
+    {
+      goto end;
+    }
+    old_row_exists= 0;
+    restore_record(table,s->default_values);
+    table->field[0]->store(combo.host.str, combo.host.length,
+                           system_charset_info);
+    table->field[1]->store(combo.user.str, combo.user.length,
+                           system_charset_info);
+  }
+  else
+  {
+    // User already exists in this table.
+    old_row_exists= 1;
+    // Copy the existing user from record[0] to record[1] for later update.
+    store_record(table, record[1]);
+  }
+
+  settings= &(lex->sniper_settings);
+  // We can skip the Host and User fields which are in the first two cols.
+  for (uint cur_field= 2; cur_field < table->s->fields; cur_field++)
+  {
+    store_single_setting(settings, table->field[cur_field]);
+  }
+  get_settings(settings, table);
+
+  if (old_row_exists)
+  {
+    if (cmp_record(table, record[1]))
+    {
+      // The old and new records do not match so we should update.
+      if ((error= table->file->ha_update_row(table->record[1],
+                                             table->record[0])) &&
+          error != HA_ERR_RECORD_IS_THE_SAME)
+      {
+        // An error was encountered when writing to the table.
+        table->file->print_error(error, MYF(0));
+        error= -1;
+        goto end;
+      }
+    }
+  }
+  else if ((error= table->file->ha_write_row(table->record[0])) &&
+           // The user didn't exists so write a new record.
+           table->file->is_fatal_error(error, HA_CHECK_DUP))
+  {
+    table->file->print_error(error, MYF(0));
+    error= -1;
+    goto end;
+  }
+  // Reset since if there was an error we would have jumped past it.
+  // Everything must be find therefore.
+  error= 0;
+
+end:
+  if (!error)
+  {
+    // Update the cache to reflect the changes made in the table.
+    if (old_row_exists)
+    {
+      sniper_configs_update(combo.user.str, combo.host.str,
+                            &(lex->sniper_settings));
+    }
+    else
+    {
+      sniper_configs_insert(combo.user.str, combo.host.str,
+                            &(lex->sniper_settings));
+    }
+  }
+  return error;
+}
 
 /*
   change grants in the mysql.db table
@@ -6617,6 +7257,98 @@ bool mysql_grant_role(THD *thd, List <LEX_USER> &list, bool revoke)
   DBUG_RETURN(result);
 }
 
+static int get_single_user_limit(USER_RESOURCES *mqh,
+                                 Item *item,
+                                 const char *name)
+{
+  if (!strcasecmp("MAX_QUERIES_PER_HOUR", name))
+  {
+    mqh->questions= (uint)item->val_int();
+    mqh->specified_limits|= USER_RESOURCES::QUERIES_PER_HOUR;
+  }
+  else if (!strcasecmp("MAX_UPDATES_PER_HOUR", name))
+  {
+    mqh->updates= (uint)item->val_int();
+    mqh->specified_limits|= USER_RESOURCES::UPDATES_PER_HOUR;
+  }
+  else if (!strcasecmp("MAX_CONNECTIONS_PER_HOUR", name))
+  {
+    mqh->conn_per_hour= (uint)item->val_int();
+    mqh->specified_limits|= USER_RESOURCES::CONNECTIONS_PER_HOUR;
+  }
+  else if (!strcasecmp("MAX_USER_CONNECTIONS", name))
+  {
+    mqh->user_conn= (int)item->val_int();
+    mqh->specified_limits|= USER_RESOURCES::USER_CONNECTIONS;
+  }
+  else
+  {
+    return ER_NO;
+  }
+  return FALSE;
+}
+
+static bool interpret_grant_options(THD *thd, LEX *lex)
+{
+  const char *sniper_prefix= "SNIPER_";
+  const size_t sniper_prefix_length= strlen(sniper_prefix);
+  int ret= FALSE;
+
+  List_iterator<Item> iter(lex->grant_options);
+  Item *item= NULL;
+  while ((item= iter++))
+  {
+    if (item->fix_fields(thd, &item))
+    {
+      // This should not happen. The check in sql_yacc.yy should catch
+      // anything that could cause this.
+      my_error(ER_INTERNAL_ERROR, MYF(0), "Unable to fix Item value");
+      return ER_INTERNAL_ERROR;
+    }
+    item->update_null_value();
+    item->bring_value();
+    if (thd->is_error())
+      return -1;
+
+    if (!get_single_user_limit(&lex->mqh, item, item->name))
+    {
+      // We have got a match on a user limit so we can continue on.
+      continue;
+    }
+
+    if (strncasecmp(sniper_prefix, item->name, sniper_prefix_length))
+    {
+      my_error(ER_UNKNOWN_OPTION, MYF(0), item->name);
+      return ER_UNKNOWN_OPTION;
+    }
+
+    if ((ret= get_single_setting(&lex->sniper_settings, item,
+                                 item->name + sniper_prefix_length,
+                                 FALSE)))
+    {
+      switch (ret)
+      {
+      case ER_UNKNOWN_OPTION:
+        my_error(ER_UNKNOWN_OPTION, MYF(0), item->name);
+        break;
+      case ER_BAD_OPTION_VALUE:
+        {
+          String val;
+          String *val_ptr= &val;
+          val_ptr= item->val_str(val_ptr);
+          my_error(ER_BAD_OPTION_VALUE, MYF(0),
+                   (val_ptr) ? val_ptr->c_ptr_safe() : "<NULL>", item->name);
+          break;
+        }
+      default:
+        my_error(ER_UNKNOWN_ERROR, MYF(0));
+        break;
+      }
+      return ret;
+    }
+  }
+  return 0;
+}
 
 bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
                  ulong rights, bool revoke_grant, bool is_proxy)
@@ -6651,6 +7383,14 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     db=tmp_db;
   }
 
+  if (!revoke_grant &&
+      thd->lex->grant_options.elements &&
+      interpret_grant_options(thd, thd->lex))
+  {
+    result= TRUE;
+    goto end;
+  }
+
   if (is_proxy)
   {
     DBUG_ASSERT(!db);
@@ -6683,9 +7423,14 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   tables[GRANT_SYSTEM_USER].init_one_table(C_STRING_WITH_LEN("mysql"),
                              C_STRING_WITH_LEN("system_user"),
                              "system_user", TL_WRITE);
+  tables[GRANT_SNIPER_CONFIGS].init_one_table(C_STRING_WITH_LEN("mysql"),
+                                C_STRING_WITH_LEN("sniper_settings"),
+                                "sniper_settings", TL_WRITE);
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global= next_table;
+  next_table->next_local= next_table->next_global= &tables[GRANT_SNIPER_CONFIGS];
   if (opt_system_user_table)
-    next_table->next_local= next_table->next_global= &tables[GRANT_SYSTEM_USER];
+    tables[GRANT_SNIPER_CONFIGS].next_local=
+      tables[GRANT_SNIPER_CONFIGS].next_global= &tables[GRANT_SYSTEM_USER];
 
 #ifdef HAVE_REPLICATION
   /*
@@ -6699,7 +7444,8 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
       The tables must be marked "updating" so that tables_ok() takes them into
       account in tests.
     */
-    tables[GRANT_USER].updating= next_table->updating= 1;
+    tables[GRANT_USER].updating= next_table->updating=
+      tables[GRANT_SNIPER_CONFIGS].updating= 1;
     if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
       goto end;
   }
@@ -6720,6 +7466,7 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
   /* go through users in user_list */
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
+  mysql_mutex_lock(&LOCK_sniper_config);
   grant_version++;
 
   if (proxied_user)
@@ -6753,7 +7500,9 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
     if (replace_user_table(thd, tables[GRANT_USER].table, *Str,
                            (!db ? rights : 0), revoke_grant, create_new_users,
                            MY_TEST(thd->variables.sql_mode &
-                                   MODE_NO_AUTO_CREATE_USER)))
+                                   MODE_NO_AUTO_CREATE_USER)) ||
+        replace_sniper_settings_table(thd, tables[GRANT_SNIPER_CONFIGS].table,
+                                      *Str, revoke_grant))
       result= -1;
     else if (db)
     {
@@ -6783,6 +7532,7 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
                             db ? PRIVS_TO_MERGE::DB : PRIVS_TO_MERGE::GLOBAL,
                             db);
   }
+  mysql_mutex_unlock(&LOCK_sniper_config);
   mysql_mutex_unlock(&acl_cache->lock);
 
   if (!result)
@@ -7942,18 +8692,22 @@ ulong get_column_grant(THD *thd, GRANT_INFO *grant,
 
 /* Help function for mysql_show_grants */
 
+static void unconditional_add_user_option(String *grant, long value,
+                                          const char *name, my_bool is_signed)
+{
+  char buff[22], *p; // just as in int2str
+  grant->append(' ');
+  grant->append(name, strlen(name));
+  grant->append(' ');
+  p=int10_to_str(value, buff, is_signed ? -10 : 10);
+  grant->append(buff,p-buff);
+}
+
 static void add_user_option(String *grant, long value, const char *name,
                             my_bool is_signed)
 {
   if (value)
-  {
-    char buff[22], *p; // just as in int2str
-    grant->append(' ');
-    grant->append(name, strlen(name));
-    grant->append(' ');
-    p=int10_to_str(value, buff, is_signed ? -10 : 10);
-    grant->append(buff,p-buff);
-  }
+    unconditional_add_user_option(grant, value, name, is_signed);
 }
 
 static const char *command_array[]=
@@ -7980,7 +8734,7 @@ static bool print_grants_for_role(THD *thd, ACL_ROLE * role)
   if (show_role_grants(thd, role->user.str, "", role, buff, sizeof(buff)))
     return TRUE;
 
-  if (show_global_privileges(thd, role, TRUE, buff, sizeof(buff)))
+  if (show_global_privileges(thd, role, TRUE, NULL, buff, sizeof(buff)))
     return TRUE;
 
   if (show_database_privileges(thd, role->user.str, "", buff, sizeof(buff)))
@@ -8023,6 +8777,7 @@ bool mysql_show_grants(THD *thd, LEX_USER *lex_user)
 {
   int  error = -1;
   ACL_USER *UNINIT_VAR(acl_user);
+  SNIPER_SETTINGS settings;
   ACL_ROLE *acl_role= NULL;
   char buff[1024];
   Protocol *protocol= thd->protocol;
@@ -8108,12 +8863,17 @@ bool mysql_show_grants(THD *thd, LEX_USER *lex_user)
       DBUG_RETURN(TRUE);
     }
 
+    mysql_mutex_lock(&LOCK_sniper_config);
+    sniper_settings_get_name(&settings, acl_user->user.str,
+                             acl_user->host.hostname, TRUE);
+    mysql_mutex_unlock(&LOCK_sniper_config);
+
     /* Show granted roles to acl_user */
     if (show_role_grants(thd, username, hostname, acl_user, buff, sizeof(buff)))
       goto end;
 
     /* Add first global access grants */
-    if (show_global_privileges(thd, acl_user, FALSE, buff, sizeof(buff)))
+    if (show_global_privileges(thd, acl_user, FALSE, &settings, buff, sizeof(buff)))
       goto end;
 
     /* Add database access */
@@ -8230,6 +8990,7 @@ static bool show_role_grants(THD *thd, const char *username,
 
 static bool show_global_privileges(THD *thd, ACL_USER_BASE *acl_entry,
                                    bool handle_as_role,
+                                   SNIPER_SETTINGS *settings,
                                    char *buff, size_t buffsize)
 {
   uint counter;
@@ -8334,6 +9095,7 @@ static bool show_global_privileges(THD *thd, ACL_USER_BASE *acl_entry,
         global.append('\'');
       }
     }
+    bool with_printed= FALSE;
     if ((want_access & GRANT_ACL) ||
         (acl_user->user_resource.questions ||
          acl_user->user_resource.updates ||
@@ -8341,6 +9103,7 @@ static bool show_global_privileges(THD *thd, ACL_USER_BASE *acl_entry,
          acl_user->user_resource.user_conn))
     {
       global.append(STRING_WITH_LEN(" WITH"));
+      with_printed= TRUE;
       if (want_access & GRANT_ACL)
         global.append(STRING_WITH_LEN(" GRANT OPTION"));
       add_user_option(&global, acl_user->user_resource.questions,
@@ -8351,6 +9114,61 @@ static bool show_global_privileges(THD *thd, ACL_USER_BASE *acl_entry,
                       "MAX_CONNECTIONS_PER_HOUR", 0);
       add_user_option(&global, acl_user->user_resource.user_conn,
                       "MAX_USER_CONNECTIONS", 1);
+    }
+    if (settings->has_any_setting()) // Check all settings.
+    {
+      if (!with_printed)
+        global.append(STRING_WITH_LEN(" WITH"));
+      if (settings->has_setting(SNIPER_SETTINGS::IDLE_TIMEOUT))
+        unconditional_add_user_option(&global, settings->idle_timeout,
+                                      "SNIPER_IDLE_TIMEOUT", 0);
+      if (settings->has_setting(SNIPER_SETTINGS::LONG_QUERY_TIMEOUT))
+        unconditional_add_user_option(&global, settings->long_query_timeout,
+                                      "SNIPER_LONG_QUERY_TIMEOUT", 0);
+      if (settings->has_setting(SNIPER_SETTINGS::KILL_CONNECTIONLESS))
+      {
+        if (settings->kill_connectionless)
+          global.append(STRING_WITH_LEN(" SNIPER_KILL_CONNECTIONLESS ENABLE"));
+        else
+          global.append(STRING_WITH_LEN(" SNIPER_KILL_CONNECTIONLESS DISABLE"));
+      }
+      if (settings->has_setting(SNIPER_SETTINGS::INFEASIBLE_CROSS_PRODUCT_ROWS))
+      {
+        char buff[128];
+        int size= 0;
+        size= snprintf(buff, sizeof(buff), "%.0f",
+                       settings->infeasible_cross_product_rows);
+        global.append(STRING_WITH_LEN(" SNIPER_INFEASIBLE_CROSS_PRODUCT_ROWS "));
+        global.append(buff, size);
+      }
+      if (settings->has_setting(SNIPER_SETTINGS::INFEASIBLE_MAX_TIME))
+        unconditional_add_user_option(&global, settings->infeasible_max_time,
+                                      "SNIPER_INFEASIBLE_MAX_TIME", 0);
+      if (settings->has_setting(SNIPER_SETTINGS::INFEASIBLE_SECONDARY_REQS) &&
+          settings->infeasible_secondary_reqs != ILLEGAL)
+      {
+        global.append(STRING_WITH_LEN(" SNIPER_INFEASIBLE_SECONDARY_REQUIREMENTS"));
+        switch (settings->infeasible_secondary_reqs)
+        {
+        case REQUIRES_NONE:
+          global.append(STRING_WITH_LEN(" NONE"));
+          break;
+        case REQUIRES_FILESORT:
+          global.append(STRING_WITH_LEN(" FILESORT"));
+          break;
+        case REQUIRES_TEMPORARY:
+          global.append(STRING_WITH_LEN(" TEMPORARY"));
+          break;
+        case REQUIRES_FILESORT_OR_TEMPORARY:
+          global.append(STRING_WITH_LEN(" FILESORT_OR_TEMPORARY"));
+          break;
+        case REQUIRES_FILESORT_AND_TEMPORARY:
+          global.append(STRING_WITH_LEN(" FILESORT_AND_TEMPORARY"));
+          break;
+        case ILLEGAL:
+          break;
+        }
+      }
     }
   }
 
@@ -8781,6 +9599,10 @@ static int open_grant_tables(THD *thd, TABLE_LIST *tables)
                              C_STRING_WITH_LEN("system_user"),
                              "system_user", TL_WRITE);
   tables[GRANT_SYSTEM_USER].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
+  tables[GRANT_SNIPER_CONFIGS].init_one_table(C_STRING_WITH_LEN("mysql"),
+                             C_STRING_WITH_LEN("sniper_settings"),
+                             "sniper_settings", TL_WRITE);
+  tables[GRANT_SNIPER_CONFIGS].open_strategy= TABLE_LIST::OPEN_IF_EXISTS;
 
 
   tables[GRANT_USER].next_local= tables[GRANT_USER].next_global=
@@ -8795,9 +9617,13 @@ static int open_grant_tables(THD *thd, TABLE_LIST *tables)
     &tables[GRANT_PROXIES_PRIV];
   tables[GRANT_PROXIES_PRIV].next_local= tables[GRANT_PROXIES_PRIV].next_global=
     &tables[GRANT_ROLES_MAPPING];
+  tables[GRANT_ROLES_MAPPING].next_local=
+    tables[GRANT_ROLES_MAPPING].next_global=
+    &tables[GRANT_SNIPER_CONFIGS];
   if (opt_system_user_table)
   {
-    tables[GRANT_ROLES_MAPPING].next_local= tables[GRANT_ROLES_MAPPING].next_global=
+    tables[GRANT_SNIPER_CONFIGS].next_local=
+      tables[GRANT_SNIPER_CONFIGS].next_global=
       &tables[GRANT_SYSTEM_USER];
   }
 
@@ -8816,13 +9642,15 @@ static int open_grant_tables(THD *thd, TABLE_LIST *tables)
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
       tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
       tables[GRANT_PROCS_PRIV].updating= tables[GRANT_PROXIES_PRIV].updating=
-      tables[GRANT_ROLES_MAPPING].updating= 1;
+      tables[GRANT_ROLES_MAPPING].updating=
+      tables[GRANT_SNIPER_CONFIGS].updating= 1;
     if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
       DBUG_RETURN(1);
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
       tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
       tables[GRANT_PROCS_PRIV].updating= tables[GRANT_PROXIES_PRIV].updating=
-      tables[GRANT_ROLES_MAPPING].updating= 0;
+      tables[GRANT_ROLES_MAPPING].updating=
+      tables[GRANT_SNIPER_CONFIGS].updating= 0;
   }
 #endif
 
@@ -9023,6 +9851,7 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
   TABLE *table= tables[table_id].table;
   Field *host_field= table->field[0];
   Field *user_field= table->field[table_id != GRANT_USER &&
+                                  table_id != GRANT_SNIPER_CONFIGS &&
                                   table_id != GRANT_PROXIES_PRIV ? 2 : 1];
   const char *host_str= user_from->host.str;
   const char *user_str= user_from->user.str;
@@ -9040,7 +9869,7 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
   }
 
   table->use_all_columns();
-  if (table_id == GRANT_USER)
+  if (table_id == GRANT_USER || table_id == GRANT_SNIPER_CONFIGS)
   {
     /*
       The 'user' table has an unique index on (host, user).
@@ -9050,6 +9879,9 @@ static int handle_grant_table(TABLE_LIST *tables, enum GrantTable table_id,
       pointer to the host field as key.
       index_read_idx() will replace table->record[0] (its first argument)
       by the searched record, if it exists.
+
+      Since the sniper_settings table has the same index as the user table we
+      can use the same code.
     */
     DBUG_PRINT("info",("read table: '%s'  search: '%s'@'%s'",
                        table->s->table_name.str, user_str, host_str));
@@ -9188,6 +10020,7 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
   ROLE_GRANT_PAIR *UNINIT_VAR(role_grant_pair);
   HASH *grant_name_hash= NULL;
   HASH *roles_mappings_hash= NULL;
+  SNIPER_CONFIG *config= NULL;
   DBUG_ENTER("handle_grant_struct");
   DBUG_PRINT("info",("scan struct: %u  search: '%s'@'%s'",
                      struct_no, user_from->user.str, user_from->host.str));
@@ -9273,6 +10106,10 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
     roles_mappings_hash= &acl_roles_mappings;
     elements= roles_mappings_hash->records;
     break;
+  case SNIPER_CONFIGS_HASH:
+    mysql_mutex_assert_owner(&LOCK_sniper_config);
+    elements= sniper_configs.elements;
+    break;
   default:
     DBUG_ASSERT(0);
     DBUG_RETURN(-1);
@@ -9320,6 +10157,12 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
       user= role_grant_pair->u_uname;
       host= role_grant_pair->u_hname;
       role= role_grant_pair->r_uname;
+      break;
+
+    case SNIPER_CONFIGS_HASH:
+      config= dynamic_element(&sniper_configs, idx, SNIPER_CONFIG*);
+      user= config->user;
+      host= config->host.hostname;
       break;
 
     default:
@@ -9389,6 +10232,10 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
         my_hash_delete(roles_mappings_hash, (uchar*) role_grant_pair);
         if (idx != elements)
           idx++;
+        break;
+
+      case SNIPER_CONFIGS_HASH:
+        delete_dynamic_element(&sniper_configs, idx);
         break;
 
       default:
@@ -9479,6 +10326,12 @@ static int handle_grant_struct(enum enum_acl_lists struct_no, bool drop,
                          (uchar*) old_key, old_key_length);
           break;
         }
+
+      case SNIPER_CONFIGS_HASH:
+        config->user= strdup_root(&acl_memroot, user_to->user.str);
+        config->user_name_length= strnlen(config->user, USERNAME_CHAR_LENGTH);
+        config->host.hostname= strdup_root(&acl_memroot, user_to->host.str);
+        break;
 
       default:
         DBUG_ASSERT(0);
@@ -9673,6 +10526,21 @@ static int handle_grant_data(TABLE_LIST *tables, bool drop,
     }
   }
 
+  /* Handle the sniper_settings table */
+  if (tables[GRANT_SNIPER_CONFIGS].table)
+  {
+    if ((found= handle_grant_table(tables, GRANT_SNIPER_CONFIGS, drop,
+                                   user_from, user_to)) < 0)
+    {
+      result= -1;
+    }
+    else
+    {
+      if ((handle_grant_struct(SNIPER_CONFIGS_HASH, drop, user_from, user_to) && !result))
+        result= 1;
+    }
+  }
+
   /* Handle user table. */
   if ((found= handle_grant_table(tables, GRANT_USER, drop,
                                  user_from, user_to)) < 0)
@@ -9732,6 +10600,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
+  mysql_mutex_lock(&LOCK_sniper_config);
 
   while ((user_name= user_list++))
   {
@@ -9811,6 +10680,7 @@ bool mysql_create_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
     }
   }
 
+  mysql_mutex_unlock(&LOCK_sniper_config);
   mysql_mutex_unlock(&acl_cache->lock);
 
   if (result)
@@ -9863,6 +10733,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
 
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
+  mysql_mutex_lock(&LOCK_sniper_config);
 
   while ((tmp_user_name= user_list++))
   {
@@ -9903,6 +10774,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
   {
     /* Rebuild 'acl_check_hosts' since 'acl_users' has been modified */
     rebuild_check_host();
+    rebuild_sniper_configs();
 
     /*
       Rebuild every user's role_grants since 'acl_users' has been sorted
@@ -9911,6 +10783,7 @@ bool mysql_drop_user(THD *thd, List <LEX_USER> &list, bool handle_as_role)
     rebuild_role_grants();
   }
 
+  mysql_mutex_unlock(&LOCK_sniper_config);
   mysql_mutex_unlock(&acl_cache->lock);
 
   if (result)
@@ -9963,6 +10836,7 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
 
   mysql_rwlock_wrlock(&LOCK_grant);
   mysql_mutex_lock(&acl_cache->lock);
+  mysql_mutex_lock(&LOCK_sniper_config);
 
   while ((tmp_user_from= user_list++))
   {
@@ -10007,6 +10881,7 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
 
   /* Rebuild 'acl_check_hosts' since 'acl_users' has been modified */
   rebuild_check_host();
+  rebuild_sniper_configs();
 
   /*
     Rebuild every user's role_grants since 'acl_users' has been sorted
@@ -10014,6 +10889,7 @@ bool mysql_rename_user(THD *thd, List <LEX_USER> &list)
   */
   rebuild_role_grants();
 
+  mysql_mutex_unlock(&LOCK_sniper_config);
   mysql_mutex_unlock(&acl_cache->lock);
 
   if (result)

@@ -1312,13 +1312,9 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  MASTER_USE_GTID_SYM
 %token  MASTER_HEARTBEAT_PERIOD_SYM
 %token  MATCH                         /* SQL-2003-R */
-%token  MAX_CONNECTIONS_PER_HOUR
-%token  MAX_QUERIES_PER_HOUR
 %token  MAX_ROWS
 %token  MAX_SIZE_SYM
 %token  MAX_SYM                       /* SQL-2003-N */
-%token  MAX_UPDATES_PER_HOUR
-%token  MAX_USER_CONNECTIONS_SYM
 %token  MAX_VALUE_SYM                 /* SQL-2003-N */
 %token  MEDIUMBLOB
 %token  MEDIUMINT
@@ -1696,7 +1692,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         opt_ev_status opt_ev_on_completion ev_on_completion opt_ev_comment
         ev_alter_on_schedule_completion opt_ev_rename_to opt_ev_sql_stmt
         optional_flush_tables_arguments opt_dyncol_type dyncol_type
-        opt_time_precision kill_type kill_option int_num
+        opt_time_precision kill_type kill_option
         opt_default_time_precision
 
 /*
@@ -2733,16 +2729,18 @@ ev_sql_stmt_inner:
 clear_privileges:
           /* Nothing */
           {
-           LEX *lex=Lex;
-           lex->users_list.empty();
-           lex->columns.empty();
-           lex->grant= lex->grant_tot_col= 0;
-           lex->all_privileges= 0;
-           lex->select_lex.db= 0;
-           lex->ssl_type= SSL_TYPE_NOT_SPECIFIED;
-           lex->ssl_cipher= lex->x509_subject= lex->x509_issuer= 0;
-           bzero((char *)&(lex->mqh),sizeof(lex->mqh));
-         }
+            LEX *lex=Lex;
+            lex->users_list.empty();
+            lex->columns.empty();
+            lex->grant= lex->grant_tot_col= 0;
+            lex->all_privileges= 0;
+            lex->select_lex.db= 0;
+            lex->ssl_type= SSL_TYPE_NOT_SPECIFIED;
+            lex->ssl_cipher= lex->x509_subject= lex->x509_issuer= 0;
+            bzero(&(lex->mqh), sizeof(lex->mqh));
+            lex->sniper_settings.reset();
+            lex->grant_options.empty();
+          }
         ;
 
 sp_name:
@@ -11466,12 +11464,6 @@ delete_limit_clause:
        | LIMIT limit_option ROWS_SYM EXAMINED_SYM { my_parse_error(ER(ER_SYNTAX_ERROR)); MYSQL_YYABORT; }
         ;
 
-int_num:
-          NUM           { int error; $$= (int) my_strtoll10($1.str, (char**) 0, &error); }
-        | '-' NUM       { int error; $$= -(int) my_strtoll10($2.str, (char**) 0, &error); }
-        | '-' LONG_NUM  { int error; $$= -(int) my_strtoll10($2.str, (char**) 0, &error); }
-        ;
-
 ulong_num:
           NUM           { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
         | HEX_NUM       { $$= (ulong) strtol($1.str, (char**) 0, 16); }
@@ -14299,11 +14291,7 @@ keyword_sp:
         | MASTER_SSL_CRL_SYM       {}
         | MASTER_SSL_CRLPATH_SYM   {}
         | MASTER_SSL_KEY_SYM       {}
-        | MAX_CONNECTIONS_PER_HOUR {}
-        | MAX_QUERIES_PER_HOUR     {}
         | MAX_SIZE_SYM             {}
-        | MAX_UPDATES_PER_HOUR     {}
-        | MAX_USER_CONNECTIONS_SYM {}
         | MEDIUM_SYM               {}
         | MEMORY_SYM               {}
         | MERGE_SYM                {}
@@ -15168,6 +15156,9 @@ admin_option_for_role:
       ;
 
 grant:
+          {
+            Lex->expr_allows_subselect= FALSE;
+          }
           GRANT clear_privileges grant_command
           {}
         ;
@@ -15597,6 +15588,14 @@ require_clause:
 grant_options:
           /* empty */ {}
         | WITH grant_option_list
+          {
+            if (Lex->uses_stored_routines())
+            {
+              my_error(ER_NOT_SUPPORTED_YET, MYF(0),
+                       "stored functions in GRANT ... WITH option");
+              YYABORT;
+            }
+          }
         ;
 
 opt_grant_option:
@@ -15611,29 +15610,30 @@ grant_option_list:
 
 grant_option:
           GRANT OPTION { Lex->grant |= GRANT_ACL;}
-        | MAX_QUERIES_PER_HOUR ulong_num
+        | ident DEFAULT
           {
-            LEX *lex=Lex;
-            lex->mqh.questions=$2;
-            lex->mqh.specified_limits|= USER_RESOURCES::QUERIES_PER_HOUR;
+            Item *grant_option= new (thd->mem_root) Item_null();
+            grant_option->rename($1.str);
+            Lex->grant_options.push_back(grant_option);
           }
-        | MAX_UPDATES_PER_HOUR ulong_num
+        | ident expr
           {
-            LEX *lex=Lex;
-            lex->mqh.updates=$2;
-            lex->mqh.specified_limits|= USER_RESOURCES::UPDATES_PER_HOUR;
-          }
-        | MAX_CONNECTIONS_PER_HOUR ulong_num
-          {
-            LEX *lex=Lex;
-            lex->mqh.conn_per_hour= $2;
-            lex->mqh.specified_limits|= USER_RESOURCES::CONNECTIONS_PER_HOUR;
-          }
-        | MAX_USER_CONNECTIONS_SYM int_num
-          {
-            LEX *lex=Lex;
-            lex->mqh.user_conn= $2;
-            lex->mqh.specified_limits|= USER_RESOURCES::USER_CONNECTIONS;
+            Item *grant_option;
+            if ($2->type() == Item::FIELD_ITEM)
+            {
+              // This means that the parser thinks the result is a field for
+              // some unknown table(i.e. its a string without quotes). Lets
+              // turn it into a string field here.
+              if (!strcasecmp("DEFAULT", $2->name))
+                grant_option= new (thd->mem_root) Item_null();
+              else
+                grant_option= new (thd->mem_root) Item_string(
+                          $2->name, strlen($2->name), system_charset_info);
+            }
+            else
+              grant_option= $2;
+            grant_option->rename($1.str);
+            Lex->grant_options.push_back(grant_option);
           }
         ;
 

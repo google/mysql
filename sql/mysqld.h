@@ -298,6 +298,7 @@ extern PSI_mutex_key key_BINLOG_LOCK_index, key_BINLOG_LOCK_xid_list,
 extern PSI_mutex_key key_RELAYLOG_LOCK_index;
 extern PSI_mutex_key key_LOCK_slave_state, key_LOCK_binlog_state,
   key_LOCK_rpl_thread, key_LOCK_rpl_thread_pool, key_LOCK_parallel_entry;
+extern PSI_mutex_key key_LOCK_sniper_config;
 
 extern PSI_mutex_key key_TABLE_SHARE_LOCK_share, key_LOCK_stats,
   key_LOCK_global_user_client_stats, key_LOCK_global_table_stats,
@@ -547,6 +548,7 @@ extern mysql_mutex_t
        LOCK_slave_list, LOCK_active_mi, LOCK_manager,
        LOCK_global_system_variables, LOCK_user_conn,
        LOCK_prepared_stmt_count, LOCK_error_messages, LOCK_connection_count;
+extern mysql_mutex_t LOCK_sniper_config;
 extern MYSQL_PLUGIN_IMPORT mysql_mutex_t LOCK_thread_count;
 #ifdef HAVE_OPENSSL
 extern mysql_mutex_t LOCK_des_key_file;

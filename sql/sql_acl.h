@@ -19,6 +19,7 @@
 #include "my_global.h"                          /* NO_EMBEDDED_ACCESS_CHECKS */
 #include "violite.h"                            /* SSL_type */
 #include "sql_class.h"                          /* LEX_COLUMN */
+#include "sniper_structs.h"
 
 #define SELECT_ACL      (1L << 0)
 #define INSERT_ACL      (1L << 1)
@@ -201,6 +202,10 @@ my_bool  acl_init(bool dont_read_acl_tables);
 my_bool acl_reload(THD *thd);
 void acl_free(bool end=0);
 bool acl_is_initialized();
+void sniper_settings_get_name(SNIPER_SETTINGS *result, const char *user,
+                              const char *host, bool already_have_lock= FALSE);
+void sniper_settings_get(SNIPER_SETTINGS *res, Security_context *ctx,
+                         bool already_have_lock= FALSE);
 ulong acl_get(const char *host, const char *ip,
               const char *user, const char *db, my_bool db_is_pattern);
 bool acl_authenticate(THD *thd, uint com_change_user_pkt_len);

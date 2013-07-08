@@ -1,0 +1,116 @@
+# Set up
+create user user1;
+grant select,insert,update,delete on *.* to user1;
+# test that grant will set the sniper settings in the table correctly.
+grant usage on *.* to user1 with SnIpEr_Idle_Timeout 5
+sniper_long_qUery_timeout 5
+sniPER_infeasiBle_cross_product_rows 1000
+SNIper_infeasibLe_seCONDARY_REQuirements filesort;
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user1	5	5	NULL	1000	NULL	FILESORT
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%' WITH SNIPER_IDLE_TIMEOUT 5 SNIPER_LONG_QUERY_TIMEOUT 5 SNIPER_INFEASIBLE_CROSS_PRODUCT_ROWS 1000 SNIPER_INFEASIBLE_SECONDARY_REQUIREMENTS FILESORT
+# Test that flush privileges works.
+update mysql.sniper_settings set long_query_timeout=25 where user='user1';
+flush privileges;
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%' WITH SNIPER_IDLE_TIMEOUT 5 SNIPER_LONG_QUERY_TIMEOUT 25 SNIPER_INFEASIBLE_CROSS_PRODUCT_ROWS 1000 SNIPER_INFEASIBLE_SECONDARY_REQUIREMENTS FILESORT
+# test that grant can set it back to null.
+grant usage on *.* to user1 with snipeR_INFEASIBLE_secondary_requirements default
+sniper_long_query_TIMEOUT DEFault
+SNIPER_infeaSiBLE_crosS_PRoduct_rows DEFAULT;
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user1	5	NULL	NULL	NULL	NULL	NULL
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%' WITH SNIPER_IDLE_TIMEOUT 5
+# Test that grants will come along when the user is renamed.
+create user user_temp;
+grant usage on *.* to user_temp with sniper_idle_timeout 10;
+show grants for user_temp;
+Grants for user_temp@%
+GRANT USAGE ON *.* TO 'user_temp'@'%' WITH SNIPER_IDLE_TIMEOUT 10
+rename user user_temp to user_temp2;
+select * from mysql.sniper_settings where user!='user1';
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user_temp2	10	NULL	NULL	NULL	NULL	NULL
+show grants for user_temp2;
+Grants for user_temp2@%
+GRANT USAGE ON *.* TO 'user_temp2'@'%' WITH SNIPER_IDLE_TIMEOUT 10
+# Test that grants will be deleted with the user is deleted.
+drop user user_temp2;
+select * from mysql.sniper_settings where user!='user1';
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+# Test that grants will accept expressions.
+delete from mysql.sniper_settings;
+flush privileges;
+set @variable_a= 100;
+set @variable_b= 124.84;
+grant usage on *.* to user1 with
+sniper_idle_timeout 10+5
+sniper_long_query_timeout @variable_a+123
+sniper_infeasible_cross_product_rows @variable_b*@variable_a
+sniper_infeasible_max_time cast(@variable_b as int)
+sniper_kill_connectionless CASE WHEN @variable_a > 10
+THEN "ENABLE"
+                                        ELSE "DISABLE"
+                                   END
+sniper_infeasible_secondary_requirements IF(TRUE, "NONE",
+"SOMETHING DUMB");
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user1	15	223	1	12484	125	NONE
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%' WITH SNIPER_IDLE_TIMEOUT 15 SNIPER_LONG_QUERY_TIMEOUT 223 SNIPER_KILL_CONNECTIONLESS ENABLE SNIPER_INFEASIBLE_CROSS_PRODUCT_ROWS 12484 SNIPER_INFEASIBLE_MAX_TIME 125 SNIPER_INFEASIBLE_SECONDARY_REQUIREMENTS NONE
+# Test that unknown settings will trigger an error and not cause an update.
+delete from mysql.sniper_settings;
+flush privileges;
+grant usage on *.* to user1 with sniper_idle_timeout 10
+sniper_option_that_doesnt_really_exist 100
+sniper_long_query_timeout 10;
+ERROR HY000: Unknown option 'sniper_option_that_doesnt_really_exist'
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%'
+# Test that only the final setting is used.
+grant usage on *.* to user1 with sniper_long_query_timeout 100
+sniper_long_query_timeout default;
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user1	NULL	NULL	NULL	NULL	NULL	NULL
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%'
+# Test that subselects do not work.
+grant usage on *.* to user1 with sniper_long_query_timeout (select 123);
+ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'select 123)' at line 1
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user1	NULL	NULL	NULL	NULL	NULL	NULL
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%'
+# Test that wrong type of value is caught.
+grant usage on *.* to user1 with sniper_idle_timeout 12.832;
+ERROR HY000: Incorrect value '12.832' for option 'sniper_idle_timeout'
+grant usage on *.* to user1 with sniper_idle_timeout -19;
+ERROR HY000: Incorrect value '-19' for option 'sniper_idle_timeout'
+grant usage on *.* to user1 with sniper_idle_timeout "NOT AN INT";
+ERROR HY000: Incorrect value 'NOT AN INT' for option 'sniper_idle_timeout'
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user1	NULL	NULL	NULL	NULL	NULL	NULL
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%'
+# Clean up;
+drop user user1;
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements

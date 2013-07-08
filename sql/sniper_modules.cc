@@ -2,10 +2,11 @@
 
 #include "my_global.h"
 #include <my_pthread.h>
+#include "sniper_modules.h"
+#include "structs.h"
 #include "sql_class.h"
 #include "sql_lex.h"
 #include "sniper.h"
-#include "sniper_modules.h"
 #include "mysql_com.h"
 #include "sql_acl.h"
 
@@ -24,72 +25,107 @@ bool sniper_connectionless;
 uint sniper_idle_timeout;
 uint sniper_long_query_timeout;
 
-bool sniper_infeasible_used;
 double sniper_infeasible_max_cross_product_rows;
 uint sniper_infeasible_max_time;
 ulong sniper_infeasible_secondary_requirements;
 
-bool Sniper_module_priv_ignore::should_snipe(THD *target_thd)
+SNIPER_DECISION Sniper_module_priv_ignore::decide(THD *target_thd,
+                                                  SNIPER_SETTINGS *settings)
 {
   Security_context *ctx = target_thd->security_ctx;
-  return ((ctx->master_access | ctx->db_access) & ignored) == 0;
+  if ((ctx->master_access | ctx->db_access) & ignored)
+    return MUST_NOT_SNIPE;
+  return NO_OPINION;
 }
 
-bool Sniper_module_idle::should_snipe(THD *target_thd)
+SNIPER_DECISION Sniper_module_idle::decide(THD *target_thd,
+                                           SNIPER_SETTINGS *settings)
 {
-  return target_thd->get_command() == COM_SLEEP &&
-      (time(0) - target_thd->start_time) > max_time;
+  uint timeout= settings->get_idle_timeout(max_time);
+  if (timeout != 0 && target_thd->get_command() == COM_SLEEP &&
+      (time(0) - target_thd->start_time) > timeout)
+    return MAY_SNIPE;
+  return NO_OPINION;
 }
 
-bool Sniper_module_unauthenticated::should_snipe(THD *target_thd)
+SNIPER_DECISION Sniper_module_unauthenticated::decide(THD *target_thd,
+                                                      SNIPER_SETTINGS *settings)
 {
-  return target_thd->security_ctx->user != NULL;
+  if (active && target_thd->security_ctx->user == NULL)
+    return MUST_NOT_SNIPE;
+  return NO_OPINION;
 }
 
-bool Sniper_module_connectionless::should_snipe(THD *target_thd)
+SNIPER_DECISION Sniper_module_connectionless::decide(THD *target_thd,
+                                                     SNIPER_SETTINGS *settings)
 {
-  return !target_thd->is_connected();
+  bool should_kill= settings->get_kill_connectionless(active);
+  if (should_kill && !target_thd->is_connected())
+    return MAY_SNIPE;
+  return NO_OPINION;
 }
 
-bool Sniper_module_long_query::should_snipe(THD *target_thd)
+SNIPER_DECISION Sniper_module_long_query::decide(THD *target_thd,
+                                                 SNIPER_SETTINGS *settings)
 {
+  uint timeout= settings->get_long_query_timeout(max_time);
   enum enum_server_command cmd= target_thd->get_command();
-  return cmd != COM_SLEEP && cmd != COM_BINLOG_DUMP &&
-      (time(0) - target_thd->start_time) > max_time;
+  if (timeout != 0 && cmd != COM_SLEEP &&
+      (time(0) - target_thd->start_time) > timeout)
+    return MAY_SNIPE;
+  return NO_OPINION;
 }
 
-bool Sniper_module_infeasible::should_snipe(THD *target_thd)
+SNIPER_DECISION Sniper_module_infeasible::decide(THD *target_thd,
+                                                 SNIPER_SETTINGS *settings)
 {
+  double cp_rows= settings->get_infeasible_cross_product_rows(
+                    max_cross_product_rows);
+  uint timeout=  settings->get_infeasible_max_time(max_time);
+  SNIPER_INFEASIBLE_SECONDARY_REQUIREMENTS reqs=
+      settings->get_infeasible_secondary_reqs(secondary_requirements);
+
   QUERY_INFEASIBILITY infeasibility;
-  if (!target_thd->lex || target_thd->get_command() != COM_QUERY)
-    return FALSE;
+  if (!cp_rows || !target_thd->lex || target_thd->get_command() != COM_QUERY)
+    return NO_OPINION;
   if (mysql_mutex_trylock(&(target_thd->LOCK_thd_data)))
-    return FALSE;
+    return NO_OPINION;
 
   infeasibility= target_thd->lex->unit.get_infeasibility();
   mysql_mutex_unlock(&(target_thd->LOCK_thd_data));
-  if (!(infeasibility.cross_product_rows >= max_cross_product_rows &&
-      (max_time == 0 || (time(0) - target_thd->start_time) > max_time)))
-    return FALSE;
+  if (!(infeasibility.cross_product_rows >= cp_rows &&
+        (timeout == 0 || (time(0) - target_thd->start_time) > timeout)))
+    return NO_OPINION;
 
-  switch (secondary_requirements)
+  bool ret;
+  switch (reqs)
   {
-  case NONE:
-    return TRUE;
-  case FILESORT:
-    return infeasibility.uses_filesort;
-  case TEMPORARY:
-    return infeasibility.uses_temporary;
-  case FILESORT_AND_TEMPORARY:
-    return infeasibility.uses_filesort && infeasibility.uses_temporary;
-  case FILESORT_OR_TEMPORARY:
-    return infeasibility.uses_filesort || infeasibility.uses_temporary;
+  case REQUIRES_NONE:
+    ret= TRUE;
+    break;
+  case REQUIRES_FILESORT:
+    ret= infeasibility.uses_filesort;
+    break;
+  case REQUIRES_TEMPORARY:
+    ret= infeasibility.uses_temporary;
+    break;
+  case REQUIRES_FILESORT_AND_TEMPORARY:
+    ret= infeasibility.uses_filesort && infeasibility.uses_temporary;
+    break;
+  case REQUIRES_FILESORT_OR_TEMPORARY:
+    ret= infeasibility.uses_filesort || infeasibility.uses_temporary;
+    break;
   default:// Should not happen
-    return FALSE;
+    ret= FALSE;
+    break;
   }
+  return (ret) ? MAY_SNIPE : NO_OPINION;
 }
 
-bool Sniper_module_system_user_ignore::should_snipe(THD *target_thd)
+SNIPER_DECISION Sniper_module_system_user_ignore::decide(THD *target_thd,
+                                                         SNIPER_SETTINGS *settings)
 {
-  return !target_thd->security_ctx->is_system_user;
+  if (target_thd->security_ctx->is_system_user)
+    return MUST_NOT_SNIPE;
+  return NO_OPINION;
 }

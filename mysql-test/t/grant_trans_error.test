@@ -94,21 +94,21 @@ FLUSH PRIVILEGES;
 ROLLBACK;
 FLUSH PRIVILEGES;
 
-#--echo #
-#--echo # Test error when reading mysql.sniper_settings
-#--echo #
-#--connection con1
-#BEGIN;
-#INSERT INTO mysql.sniper_settings VALUES ();
-#
-#--connection con2
-#--error ER_LOCK_WAIT_TIMEOUT
-#FLUSH PRIVILEGES;
-#
-#--connection con1
-#ROLLBACK;
-#FLUSH PRIVILEGES;
-#
+--echo #
+--echo # Test error when reading mysql.sniper_settings
+--echo #
+--connection con1
+BEGIN;
+INSERT INTO mysql.sniper_settings VALUES ();
+
+--connection con2
+--error ER_LOCK_WAIT_TIMEOUT
+FLUSH PRIVILEGES;
+
+--connection con1
+ROLLBACK;
+FLUSH PRIVILEGES;
+
 #--echo #
 #--echo # Test error when reading mysql.mapped_user
 #--echo #

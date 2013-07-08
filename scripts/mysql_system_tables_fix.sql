@@ -667,6 +667,7 @@ UPDATE user SET host=LOWER( host ) WHERE LOWER( host ) <> host;
 # MDEV-4332 longer user names
 alter table user         modify User         char(80)  binary not null default '';
 alter table system_user  modify User         char(80)  binary not null default '';
+alter table sniper_settings modify User      char(80)  binary not null default '';
 alter table db           modify User         char(80)  binary not null default '';
 alter table tables_priv  modify User         char(80)  binary not null default '';
 alter table columns_priv modify User         char(80)  binary not null default '';

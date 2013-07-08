@@ -1,0 +1,225 @@
+# Set up
+create user user1;
+grant select,insert,update,delete on *.* to user1;
+create user user2;
+grant select,insert,update,delete on *.* to user2;
+create user user3;
+grant select,insert,update,delete on *.* to user3;
+create user user4;
+grant select,insert,update,delete on *.* to user4;
+grant usage on *.* to user1 with sniper_idle_timeout 5;
+# set up the sniper.
+set @@global.sniper_idle_timeout=10;
+set @@global.sniper=1;
+# test that idle sniper will accept a lower per user defaults.
+# this should die since it is more than the 5 seconds alloted.
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as user1_reconnect;
+user1_reconnect
+1
+set @@global.sniper_idle_timeout= 5;
+# check that the idle sniper accepts a higher time.
+grant usage on *.* to user1 with sniper_idle_timeout 10;
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements
+%	user1	10	NULL	NULL	NULL	NULL	NULL
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%' WITH SNIPER_IDLE_TIMEOUT 10
+# this should not die since the wait is less than the 10 second timeout
+# on this user.
+select 1 as should_work;
+should_work
+1
+# this should die since the wait is more than the 10 second timeout on
+# the user.
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as user1_reconnect;
+user1_reconnect
+1
+# Check that the idle sniper correctly ignores users with a timeout of 0.
+grant usage on *.* to user1 with sniper_idle_timeout 0;
+show grants for user1;
+Grants for user1@%
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'user1'@'%' WITH SNIPER_IDLE_TIMEOUT 0
+# This should work fine, since a timeout of 0 disables the module.
+select 1 as should_work;
+should_work
+1
+set @@global.sniper_idle_timeout=0;
+grant usage on *.* to user1 with sniper_idle_timeout 5;
+# Test that the sniper will honor user setting even when the global
+# timeout is 0.
+select 1 as should_error;
+ERROR HY000: MySQL server has gone away
+select 1 as user1_reconnect;
+user1_reconnect
+1
+# Clean up the idle sniper test.
+drop user user1;
+set @@global.sniper_idle_timeout=0;
+set @@global.sniper_long_query_timeout=10;
+grant usage on *.* to user2 with sniper_long_query_timeout 5;
+# Test that the long query sniper will accept a lower timeout than default.
+select sleep(7) as should_error;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as user2_reconnect;
+user2_reconnect
+1
+set @@global.sniper_long_query_timeout=5;
+grant usage on *.* to user2 with sniper_long_query_timeout 10;
+# Test that the long query sniper will accept a higher timeout than default.
+select sleep(7) as should_work;
+should_work
+0
+select sleep(12) as should_error;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as user2_reconnect;
+user2_reconnect
+1
+grant usage on *.* to user2 with sniper_long_query_timeout 0;
+# Test that the long query sniper correctly ignores users with a
+# timeout of 0.
+select sleep(12) as should_work;
+should_work
+0
+set @@global.sniper_long_query_timeout=0;
+grant usage on *.* to user2 with sniper_long_query_timeout 5;
+# Test that the sniper still honors user settings even when default
+# timeout is 0.
+select sleep(7) as should_error;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as user2_reconnect;
+user2_reconnect
+1
+drop user user2;
+set @@global.sniper_long_query_timeout=0;
+set @@global.sniper_connectionless=1;
+grant usage on *.* to user3 with sniper_kill_connectionless DISABLE;
+create table ids (id int);
+# Test that the connectionless sniper ignores the query and lets it run
+insert into ids values (CONNECTION_ID());
+select sleep(10) as should_run;;
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+should_be_1
+1
+# Give the sniper time to see it.
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+should_be_1
+1
+# Clean up from the connectionless query.
+# This should not be counted as a sniper kill.
+ERROR HY000: Lost connection to MySQL server during query
+set @con3_id=(select id from ids);
+kill connection @con3_id;
+delete from ids;
+grant usage on *.* to user3 with sniper_kill_connectionless default;
+# Test that the connectionless sniper will still work when we change
+# the settings.
+insert into ids values (CONNECTION_ID());
+select sleep(10) as should_be_killed;;
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+should_be_1
+1
+# Give the sniper time to see it.
+select count(ids.id) as should_be_0
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+should_be_0
+0
+# clean up from the sniper kill.
+# this should be a sniper kill.
+ERROR HY000: Lost connection to MySQL server during query
+delete from ids;
+grant usage on *.* to user3 with sniper_kill_connectionless ENABLE;
+set @@global.sniper_connectionless=0;
+# Test that user setting will be honored even when default is to allow
+# connectionless threads to continue.
+insert into ids values (CONNECTION_ID());
+select sleep(10) as should_be_killed;;
+select count(ids.id) as should_be_1
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+should_be_1
+1
+# Give the sniper time to see it.
+select count(ids.id) as should_be_0
+from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+should_be_0
+0
+# clean up from the sniper kill.
+# this should be a sniper kill.
+ERROR HY000: Lost connection to MySQL server during query
+delete from ids;
+drop user user3;
+set @@global.sniper_connectionless=0;
+drop table ids;
+set @@global.sniper_infeasible_cross_product_rows=1000;
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 100;
+# create tables
+create table t1 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t1 (val) values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
+create table t2 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t2 (val) select val from t1 order by id DESC;
+insert into t2 (val) select val from t1 order by id ASC;
+create table t3 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t3 (val) select val from t2 order by id DESC;
+insert into t3 (val) select val from t2 order by id ASC;
+create table t4 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t4 (val) select val from t3 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+insert into t4 (val) select val from t4 order by id;
+# Test the infeasible sniper will use a lower cross product bound.
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+from t1 inner join t2;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as con4_reconnect;
+con4_reconnect
+1
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 10000;
+# Test the sniper will honor a higher bound.
+select count(*) as works_high_cross, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3;
+works_high_cross	sleep_time
+8000	0
+# Test the sniper will still kill an even bigger query.
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3 inner join t4;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as con4_reconnect;
+con4_reconnect
+1
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 0;
+# Test the sniper will ignore a user with cross_product set to 0.
+select count(*) as works_high_cross, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3 inner join t4;
+works_high_cross	sleep_time
+10240000	0
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 1000;
+set @@global.sniper_infeasible_cross_product_rows=0;
+# Test that sniper will still honor user setting even when the default
+# is to allow all queries.
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+from t1 inner join t2 inner join t3;
+ERROR HY000: Lost connection to MySQL server during query
+select 1 as con4_reconnect;
+con4_reconnect
+1
+drop user user4;
+drop table t1,t2,t3,t4;
+set @@global.sniper_infeasible_cross_product_rows=0;
+# Clean up
+select * from mysql.sniper_settings;
+Host	User	idle_timeout	long_query_timeout	kill_connectionless	infeasible_cross_product_rows	infeasible_max_time	infeasible_secondary_requirements

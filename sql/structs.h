@@ -229,7 +229,6 @@ typedef struct user_resources {
   uint specified_limits;
 } USER_RESOURCES;
 
-
 /*
   This structure is used for counting resources consumed and for checking
   them against specified user limits.

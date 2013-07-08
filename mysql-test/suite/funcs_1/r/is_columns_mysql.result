@@ -193,6 +193,14 @@ def	mysql	slow_log	sql_text	11	NULL	NO	mediumtext	16777215	16777215	NULL	NULL	NU
 def	mysql	slow_log	start_time	1	CURRENT_TIMESTAMP(6)	NO	timestamp	NULL	NULL	NULL	NULL	6	NULL	NULL	timestamp(6)		on update CURRENT_TIMESTAMP	select,insert,update,references	
 def	mysql	slow_log	thread_id	12	NULL	NO	bigint	NULL	NULL	20	0	NULL	NULL	NULL	bigint(21) unsigned			select,insert,update,references	
 def	mysql	slow_log	user_host	2	NULL	NO	mediumtext	16777215	16777215	NULL	NULL	NULL	utf8	utf8_general_ci	mediumtext			select,insert,update,references	
+def	mysql	sniper_settings	Host	1		NO	char	60	180	NULL	NULL	NULL	utf8	utf8_bin	char(60)	PRI		select,insert,update,references	
+def	mysql	sniper_settings	idle_timeout	3	NULL	YES	int	NULL	NULL	10	0	NULL	NULL	NULL	int(11) unsigned			select,insert,update,references	
+def	mysql	sniper_settings	infeasible_cross_product_rows	6	NULL	YES	double	NULL	NULL	22	NULL	NULL	NULL	NULL	double unsigned			select,insert,update,references	
+def	mysql	sniper_settings	infeasible_max_time	7	NULL	YES	int	NULL	NULL	10	0	NULL	NULL	NULL	int(11) unsigned			select,insert,update,references	
+def	mysql	sniper_settings	infeasible_secondary_requirements	8	NULL	YES	enum	22	66	NULL	NULL	NULL	utf8	utf8_bin	enum('NONE','FILESORT','TEMPORARY','FILESORT_AND_TEMPORARY','FILESORT_OR_TEMPORARY')			select,insert,update,references	
+def	mysql	sniper_settings	kill_connectionless	5	NULL	YES	tinyint	NULL	NULL	3	0	NULL	NULL	NULL	tinyint(1)			select,insert,update,references	
+def	mysql	sniper_settings	long_query_timeout	4	NULL	YES	int	NULL	NULL	10	0	NULL	NULL	NULL	int(11) unsigned			select,insert,update,references	
+def	mysql	sniper_settings	User	2		NO	char	80	240	NULL	NULL	NULL	utf8	utf8_bin	char(80)	PRI		select,insert,update,references	
 def	mysql	system_user	Alter_priv	17	N	NO	enum	1	3	NULL	NULL	NULL	utf8	utf8_general_ci	enum('N','Y')			select,insert,update,references	
 def	mysql	system_user	Alter_routine_priv	28	N	NO	enum	1	3	NULL	NULL	NULL	utf8	utf8_general_ci	enum('N','Y')			select,insert,update,references	
 def	mysql	system_user	authentication_string	42	NULL	NO	text	65535	65535	NULL	NULL	NULL	utf8	utf8_bin	text			select,insert,update,references	
@@ -357,6 +365,7 @@ COL_CML	DATA_TYPE	CHARACTER_SET_NAME	COLLATION_NAME
 NULL	bigint	NULL	NULL
 NULL	datetime	NULL	NULL
 NULL	decimal	NULL	NULL
+NULL	double	NULL	NULL
 NULL	int	NULL	NULL
 NULL	smallint	NULL	NULL
 NULL	time	NULL	NULL
@@ -569,6 +578,14 @@ NULL	mysql	slow_log	insert_id	int	NULL	NULL	NULL	NULL	int(11)
 NULL	mysql	slow_log	server_id	int	NULL	NULL	NULL	NULL	int(10) unsigned
 1.0000	mysql	slow_log	sql_text	mediumtext	16777215	16777215	utf8	utf8_general_ci	mediumtext
 NULL	mysql	slow_log	thread_id	bigint	NULL	NULL	NULL	NULL	bigint(21) unsigned
+3.0000	mysql	sniper_settings	Host	char	60	180	utf8	utf8_bin	char(60)
+3.0000	mysql	sniper_settings	User	char	80	240	utf8	utf8_bin	char(80)
+NULL	mysql	sniper_settings	idle_timeout	int	NULL	NULL	NULL	NULL	int(11) unsigned
+NULL	mysql	sniper_settings	long_query_timeout	int	NULL	NULL	NULL	NULL	int(11) unsigned
+NULL	mysql	sniper_settings	kill_connectionless	tinyint	NULL	NULL	NULL	NULL	tinyint(1)
+NULL	mysql	sniper_settings	infeasible_cross_product_rows	double	NULL	NULL	NULL	NULL	double unsigned
+NULL	mysql	sniper_settings	infeasible_max_time	int	NULL	NULL	NULL	NULL	int(11) unsigned
+3.0000	mysql	sniper_settings	infeasible_secondary_requirements	enum	22	66	utf8	utf8_bin	enum('NONE','FILESORT','TEMPORARY','FILESORT_AND_TEMPORARY','FILESORT_OR_TEMPORARY')
 3.0000	mysql	system_user	Host	char	60	180	utf8	utf8_bin	char(60)
 3.0000	mysql	system_user	User	char	80	240	utf8	utf8_bin	char(80)
 1.0000	mysql	system_user	Password	char	41	41	latin1	latin1_bin	char(41)

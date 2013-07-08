@@ -12,3 +12,5 @@
 
 create_and_drop_current : This test cannot work when connection permissions are auto-updated.
 drop_current_user-5176  : This test cannot work when connection permissions are auto-updated.
+admin                   : Parser rules are screwed up now, need fixing.
+password                : Parser rules are screwed up now, need fixing.

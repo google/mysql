@@ -141,6 +141,8 @@ def	mysql	roles_mapping	mysql	Host
 def	mysql	roles_mapping	mysql	Host
 def	mysql	roles_mapping	mysql	Host
 def	mysql	servers	mysql	PRIMARY
+def	mysql	sniper_settings	mysql	PRIMARY
+def	mysql	sniper_settings	mysql	PRIMARY
 def	mysql	system_user	mysql	PRIMARY
 def	mysql	system_user	mysql	PRIMARY
 def	mysql	table_stats	mysql	PRIMARY

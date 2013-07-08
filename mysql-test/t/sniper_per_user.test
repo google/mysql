@@ -1,0 +1,324 @@
+# Tests for per user settings on the sniper
+#
+# This doesn't work on the embedded version because the code is only compiled
+# on the non-embedded version.
+
+--source include/not_embedded.inc
+
+let $sniper_kills=11;
+--source include/sniper_used.inc
+
+--echo # Set up
+
+create user user1; # User for idle test
+grant select,insert,update,delete on *.* to user1;
+create user user2; # User for long query test
+grant select,insert,update,delete on *.* to user2;
+create user user3; # User for connectionless test
+grant select,insert,update,delete on *.* to user3;
+create user user4; # user for infeasible test
+grant select,insert,update,delete on *.* to user4;
+
+grant usage on *.* to user1 with sniper_idle_timeout 5;
+
+--echo # set up the sniper.
+set @@global.sniper_idle_timeout=10;
+set @@global.sniper=1;
+
+connect (con1, localhost, user1,,);
+--echo # test that idle sniper will accept a lower per user defaults.
+connection con1;
+--disable_reconnect
+--echo # this should die since it is more than the 5 seconds alloted.
+--sleep 7
+--error 2006
+select 1 as should_error;
+--enable_reconnect
+select 1 as user1_reconnect;
+
+connection default;
+set @@global.sniper_idle_timeout= 5;
+--echo # check that the idle sniper accepts a higher time.
+grant usage on *.* to user1 with sniper_idle_timeout 10;
+select * from mysql.sniper_settings;
+show grants for user1;
+
+connection con1;
+--disable_reconnect
+--echo # this should not die since the wait is less than the 10 second timeout
+--echo # on this user.
+--sleep 7
+select 1 as should_work;
+
+--echo # this should die since the wait is more than the 10 second timeout on
+--echo # the user.
+--sleep 12
+--error 2006
+select 1 as should_error;
+--enable_reconnect
+select 1 as user1_reconnect;
+
+--echo # Check that the idle sniper correctly ignores users with a timeout of 0.
+connection default;
+grant usage on *.* to user1 with sniper_idle_timeout 0;
+show grants for user1;
+
+connection con1;
+--disable_reconnect
+--echo # This should work fine, since a timeout of 0 disables the module.
+--sleep 12
+select 1 as should_work;
+--enable_reconnect
+
+connection default;
+set @@global.sniper_idle_timeout=0;
+grant usage on *.* to user1 with sniper_idle_timeout 5;
+
+connection con1;
+--disable_reconnect
+--echo # Test that the sniper will honor user setting even when the global
+--echo # timeout is 0.
+--sleep 12
+--error 2006
+select 1 as should_error;
+--enable_reconnect
+select 1 as user1_reconnect;
+
+--echo # Clean up the idle sniper test.
+connection default;
+disconnect con1;
+drop user user1;
+set @@global.sniper_idle_timeout=0;
+set @@global.sniper_long_query_timeout=10;
+grant usage on *.* to user2 with sniper_long_query_timeout 5;
+connect (con2, localhost, user2,,);
+
+connection con2;
+--echo # Test that the long query sniper will accept a lower timeout than default.
+--disable_reconnect
+--error 2013
+select sleep(7) as should_error;
+--enable_reconnect
+select 1 as user2_reconnect;
+
+connection default;
+set @@global.sniper_long_query_timeout=5;
+grant usage on *.* to user2 with sniper_long_query_timeout 10;
+
+connection con2;
+--echo # Test that the long query sniper will accept a higher timeout than default.
+--disable_reconnect
+select sleep(7) as should_work;
+--error 2013
+select sleep(12) as should_error;
+--enable_reconnect
+select 1 as user2_reconnect;
+
+connection default;
+grant usage on *.* to user2 with sniper_long_query_timeout 0;
+
+connection con2;
+--echo # Test that the long query sniper correctly ignores users with a
+--echo # timeout of 0.
+--disable_reconnect
+select sleep(12) as should_work;
+--enable_reconnect
+
+connection default;
+set @@global.sniper_long_query_timeout=0;
+grant usage on *.* to user2 with sniper_long_query_timeout 5;
+
+connection con2;
+--echo # Test that the sniper still honors user settings even when default
+--echo # timeout is 0.
+--disable_reconnect
+--error 2013
+select sleep(7) as should_error;
+--enable_reconnect
+select 1 as user2_reconnect;
+
+connection default;
+disconnect con2;
+drop user user2;
+set @@global.sniper_long_query_timeout=0;
+set @@global.sniper_connectionless=1;
+grant usage on *.* to user3 with sniper_kill_connectionless DISABLE;
+connect(con3, localhost, user3);
+create table ids (id int);
+
+connection con3;
+--echo # Test that the connectionless sniper ignores the query and lets it run
+insert into ids values (CONNECTION_ID());
+--send select sleep(10) as should_run;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+sudden_close con3;
+--echo # Give the sniper time to see it.
+--sleep 3
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+--echo # Clean up from the connectionless query.
+connection con3;
+--echo # This should not be counted as a sniper kill.
+--error 2013
+--reap
+
+connection default;
+set @con3_id=(select id from ids);
+kill connection @con3_id;
+disconnect con3;
+delete from ids;
+grant usage on *.* to user3 with sniper_kill_connectionless default;
+connect(con3, localhost, user3);
+
+connection con3;
+--echo # Test that the connectionless sniper will still work when we change
+--echo # the settings.
+insert into ids values (CONNECTION_ID());
+--send select sleep(10) as should_be_killed;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+sudden_close con3;
+--echo # Give the sniper time to see it.
+--sleep 3
+select count(ids.id) as should_be_0
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+--echo # clean up from the sniper kill.
+connection con3;
+--echo # this should be a sniper kill.
+--error 2013
+--reap
+
+connection default;
+disconnect con3;
+delete from ids;
+grant usage on *.* to user3 with sniper_kill_connectionless ENABLE;
+set @@global.sniper_connectionless=0;
+connect(con3, localhost, user3);
+
+connection con3;
+--echo # Test that user setting will be honored even when default is to allow
+--echo # connectionless threads to continue.
+insert into ids values (CONNECTION_ID());
+--send select sleep(10) as should_be_killed;
+
+connection default;
+--sleep 1
+select count(ids.id) as should_be_1
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+sudden_close con3;
+--echo # Give the sniper time to see it.
+--sleep 3
+select count(ids.id) as should_be_0
+  from ids inner join INFORMATION_SCHEMA.PROCESSLIST
+  on ids.id=INFORMATION_SCHEMA.PROCESSLIST.ID;
+
+--echo # clean up from the sniper kill.
+connection con3;
+--echo # this should be a sniper kill.
+--error 2013
+--reap
+
+connection default;
+disconnect con3;
+delete from ids;
+drop user user3;
+set @@global.sniper_connectionless=0;
+drop table ids;
+set @@global.sniper_infeasible_cross_product_rows=1000;
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 100;
+connect (con4, localhost, user4);
+
+--echo # create tables
+create table t1 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t1 (val) values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
+
+create table t2 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t2 (val) select val from t1 order by id DESC; # 10 rows
+insert into t2 (val) select val from t1 order by id ASC;  # 20 rows
+
+create table t3 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t3 (val) select val from t2 order by id DESC; # 20 rows
+insert into t3 (val) select val from t2 order by id ASC;  # 40 rows
+
+create table t4 (val int, id int NOT NULL AUTO_INCREMENT, primary key (id));
+insert into t4 (val) select val from t3 order by id;      # 40   rows
+insert into t4 (val) select val from t4 order by id;      # 80   rows
+insert into t4 (val) select val from t4 order by id;      # 160  rows
+insert into t4 (val) select val from t4 order by id;      # 320  rows
+insert into t4 (val) select val from t4 order by id;      # 640  rows
+insert into t4 (val) select val from t4 order by id;      # 1280 rows
+
+connection con4;
+--disable_reconnect
+--echo # Test the infeasible sniper will use a lower cross product bound.
+--error 2013
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+  from t1 inner join t2;
+--enable_reconnect
+select 1 as con4_reconnect;
+
+connection default;
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 10000;
+
+connection con4;
+--disable_reconnect
+--echo # Test the sniper will honor a higher bound.
+select count(*) as works_high_cross, sleep(3) as sleep_time
+  from t1 inner join t2 inner join t3;
+--echo # Test the sniper will still kill an even bigger query.
+--error 2013
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+  from t1 inner join t2 inner join t3 inner join t4;
+--enable_reconnect
+select 1 as con4_reconnect;
+
+connection default;
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 0;
+
+connection con4;
+--disable_reconnect
+--echo # Test the sniper will ignore a user with cross_product set to 0.
+select count(*) as works_high_cross, sleep(3) as sleep_time
+  from t1 inner join t2 inner join t3 inner join t4;
+--enable_reconnect
+
+connection default;
+grant usage on *.* to user4 with sniper_infeasible_cross_product_rows 1000;
+set @@global.sniper_infeasible_cross_product_rows=0;
+
+connection con4;
+--echo # Test that sniper will still honor user setting even when the default
+--echo # is to allow all queries.
+--disable_reconnect
+--error 2013
+select count(*) as fails_high_cross, sleep(3) as sleep_time
+  from t1 inner join t2 inner join t3;
+--enable_reconnect
+select 1 as con4_reconnect;
+
+connection default;
+disconnect con4;
+drop user user4;
+drop table t1,t2,t3,t4;
+set @@global.sniper_infeasible_cross_product_rows=0;
+
+--echo # Clean up
+connection default;
+select * from mysql.sniper_settings;

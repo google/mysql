@@ -1,0 +1,107 @@
+# Tests for the grant syntax for sniper
+#
+# This doesn't work on the embedded version because the code is only compiled
+# on the non-embedded version.
+
+--source include/not_embedded.inc
+
+--echo # Set up
+
+create user user1;
+grant select,insert,update,delete on *.* to user1;
+
+--echo # test that grant will set the sniper settings in the table correctly.
+grant usage on *.* to user1 with SnIpEr_Idle_Timeout 5
+                                 sniper_long_qUery_timeout 5
+                                 sniPER_infeasiBle_cross_product_rows 1000
+                                 SNIper_infeasibLe_seCONDARY_REQuirements filesort;
+
+select * from mysql.sniper_settings;
+show grants for user1;
+
+--echo # Test that flush privileges works.
+update mysql.sniper_settings set long_query_timeout=25 where user='user1';
+flush privileges;
+show grants for user1;
+
+--echo # test that grant can set it back to null.
+grant usage on *.* to user1 with snipeR_INFEASIBLE_secondary_requirements default
+                                 sniper_long_query_TIMEOUT DEFault
+                                 SNIPER_infeaSiBLE_crosS_PRoduct_rows DEFAULT;
+select * from mysql.sniper_settings;
+show grants for user1;
+
+--echo # Test that grants will come along when the user is renamed.
+create user user_temp;
+grant usage on *.* to user_temp with sniper_idle_timeout 10;
+show grants for user_temp;
+rename user user_temp to user_temp2;
+select * from mysql.sniper_settings where user!='user1';
+show grants for user_temp2;
+
+--echo # Test that grants will be deleted with the user is deleted.
+drop user user_temp2;
+select * from mysql.sniper_settings where user!='user1';
+
+--echo # Test that grants will accept expressions.
+delete from mysql.sniper_settings;
+flush privileges;
+
+set @variable_a= 100;
+set @variable_b= 124.84;
+
+grant usage on *.* to user1 with
+        sniper_idle_timeout 10+5
+        sniper_long_query_timeout @variable_a+123
+        sniper_infeasible_cross_product_rows @variable_b*@variable_a
+        sniper_infeasible_max_time cast(@variable_b as int)
+        sniper_kill_connectionless CASE WHEN @variable_a > 10
+                                        THEN "ENABLE"
+                                        ELSE "DISABLE"
+                                   END
+        sniper_infeasible_secondary_requirements IF(TRUE, "NONE",
+                                                          "SOMETHING DUMB");
+
+select * from mysql.sniper_settings;
+show grants for user1;
+
+--echo # Test that unknown settings will trigger an error and not cause an update.
+delete from mysql.sniper_settings;
+flush privileges;
+
+--error ER_UNKNOWN_OPTION
+grant usage on *.* to user1 with sniper_idle_timeout 10
+                                 sniper_option_that_doesnt_really_exist 100
+                                 sniper_long_query_timeout 10;
+
+select * from mysql.sniper_settings;
+show grants for user1;
+
+--echo # Test that only the final setting is used.
+grant usage on *.* to user1 with sniper_long_query_timeout 100
+                                 sniper_long_query_timeout default;
+
+select * from mysql.sniper_settings;
+show grants for user1;
+
+--echo # Test that subselects do not work.
+--error ER_PARSE_ERROR
+grant usage on *.* to user1 with sniper_long_query_timeout (select 123);
+
+select * from mysql.sniper_settings;
+show grants for user1;
+
+--echo # Test that wrong type of value is caught.
+--error ER_BAD_OPTION_VALUE
+grant usage on *.* to user1 with sniper_idle_timeout 12.832;
+--error ER_BAD_OPTION_VALUE
+grant usage on *.* to user1 with sniper_idle_timeout -19;
+--error ER_BAD_OPTION_VALUE
+grant usage on *.* to user1 with sniper_idle_timeout "NOT AN INT";
+
+select * from mysql.sniper_settings;
+show grants for user1;
+
+--echo # Clean up;
+drop user user1;
+select * from mysql.sniper_settings;

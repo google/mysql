@@ -2653,7 +2653,7 @@ static bool sniper_set_activity(sys_var *self, THD *thd, enum_var_type type)
 
 static Sys_var_mybool Sys_sniper_active(
        "sniper", "Enable sniping support",
-       GLOBAL_VAR(sniper_active), CMD_LINE(OPT_ARG), DEFAULT(FALSE),
+       GLOBAL_VAR(sniper_active), CMD_LINE(OPT_ARG), DEFAULT(TRUE),
        NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(0),
        ON_UPDATE(sniper_set_activity));
 
@@ -2674,10 +2674,7 @@ static Sys_var_uint Sys_sniper_check_period(
 static bool sniper_set_unauthenticated(sys_var *self, THD *thd,
                                        enum_var_type type)
 {
-  if (sniper_ignore_unauthenticated)
-    sniper.register_global_check(&sniper_module_unauthenticated);
-  else
-    sniper.unregister_global_check(&sniper_module_unauthenticated);
+  sniper_module_unauthenticated.set_active(sniper_ignore_unauthenticated);
   return FALSE;
 }
 
@@ -2691,13 +2688,7 @@ static Sys_var_mybool Sys_sniper_ignore_unauthenticated(
 
 static bool sniper_set_idle(sys_var *self, THD *thd, enum_var_type type)
 {
-  if (sniper_idle_timeout)
-  {
-    sniper_module_idle.set_timeout(sniper_idle_timeout);
-    sniper.register_periodic_check(&sniper_module_idle);
-  }
-  else
-    sniper.unregister_periodic_check(&sniper_module_idle);
+  sniper_module_idle.set_timeout(sniper_idle_timeout);
   return FALSE;
 }
 
@@ -2712,13 +2703,7 @@ static Sys_var_uint Sys_sniper_idle_timeout(
 static bool sniper_set_long_query_timeout(sys_var *self, THD *thd,
                                           enum_var_type type)
 {
-  if (sniper_long_query_timeout)
-  {
-    sniper_module_long_query.set_max_time(sniper_long_query_timeout);
-    sniper.register_periodic_check(&sniper_module_long_query);
-  }
-  else
-    sniper.unregister_periodic_check(&sniper_module_long_query);
+  sniper_module_long_query.set_max_time(sniper_long_query_timeout);
   return FALSE;
 }
 
@@ -2734,12 +2719,7 @@ static Sys_var_uint Sys_sniper_long_query_timeout(
 static bool sniper_set_connectionless(sys_var *self, THD *thd,
                                       enum_var_type type)
 {
-  if (sniper_connectionless)
-  {
-    sniper.register_periodic_check(&sniper_module_connectionless);
-  }
-  else
-    sniper.unregister_periodic_check(&sniper_module_connectionless);
+  sniper_module_connectionless.set_active(sniper_connectionless);
   return FALSE;
 }
 
@@ -2754,14 +2734,8 @@ static bool sniper_set_infeasible_max_cross_product_rows(sys_var *self,
                                                          THD *thd,
                                                          enum_var_type type)
 {
-  if (sniper_infeasible_max_cross_product_rows)
-  {
-    sniper_module_infeasible.set_max_cross_product_rows(
-        sniper_infeasible_max_cross_product_rows);
-    sniper.register_periodic_check(&sniper_module_infeasible);
-  }
-  else
-    sniper.unregister_periodic_check(&sniper_module_infeasible);
+  sniper_module_infeasible.set_max_cross_product_rows(
+      sniper_infeasible_max_cross_product_rows);
   return FALSE;
 }
 

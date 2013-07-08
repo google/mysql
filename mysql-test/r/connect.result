@@ -23,6 +23,7 @@ proxies_priv
 roles_mapping
 servers
 slow_log
+sniper_settings
 system_user
 table_stats
 tables_priv
@@ -64,6 +65,7 @@ proxies_priv
 roles_mapping
 servers
 slow_log
+sniper_settings
 system_user
 table_stats
 tables_priv
@@ -113,6 +115,7 @@ proxies_priv
 roles_mapping
 servers
 slow_log
+sniper_settings
 system_user
 table_stats
 tables_priv

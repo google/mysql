@@ -4,6 +4,7 @@
 #define SNIPER_MODULES_INCLUDED
 
 #include "sql_class.h"
+#include "sniper_structs.h"
 #include "sniper.h"
 
 extern bool sniper_connectionless;
@@ -15,15 +16,6 @@ extern double sniper_infeasible_max_cross_product_rows;
 extern uint sniper_infeasible_max_time;
 
 extern ulong sniper_infeasible_secondary_requirements;
-typedef enum
-{
-  NONE= 0,
-  FILESORT,
-  TEMPORARY,
-  FILESORT_AND_TEMPORARY,
-  FILESORT_OR_TEMPORARY,
-  ILLEGAL= 255
-} SNIPER_INFEASIBLE_SECONDARY_REQUIREMENTS;
 
 class Sniper_module_priv_ignore :public Sniper_module
 {
@@ -32,10 +24,9 @@ private:
 public:
   Sniper_module_priv_ignore(ulong ignored_privs)
       :Sniper_module("Sniper_module_priv_ignore",
-                    "Will return FALSE if the thread has any of the "
-                    "permissions given."),
+                     "Will VETO sniping if the thread has any of the "
+                     "permissions given."),
        ignored(ignored_privs) {};
-  virtual bool should_snipe(THD *target_thd);
 
   void set_ignored_privs(ulong ignored_privs)
   {
@@ -43,6 +34,8 @@ public:
     ignored= ignored_privs;
     config_exit();
   }
+protected:
+  virtual SNIPER_DECISION decide(THD *target_thd, SNIPER_SETTINGS *settings);
 };
 
 class Sniper_module_idle :public Sniper_module
@@ -52,10 +45,9 @@ private:
 public:
   Sniper_module_idle(uint timeout)
       :Sniper_module("Sniper_module_idle",
-                    "Will return true if the thread has been idle "
-                    "for more the given number of seconds."),
+                     "Will APPROVE sniping if the thread has been idle "
+                     "for more the given number of seconds."),
        max_time(timeout) {};
-  virtual bool should_snipe(THD *target_thd);
 
   void set_timeout(uint timeout)
   {
@@ -63,26 +55,48 @@ public:
     max_time= timeout;
     config_exit();
   }
+protected:
+  virtual SNIPER_DECISION decide(THD *target_thd, SNIPER_SETTINGS *settings);
 };
 
 class Sniper_module_connectionless :public Sniper_module
 {
+private:
+  bool active;
 public:
   Sniper_module_connectionless()
       :Sniper_module("Sniper_module_connectionless",
-                    "Will return true if a user is not connected to "
-                    "the server") {};
-  virtual bool should_snipe(THD *target_thd);
+                     "Will APPROVE sniping if a user is not connected to "
+                     "the server"),
+       active(TRUE) {};
+  void set_active(bool is_active)
+  {
+    config_enter();
+    active= is_active;
+    config_exit();
+  }
+protected:
+  virtual SNIPER_DECISION decide(THD *target_thd, SNIPER_SETTINGS *settings);
 };
 
 class Sniper_module_unauthenticated :public Sniper_module
 {
+private:
+  bool active;
 public:
   Sniper_module_unauthenticated()
       :Sniper_module("Sniper_module_unauthenticated",
-                    "Will only return true if the user is "
-                    "authenticated.") {};
-  virtual bool should_snipe(THD *target_thd);
+                     "Will VETO sniping if the user is not"
+                     "authenticated yet."),
+       active(TRUE) {};
+  void set_active(bool is_active)
+  {
+    config_enter();
+    active= is_active;
+    config_exit();
+  }
+protected:
+  virtual SNIPER_DECISION decide(THD *target_thd, SNIPER_SETTINGS *settings);
 };
 
 class Sniper_module_long_query :public Sniper_module
@@ -92,12 +106,10 @@ private:
 public:
   Sniper_module_long_query(uint time)
       :Sniper_module("Sniper_module_long_query",
-                    "Will return true if the command is something "
-                    "other then \"sleep\" or \"binlog dump\" and it "
-                    "has been running for longer then the given "
-                    "time."),
+                     "Will APPROVE sniping if the command is something "
+                     "other then \"sleep\" and it has been running for "
+                     "longer then the given time."),
       max_time(time) {};
-  virtual bool should_snipe(THD *target_thd);
 
   void set_max_time(uint time)
   {
@@ -105,6 +117,8 @@ public:
     max_time= time;
     config_exit();
   }
+protected:
+  virtual SNIPER_DECISION decide(THD *target_thd, SNIPER_SETTINGS *settings);
 };
 
 class Sniper_module_infeasible : public Sniper_module
@@ -118,7 +132,7 @@ public:
                            uint max_time_arg,
                            ulong secondary_requirements_arg)
       :Sniper_module("Sniper_module_infeasible",
-                     "Will return true if the command is judged to be "
+                     "Will APPROVE sniping if the command is judged to be "
                      "infeasible. This decision is made based on the "
                      "cross-product of all the tables and whether the "
                      "query requires the use of filesort or temporary "
@@ -128,30 +142,9 @@ public:
       max_cross_product_rows(max_cross_product_rows_arg),
       max_time(max_time_arg)
   {
-    switch(secondary_requirements_arg)
-    {
-    case NONE:
-      secondary_requirements= NONE;
-      break;
-    case FILESORT:
-      secondary_requirements= FILESORT;
-      break;
-    case TEMPORARY:
-      secondary_requirements= TEMPORARY;
-      break;
-    case FILESORT_AND_TEMPORARY:
-      secondary_requirements= FILESORT_AND_TEMPORARY;
-      break;
-    case FILESORT_OR_TEMPORARY:
-      secondary_requirements= FILESORT_OR_TEMPORARY;
-      break;
-    default:
-      secondary_requirements= ILLEGAL;
-      break;
-    }
+    set_secondary_requirements(secondary_requirements_arg);
   };
 
-  virtual bool should_snipe(THD *target_thd);
   void set_max_cross_product_rows(double new_max_cross_product)
   {
     config_enter();
@@ -168,20 +161,20 @@ public:
   {
     switch(requirements)
     {
-    case NONE:
-      set_secondary_requirements(NONE);
+    case REQUIRES_NONE:
+      set_secondary_requirements(REQUIRES_NONE);
       break;
-    case FILESORT:
-      set_secondary_requirements(FILESORT);
+    case REQUIRES_FILESORT:
+      set_secondary_requirements(REQUIRES_FILESORT);
       break;
-    case TEMPORARY:
-      set_secondary_requirements(TEMPORARY);
+    case REQUIRES_TEMPORARY:
+      set_secondary_requirements(REQUIRES_TEMPORARY);
       break;
-    case FILESORT_AND_TEMPORARY:
-      set_secondary_requirements(FILESORT_AND_TEMPORARY);
+    case REQUIRES_FILESORT_AND_TEMPORARY:
+      set_secondary_requirements(REQUIRES_FILESORT_AND_TEMPORARY);
       break;
-    case FILESORT_OR_TEMPORARY:
-      set_secondary_requirements(FILESORT_OR_TEMPORARY);
+    case REQUIRES_FILESORT_OR_TEMPORARY:
+      set_secondary_requirements(REQUIRES_FILESORT_OR_TEMPORARY);
       break;
     default:
       set_secondary_requirements(ILLEGAL);
@@ -196,6 +189,8 @@ public:
     secondary_requirements= requirements;
     config_exit();
   }
+protected:
+  virtual SNIPER_DECISION decide(THD *target_thd, SNIPER_SETTINGS *settings);
 };
 
 class Sniper_module_system_user_ignore : public Sniper_module
@@ -203,9 +198,10 @@ class Sniper_module_system_user_ignore : public Sniper_module
 public:
   Sniper_module_system_user_ignore()
       : Sniper_module("Sniper_module_system_user_ignore",
-                      "Will return false if the user is a system_user so "
-                      "it can be ignored") {}
-  virtual bool should_snipe(THD *target_thd);
+                      "Will VETO sniping if the user is a system_user "
+                      "so it can be ignored") {}
+protected:
+  virtual SNIPER_DECISION decide(THD *target_thd, SNIPER_SETTINGS *settings);
 };
 
 extern Sniper sniper;

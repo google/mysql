@@ -46,4 +46,13 @@ FLUSH PRIVILEGES;
 ERROR HY000: Lock wait timeout exceeded; try restarting transaction
 ROLLBACK;
 FLUSH PRIVILEGES;
+#
+# Test error when reading mysql.sniper_settings
+#
+BEGIN;
+INSERT INTO mysql.sniper_settings VALUES ();
+FLUSH PRIVILEGES;
+ERROR HY000: Lock wait timeout exceeded; try restarting transaction
+ROLLBACK;
+FLUSH PRIVILEGES;
 SET GLOBAL innodb_lock_wait_timeout=@save_lock_wait_timeout;

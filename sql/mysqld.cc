@@ -730,6 +730,7 @@ mysql_mutex_t
   LOCK_user_conn, LOCK_slave_list, LOCK_active_mi,
   LOCK_connection_count, LOCK_error_messages;
 mysql_mutex_t LOCK_cleanup;
+mysql_mutex_t LOCK_sniper_config;
 
 mysql_mutex_t LOCK_stats, LOCK_global_user_client_stats,
               LOCK_global_table_stats, LOCK_global_index_stats;
@@ -911,6 +912,7 @@ PSI_mutex_key key_BINLOG_LOCK_index, key_BINLOG_LOCK_xid_list,
   key_LOCK_error_messages, key_LOG_INFO_lock,
   key_LOCK_thread_count, key_LOCK_thread_cache,
   key_PARTITION_LOCK_auto_inc;
+PSI_mutex_key key_LOCK_sniper_config;
 PSI_mutex_key key_LOCK_cleanup;
 PSI_mutex_key key_RELAYLOG_LOCK_index;
 PSI_mutex_key key_LOCK_slave_state, key_LOCK_binlog_state,
@@ -959,6 +961,7 @@ static PSI_mutex_info all_server_mutexes[]=
   { &key_LOCK_rpl_status, "LOCK_rpl_status", PSI_FLAG_GLOBAL},
   { &key_LOCK_server_started, "LOCK_server_started", PSI_FLAG_GLOBAL},
   { &key_LOCK_status, "LOCK_status", PSI_FLAG_GLOBAL},
+  { &key_LOCK_sniper_config, "LOCK_sniper_config", PSI_FLAG_GLOBAL},
   { &key_LOCK_system_variables_hash, "LOCK_system_variables_hash", PSI_FLAG_GLOBAL},
   { &key_LOCK_stats, "LOCK_stats", PSI_FLAG_GLOBAL},
   { &key_LOCK_global_user_client_stats, "LOCK_global_user_client_stats", PSI_FLAG_GLOBAL},
@@ -2203,6 +2206,7 @@ static void clean_up_mutexes()
   mysql_mutex_destroy(&LOCK_thread_count);
   mysql_mutex_destroy(&LOCK_thread_cache);
   mysql_mutex_destroy(&LOCK_status);
+  mysql_mutex_destroy(&LOCK_sniper_config);
   mysql_mutex_destroy(&LOCK_delayed_insert);
   mysql_mutex_destroy(&LOCK_delayed_status);
   mysql_mutex_destroy(&LOCK_delayed_create);
@@ -4443,6 +4447,7 @@ static int init_thread_environment()
   mysql_mutex_init(key_LOCK_thread_count, &LOCK_thread_count, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_thread_cache, &LOCK_thread_cache, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_status, &LOCK_status, MY_MUTEX_INIT_FAST);
+  mysql_mutex_init(key_LOCK_sniper_config, &LOCK_sniper_config, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_delayed_insert,
                    &LOCK_delayed_insert, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_delayed_status,
@@ -5418,47 +5423,34 @@ static void test_lc_time_sz()
 #ifndef EMBEDDED_LIBRARY
 static void setup_sniper()
 {
-  sniper_active= sniper_active
-      || sniper_idle_timeout
-      || sniper_connectionless
-      || sniper_long_query_timeout
-      || sniper_infeasible_max_cross_product_rows;
+  sniper_module_idle.set_timeout(sniper_idle_timeout);
+  sniper.register_module(&sniper_module_idle);
+
+  sniper_module_connectionless.set_active(sniper_connectionless);
+  sniper.register_module(&sniper_module_connectionless);
+
+  sniper_module_long_query.set_max_time(sniper_long_query_timeout);
+  sniper.register_module(&sniper_module_long_query);
+
+  sniper_module_infeasible.set_max_cross_product_rows(
+      sniper_infeasible_max_cross_product_rows);
+  sniper_module_infeasible.set_max_time(sniper_infeasible_max_time);
+  sniper_module_infeasible.set_secondary_requirements(
+      sniper_infeasible_secondary_requirements);
+  sniper.register_module(&sniper_module_infeasible);
+
   sniper_module_priv_ignore.set_ignored_privs(SUPER_ACL);
-  sniper.register_global_check(&sniper_module_priv_ignore);
-  sniper.register_global_check(&sniper_module_system_user_ignore);
-  if (sniper_ignore_unauthenticated)
-  {
-    sniper.register_global_check(&sniper_module_unauthenticated);
-  }
-  if (sniper_idle_timeout)
-  {
-    sniper_module_idle.set_timeout(sniper_idle_timeout);
-    sniper.register_periodic_check(&sniper_module_idle);
-  }
-  if (sniper_connectionless)
-  {
-    sniper.register_periodic_check(&sniper_module_connectionless);
-  }
-  if (sniper_long_query_timeout)
-  {
-    sniper_module_long_query.set_max_time(sniper_long_query_timeout);
-    sniper.register_periodic_check(&sniper_module_long_query);
-  }
-  if (sniper_infeasible_max_cross_product_rows)
-  {
-    sniper_module_infeasible.set_max_cross_product_rows(
-        sniper_infeasible_max_cross_product_rows);
-    sniper_module_infeasible.set_max_time(sniper_infeasible_max_time);
-    sniper_module_infeasible.set_secondary_requirements(
-        sniper_infeasible_secondary_requirements);
-    sniper.register_periodic_check(&sniper_module_infeasible);
-  }
+  sniper.register_module(&sniper_module_priv_ignore);
+
+  sniper.register_module(&sniper_module_system_user_ignore);
+
+  sniper_module_unauthenticated.set_active(sniper_ignore_unauthenticated);
+  sniper.register_module(&sniper_module_unauthenticated);
+
   sniper.set_period(sniper_check_period);
 
   if (sniper_active)
-  {
     sniper.start();
-  }
 }
 #endif
 

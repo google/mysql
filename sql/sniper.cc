@@ -6,7 +6,15 @@
 #include "sql_class.h"
 #include "sql_callback.h"
 #include "sniper.h"
+#include "sniper_modules.h"
+#include "sql_acl.h"
 #include <my_list.h>
+
+struct sniper_action_arg
+{
+  THD *target_thd;
+  SNIPER_SETTINGS *settings;
+};
 
 bool sniper_active;
 uint sniper_check_period;
@@ -15,9 +23,9 @@ Sniper::Sniper(uint interval)
   : period(interval),
     periodic_running(FALSE),
     running(FALSE),
-    global_checks(NULL),
     periodic_checks(NULL)
 {
+  DBUG_ASSERT(this == &sniper);
   init();
 }
 
@@ -39,14 +47,12 @@ static int call_shutdown(void *mod, void *nothing)
   ((Sniper_module*)mod)->shutdown();
   return FALSE;
 }
+
 void Sniper::clean_up()
 {
   pthread_mutex_lock(&LOCK_startup);
   real_stop(FALSE);
   pthread_mutex_lock(&LOCK_register);
-  list_walk(global_checks, (list_walk_action)(&call_shutdown),NULL);
-  list_free(global_checks, FALSE);
-  global_checks= NULL;
   list_walk(periodic_checks, (list_walk_action)(&call_shutdown),NULL);
   list_free(periodic_checks, FALSE);
   periodic_checks= NULL;
@@ -85,9 +91,10 @@ void Sniper::real_stop(bool should_lock)
     pthread_mutex_lock(&LOCK_periodic);
     if (periodic_running)
     {
+      pthread_t thrd= periodic_thread;
       stop_periodic_thread();
       pthread_mutex_unlock(&LOCK_periodic);
-      pthread_join(periodic_thread, NULL);
+      pthread_join(thrd, NULL);
     }
     else
       pthread_mutex_unlock(&LOCK_periodic);
@@ -134,33 +141,21 @@ static int list_contains_callback(void *data, void *want)
 {
   return data==want;
 }
-inline static bool list_contains(LIST *list, void* data)
+
+inline static int list_contains(LIST *list, void* data)
 {
   return list_walk(list,(list_walk_action)(&list_contains_callback),
                    (uchar*)data);
 }
 
-sniper_module_id Sniper::register_global_check(Sniper_module *module)
-{
-  pthread_mutex_lock(&LOCK_register);
-  if (!list_contains(global_checks,module))
-  {
-    list_push(global_checks, module);
-    sql_print_information("Sniper: %s (%s) registered as a global_check to "
-                          "Sniper.", module->name, module->description);
-  }
-  pthread_mutex_unlock(&LOCK_register);
-  return (sniper_module_id)module;
-}
-
-sniper_module_id Sniper::register_periodic_check(Sniper_module *module)
+sniper_module_id Sniper::register_module(Sniper_module *module)
 {
   pthread_mutex_lock(&LOCK_register);
   if (!list_contains(periodic_checks, module))
   {
     list_push(periodic_checks, module);
-    sql_print_information("Sniper: %s (%s) registered as a periodic_check to "
-                          "Sniper.", module->name, module->description);
+    sql_print_information("Sniper: %s (%s) registered to the Sniper.",
+                          module->name, module->description);
   }
   if (periodic_checks != NULL)
   {
@@ -174,34 +169,7 @@ sniper_module_id Sniper::register_periodic_check(Sniper_module *module)
   return (sniper_module_id)module;
 }
 
-Sniper_module *Sniper::unregister_global_check(sniper_module_id module)
-{
-  Sniper_module *ret= NULL;
-  LIST *root= global_checks;
-  while (root != NULL)
-  {
-    if ((Sniper_module*)root->data == (Sniper_module*)module)
-    {
-      ret= (Sniper_module*)module;
-      LIST *cur= root;
-      root= root->next;
-      global_checks= list_delete(global_checks, cur);
-      my_free(cur);
-    }
-    else
-    {
-      root= root->next;
-    }
-  }
-  if (ret)
-  {
-    sql_print_information("Sniper: global_check %s (%s) unregistered from Sniper.",
-                          ret->name, ret->description);
-  }
-  return ret;
-}
-
-Sniper_module *Sniper::unregister_periodic_check(sniper_module_id module)
+Sniper_module *Sniper::unregister_module(sniper_module_id module)
 {
   Sniper_module *ret= NULL;
   LIST *root= periodic_checks;
@@ -222,10 +190,27 @@ Sniper_module *Sniper::unregister_periodic_check(sniper_module_id module)
   }
   if (ret)
   {
-    sql_print_information("Sniper: periodic_check %s (%s) unregistered from Sniper.",
+    sql_print_information("Sniper: module %s (%s) unregistered from Sniper.",
                           ret->name, ret->description);
   }
   return ret;
+}
+
+void Sniper::stop_from_periodic_thread()
+{
+  DBUG_ASSERT(periodic_thread == pthread_self());
+  sniper_active= FALSE;
+  // Prevent a race with start.
+  pthread_mutex_lock(&LOCK_startup);
+
+  // Prevent a race where new thread created before this one gets detached.
+  pthread_mutex_lock(&LOCK_periodic);
+  stop_periodic_thread();
+  pthread_detach(pthread_self());
+  pthread_mutex_unlock(&LOCK_periodic);
+
+  real_stop(FALSE);
+  pthread_mutex_unlock(&LOCK_startup);
 }
 
 void *sniper_periodic_thread(void * arg)
@@ -235,8 +220,8 @@ void *sniper_periodic_thread(void * arg)
   {
     snp->periodic_running= FALSE;
     sql_print_error("Sniper: Could not initialize sniper thread");
-    pthread_detach(pthread_self());
-    pthread_exit(NULL);
+    snp->stop_from_periodic_thread();
+    return NULL;
   }
   int res;
 
@@ -263,6 +248,7 @@ void *sniper_periodic_thread(void * arg)
     else
     {
       sql_print_error("Sniper: Error %i received on timedwait", res);
+      snp->stop_from_periodic_thread();
       break;
     }
   }
@@ -292,8 +278,10 @@ void Sniper::start_periodic_thread()
   if (pthread_create(&periodic_thread, &attrs,
                      sniper_periodic_thread, (this)))
   {
-    sql_print_warning("Sniper: Cannot create sniper periodic thread.");
+    sql_print_error("Sniper: Cannot create sniper periodic thread.");
     periodic_running= FALSE;
+    running= FALSE;
+    sniper_active= FALSE;
   }
 }
 
@@ -311,36 +299,74 @@ void Sniper::shoot(THD *target_thd)
   mysql_mutex_unlock(&(target_thd->LOCK_thd_data));
 }
 
-static int walk_action_global(void *data, void *arg)
+// Print out all the modules that approved of a sniping.
+static int walk_action_print_approvals(void *module, void *thread)
 {
-  return !((Sniper_module*)data)->does_approve((THD*)arg);
-}
-
-static int walk_action_periodic(void *data, void *arg)
-{
-  THD *target_thd= (THD*)arg;
-  Sniper_module *mod= (Sniper_module*)data;
-  if (mod->does_approve(target_thd))
-  {
-    sql_print_information("Sniper: THD id=%lu approved for sniping by "
-                          "%s (%s).", target_thd->thread_id, mod->name,
-                          mod->description);
-    return 1;
-  }
-  else
-    return 0;
+  Sniper_module *mod= (Sniper_module *)module;
+  THD *target_thd= (THD *)thread;
+  sql_print_information("Sniper: THD id=%lu approved for sniping by "
+                        "%s (%s).", target_thd->thread_id, mod->name,
+                        mod->description);
+  return 0;
 }
 
 bool Sniper::should_shoot(THD *target_thd)
 {
-  return !list_walk(global_checks, (list_walk_action)(&walk_action_global),
-                    (uchar*)target_thd) &&
-         list_sum(periodic_checks, (list_walk_action)(&walk_action_periodic),
-                  (uchar *)target_thd);
+  // We have already obtained a lock on LOCK_sniper_config in the do_sniping
+  // function. We do that there to prevent a possible deadlock in sql_acl.cc
+  SNIPER_SETTINGS settings;
+  Security_context *ctx= target_thd->security_ctx;
+  mysql_mutex_assert_owner(&LOCK_sniper_config);
+  sniper_settings_get(&settings, ctx, TRUE);
+
+  bool ret= FALSE; // If nothing cares we do not snipe.
+  LIST *approvals= NULL; // Hold onto modules that approve for logging.
+
+  for (LIST *root= periodic_checks; root; root= root->next)
+  {
+    Sniper_module *mod= (Sniper_module *)root->data;
+    switch (mod->get_decision(target_thd, &settings))
+    {
+    case MUST_NOT_SNIPE:
+      // The sniping has been rejected. We can stop looking through the
+      // modules right now.
+      ret= FALSE;
+      goto end;
+      break;
+    case MAY_SNIPE:
+      // Save the module so we can credit it with the kill later, if that is,
+      // we are not rejected.
+      list_push(approvals, mod);
+      ret= TRUE;
+      break;
+    case NO_OPINION:
+      // This module doesn't care. Continue on.
+      break;
+    }
+  }
+  // If we are here that means that no module flat out rejected the sniping.
+  // Therefore we might have decided to kill a thread and should log it if we
+  // have.
+  if (ret)
+  {
+    // We got no absolute rejections and some provisional approvals. We should
+    // print out all modules which approved the sniping.
+    list_walk(approvals,
+              (list_walk_action)walk_action_print_approvals,
+              (unsigned char *)target_thd);
+  }
+end:
+  // Clean up the list of approvals. Don't destroy the modules though.
+  list_free(approvals, FALSE);
+  return ret;
 }
 
 void Sniper::do_sniping()
 {
+  // Locking this for use in should_shoot. We do this here to prevent
+  // a possible deadlock when acl_kill_user_threads locks LOCK_thread_count
+  // after locking LOCK_sniper_config when running a DROP USER command.
+  mysql_mutex_lock(&LOCK_sniper_config);
   mysql_mutex_lock(&LOCK_thread_count);
   I_List_iterator<THD> it(threads);
   THD *target_thd;
@@ -366,5 +392,6 @@ void Sniper::do_sniping()
   pthread_mutex_unlock(&LOCK_register);
 end:
   mysql_mutex_unlock(&LOCK_thread_count);
+  mysql_mutex_unlock(&LOCK_sniper_config);
 }
 

@@ -239,4 +239,6 @@ PREPARE stmt FROM @str;
 EXECUTE stmt;
 DROP PREPARE stmt;
 
+CREATE TABLE IF NOT EXISTS sniper_settings ( Host char(60) binary DEFAULT '' NOT NULL, User char(80) binary DEFAULT '' NOT NULL, idle_timeout INT(11) unsigned DEFAULT NULL, long_query_timeout INT(11) unsigned DEFAULT NULL, kill_connectionless BOOL DEFAULT NULL, infeasible_cross_product_rows DOUBLE unsigned DEFAULT NULL, infeasible_max_time INT(11) unsigned DEFAULT NULL, infeasible_secondary_requirements ENUM('NONE','FILESORT','TEMPORARY','FILESORT_AND_TEMPORARY','FILESORT_OR_TEMPORARY') DEFAULT NULL, PRIMARY KEY (Host, User)) ENGINE=INNODB DEFAULT CHARSET=utf8 COLLATE=utf8_bin comment='User-specific sniper configuration';
+
 set storage_engine=@orig_storage_engine;
