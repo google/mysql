@@ -12271,6 +12271,11 @@ struct MPVIO_EXT :public MYSQL_PLUGIN_VIO
   enum { SUCCESS, FAILURE, RESTART } status;
 };
 
+static bool connection_is_remote(THD *thd)
+{
+  return vio_peer_is_remote(thd->net.vio);
+}
+
 /**
   a helper function to report an access denied error in all the proper places
 */
@@ -12285,7 +12290,8 @@ static void login_failed_error(THD *thd)
                     thd->main_security_ctx.user,
                     thd->main_security_ctx.host_or_ip,
                     thd->password ? ER(ER_YES) : ER(ER_NO));
-  if (opt_audit_log_connections)
+  if (opt_audit_log_connections
+      || (opt_audit_log_remote_connections && connection_is_remote(thd)))
   {
     audit_log_print(thd, COM_CONNECT, ER(access_denied_error_code(thd->password)),
                     thd->main_security_ctx.user,
@@ -13500,7 +13506,8 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
   {
     if (strcmp(sctx->priv_user, sctx->user))
     {
-      if (opt_audit_log_connections)
+      if (opt_audit_log_connections
+          || (opt_audit_log_remote_connections && connection_is_remote(thd)))
       {
         audit_log_print(thd, command, (char*) "%s@%s as %s on %s",
                         sctx->user, sctx->host_or_ip,
@@ -13514,7 +13521,8 @@ bool acl_authenticate(THD *thd, uint com_change_user_pkt_len)
     }
     else
     {
-      if (opt_audit_log_connections)
+      if (opt_audit_log_connections
+          || (opt_audit_log_remote_connections && connection_is_remote(thd)))
       {
         audit_log_print(thd, command, (char*) "%s@%s on %s",
                         sctx->user, sctx->host_or_ip,

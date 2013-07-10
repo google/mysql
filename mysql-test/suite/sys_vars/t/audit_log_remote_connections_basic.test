@@ -1,0 +1,8 @@
+SELECT @@global.audit_log_remote_connections;
+SET GLOBAL audit_log_remote_connections = 1;
+SELECT @@global.audit_log_remote_connections;
+SET GLOBAL audit_log_remote_connections = 0;
+SELECT @@global.audit_log_remote_connections;
+SET GLOBAL audit_log_remote_connections = DEFAULT;
+
+

@@ -4318,6 +4318,11 @@ static Sys_var_mybool Sys_audit_log_connections(
        "Log [failed] connections to the server.",
        GLOBAL_VAR(opt_audit_log_connections),
        CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+static Sys_var_mybool Sys_audit_log_remote_connections(
+       "audit_log_remote_connections",
+       "Log connections to the server not from localhost or via UNIX socket.",
+       GLOBAL_VAR(opt_audit_log_remote_connections),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
 static Sys_var_mybool Sys_audit_log_super(
        "audit_log_super",
        "Log commands executed by users with SUPER privileges.",

@@ -101,6 +101,7 @@ my_bool vio_peer_addr(Vio *vio, char *buf, uint16 *port, size_t buflen);
 /* Wait for an I/O event notification. */
 int vio_io_wait(Vio *vio, enum enum_vio_io_event event, int timeout);
 my_bool vio_is_connected(Vio *vio);
+my_bool vio_peer_is_remote(Vio *vio);
 #ifndef DBUG_OFF
 ssize_t vio_pending(Vio *vio);
 #endif
@@ -198,6 +199,7 @@ void vio_end(void);
 #define vio_peer_addr(vio, buf, prt, buflen)	(vio)->peer_addr(vio, buf, prt, buflen)
 #define vio_io_wait(vio, event, timeout)        (vio)->io_wait(vio, event, timeout)
 #define vio_is_connected(vio)                   (vio)->is_connected(vio)
+#define vio_peer_is_remote(vio)                 (vio)->peer_is_remote(vio)
 #endif /* !defined(DONT_MAP_VIO) */
 
 #ifdef _WIN32
@@ -237,7 +239,8 @@ struct st_vio
   int			fcntl_mode;	/* Buffered fcntl(sd,F_GETFL) */
   struct sockaddr_storage local;	/* Local internet address */
   struct sockaddr_storage remote;	/* Remote internet address */
-  int addrLen;                          /* Length of remote address */
+  int local_length;                     /* Length of local address */
+  int remote_length;                    /* Length of remote address */
   enum enum_vio_type	type;		/* Type of connection */
   const char		*desc;		/* String description */
   char                  *read_buffer;   /* buffer for vio_read_buff */
@@ -267,6 +270,7 @@ struct st_vio
   my_bool (*has_data) (Vio*);
   int (*io_wait)(Vio*, enum enum_vio_io_event, int);
   my_bool (*connect)(Vio*, struct sockaddr *, socklen_t, int);
+  my_bool (*peer_is_remote)(Vio*);
 #ifdef HAVE_OPENSSL
   void	  *ssl_arg;
 #endif

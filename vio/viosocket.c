@@ -776,13 +776,13 @@ my_bool vio_peer_addr(Vio *vio, char *ip_buffer, uint16 *port,
   if (vio->localhost)
   {
     /*
-      Initialize vio->remote and vio->addLen. Set vio->remote to IPv4 loopback
-      address.
+      Initialize vio->remote and vio->remote_length. Set vio->remote to IPv4
+      loopback address.
     */
     struct in_addr *ip4= &((struct sockaddr_in *) &(vio->remote))->sin_addr;
 
     vio->remote.ss_family= AF_INET;
-    vio->addrLen= sizeof (struct sockaddr_in);
+    vio->remote_length= sizeof (struct sockaddr_in);
 
     ip4->s_addr= htonl(INADDR_LOOPBACK);
 
@@ -800,7 +800,23 @@ my_bool vio_peer_addr(Vio *vio, char *ip_buffer, uint16 *port,
     struct sockaddr *addr= (struct sockaddr *) &addr_storage;
     size_socket addr_length= sizeof (addr_storage);
 
-    /* Get sockaddr by socked fd. */
+    /* Get local sockaddr by FD. */
+
+    err_code= mysql_socket_getsockname(vio->mysql_socket, addr, &addr_length);
+
+    if (err_code)
+    {
+      DBUG_PRINT("exit", ("getsockname() gave error: %d", socket_errno));
+      DBUG_RETURN(1);
+    }
+
+    /* Normalize local IP address. */
+
+    vio_get_normalized_ip(addr, addr_length,
+                          (struct sockaddr *) &vio->local,
+                          &vio->local_length);
+
+    /* Get remote sockaddr by FD. */
 
     err_code= mysql_socket_getpeername(vio->mysql_socket, addr, &addr_length);
 
@@ -810,12 +826,13 @@ my_bool vio_peer_addr(Vio *vio, char *ip_buffer, uint16 *port,
       DBUG_RETURN(TRUE);
     }
 
-    /* Normalize IP address. */
+    /* Normalize remote IP address. */
 
     vio_get_normalized_ip(addr, addr_length,
-                          (struct sockaddr *) &vio->remote, &vio->addrLen);
+                          (struct sockaddr *) &vio->remote,
+                          &vio->remote_length);
 
-    /* Get IP address & port number. */
+    /* Get remote IP address and port number. */
 
     err_code= vio_getnameinfo((struct sockaddr *) &vio->remote,
                               ip_buffer, ip_buffer_size,
@@ -836,6 +853,43 @@ my_bool vio_peer_addr(Vio *vio, char *ip_buffer, uint16 *port,
                       (const char *) ip_buffer,
                       (int) *port));
   DBUG_RETURN(FALSE);
+}
+
+static my_bool vio_ipv4_peer_is_remote(Vio *vio)
+{
+  return ((struct sockaddr_in *)&vio->local)->sin_addr.s_addr !=
+         ((struct sockaddr_in *)&vio->remote)->sin_addr.s_addr;
+}
+
+#ifdef HAVE_IPV6
+static my_bool vio_ipv6_peer_is_remote(Vio *vio)
+{
+  return !IN6_ARE_ADDR_EQUAL(
+    ((struct sockaddr_in6 *)&vio->local)->sin6_addr.s6_addr,
+    ((struct sockaddr_in6 *)&vio->remote)->sin6_addr.s6_addr);
+}
+#endif
+
+my_bool vio_peer_is_remote(Vio *vio)
+{
+  /* Remote connections will only be via TCP/IP. It is not currently
+   * possible to tell apart SSL-over-TCP/IP and SSL-over-Unix-socket,
+   * but the below switch statement on sa_family will take care of the
+   * distinction safely. */
+  if (vio->type != VIO_TYPE_TCPIP && vio->type != VIO_TYPE_SSL)
+    return FALSE;
+
+  switch (((struct sockaddr *)&vio->local)->sa_family) {
+  case AF_INET:
+    return vio_ipv4_peer_is_remote(vio);
+#ifdef HAVE_IPV6
+  case AF_INET6:
+    return vio_ipv6_peer_is_remote(vio);
+#endif
+  }
+
+  /* If we can't prove otherwise, assume the connection is remote. */
+  return TRUE;
 }
 
 

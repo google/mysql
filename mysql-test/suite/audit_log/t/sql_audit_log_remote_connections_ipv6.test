@@ -1,0 +1,17 @@
+--source include/check_ipv6.inc
+--source include/not_embedded.inc
+let $MYSQLD_DATADIR= `select @@datadir`;
+let $hostname=`select @@hostname`;
+
+grant all on *.* to 'remote'@'%';
+
+connect(local_via_ipv6,::1,remote,,);
+connection local_via_ipv6;
+select 1 as should_be_1;
+
+connection default;
+disconnect local_via_ipv6;
+drop user 'remote'@'%';
+
+--echo # We expect to see 0 remote connections here:
+--exec sed -e '/Connect/!d;s/^.*Connect[ \t]*//' $MYSQLD_DATADIR/auditlog.000001 | wc -l

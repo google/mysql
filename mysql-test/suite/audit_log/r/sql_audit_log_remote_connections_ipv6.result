@@ -1,0 +1,7 @@
+grant all on *.* to 'remote'@'%';
+select 1 as should_be_1;
+should_be_1
+1
+drop user 'remote'@'%';
+# We expect to see 0 remote connections here:
+0

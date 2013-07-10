@@ -1,0 +1,7 @@
+--source include/not_embedded.inc
+let $MYSQLD_DATADIR= `select @@datadir`;
+
+select 1 as should_be_1;
+
+--echo # We expect to see 0 connections here:
+--exec sed -e '/Connect/!d;s/^.*Connect[ \t]*//' $MYSQLD_DATADIR/auditlog.000001 | wc -l
