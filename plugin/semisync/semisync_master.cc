@@ -1207,7 +1207,13 @@ int ReplSemiSyncMaster::readSlaveReply(NET *net, uint32 server_id,
     sql_print_error("Read semi-sync reply binlog file length too large");
     goto l_end;
   }
-  strncpy(log_file_name, (const char*)packet + REPLY_BINLOG_NAME_OFFSET, log_file_len);
+  packet+= REPLY_BINLOG_NAME_OFFSET;
+  if (*packet == ReplSemiSyncMaster::kPacketMagicNum)
+  {
+    ++packet;
+    --log_file_len;
+  }
+  strncpy(log_file_name, (const char*)packet, log_file_len);
   log_file_name[log_file_len] = 0;
 
   if (trc_level & kTraceDetail)

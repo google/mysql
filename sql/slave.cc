@@ -159,7 +159,8 @@ static int safe_reconnect(THD* thd, MYSQL* mysql, Master_info* mi,
 static int connect_to_master(THD* thd, MYSQL* mysql, Master_info* mi,
                              bool reconnect, bool suppress_warnings);
 static Log_event* next_event(rpl_group_info* rgi, ulonglong *event_size);
-static int queue_event(Master_info* mi,const char* buf,ulong event_len);
+static int queue_event(Master_info* mi,const char* buf,ulong event_len,
+                       bool fake_event= false);
 static int terminate_slave_thread(THD *thd,
                                   mysql_mutex_t *term_lock,
                                   mysql_cond_t *term_cond,
@@ -5175,7 +5176,8 @@ static int queue_old_event(Master_info *mi, const char *buf,
   any >=5.0.0 format.
 */
 
-static int queue_event(Master_info* mi,const char* buf, ulong event_len)
+static int queue_event(Master_info* mi,const char* buf, ulong event_len,
+                       bool fake_event)
 {
   int error= 0;
   String error_msg;
@@ -5244,7 +5246,8 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
     }
   );
                                               
-  if (event_checksum_test((uchar *) buf, event_len, checksum_alg))
+  if (buf[EVENT_TYPE_OFFSET] != ROTATE_EVENT &&
+      event_checksum_test((uchar *) buf, event_len, checksum_alg))
   {
     error= ER_NETWORK_READ_EVENT_CHECKSUM_FAILURE;
     unlock_data_lock= FALSE;
@@ -5255,7 +5258,13 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
       (uchar)buf[EVENT_TYPE_OFFSET] != FORMAT_DESCRIPTION_EVENT /* a way to escape */)
     DBUG_RETURN(queue_old_event(mi,buf,event_len));
 
-  mysql_mutex_lock(&mi->data_lock);
+  if (fake_event)
+  {
+    mysql_mutex_assert_owner(&mi->data_lock);
+    unlock_data_lock= FALSE;
+  }
+  else
+    mysql_mutex_lock(&mi->data_lock);
 
   switch ((uchar)buf[EVENT_TYPE_OFFSET]) {
   case STOP_EVENT:
@@ -5274,8 +5283,31 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
     goto err;
   case ROTATE_EVENT:
   {
-    Rotate_log_event rev(buf, checksum_alg != BINLOG_CHECKSUM_ALG_OFF ?
-                         event_len - BINLOG_CHECKSUM_LEN : event_len,
+    ulong rev_len= checksum_alg != BINLOG_CHECKSUM_ALG_OFF ?
+                   event_len - BINLOG_CHECKSUM_LEN : event_len;
+    /*
+       This is a dirty hack to make sure that master log filename is not trimmed
+       in the Rotate_log_event because of mis-understanding of whether this
+       event actually has checksum or not. When replicating from MySQL 5.1
+       master Rotate_log_event never has checksum at the end, but in some
+       situations slave's FD event is used and Rotate_log_event is assumed
+       to have checksum when it's not. Checking of the checksum on the
+       ROTATE_EVENT is turned off because of the same reason of
+       mis-understanding (otherwise this code won't be reached at all).
+       This is a dirty hack, but we can ride on it until upgrade from
+       MySQL 5.1 is done.
+     */
+    const char* rev_end= buf + rev_len - 1;
+    const char* dot_pos= rev_end;
+    while (dot_pos > buf && *dot_pos != '.')
+      --dot_pos;
+    if (dot_pos > buf && rev_end - dot_pos < 6)
+    {
+      rev_len += BINLOG_CHECKSUM_LEN;
+      checksum_alg = BINLOG_CHECKSUM_ALG_OFF;
+    }
+
+    Rotate_log_event rev(buf, rev_len,
                          mi->rli.relay_log.description_event_for_queue);
 
     if (unlikely(process_io_rotate(mi, &rev)))
@@ -5572,9 +5604,52 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
     mi->last_queued_gtid_standalone=
       (gtid_flag & Gtid_log_event::FL_STANDALONE) != 0;
     ++mi->events_queued_since_last_gtid;
-    inc_pos= event_len;
+    inc_pos= fake_event ? 0 : event_len;
   }
   break;
+
+  /*
+    XXX: Google MySQL 5.1 Migration
+
+    Check for an old-style BEGIN event from Google MySQL 5.1. Such an
+    event should be converted to a GTID event. Also any query outside of
+    transaction should have GTID event added.
+  */
+  case QUERY_EVENT:
+  {
+    ulonglong mysql51_group_id= 0;
+    bool is_trans_begin= false;
+    ulonglong last_group_id=
+        (mi->gtid_event_seen ? mi->last_queued_gtid.seq_no : 0);
+    if (Query_log_event::is_mysql51_next_group_id(
+            buf, event_len, last_group_id,
+            mi->rli.relay_log.description_event_for_queue,
+            &mysql51_group_id, &is_trans_begin))
+    {
+      /*
+        Replication stream is coming from MySQL 5.1 and the event represents
+        next transaction.
+      */
+      char gtid_buf[LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN + 30];
+      Format_description_log_event *description_event=
+          rli->relay_log.description_event_for_queue;
+      Gtid_log_event::create_event_for_mysql51(
+          gtid_buf, buf, description_event, mysql51_group_id, is_trans_begin);
+      error= queue_event(mi, gtid_buf,
+                         description_event->common_header_len + GTID_HEADER_LEN,
+                         true);
+      if (error)
+        goto err;
+      if (is_trans_begin)
+      {
+        inc_pos= event_len;
+        gtid_skip_enqueue= true;
+        break;
+      }
+    }
+  }
+  // Further processing should be default.
+  goto default_action;
 
   default:
   default_action:
@@ -5589,7 +5664,7 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
         ++mi->events_queued_since_last_gtid;
     }
 
-    inc_pos= event_len;
+    inc_pos= fake_event ? 0 : event_len;
     break;
   }
 

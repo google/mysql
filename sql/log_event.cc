@@ -1556,7 +1556,7 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
       DBUG_SET("-d,corrupt_read_log_event_char");
     }
   );                                                 
-  if (crc_check &&
+  if (crc_check && event_type != ROTATE_EVENT &&
       event_checksum_test((uchar *) buf, event_len, alg))
   {
 #ifdef MYSQL_CLIENT
@@ -1576,7 +1576,8 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
   }
 
   if (event_type > description_event->number_of_event_types &&
-      event_type != FORMAT_DESCRIPTION_EVENT)
+      event_type != FORMAT_DESCRIPTION_EVENT &&
+      event_type != GTID_EVENT)
   {
     /*
       It is unsafe to use the description_event if its post_header_len
@@ -3101,7 +3102,9 @@ Query_log_event::Query_log_event(THD* thd_arg, const char* query_arg,
    lc_time_names_number(thd_arg->variables.lc_time_names->number),
    charset_database_number(0),
    table_map_for_update((ulonglong)thd_arg->table_map_for_update),
-   master_data_written(0)
+   master_data_written(0),
+   mysql51_group_id(0),
+   mysql51_checksum(0)
 {
   time_t end_time;
 
@@ -3340,7 +3343,8 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
    flags2_inited(0), sql_mode_inited(0), charset_inited(0),
    auto_increment_increment(1), auto_increment_offset(1),
    time_zone_len(0), lc_time_names_number(0), charset_database_number(0),
-   table_map_for_update(0), master_data_written(0)
+   table_map_for_update(0), master_data_written(0),
+   mysql51_group_id(0), mysql51_checksum(0)
 {
   ulong data_len;
   uint32 tmp;
@@ -3365,6 +3369,38 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
   if (event_len < (uint)(common_header_len + post_header_len))
     DBUG_VOID_RETURN;				
   data_len = event_len - (common_header_len + post_header_len);
+
+  /*
+    XXX: Google MySQL 5.1 Migration
+
+    Attempt to extract a Google MySQL 5.1 Group ID and Checksum from
+    the event. The only real way to determine if it may be present is by
+    checking the size of the event's header.
+
+    If the event's header is:
+      * 4 bytes larger, it has only a Checksum; or
+      * 8 bytes larger, it has only a Group ID; or
+      * 12 bytes larger, it has a Group ID and Checksum.
+
+    Store the Group ID and Checksum in the event for later processing.
+  */
+  {
+    char *mysql51_buf= (char *)(buf + LOG_EVENT_MINIMAL_HEADER_LEN);
+
+    if (common_header_len == LOG_EVENT_MINIMAL_HEADER_LEN + 12
+        || common_header_len == LOG_EVENT_MINIMAL_HEADER_LEN + 8)
+    {
+      mysql51_group_id= uint8korr(mysql51_buf);
+      mysql51_buf+= 8;
+    }
+
+    if (common_header_len == LOG_EVENT_MINIMAL_HEADER_LEN + 12
+        || common_header_len == LOG_EVENT_MINIMAL_HEADER_LEN + 4)
+    {
+      mysql51_checksum= uint4korr(mysql51_buf);
+    }
+  }
+
   buf+= common_header_len;
   
   slave_proxy_id= thread_id = uint4korr(buf + Q_THREAD_ID_OFFSET);
@@ -3618,6 +3654,30 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
   memcpy(start + data_len + 1, &db_length, sizeof(size_t));
 #endif
   DBUG_VOID_RETURN;
+}
+
+
+bool
+Query_log_event::is_mysql51_next_group_id(
+    const char* buf, ulong event_len, ulonglong last_group_id,
+    const Format_description_log_event* description_event,
+    ulonglong* event_group_id, bool* is_trans_begin)
+{
+  uint8 common_header_len= description_event->common_header_len;
+  if (common_header_len != LOG_EVENT_MINIMAL_HEADER_LEN + 12
+      && common_header_len != LOG_EVENT_MINIMAL_HEADER_LEN + 8)
+  {
+    return false;
+  }
+
+  char *mysql51_buf= (char *)(buf + LOG_EVENT_MINIMAL_HEADER_LEN);
+  *event_group_id= uint8korr(mysql51_buf);
+  if (*event_group_id == last_group_id)
+    return false;
+
+  Query_log_event qev(buf, event_len, description_event, QUERY_EVENT);
+  *is_trans_begin= strcmp(qev.query, "BEGIN") == 0;
+  return true;
 }
 
 
@@ -6371,8 +6431,11 @@ Gtid_log_event::Gtid_log_event(const char *buf, uint event_len,
                const Format_description_log_event *description_event)
   : Log_event(buf, description_event), seq_no(0), commit_id(0)
 {
+  /* Hack for MySQL 5.1 migration. */
   uint8 header_size= description_event->common_header_len;
-  uint8 post_header_len= description_event->post_header_len[GTID_EVENT-1];
+  uint8 post_header_len= GTID_HEADER_LEN;
+  if (description_event->number_of_event_types >= GTID_EVENT)
+    post_header_len= description_event->post_header_len[GTID_EVENT-1];
   if (event_len < header_size + post_header_len ||
       post_header_len < GTID_HEADER_LEN)
     return;
@@ -6468,6 +6531,26 @@ Gtid_log_event::write(IO_CACHE *file)
   return write_header(file, write_len) ||
     wrapper_my_b_safe_write(file, buf, write_len) ||
     write_footer(file);
+}
+
+
+void
+Gtid_log_event::create_event_for_mysql51(
+    char* buf, const char* qev_buf,
+    Format_description_log_event *description_event,
+    ulonglong mysql51_group_id, bool is_trans_begin)
+{
+  memcpy(buf, qev_buf, description_event->common_header_len);
+  buf[EVENT_TYPE_OFFSET]= GTID_EVENT;
+  int4store(buf + EVENT_LEN_OFFSET,
+            description_event->common_header_len + GTID_HEADER_LEN);
+  int2store(buf + FLAGS_OFFSET, 0);
+
+  buf+= description_event->common_header_len;
+  int8store(buf, mysql51_group_id);
+  int4store(buf + 8, 0);
+  buf[12]= is_trans_begin ? 0 : FL_STANDALONE;
+  bzero(buf + 13, GTID_HEADER_LEN - 13);
 }
 
 

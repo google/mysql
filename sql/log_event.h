@@ -1973,6 +1973,14 @@ public:
   */
   uint32 master_data_written;
 
+  /* XXX: Google MySQL 5.1 Migration */
+  ulonglong mysql51_group_id;
+  ulong mysql51_checksum;
+  static bool is_mysql51_next_group_id(
+      const char* buf, ulong event_len, ulonglong last_group_id,
+      const Format_description_log_event* description_event,
+      ulonglong* event_group_id, bool* is_trans_begin);
+
 #ifdef MYSQL_SERVER
 
   Query_log_event(THD* thd_arg, const char* query_arg, ulong query_length,
@@ -3198,6 +3206,10 @@ public:
                    uint8 checksum_alg,
                    uint32 *domain_id, uint32 *server_id, uint64 *seq_no,
                    uchar *flags2, const Format_description_log_event *fdev);
+  static void create_event_for_mysql51(
+      char* buf, const char* qev_buf,
+      Format_description_log_event *description_event,
+      ulonglong mysql51_group_id, bool is_trans_begin);
 #endif
 };
 

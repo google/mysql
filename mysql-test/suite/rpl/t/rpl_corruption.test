@@ -128,25 +128,30 @@ SET GLOBAL debug_dbug= "";
 SET GLOBAL master_verify_checksum=1;
 
 # Emulate corruption in network
---echo # 5. Slave. Corruption in network
---connection slave
-SET GLOBAL debug_dbug="+d,corrupt_queue_event";
-START SLAVE IO_THREAD;
-let $slave_io_errno= 1595,1913;
---source include/wait_for_slave_io_error.inc
-SET GLOBAL debug_dbug="-d,corrupt_queue_event";
+#
+# The following two tests are commented out as it injects corruption in the
+# Rotate event. But checking of the checksum in it is temporary disabled to make
+# it possible for MariaDB to replicate from MySQL 5.1.
+#
+#--echo # 5. Slave. Corruption in network
+#--connection slave
+#SET GLOBAL debug_dbug="+d,corrupt_queue_event";
+#START SLAVE IO_THREAD;
+#let $slave_io_errno= 1595,1913;
+#--source include/wait_for_slave_io_error.inc
+#SET GLOBAL debug_dbug="-d,corrupt_queue_event";
 
 # Emulate corruption in relay log
---echo # 6. Slave. Corruption in relay log
+#--echo # 6. Slave. Corruption in relay log
 
-SET GLOBAL debug_dbug="+d,corrupt_read_log_event_char";
+#SET GLOBAL debug_dbug="+d,corrupt_read_log_event_char";
 
-START SLAVE SQL_THREAD;
-let $slave_sql_errno= 1593;
---source include/wait_for_slave_sql_error.inc
+#START SLAVE SQL_THREAD;
+#let $slave_sql_errno= 1593;
+#--source include/wait_for_slave_sql_error.inc
 
-SET GLOBAL debug_dbug="-d,corrupt_read_log_event_char";
-SET GLOBAL debug_dbug= "";
+#SET GLOBAL debug_dbug="-d,corrupt_read_log_event_char";
+#SET GLOBAL debug_dbug= "";
 
 # Start normal replication and compare same table on master
 # and slave
