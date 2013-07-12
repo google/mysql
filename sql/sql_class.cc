@@ -620,6 +620,7 @@ THD::THD()
    updated_row_count(0L),
    global_read_lock(0),
    semi_sync_slave(false),
+   slave_is_mariadb(false),
    failed_com_change_user(0),
    is_fatal_error(0),
    transaction_rollback_request(0),

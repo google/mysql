@@ -365,6 +365,73 @@ static void repl_cleanup(ushort flags, String *packet,
   }
 }
 
+/* XXX: MariaDB 10.0 Migration: Copied from MariaDB */
+struct rpl_gtid
+{
+  uint32 domain_id;
+  uint32 server_id;
+  uint64 seq_no;
+};
+
+/*
+  XXX: MariaDB 10.0 Migration: Copied from MariaDB
+
+  Parse a GTID at the start of a string, and update the pointer to point
+  at the first character after the parsed GTID.
+
+  Returns 0 on ok, non-zero on parse error.
+*/
+static int
+gtid_parser_helper(char **ptr, char *end, rpl_gtid *out_gtid)
+{
+  char *q;
+  char *p= *ptr;
+  uint64 v1, v2, v3;
+  int err= 0;
+
+  q= end;
+  v1= (uint64)my_strtoll10(p, &q, &err);
+  if (err != 0 || v1 > (uint32)0xffffffff || q == end || *q != '-')
+    return 1;
+  p= q+1;
+  q= end;
+  v2= (uint64)my_strtoll10(p, &q, &err);
+  if (err != 0 || v2 > (uint32)0xffffffff || q == end || *q != '-')
+    return 1;
+  p= q+1;
+  q= end;
+  v3= (uint64)my_strtoll10(p, &q, &err);
+  if (err != 0)
+    return 1;
+
+  out_gtid->domain_id= v1;
+  out_gtid->server_id= v2;
+  out_gtid->seq_no= v3;
+  *ptr= q;
+  return 0;
+}
+
+/*
+  XXX: MariaDB 10.0 Migration: Copied from MariaDB
+
+  Get the value of the @slave_connect_state user variable into the supplied
+  String (this is the GTID connect state requested by the connecting slave).
+
+  Returns false if error (ie. slave did not set the variable and does not
+  want to use GTID to set start position), true if success.
+*/
+static bool
+get_slave_connect_state(THD *thd, String *out_str)
+{
+  my_bool null_value;
+
+  const LEX_STRING name= { C_STRING_WITH_LEN("slave_connect_state") };
+  user_var_entry *entry=
+    (user_var_entry*) my_hash_search(&thd->user_vars, (uchar*) name.str,
+                                     name.length);
+  return entry && entry->val_str(&null_value, out_str, 0) && !null_value;
+}
+
 /*
   TODO: Clean up loop to only have one call to send_file()
 */
@@ -412,10 +479,96 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
   DBUG_PRINT("enter",("log_ident: '%s'  pos: %ld", log_ident, (long) pos));
 
   bzero((char*) &log,sizeof(log));
-  sql_print_information("Start %s binlog_dump to slave_server(%d), "
-                        "pos(%s, %lu)",
+
+  /*
+    XXX: MariaDB 10.0 Migration
+
+    The following code checks the 'slave_connect_state' user variable for
+    the slave thread, and uses the 'seq_no' field present within as a
+    Group ID to initialize the replication starting position.
+
+    For the purposes of debugging GTID, a replication "Request" log
+    message was added to include necessary GTID information.
+  */
+  char slave_connect_state_buf[256];
+  String slave_connect_state(slave_connect_state_buf,
+                             sizeof(slave_connect_state_buf),
+                             system_charset_info);
+  thd->slave_is_mariadb = get_slave_connect_state(thd, &slave_connect_state);
+
+  if (thd->slave_is_mariadb)
+  {
+    LOG_INFO gtid_linfo;
+    rpl_gtid gtid;
+    char *gtid_str = slave_connect_state.c_ptr();
+
+    sql_print_information("Request binlog_dump by GTID: "
+                          "server_id(%d), pos(%s, %lu), gtid(%s)",
+                          thd->server_id,
+                          log_ident, (ulong)pos,
+                          gtid_str);
+
+    if (strstr(gtid_str, ",") != NULL)
+    {
+      errmsg= "Slave requested GTID position containing more than one "
+              "domain; only a single domain (0) is supported by this "
+              "version of MySQL.";
+      my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+      goto err;
+    }
+
+    if (gtid_parser_helper(&gtid_str,
+                          gtid_str + slave_connect_state.length(),
+                          &gtid))
+    {
+      errmsg= "Slave requested GTID position but the GTID string provided "
+              "couldn't be parsed.";
+      my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+      goto err;
+    }
+
+    if (gtid.domain_id != 0)
+    {
+      errmsg= "Slave requested GTID position with a non-zero domain_id, which "
+              "is not supported by this version of MySQL.";
+      my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+      goto err;
+    }
+
+    if (mysql_bin_log.get_log_info_for_group_id(thd, gtid.seq_no, &gtid_linfo) != 0)
+    {
+      errmsg= "Slave requested GTID position with a sequence number that "
+              "doesn't exist as a Group ID in the binary log. ";
+      my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+      goto err;
+    }
+
+    if (gtid.server_id != gtid_linfo.server_id)
+    {
+      errmsg= "Slave requested GTID position with a server_id that doesn't "
+              "match the server_id of the event with the same Group ID found "
+              "in the binary log. "
+              "Slave appears to be from an alternate future.";
+      my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+      goto err;
+    }
+
+    sql_print_information("Found GTID seq_no %lu at: %s, %lu",
+        (ulong)gtid.seq_no,
+        gtid_linfo.log_file_name,
+        (ulong)gtid_linfo.pos);
+
+    /* Strip off the path prefix; log_ident needs to be a filename only. */
+    int dir_len= dirname_length(gtid_linfo.log_file_name);
+    log_ident= gtid_linfo.log_file_name + dir_len;
+    pos= gtid_linfo.pos;
+  }
+
+  sql_print_information("Start binlog_dump: "
+                        "server_id(%d), mode(%s), pos(%s, %lu)",
+                        thd->server_id,
                         thd->semi_sync_slave ? "semi-sync" : "asynchronous",
-                        thd->server_id, log_ident, (ulong)pos);
+                        log_ident, (ulong)pos);
 
   if (flags & BINLOG_SEMI_SYNC)
   {

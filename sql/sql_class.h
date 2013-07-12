@@ -1859,6 +1859,8 @@ public:
   killed_state volatile killed;
   /* Whether the slave is doing semi-synchronous replication. */
   bool       semi_sync_slave;
+  /* XXX: MariaDB 10.0 Migration */
+  bool       slave_is_mariadb;
 
   /* scramble - random string sent to client on handshake */
   char	     scramble[SCRAMBLE_LENGTH+1];

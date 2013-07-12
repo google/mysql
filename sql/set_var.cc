@@ -623,6 +623,24 @@ static sys_var_long_ptr
 sys_rpl_semi_sync_trace_level(&vars, "rpl_semi_sync_trace_level",
                               &rpl_semi_sync_trace_level,
                               fix_rpl_semi_sync_trace_level);
+
+/*
+  XXX: MariaDB 10.0 Migration
+
+  The gtid_domain_id variable is required only for the MariaDB 10.0
+  migration, as MariaDB checks it on slave connect. For MySQL 5.1, it
+  should always return 0, so the variable should be read-only.
+*/
+static uchar *get_gtid_domain_id_always_zero(THD *thd)
+{
+  thd->sys_var_tmp.long_value= 0;
+  return (uchar*) &thd->sys_var_tmp.long_value;
+}
+
+static sys_var_readonly sys_gtid_domain_id(&vars, "gtid_domain_id",
+                                           OPT_GLOBAL, SHOW_LONG,
+                                           get_gtid_domain_id_always_zero);
+
 #endif  /* HAVE_REPLICATION */
 
 static sys_var_long_ptr	sys_query_cache_size(&vars, "query_cache_size",
