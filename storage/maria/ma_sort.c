@@ -376,7 +376,7 @@ pthread_handler_t _ma_thr_find_all_keys(void *arg)
     goto err;
 
   { /* Add extra block since DBUG_ENTER declare variables */
-    DBUG_ENTER("_ma_thr_find_all_keys");
+    DBUG_ENTER_NO_RETURN("_ma_thr_find_all_keys");
     DBUG_PRINT("enter", ("master: %d", sort_param->master));
     if (sort_param->sort_info->got_error)
       goto err;

@@ -1947,7 +1947,7 @@ void unireg_end(void)
 
 extern "C" void unireg_abort(int exit_code)
 {
-  DBUG_ENTER("unireg_abort");
+  DBUG_ENTER_NO_RETURN("unireg_abort");
 
   if (opt_help)
     usage();

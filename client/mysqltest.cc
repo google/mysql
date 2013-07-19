@@ -1616,7 +1616,7 @@ void report_or_die(const char *fmt, ...)
 void abort_not_supported_test(const char *fmt, ...)
 {
   va_list args;
-  DBUG_ENTER("abort_not_supported_test");
+  DBUG_ENTER_NO_RETURN("abort_not_supported_test");
 
   /* Print include filestack */
   fflush(stdout);
@@ -2775,6 +2775,8 @@ do_result_format_version(struct st_command *command)
   dynstr_append_mem(&ds_res, ds_version.str, ds_version.length);
   dynstr_append(&ds_res, "\n");
   dynstr_free(&ds_version);
+
+  DBUG_VOID_RETURN;
 }
 
 
@@ -8954,7 +8956,7 @@ int main(int argc, char **argv)
   char save_file[FN_REFLEN];
   bool empty_result= FALSE;
   MY_INIT(argv[0]);
-  DBUG_ENTER("main");
+  DBUG_ENTER_NO_RETURN("main");
 
   /* mysqltest has no way to free all its memory correctly */
   sf_leaking_memory= 1;

@@ -691,7 +691,7 @@ static void *test_thread(void *arg)
 
   my_thread_init();
   {
-  DBUG_ENTER("test_thread");
+  DBUG_ENTER_NO_RETURN("test_thread");
   DBUG_PRINT("enter", ("param: %d", param));
 
   if (!simple_read_write_test() ||
@@ -716,7 +716,7 @@ static void *test_thread(void *arg)
   pthread_mutex_unlock(&LOCK_thread_count);
   free((uchar*) arg);
   my_thread_end();
-  DBUG_RETURN(0);
+  return 0;
   }
 }
 
@@ -765,7 +765,7 @@ int main(int argc __attribute__((unused)),
   }
 #endif
   {
-  DBUG_ENTER("main");
+  DBUG_ENTER_NO_RETURN("main");
   DBUG_PRINT("info", ("Main thread: %s\n", my_thread_name()));
 
   plan(18);

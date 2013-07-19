@@ -63,10 +63,41 @@ extern void dbug_swap_code_state(void **code_state_store);
 extern void dbug_free_code_state(void **code_state_store);
 extern  const char* _db_get_func_(void);
 
-#define DBUG_ENTER(a) struct _db_stack_frame_ _db_stack_frame_; \
+#define DBUG_ENTER_BODY(a) \
+        struct _db_stack_frame_ _db_stack_frame_; \
         _db_enter_ (a,__FILE__,__LINE__,&_db_stack_frame_)
-#define DBUG_LEAVE _db_return_ (__LINE__, &_db_stack_frame_)
 
+/*
+  Use DBUG_ENTER for functions that will always return via DBUG_RETURN or
+  DBUG_VOID_RETURN.
+
+  Use DBUG_ENTER_NO_RETURN for functions that are not expected to return
+  meaningfully, such as abort/die functions, and thread routines. This will
+  disable compile-time checking of DBUG_ENTER/DBUG_RETURN pairing via "unused
+  variable" compiler warnings.
+
+  Note:
+
+    If a compiler warning for _db_unused_variable_means_missing_return_
+    appears, claiming that the variable is unused, this normally means that
+    the function in question is missing a DBUG_RETURN or DBUG_VOID_RETURN.
+    This variable is declared in DBUG_ENTER and only used in DBUG_LEAVE in
+    order to allow compile-time validation that at least one DBUG_RETURN
+    variant is present in each function that uses DBUG_ENTER.
+
+    In functions with multiple exit points, as long as at least one exit
+    point has a DBUG_RETURN variant, compilation will succeed despite any
+    erroneously missing DBUG_RETURN variants in other exit points. However,
+    there is also a run-time check in _db_return_ which may catch this case.
+*/
+#define DBUG_ENTER(a) \
+        uint _db_unused_variable_means_missing_return_; \
+        DBUG_ENTER_BODY(a)
+#define DBUG_ENTER_NO_RETURN(a) \
+        DBUG_ENTER_BODY(a)
+#define DBUG_LEAVE \
+        _db_unused_variable_means_missing_return_= __LINE__; \
+        _db_return_ (_db_unused_variable_means_missing_return_, &_db_stack_frame_)
 #define DBUG_RETURN(a1) do {DBUG_LEAVE; return(a1);} while(0)
 #define DBUG_VOID_RETURN do {DBUG_LEAVE; return;} while(0)
 #define DBUG_EXECUTE(keyword,a1) \
@@ -130,6 +161,7 @@ extern void _db_suicide_();
 #else                                           /* No debugger */
 
 #define DBUG_ENTER(a1)
+#define DBUG_ENTER_NO_RETURN(a1)
 #define DBUG_VIOLATION_HELPER_LEAVE do { } while(0)
 #define DBUG_LEAVE
 #define DBUG_RETURN(a1)                 do { return(a1); } while(0)
