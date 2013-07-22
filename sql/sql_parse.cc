@@ -1646,8 +1646,6 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
             "bin log. Slave appears to be from an alternate future. "
             "Server_id from slave %u != Server_id from bin log %u";
 
-          sql_print_error(msg, llbuf, event_server_id, linfo.server_id);
-
           my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
           my_printf_error(my_errno, msg, MYF(0), llbuf, event_server_id,
                           linfo.server_id);
@@ -1657,8 +1655,6 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       {
         const char *msg= "Slave trying to connect using group_id = %s "
           "which couldn't be found in the bin logs.";
-
-        sql_print_error(msg, llbuf);
 
         my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
         my_printf_error(my_errno, msg, MYF(0), llbuf);
