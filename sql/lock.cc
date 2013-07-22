@@ -188,9 +188,9 @@ lock_tables_check(THD *thd, TABLE **tables, uint count, uint flags)
     if (!(flags & MYSQL_LOCK_IGNORE_GLOBAL_READ_ONLY) && !t->s->tmp_table)
     {
       if (t->reginfo.lock_type >= TL_WRITE_ALLOW_WRITE &&
-          !is_superuser && opt_readonly && !thd->slave_thread)
+          !is_superuser && !server_is_writable() && !thd->slave_thread)
       {
-        my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+        issue_server_not_writable_error();
         DBUG_RETURN(1);
       }
     }

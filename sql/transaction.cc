@@ -206,9 +206,9 @@ bool trans_begin(THD *thd, uint flags)
     */
     const bool user_is_super=
       MY_TEST(thd->security_ctx->master_access & SUPER_ACL);
-    if (opt_readonly && !user_is_super)
+    if (!server_is_writable() && !user_is_super)
     {
-      my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+      issue_server_not_writable_error();
       DBUG_RETURN(true);
     }
     thd->tx_read_only= false;

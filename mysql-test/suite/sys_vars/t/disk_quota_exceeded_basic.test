@@ -1,0 +1,169 @@
+############## mysql-test\t\disk_quota_exceeded_basic.test ###############
+#                                                                             #
+# Variable Name: disk_quota_exceeded                                          #
+# Scope: GLOBAL                                                               #
+# Access Type: Dynamic                                                        #
+# Data Type: numeric                                                          #
+# Default Value: 0                                                            #
+# Range: -                                                                    #
+#                                                                             #
+#                                                                             #
+# Creation Date: 2013-07-23                                                   #
+# Author:  Allight                                                            #
+#                                                                             #
+# Description: Test Cases of Dynamic System Variable disk_quota_exceeded      #
+#              that checks the behavior of this variable in the following ways#
+#              * Default Value                                                #
+#              * Valid & Invalid values                                       #
+#              * Scope & Access method                                        #
+#              * Data Integrity                                               #
+#                                                                             #
+###############################################################################
+
+--source include/load_sysvars.inc
+
+
+##########################################################################
+#                    START OF disk_quota_exceeded TESTS                  #
+##########################################################################
+
+
+##########################################################################
+# Saving initial value of disk_quota_exceeded in a temporary variable    #
+##########################################################################
+
+SET @start_value = @@global.disk_quota_exceeded;
+SELECT @start_value;
+
+
+--echo '#--------------------FN_DYNVARS_139_01------------------------#'
+################################################################
+#    Display the DEFAULT value of disk_quota_exceeded          #
+################################################################
+
+SET @@global.disk_quota_exceeded = 1;
+SET @@global.disk_quota_exceeded = DEFAULT;
+SELECT @@global.disk_quota_exceeded;
+
+
+--echo '#---------------------FN_DYNVARS_139_02-------------------------#'
+############################################### 
+#     Verify default value of variable        #
+############################################### 
+
+SET @@global.disk_quota_exceeded = @start_value;
+SELECT @@global.disk_quota_exceeded = 0;
+
+
+--echo '#--------------------FN_DYNVARS_139_03------------------------#'
+#################################################################
+#    Change the value of disk_quota_exceeded to a valid value   #
+#################################################################
+
+SET @@global.disk_quota_exceeded = 0;
+SELECT @@global.disk_quota_exceeded;
+SET @@global.disk_quota_exceeded = 1;
+SELECT @@global.disk_quota_exceeded;
+SET @@global.disk_quota_exceeded = TRUE;
+SELECT @@global.disk_quota_exceeded;
+SET @@global.disk_quota_exceeded = FALSE;
+SELECT @@global.disk_quota_exceeded;
+SET @@global.disk_quota_exceeded = ON;
+SELECT @@global.disk_quota_exceeded;
+SET @@global.disk_quota_exceeded = OFF;
+SELECT @@global.disk_quota_exceeded;
+
+--echo '#--------------------FN_DYNVARS_139_04-------------------------#'
+####################################################################
+#         Change the value of disk_quota_exceeded to invalid value #
+####################################################################
+
+--Error ER_WRONG_VALUE_FOR_VAR
+SET @@global.disk_quota_exceeded = -1;
+SELECT @@global.disk_quota_exceeded;
+--Error ER_WRONG_VALUE_FOR_VAR
+SET @@global.disk_quota_exceeded = 4294967296;
+SELECT @@global.disk_quota_exceeded;
+--Error ER_WRONG_VALUE_FOR_VAR
+SET @@global.disk_quota_exceeded = 10240022115;
+SELECT @@global.disk_quota_exceeded;
+--Error ER_WRONG_TYPE_FOR_VAR
+SET @@global.disk_quota_exceeded = 10000.01;
+SELECT @@global.disk_quota_exceeded;
+--Error ER_WRONG_VALUE_FOR_VAR
+SET @@global.disk_quota_exceeded = -1024;
+SELECT @@global.disk_quota_exceeded;
+--Error ER_WRONG_VALUE_FOR_VAR
+SET @@global.disk_quota_exceeded = 42949672950;
+SELECT @@global.disk_quota_exceeded;
+
+--Error ER_WRONG_VALUE_FOR_VAR
+SET @@global.disk_quota_exceeded = 'test';
+SELECT @@global.disk_quota_exceeded;
+
+
+--echo '#-------------------FN_DYNVARS_139_05----------------------------#'
+####################################################################
+#       Test if accessing session disk_quota_exceeded gives error  #
+####################################################################
+
+--Error ER_GLOBAL_VARIABLE
+SET @@session.disk_quota_exceeded = 0;
+SELECT @@disk_quota_exceeded;
+
+
+--echo '#----------------------FN_DYNVARS_139_06------------------------#'
+############################################################################## 
+# Check if the value in GLOBAL & SESSION Tables matches values in variable   #
+##############################################################################
+
+SELECT IF(@@global.disk_quota_exceeded, "ON", "OFF") = VARIABLE_VALUE 
+FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES 
+WHERE VARIABLE_NAME='disk_quota_exceeded';
+
+SELECT IF(@@disk_quota_exceeded, "ON", "OFF") = VARIABLE_VALUE 
+FROM INFORMATION_SCHEMA.SESSION_VARIABLES 
+WHERE VARIABLE_NAME='disk_quota_exceeded';
+
+
+--echo '#---------------------FN_DYNVARS_139_07----------------------#'
+########################################################################################################
+#    Check if accessing variable with SESSION,LOCAL and without SCOPE points to same session variable  #
+########################################################################################################
+
+SET @@global.disk_quota_exceeded = 1;
+SELECT @@disk_quota_exceeded = @@global.disk_quota_exceeded;
+
+
+--echo '#---------------------FN_DYNVARS_139_08----------------------#'
+#############################################################################
+#   Check if disk_quota_exceeded can be accessed with and without @@ sign   #
+#############################################################################
+
+--Error ER_GLOBAL_VARIABLE
+SET disk_quota_exceeded = 1;
+SELECT @@disk_quota_exceeded;
+--Error ER_PARSE_ERROR
+SET local.disk_quota_exceeded = 1;
+--Error ER_UNKNOWN_TABLE
+SELECT local.disk_quota_exceeded;
+--Error ER_PARSE_ERROR
+SET global.disk_quota_exceeded = 1;
+--Error ER_UNKNOWN_TABLE
+SELECT global.disk_quota_exceeded;
+--Error ER_BAD_FIELD_ERROR
+SELECT disk_quota_exceeded = @@session.disk_quota_exceeded;
+
+
+##############################  
+#   Restore initial value    #
+##############################
+
+SET @@global.disk_quota_exceeded = @start_value;
+SELECT @@global.disk_quota_exceeded;
+
+
+#################################################################
+#              END OF disk_quota_exceeded TESTS                 #
+#################################################################
+

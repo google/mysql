@@ -104,7 +104,12 @@ extern ulong slave_run_triggers_for_rbr;
 #define slave_run_triggers_for_rbr 0
 #endif //RBR_TRIGGERS
 extern ulonglong slave_type_conversions_options;
-extern my_bool read_only, opt_readonly;
+/*
+ NOTE: All code should use is_server_writable to determine if server is or is
+       not readonly.
+ */
+extern my_bool read_only, opt_readonly_do_not_use;
+extern my_bool disk_quota_exceeded, opt_disk_quota_exceeded;
 extern my_bool lower_case_file_system;
 extern my_bool opt_enable_named_pipe, opt_sync_frm, opt_allow_suspicious_udfs;
 extern my_bool opt_secure_auth;
@@ -623,6 +628,10 @@ enum options_mysqld
   OPT_which_is_always_the_last
 };
 #endif
+
+inline bool server_is_writable()
+{ return !(opt_readonly_do_not_use || opt_disk_quota_exceeded); }
+void issue_server_not_writable_error();
 
 /**
    Query type constants (usable as bitmap flags).

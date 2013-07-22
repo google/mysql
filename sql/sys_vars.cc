@@ -2304,11 +2304,11 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type type)
 {
   bool result= true;
   my_bool new_read_only= read_only; // make a copy before releasing a mutex
-  DBUG_ENTER("sys_var_opt_readonly::update");
+  DBUG_ENTER("sys_var_opt_readonly_do_not_use::update");
 
-  if (read_only == FALSE || read_only == opt_readonly)
+  if (read_only == FALSE || read_only == opt_readonly_do_not_use)
   {
-    opt_readonly= read_only;
+    opt_readonly_do_not_use= read_only;
     DBUG_RETURN(false);
   }
 
@@ -2323,7 +2323,7 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type type)
       - FLUSH TABLES WITH READ LOCK
       - SET GLOBAL READ_ONLY = 1
     */
-    opt_readonly= read_only;
+    opt_readonly_do_not_use= read_only;
     DBUG_RETURN(false);
   }
 
@@ -2339,7 +2339,7 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type type)
       Prevents transactions from committing.
   */
 
-  read_only= opt_readonly;
+  read_only= opt_readonly_do_not_use;
   mysql_mutex_unlock(&LOCK_global_system_variables);
 
   if (thd->global_read_lock.lock_global_read_lock(thd))
@@ -2348,8 +2348,8 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type type)
   if ((result= thd->global_read_lock.make_global_read_lock_block_commit(thd)))
     goto end_with_read_lock;
 
-  /* Change the opt_readonly system variable, safe because the lock is held */
-  opt_readonly= new_read_only;
+  /* Change the opt_readonly_do_not_use system variable, safe because the lock is held */
+  opt_readonly_do_not_use= new_read_only;
   result= false;
 
  end_with_read_lock:
@@ -2358,10 +2358,71 @@ static bool fix_read_only(sys_var *self, THD *thd, enum_var_type type)
  end_with_mutex_unlock:
   mysql_mutex_lock(&LOCK_global_system_variables);
  end:
-  read_only= opt_readonly;
+  read_only= opt_readonly_do_not_use;
   DBUG_RETURN(result);
 }
 
+static bool fix_disk_quota_exceeded(sys_var *self, THD *thd, enum_var_type type)
+{
+  bool result= true;
+  my_bool new_disk_quota_exceeded= disk_quota_exceeded; // make a copy before releasing a mutex
+  DBUG_ENTER("sys_var_opt_disk_quota_exceeded::update");
+
+  if (disk_quota_exceeded == FALSE || disk_quota_exceeded == opt_disk_quota_exceeded)
+  {
+    opt_disk_quota_exceeded= disk_quota_exceeded;
+    DBUG_RETURN(false);
+  }
+
+  if (check_read_only(self, thd, 0)) // just in case
+    goto end;
+
+  if (thd->global_read_lock.is_acquired())
+  {
+    /*
+      This connection already holds the global read lock.
+      This can be the case with:
+      - FLUSH TABLES WITH READ LOCK
+      - SET GLOBAL READ_ONLY = 1
+    */
+    opt_disk_quota_exceeded= disk_quota_exceeded;
+    DBUG_RETURN(false);
+  }
+
+  /*
+    DISK_QUOTA_EXCEEDED=1 prevents write locks from being taken on tables and
+    blocks transactions from committing. We therefore should make sure
+    that no such events occur while setting the disk_quota_exceeded variable.
+    This is a 2 step process:
+    [1] lock_global_read_lock()
+      Prevents connections from obtaining new write locks on
+      tables. Note that we can still have active rw transactions.
+    [2] make_global_read_lock_block_commit()
+      Prevents transactions from committing.
+  */
+
+  disk_quota_exceeded= opt_disk_quota_exceeded;
+  mysql_mutex_unlock(&LOCK_global_system_variables);
+
+  if (thd->global_read_lock.lock_global_read_lock(thd))
+    goto end_with_mutex_unlock;
+
+  if ((result= thd->global_read_lock.make_global_read_lock_block_commit(thd)))
+    goto end_with_read_lock;
+
+  /* Change the opt_disk_quota_exceeded system variable, safe because the lock is held */
+  opt_disk_quota_exceeded= new_disk_quota_exceeded;
+  result= false;
+
+ end_with_read_lock:
+  /* Release the lock */
+  thd->global_read_lock.unlock_global_read_lock(thd);
+ end_with_mutex_unlock:
+  mysql_mutex_lock(&LOCK_global_system_variables);
+ end:
+  disk_quota_exceeded= opt_disk_quota_exceeded;
+  DBUG_RETURN(result);
+}
 
 static Sys_var_mybool Sys_allow_delayed_write(
        "allow_delayed_write",
@@ -2376,8 +2437,8 @@ static Sys_var_mybool Sys_allow_xa(
        DEFAULT(FALSE));
 
 /**
-  The read_only boolean is always equal to the opt_readonly boolean except
-  during fix_read_only(); when that function is entered, opt_readonly is
+  The read_only boolean is always equal to the opt_readonly_do_not_use boolean except
+  during fix_read_only(); when that function is entered, opt_readonly_do_not_use is
   the pre-update value and read_only is the post-update value.
   fix_read_only() compares them and runs needed operations for the
   transition (especially when transitioning from false to true) and
@@ -2390,6 +2451,22 @@ static Sys_var_mybool Sys_readonly(
        GLOBAL_VAR(read_only), CMD_LINE(OPT_ARG), DEFAULT(FALSE),
        NO_MUTEX_GUARD, NOT_IN_BINLOG,
        ON_CHECK(check_read_only), ON_UPDATE(fix_read_only));
+/**
+  The disk_quota_exceeded boolean is always equal to the
+  opt_disk_quota_exceeded boolean except during fix_disk_quota_exceeded();
+  when that function is entered, opt_disk_quota_exceeded is the pre-update
+  value and disk_quota_exceeded is the post-update value.
+  fix_disk_quota_exceeded() compares them and runs needed operations for the
+  transition (especially when transitioning from false to true) and
+  synchronizes both booleans in the end.
+*/
+static Sys_var_mybool Sys_disk_quota_exceeded(
+       "disk_quota_exceeded",
+       "Make all non-temporary tables read-only, with the exception for "
+       "replication (slave) threads and users with the SUPER privilege",
+       GLOBAL_VAR(disk_quota_exceeded), CMD_LINE(OPT_ARG), DEFAULT(FALSE),
+       NO_MUTEX_GUARD, NOT_IN_BINLOG,
+       ON_CHECK(check_read_only), ON_UPDATE(fix_disk_quota_exceeded));
 
 static Sys_var_charptr_list Sys_restricted_schemas(
        "restricted_schemas",

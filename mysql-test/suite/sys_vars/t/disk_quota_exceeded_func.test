@@ -1,0 +1,148 @@
+############ mysql-test\t\disk_quota_exceeded_func.test ########################
+#                                                                              #
+#Variable Name: disk_quota_exceeded                                            #
+#Scope: SESSION                                                                #
+#Access Type: Dynamic                                                          #
+#Data Type: BOOLEAN                                                            #
+#Default Value: OFF                                                            #
+#Values:      ON, OFF                                                          #
+#                                                                              #
+#                                                                              #
+#Creation Date: 2013-07-23                                                     #
+#Author:  Allight                                                              #
+#                                                                              #
+#Description: Test Cases of Dynamic System Variable "disk_quota_exceeded"      #
+#             that checks behavior of this variable in the following ways      #
+#             * Functionality based on different values                        #
+#                                                                              #
+################################################################################
+
+--echo ** Setup **
+--echo
+#
+# Setup
+#
+
+--source include/not_embedded.inc
+
+SET @default_disk_quota_exceeded = @@disk_quota_exceeded;
+
+--echo '#--------------------FN_DYNVARS_140_01-------------------------#'
+###################################
+#Setting Read only value ON       #
+###################################
+
+SET Global disk_quota_exceeded=ON;
+
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+--enable_warnings
+
+##################################
+#     Creating table             #
+##################################
+
+
+# creating table
+CREATE TABLE t1
+(
+id INT NOT NULL auto_increment,
+PRIMARY KEY (id),
+name BLOB
+);
+
+##################################
+#         Inserting values       #
+##################################
+
+
+INSERT into t1(name) values("aaassssssssddddddddffffff");
+
+###################################
+#   Updating values               #
+###################################
+
+update t1 set name="jfjdf" where id=1;
+
+###############################################
+# Select to see wether value is updated or not#
+###############################################
+
+select * from t1 where id=1;
+
+--echo '#--------------------FN_DYNVARS_140_02-------------------------#'
+#########################################
+#Creating user without Super privilege  #
+#########################################
+
+
+--echo ** Creating new user with out super privilege**
+CREATE user sameea;
+--echo ** Connecting connn using username 'sameea' **
+CONNECT (connn,localhost,sameea,,);
+
+--Error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET Global disk_QUOTA_exceeded=ON;
+--Error ER_DISK_FULL
+CREATE TABLE t2
+(
+id INT NOT NULL auto_increment,
+PRIMARY KEY (id),
+name BLOB
+);
+
+# With ps-protocol the error is ER_NO_SUCH_TABLE
+--echo not updating values
+--Error ER_DISK_FULL,ER_NO_SUCH_TABLE
+INSERT into t2(name) values("aaassssssssddddddddffffff");
+
+
+--Error ER_DISK_FULL,ER_NO_SUCH_TABLE
+UPDATE t2 SET name="samia" where id=1;
+
+--echo '#--------------------FN_DYNVARS_140_03-------------------------#'
+
+###########################
+# Testing temporary table #
+###########################
+CREATE TEMPORARY TABLE t3(a int);
+
+--echo '#--------------------FN_DYNVARS_140_04-------------------------#'
+###########################
+# Turning disk_quota_exceeded OFF   #
+###########################
+--echo ** Connection default **
+connection default;
+
+SET Global disk_quota_exceeded=OFF;
+--echo ** Connection connn **
+connection connn;
+
+CREATE TABLE t2
+(
+id INT NOT NULL auto_increment,
+PRIMARY KEY (id),
+name BLOB
+);
+--echo updating values
+INSERT into t2(name) values("aaassssssssdddddddd");
+
+UPDATE t2 SET name="samia" where id=1;
+
+#
+# Cleanup
+#
+--echo ** Connection default **
+connection default;
+
+--echo ** Disconnecting connn **
+DISCONNECT connn;
+
+DROP USER sameea;
+
+DROP TABLE t1;
+DROP TABLE t2;
+SET global disk_quota_exceeded = @default_disk_quota_exceeded;
+
+--disable_info
+--enable_warnings

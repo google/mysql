@@ -433,7 +433,8 @@ handlerton *heap_hton;
 handlerton *myisam_hton;
 handlerton *partition_hton;
 
-my_bool read_only= 0, opt_readonly= 0;
+my_bool read_only= 0, opt_readonly_do_not_use= 0;
+my_bool disk_quota_exceeded= 0, opt_disk_quota_exceeded= 0;
 my_bool use_temp_pool, relay_log_purge;
 my_bool relay_log_recovery;
 my_bool opt_sync_frm, opt_allow_suspicious_udfs;
@@ -9058,7 +9059,8 @@ static int get_options(int *argc_ptr, char ***argv_ptr)
     MY_TEST(global_system_variables.optimizer_switch &
             OPTIMIZER_SWITCH_ENGINE_CONDITION_PUSHDOWN);
 
-  opt_readonly= read_only;
+  opt_readonly_do_not_use= read_only;
+  opt_disk_quota_exceeded= disk_quota_exceeded;
 
   /*
     If max_long_data_size is not specified explicitly use
@@ -9100,7 +9102,22 @@ static int get_options(int *argc_ptr, char ***argv_ptr)
   
   return 0;
 }
-
+/*
+ Issue the appropriate error when a command is prevented from running because
+ the server is not writable. Should be called only if server_is_writable()
+ returns false.
+*/
+void issue_server_not_writable_error()
+{
+  if (opt_disk_quota_exceeded)
+  {
+    my_error(ER_DISK_FULL, MYF(0), "quota exceeded", 0);
+  }
+  else
+  {
+    my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+  }
+}
 
 /*
   Create version name for running mysqld version

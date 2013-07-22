@@ -1016,8 +1016,10 @@ out:
 #endif  /* EMBEDDED_LIBRARY */
 
 /**
-  @brief Determine if an attempt to update a non-temporary table while the
-    read-only option was enabled has been made.
+  @brief If the server is not "writable", determine whether the current query
+    should be blocked as a result.  Any updates that touch non-tempoary tables
+    in any way are denied. (The read_only and disk_quota_exceeded options both
+    trigger this code, but produce different messages if the query is denied.)
 
   This is a helper function to mysql_execute_command.
 
@@ -1026,15 +1028,16 @@ out:
   @see mysql_execute_command
   @returns Status code
     @retval TRUE The statement should be denied.
-    @retval FALSE The statement isn't updating any relevant tables.
+    @retval FALSE The server isn't writable or the statement isn't updating
+                  any relevant tables.
 */
 
-static my_bool deny_updates_if_read_only_option(THD *thd,
-                                                TABLE_LIST *all_tables)
+static my_bool deny_updates_if_server_not_writable(THD *thd,
+                                                   TABLE_LIST *all_tables)
 {
-  DBUG_ENTER("deny_updates_if_read_only_option");
+  DBUG_ENTER("deny_updates_if_server_not_writable");
 
-  if (!opt_readonly)
+  if (server_is_writable())
     DBUG_RETURN(FALSE);
 
   LEX *lex= thd->lex;
@@ -1053,11 +1056,11 @@ static my_bool deny_updates_if_read_only_option(THD *thd,
   if (lex->sql_command == SQLCOM_UPDATE_MULTI)
     DBUG_RETURN(FALSE);
 
-  const my_bool create_temp_tables= 
+  const my_bool create_temp_tables=
     (lex->sql_command == SQLCOM_CREATE_TABLE) &&
     lex->create_info.tmp_table();
 
-  const my_bool drop_temp_tables= 
+  const my_bool drop_temp_tables=
     (lex->sql_command == SQLCOM_DROP_TABLE) &&
     lex->drop_temporary;
 
@@ -2382,12 +2385,13 @@ mysql_execute_command(THD *thd)
   {
 #endif /* HAVE_REPLICATION */
     /*
-      When option readonly is set deny operations which change non-temporary
-      tables. Except for the replication thread and the 'super' users.
+      When !server_is_writable(), deny operations which change non-temporary
+      tables. Queries from the replication thread and users with SUPER are
+      permitted regardless.
     */
-    if (deny_updates_if_read_only_option(thd, all_tables))
+    if (deny_updates_if_server_not_writable(thd, all_tables))
     {
-      my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+      issue_server_not_writable_error();
       DBUG_RETURN(-1);
     }
 #ifdef HAVE_REPLICATION
@@ -3363,11 +3367,11 @@ end_with_restore_list:
 #endif /* HAVE_REPLICATION */
       if (res)
         break;
-      if (opt_readonly &&
+      if (!server_is_writable() &&
 	  !(thd->security_ctx->master_access & SUPER_ACL) &&
 	  some_non_temp_table_to_be_updated(thd, all_tables))
       {
-	my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+        issue_server_not_writable_error();
 	break;
       }
 #ifdef HAVE_REPLICATION

@@ -1,0 +1,118 @@
+SET @start_value = @@global.disk_quota_exceeded;
+SELECT @start_value;
+@start_value
+0
+'#--------------------FN_DYNVARS_139_01------------------------#'
+SET @@global.disk_quota_exceeded = 1;
+SET @@global.disk_quota_exceeded = DEFAULT;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+'#---------------------FN_DYNVARS_139_02-------------------------#'
+SET @@global.disk_quota_exceeded = @start_value;
+SELECT @@global.disk_quota_exceeded = 0;
+@@global.disk_quota_exceeded = 0
+1
+'#--------------------FN_DYNVARS_139_03------------------------#'
+SET @@global.disk_quota_exceeded = 0;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = 1;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+1
+SET @@global.disk_quota_exceeded = TRUE;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+1
+SET @@global.disk_quota_exceeded = FALSE;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = ON;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+1
+SET @@global.disk_quota_exceeded = OFF;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+'#--------------------FN_DYNVARS_139_04-------------------------#'
+SET @@global.disk_quota_exceeded = -1;
+ERROR 42000: Variable 'disk_quota_exceeded' can't be set to the value of '-1'
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = 4294967296;
+ERROR 42000: Variable 'disk_quota_exceeded' can't be set to the value of '4294967296'
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = 10240022115;
+ERROR 42000: Variable 'disk_quota_exceeded' can't be set to the value of '10240022115'
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = 10000.01;
+ERROR 42000: Incorrect argument type to variable 'disk_quota_exceeded'
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = -1024;
+ERROR 42000: Variable 'disk_quota_exceeded' can't be set to the value of '-1024'
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = 42949672950;
+ERROR 42000: Variable 'disk_quota_exceeded' can't be set to the value of '42949672950'
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+SET @@global.disk_quota_exceeded = 'test';
+ERROR 42000: Variable 'disk_quota_exceeded' can't be set to the value of 'test'
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
+'#-------------------FN_DYNVARS_139_05----------------------------#'
+SET @@session.disk_quota_exceeded = 0;
+ERROR HY000: Variable 'disk_quota_exceeded' is a GLOBAL variable and should be set with SET GLOBAL
+SELECT @@disk_quota_exceeded;
+@@disk_quota_exceeded
+0
+'#----------------------FN_DYNVARS_139_06------------------------#'
+SELECT IF(@@global.disk_quota_exceeded, "ON", "OFF") = VARIABLE_VALUE 
+FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES 
+WHERE VARIABLE_NAME='disk_quota_exceeded';
+IF(@@global.disk_quota_exceeded, "ON", "OFF") = VARIABLE_VALUE
+1
+SELECT IF(@@disk_quota_exceeded, "ON", "OFF") = VARIABLE_VALUE 
+FROM INFORMATION_SCHEMA.SESSION_VARIABLES 
+WHERE VARIABLE_NAME='disk_quota_exceeded';
+IF(@@disk_quota_exceeded, "ON", "OFF") = VARIABLE_VALUE
+1
+'#---------------------FN_DYNVARS_139_07----------------------#'
+SET @@global.disk_quota_exceeded = 1;
+SELECT @@disk_quota_exceeded = @@global.disk_quota_exceeded;
+@@disk_quota_exceeded = @@global.disk_quota_exceeded
+1
+'#---------------------FN_DYNVARS_139_08----------------------#'
+SET disk_quota_exceeded = 1;
+ERROR HY000: Variable 'disk_quota_exceeded' is a GLOBAL variable and should be set with SET GLOBAL
+SELECT @@disk_quota_exceeded;
+@@disk_quota_exceeded
+1
+SET local.disk_quota_exceeded = 1;
+ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'disk_quota_exceeded = 1' at line 1
+SELECT local.disk_quota_exceeded;
+ERROR 42S02: Unknown table 'local' in field list
+SET global.disk_quota_exceeded = 1;
+ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'disk_quota_exceeded = 1' at line 1
+SELECT global.disk_quota_exceeded;
+ERROR 42S02: Unknown table 'global' in field list
+SELECT disk_quota_exceeded = @@session.disk_quota_exceeded;
+ERROR 42S22: Unknown column 'disk_quota_exceeded' in 'field list'
+SET @@global.disk_quota_exceeded = @start_value;
+SELECT @@global.disk_quota_exceeded;
+@@global.disk_quota_exceeded
+0
