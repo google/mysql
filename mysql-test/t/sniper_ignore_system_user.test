@@ -1,0 +1,38 @@
+# Test for toggling of the sniper
+
+--source include/not_embedded.inc
+
+let $sniper_kills=0;
+--source include/sniper_used.inc
+
+--echo # Set up
+create user sys_user;
+grant select,insert,update,delete on *.* to sys_user;
+insert into mysql.system_user (select * from mysql.user where User='sys_user');
+delete from mysql.user where User='sys_user';
+flush privileges;
+
+connect (sys_con, localhost, sys_user,,);
+
+connection sys_con;
+--echo # Testing that sys_user is ignored
+
+--disable_reconnect
+--echo ### Check that it doesn't disconnect on sleep
+select 1 as should_be_1;
+--sleep 5
+select 1 as should_work;
+--enable_reconnect
+select 1 as sys_reconnect;
+
+--disable_reconnect
+--echo ### checking will not disconnect when runnning a query
+select sleep(5);
+select 1 as still_connected;
+--enable_reconnect
+
+--echo # cleanup
+connection default;
+disconnect sys_con;
+delete from mysql.system_user where User='sys_user';
+flush privileges;

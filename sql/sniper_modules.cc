@@ -16,6 +16,7 @@ Sniper_module_unauthenticated sniper_module_unauthenticated;
 Sniper_module_long_query sniper_module_long_query(0);
 Sniper_module_priv_ignore sniper_module_priv_ignore(SUPER_ACL);
 Sniper_module_infeasible sniper_module_infeasible(0.0,0,0);
+Sniper_module_system_user_ignore sniper_module_system_user_ignore;
 
 bool sniper_ignore_unauthenticated;
 bool sniper_connectionless;
@@ -88,3 +89,7 @@ bool Sniper_module_infeasible::should_snipe(THD *target_thd)
   }
 }
 
+bool Sniper_module_system_user_ignore::should_snipe(THD *target_thd)
+{
+  return !target_thd->security_ctx->is_system_user;
+}

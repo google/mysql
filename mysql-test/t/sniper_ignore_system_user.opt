@@ -1,0 +1,4 @@
+--sniper-idle-timeout=3
+--sniper-long-query-timeout=3
+--sniper-check-period=1
+--system-user-table

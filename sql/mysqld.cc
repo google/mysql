@@ -5425,6 +5425,7 @@ static void setup_sniper()
       || sniper_infeasible_max_cross_product_rows;
   sniper_module_priv_ignore.set_ignored_privs(SUPER_ACL);
   sniper.register_global_check(&sniper_module_priv_ignore);
+  sniper.register_global_check(&sniper_module_system_user_ignore);
   if (sniper_ignore_unauthenticated)
   {
     sniper.register_global_check(&sniper_module_unauthenticated);

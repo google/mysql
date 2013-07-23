@@ -198,6 +198,16 @@ public:
   }
 };
 
+class Sniper_module_system_user_ignore : public Sniper_module
+{
+public:
+  Sniper_module_system_user_ignore()
+      : Sniper_module("Sniper_module_system_user_ignore",
+                      "Will return false if the user is a system_user so "
+                      "it can be ignored") {}
+  virtual bool should_snipe(THD *target_thd);
+};
+
 extern Sniper sniper;
 extern Sniper_module_idle sniper_module_idle;
 extern Sniper_module_connectionless sniper_module_connectionless;
@@ -205,5 +215,6 @@ extern Sniper_module_unauthenticated sniper_module_unauthenticated;
 extern Sniper_module_long_query sniper_module_long_query;
 extern Sniper_module_priv_ignore sniper_module_priv_ignore;
 extern Sniper_module_infeasible sniper_module_infeasible;
+extern Sniper_module_system_user_ignore sniper_module_system_user_ignore;
 
 #endif  // SNIPER_MODULES_INCLUDED
