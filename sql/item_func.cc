@@ -4835,10 +4835,11 @@ bool Item_func_set_user_var::register_field_in_bitmap(uchar *arg)
     true    failure
 */
 
-static bool
-update_hash(user_var_entry *entry, bool set_null, void *ptr, uint length,
-            Item_result type, CHARSET_INFO *cs, Derivation dv,
-            bool unsigned_arg)
+bool
+set_variable_value(user_var_entry *entry, bool set_null,
+                   void *ptr, uint length,
+                   Item_result type, CHARSET_INFO *cs, Derivation dv,
+                   bool unsigned_arg)
 {
   if (set_null)
   {
@@ -4895,7 +4896,6 @@ update_hash(user_var_entry *entry, bool set_null, void *ptr, uint length,
   return 0;
 }
 
-
 bool
 Item_func_set_user_var::update_hash(void *ptr, uint length,
                                     Item_result res_type,
@@ -4908,8 +4908,8 @@ Item_func_set_user_var::update_hash(void *ptr, uint length,
   */
   if ((null_value= args[0]->null_value) && null_item)
     res_type= entry->type;                      // Don't change type of item
-  if (::update_hash(entry, (null_value= args[0]->null_value),
-                    ptr, length, res_type, cs, dv, unsigned_arg))
+  if (set_variable_value(entry, (null_value= args[0]->null_value),
+                         ptr, length, res_type, cs, dv, unsigned_arg))
   {
     null_value= 1;
     return 1;
@@ -5737,16 +5737,16 @@ bool Item_user_var_as_out_param::fix_fields(THD *thd, Item **ref)
 
 void Item_user_var_as_out_param::set_null_value(CHARSET_INFO* cs)
 {
-  ::update_hash(entry, TRUE, 0, 0, STRING_RESULT, cs,
-                DERIVATION_IMPLICIT, 0 /* unsigned_arg */);
+  set_variable_value(entry, TRUE, 0, 0, STRING_RESULT, cs,
+                     DERIVATION_IMPLICIT, 0 /* unsigned_arg */);
 }
 
 
 void Item_user_var_as_out_param::set_value(const char *str, uint length,
                                            CHARSET_INFO* cs)
 {
-  ::update_hash(entry, FALSE, (void*)str, length, STRING_RESULT, cs,
-                DERIVATION_IMPLICIT, 0 /* unsigned_arg */);
+  set_variable_value(entry, FALSE, (void*)str, length, STRING_RESULT, cs,
+                     DERIVATION_IMPLICIT, 0 /* unsigned_arg */);
 }
 
 

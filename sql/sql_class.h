@@ -4549,6 +4549,10 @@ class user_var_entry
 
 user_var_entry *get_variable(HASH *hash, LEX_STRING &name,
 				    bool create_if_not_exists);
+bool set_variable_value(user_var_entry *entry, bool set_null,
+                        void *ptr, uint length,
+                        Item_result type, CHARSET_INFO *cs, Derivation dv,
+                        bool unsigned_arg);
 
 /*
    Unique -- class for unique (removing of duplicates).

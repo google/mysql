@@ -96,6 +96,7 @@
 #include "set_var.h"
 #include "log_slow.h"
 #include "sql_bootstrap.h"
+#include "sql_class.h"
 
 #define FLAGSTR(V,F) ((V)&(F)?#F" ":"")
 
@@ -162,6 +163,16 @@ const LEX_STRING command_name[]={
   { C_STRING_WITH_LEN("Set option") },
   { C_STRING_WITH_LEN("Fetch") },
   { C_STRING_WITH_LEN("Daemon") },
+  { C_STRING_WITH_LEN("Reserved1") },
+  { C_STRING_WITH_LEN("Reserved2") },
+  { C_STRING_WITH_LEN("Reserved3") },
+  { C_STRING_WITH_LEN("Reserved4") },
+  { C_STRING_WITH_LEN("Reserved5") },
+  { C_STRING_WITH_LEN("Reserved6") },
+  { C_STRING_WITH_LEN("Reserved7") },
+  { C_STRING_WITH_LEN("Reserved8") },
+  { C_STRING_WITH_LEN("Reserved9") },
+  { C_STRING_WITH_LEN("Binlog Dump") },
   { C_STRING_WITH_LEN("Error") }  // Last command number
 };
 
@@ -1550,6 +1561,59 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
       unregister_slave(thd,1,1);
       /*  fake COM_QUIT -- if we get here, the thread needs to terminate */
       error = TRUE;
+      break;
+    }
+  case COM_BINLOG_DUMP2:
+    {
+      ushort flags;
+      uint32 slave_server_id;
+      uint32 event_server_id;
+      ulonglong group_id;
+
+      status_var_increment(thd->status_var.com_other);
+
+      thd->enable_slow_log= opt_log_slow_admin_statements;
+      thd->query_plan_flags|= QPLAN_ADMIN;
+      if (check_global_access(thd, REPL_SLAVE_ACL))
+        break;
+
+      flags= uint2korr(packet);
+
+      thd->variables.server_id=0; /* avoid suicide */
+      if ((slave_server_id= uint4korr(packet + 2)))
+        kill_zombie_dump_threads(slave_server_id);
+      thd->variables.server_id = slave_server_id;
+
+      group_id= uint8korr(packet + 6);
+      event_server_id= uint4korr(packet + 14);
+      char gtid_buf[50];
+      snprintf(gtid_buf, 50, "0-%u-%llu", event_server_id, group_id);
+      ulonglong strict_value= 1;
+
+      LEX_STRING state_var_name= { C_STRING_WITH_LEN("slave_connect_state") };
+      LEX_STRING strict_var_name= { C_STRING_WITH_LEN("slave_gtid_strict_mode") };
+      user_var_entry *state_entry= get_variable(&thd->user_vars, state_var_name, true);
+      user_var_entry *strict_entry= get_variable(&thd->user_vars, strict_var_name, true);
+
+      if (state_entry && strict_entry &&
+          !set_variable_value(state_entry, false, gtid_buf, strlen(gtid_buf),
+                              STRING_RESULT, &my_charset_latin1,
+                              DERIVATION_IMPLICIT, false) &&
+          !set_variable_value(strict_entry, false, &strict_value, sizeof(strict_value),
+                              INT_RESULT, &my_charset_latin1,
+                              DERIVATION_IMPLICIT, false))
+      {
+        mysql_binlog_send(thd, thd->strdup(""), 4, flags);
+      }
+      else
+      {
+        my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+        my_printf_error(my_errno, "Out of memory error", MYF(0));
+      }
+
+      /*  fake COM_QUIT -- if we get here, the thread needs to terminate. */
+      unregister_slave(thd, 1, 1);
+      error= TRUE;
       break;
     }
 #endif
