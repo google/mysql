@@ -1286,6 +1286,34 @@ when it try to get the value of TIME_ZONE global variable from master.";
     }
   }
 
+  /* In case we connected to MariaDB announce ourselves as having MariaDB
+     slave capabilities.
+  */
+  {
+    /* 4 == MARIA_SLAVE_CAPABILITY_GTID in MariaDB */
+    int rc= mysql_real_query(mysql,
+                             STRING_WITH_LEN("SET @mariadb_slave_capability=4"));
+    if (rc)
+    {
+      err_code= mysql_errno(mysql);
+      if (is_network_error(err_code))
+      {
+        mi->report(ERROR_LEVEL, err_code,
+                   "Setting @mariadb_slave_capability failed with error: %s",
+                   mysql_error(mysql));
+        goto network_err;
+      }
+      else
+      {
+        /* Fatal error */
+        errmsg= "The slave I/O thread stops because a fatal error was "
+          "encountered when trying to set @mariadb_slave_capability.";
+        sprintf(err_buff, "%s Error: %s", errmsg, mysql_error(mysql));
+        goto err;
+      }
+    }
+  }
+
 err:
   if (errmsg)
   {
@@ -2098,6 +2126,7 @@ static int request_dump(MYSQL* mysql, Master_info* mi,
     snprintf(llbuf, 22, "%llu", group_id);
     sql_print_information("Slave IO thread requesting dump from master at "
                           "group_id=%s, server_id=%u", llbuf, event_server_id);
+    mi->rli.is_master_mariadb= false;
   }
 
   if (simple_command(mysql, cmd, buf, len, 1))
@@ -2335,8 +2364,11 @@ int apply_event_and_update_pos(Log_event* ev, THD* thd, Relay_log_info* rli)
     has a Rotate etc).
   */
 
-  thd->server_id = ev->server_id; // use the original server id for logging
-  thd->group_id= ev->group_id;                // ad the same group_id
+  if (!rli->is_master_mariadb)
+  {
+    thd->server_id = ev->server_id; // use the original server id for logging
+    thd->group_id= ev->group_id;              // ad the same group_id
+  }
   thd->set_time();                            // time the query
   thd->lex->current_select= 0;
   if (!ev->when)
@@ -2505,13 +2537,19 @@ static int exec_relay_log_event(THD* thd, Relay_log_info* rli)
         which is generating group_ids.
       */
       if (rli->relay_log.description_event_for_exec->common_header_len <
-          LOG_EVENT_HEADER_WITH_ID_LEN)
+          LOG_EVENT_HEADER_WITH_ID_LEN && !rli->is_master_mariadb)
       {
         thd->master_has_group_ids= false;
       }
       else
       {
         thd->master_has_group_ids= true;
+
+        if (rli->is_master_mariadb)
+        {
+          ev->server_id= thd->server_id;
+          ev->group_id= thd->group_id;
+        }
 
         ulonglong grp_id= mysql_bin_log.get_group_id();
         if (ev->get_type_code() != FORMAT_DESCRIPTION_EVENT &&

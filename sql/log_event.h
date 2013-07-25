@@ -268,6 +268,7 @@ extern my_bool rpl_event_checksums;
 #define EXECUTE_LOAD_QUERY_EXTRA_HEADER_LEN (4 + 4 + 4 + 1)
 #define EXECUTE_LOAD_QUERY_HEADER_LEN  (QUERY_HEADER_LEN + EXECUTE_LOAD_QUERY_EXTRA_HEADER_LEN)
 #define INCIDENT_HEADER_LEN    2
+#define GTID_HEADER_LEN       19
 /* 
   Max number of possible extra bytes in a replication event compared to a
   packet (i.e. a query) sent from client to master;
@@ -613,6 +614,31 @@ enum Log_event_type
    */
   INCIDENT_EVENT= 26,
 
+  MYSQL51_END_EVENT,
+
+  /* New Maria event numbers start from here */
+  ANNOTATE_ROWS_EVENT= 160,
+  /*
+    Binlog checkpoint event. Used for XA crash recovery on the master, not used
+    in replication.
+    A binlog checkpoint event specifies a binlog file such that XA crash
+    recovery can start from that file - and it is guaranteed to find all XIDs
+    that are prepared in storage engines but not yet committed.
+  */
+  BINLOG_CHECKPOINT_EVENT= 161,
+  /*
+    Gtid event. For global transaction ID, used to start a new event group,
+    instead of the old BEGIN query event, and also to mark stand-alone
+    events.
+  */
+  GTID_EVENT= 162,
+  /*
+    Gtid list event. Logged at the start of every binlog, to record the
+    current replication state. This consists of the last GTID seen for
+    each replication domain.
+  */
+  GTID_LIST_EVENT= 163,
+
   /*
     Add new events here - right above this comment!
     Existing events (except ENUM_END_EVENT) should never change their numbers
@@ -626,7 +652,7 @@ enum Log_event_type
    is not to be handled, it does not exist in binlogs, it does not have a
    format).
 */
-#define LOG_EVENT_TYPES (ENUM_END_EVENT-1)
+#define LOG_EVENT_TYPES (MYSQL51_END_EVENT-1)
 
 enum Int_event_type
 {
@@ -1794,6 +1820,67 @@ public:        /* !!! Public in this patch to allow old usage */
       !strncasecmp(query, "SAVEPOINT", 9) ||
       !strncasecmp(query, "ROLLBACK", 8);
   }
+};
+
+
+class Gtid_log_event: public Log_event
+{
+public:
+  uint64 seq_no;
+  uint32 domain_id;
+  uchar flags2;
+
+  /* Flags2. */
+
+  /* FL_STANDALONE is set when there is no terminating COMMIT event. */
+  static const uchar FL_STANDALONE= 1;
+
+#ifdef MYSQL_SERVER
+#ifdef HAVE_REPLICATION
+  virtual int do_apply_event(Relay_log_info const *rli);
+  virtual int do_update_pos(Relay_log_info *rli);
+#endif
+#else
+  virtual void print(FILE *, PRINT_EVENT_INFO *)
+  {}
+#endif
+
+  Gtid_log_event(const char *buf, uint event_len,
+                 const Format_description_log_event *description_event);
+  ~Gtid_log_event() { }
+  Log_event_type get_type_code() { return GTID_EVENT; }
+  int get_data_size() { return GTID_HEADER_LEN; }
+  bool is_valid() const { return seq_no != 0; }
+};
+
+
+class Dummy_log_event: public Log_event
+{
+public:
+  Dummy_log_event(const char* buf,
+                  const Format_description_log_event* desc_event)
+    : Log_event(buf, desc_event)
+  {}
+  ~Dummy_log_event()
+  {}
+
+  virtual Log_event_type get_type_code()
+  {
+    // It doesn't matter what to return in this event.
+    return ANNOTATE_ROWS_EVENT;
+  }
+  virtual bool is_valid() const
+  { return true; }
+
+#ifdef MYSQL_CLIENT
+  virtual void print(FILE*, PRINT_EVENT_INFO*)
+  {}
+#endif
+
+#if !defined(MYSQL_CLIENT) && defined(HAVE_REPLICATION)
+private:
+  virtual int do_update_pos(Relay_log_info* rli);
+#endif
 };
 
 

@@ -1321,14 +1321,14 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
 
   /* Check the integrity */
   if (event_len < EVENT_LEN_OFFSET ||
-      buf[EVENT_TYPE_OFFSET] >= ENUM_END_EVENT ||
+      (uchar) buf[EVENT_TYPE_OFFSET] >= ENUM_END_EVENT ||
       (uint) event_len != uint4korr(buf+EVENT_LEN_OFFSET))
   {
     *error="Sanity check failed";		// Needed to free buffer
     DBUG_RETURN(NULL); // general sanity check - will fail on a partial read
   }
 
-  uint event_type= buf[EVENT_TYPE_OFFSET];
+  uint event_type= (uchar) buf[EVENT_TYPE_OFFSET];
   if (event_type > description_event->number_of_event_types &&
       event_type != FORMAT_DESCRIPTION_EVENT)
   {
@@ -1379,6 +1379,14 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
       break;
     case ROTATE_EVENT:
       ev = new Rotate_log_event(buf, event_len, description_event);
+      break;
+    case GTID_EVENT:
+      ev = new Gtid_log_event(buf, event_len, description_event);
+      break;
+    case BINLOG_CHECKPOINT_EVENT:
+    case GTID_LIST_EVENT:
+    case ANNOTATE_ROWS_EVENT:
+      ev = new Dummy_log_event(buf, description_event);
       break;
 #ifdef HAVE_REPLICATION
     case SLAVE_EVENT: /* can never happen (unused event) */
@@ -3785,6 +3793,88 @@ Query_log_event::do_shall_skip(Relay_log_info *rli)
     }
   }
   DBUG_RETURN(Log_event::do_shall_skip(rli));
+}
+
+#endif
+
+
+/**************************************************************************
+        Gtid_log_event methods
+**************************************************************************/
+
+Gtid_log_event::Gtid_log_event(const char *buf, uint event_len,
+               const Format_description_log_event *description_event)
+  : Log_event(buf, description_event), seq_no(0)
+{
+  uint8 header_size= description_event->common_header_len;
+  uint8 post_header_len= description_event->post_header_len[GTID_EVENT-1];
+  if (event_len < header_size + post_header_len ||
+      post_header_len < GTID_HEADER_LEN)
+    return;
+
+  buf+= header_size;
+  seq_no= uint8korr(buf);
+  buf+= 8;
+  domain_id= uint4korr(buf);
+  buf+= 4;
+  flags2= *buf;
+}
+
+
+#if defined(MYSQL_SERVER) && defined(HAVE_REPLICATION)
+
+static char gtid_begin_string[] = "BEGIN";
+
+int
+Gtid_log_event::do_apply_event(Relay_log_info const *rli)
+{
+  if (domain_id != 0)
+  {
+    rli->report(ERROR_LEVEL, 0,
+                "Received GTID event with domain not equal to 0");
+    return 1;
+  }
+
+  thd->server_id= server_id;
+  thd->group_id= seq_no;
+  fprintf(stderr, "Setting is_mariadb to true, rli=%p\n", rli);
+  fflush(stderr);
+  const_cast<Relay_log_info *>(rli)->is_master_mariadb= true;
+
+  if (flags2 & FL_STANDALONE)
+    return 0;
+
+  /* Execute this like a BEGIN query event. */
+  thd->set_query(gtid_begin_string, sizeof(gtid_begin_string)-1);
+  VOID(pthread_mutex_lock(&LOCK_thread_count));
+  thd->query_id = next_query_id();
+  VOID(pthread_mutex_unlock(&LOCK_thread_count));
+  const char* found_semicolon= NULL;
+  mysql_parse(thd, thd->query(), thd->query_length(), &found_semicolon);
+  thd->update_stats(true);
+  log_slow_statement(thd);
+  if (unlikely(thd->is_fatal_error))
+    thd->is_slave_error= 1;
+  else if (likely(!thd->is_slave_error))
+    general_log_write(thd, COM_QUERY, thd->query(), thd->query_length());
+  thd->set_query(NULL, 0);
+  free_root(thd->mem_root,MYF(MY_KEEP_PREALLOC));
+  return thd->is_slave_error;
+}
+
+int
+Gtid_log_event::do_update_pos(Relay_log_info *rli)
+{
+  rli->inc_event_relay_log_pos();
+  return 0;
+}
+
+
+int
+Dummy_log_event::do_update_pos(Relay_log_info *rli)
+{
+  rli->inc_event_relay_log_pos();
+  return 0;
 }
 
 #endif

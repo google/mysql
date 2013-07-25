@@ -234,6 +234,7 @@ public:
     Readers may not acquire the mutex while they realize potential concurrency
     issue.
   */
+  bool is_master_mariadb;
   volatile bool inited;
   volatile bool abort_slave;
   volatile uint slave_running;
