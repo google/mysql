@@ -2714,6 +2714,8 @@ mysql_execute_command(THD *thd)
     if (create_info.db_type->flags & HTON_DEPRECATED)
     {
         my_error(ER_ENGINE_DEPRECATED, MYF(0),
+          create_table->db,
+          create_table->table_name,
           ha_resolve_storage_engine_name(create_info.db_type)
           );
         res= 1;
@@ -3033,6 +3035,8 @@ end_with_restore_list:
           create_info.db_type->flags & HTON_DEPRECATED)
       {
           my_error(ER_ENGINE_DEPRECATED, MYF(0),
+            first_table->db,
+            first_table->table_name,
             ha_resolve_storage_engine_name(create_info.db_type)
             );
           res= 1;

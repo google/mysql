@@ -7,17 +7,17 @@ SELECT @@deprecated_engines;
 ,innodb,baz,bar
 SET storage_engine=innodb;
 CREATE TABLE test1 (x int);
-ERROR HY000: InnoDB is deprecated by the system administrator. Please use a different storage engine.
+ERROR HY000: Create or alter table test.test1 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
 CREATE TABLE test2 (x int) ENGINE=INNODB;
-ERROR HY000: InnoDB is deprecated by the system administrator. Please use a different storage engine.
+ERROR HY000: Create or alter table test.test2 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
 CREATE TABLE test3 (x int) ENGINE=MyISAM;
 SET storage_engine=MyISAM;
 CREATE TABLE test4 (x int);
 ALTER TABLE test0 ADD (y int);
 ALTER TABLE test3 ENGINE=InnoDB;
-ERROR HY000: InnoDB is deprecated by the system administrator. Please use a different storage engine.
+ERROR HY000: Create or alter table test.test3 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
 ALTER TABLE test3 ADD (y int), ENGINE=InnoDB;
-ERROR HY000: InnoDB is deprecated by the system administrator. Please use a different storage engine.
+ERROR HY000: Create or alter table test.test3 requested with engine InnoDB, which is deprecated by the system administrator. Please use a different storage engine.
 SELECT engine FROM information_schema.engines WHERE engine = 'frobnitz';
 engine
 ALTER TABLE test3 ENGINE=frobnitz;
