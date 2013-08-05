@@ -37,6 +37,12 @@ private:
   bool write_body_fmt(const char *fmt, ...);
   bool write_body_fmt_va_list(const char *fmt, va_list ap);
 
+  bool write_body_htmlencode(const char *buff, int buffLen);
+  bool write_body_htmlencode(const char *buff)
+  {
+    return write_body_htmlencode(buff, strlen(buff));
+  }
+
   bool write_body(const char *buff)
   {
     return resp_body_.append(buff);

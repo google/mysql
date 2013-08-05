@@ -31,7 +31,7 @@ bool Http_request::write_table_header(const char *title,
   bool err= false;
   err|= write_body("<p><table bgcolor=#eeeeff width=100%><tr align=center>"
                    "<td><font size=+2>");
-  err|= write_body(title);
+  err|= write_body_htmlencode(title);
   err|= write_body("</font></td></tr></table></p>"
                    "<table bgcolor=#fff5ee>\r\n<tr bgcolor=#eee5de>\r\n");
   while (*headings && !err)
@@ -98,7 +98,7 @@ bool Http_request::write_table_column(const char *value)
 {
   bool err= false;
   err|= write_body("  <td>");
-  err|= write_body(value);
+  err|= write_body_htmlencode(value);
   err|= write_body("</td>\r\n");
   return err;
 }
@@ -135,6 +135,50 @@ bool Http_request::write_body_fmt(const char *fmt, ...)
   return res;
 }
 
+bool Http_request::write_body_htmlencode(const char* buff, int buffLen)
+{
+  int out_cnt= 0;
+  int out_len= buffLen+7;
+  char *out= (char *) ::malloc(out_len);
+  for (int i= 0; i < buffLen; i++)
+  {
+    if (out_cnt + 6 >= out_len)
+    {
+      out_len+= 1000;
+      out= (char *)realloc(out, out_len);
+    }
+    switch (buff[i])
+    {
+    case '<':
+      strcpy(out+out_cnt, "&lt;");
+      out_cnt+= 4;
+      break;
+    case '>':
+      strcpy(out+out_cnt, "&gt;");
+      out_cnt+= 4;
+      break;
+    case '&':
+      strcpy(out+out_cnt, "&amp;");
+      out_cnt+= 5;
+      break;
+    case '\'':
+      strcpy(out+out_cnt, "&#39;");
+      out_cnt+= 5;
+      break;
+    case '\"':
+      strcpy(out+out_cnt, "&quot;");
+      out_cnt+= 6;
+      break;
+    default:
+      out[out_cnt]= buff[i];
+      out_cnt++;
+      break;
+    }
+  }
+  bool ret= write_body(out, out_cnt);
+  free(out);
+  return ret;
+}
 
 /**
   Allocate a two dimensional int array of size rows*columns.  Memory
