@@ -41,7 +41,7 @@ Relay_log_info::Relay_log_info()
 #endif
    group_master_log_pos(0), log_space_total(0), ignore_log_space_limit(0),
    last_master_timestamp(0), slave_skip_counter(0),
-   abort_pos_wait(0), slave_run_id(0), sql_thd(0),
+   abort_pos_wait(0), slave_run_id(0), sql_thd(0), is_master_mariadb(0),
    inited(0), abort_slave(0), slave_running(0), until_condition(UNTIL_NONE),
    until_log_pos(0), retried_trans(0),
    tables_to_lock(0), tables_to_lock_count(0),
