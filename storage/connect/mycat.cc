@@ -383,7 +383,7 @@ int MYCAT::GetCharCatInfo(PSZ what, PSZ sdef, char *buf, int size)
 /***********************************************************************/
 char *MYCAT::GetStringCatInfo(PGLOBAL g, PSZ what, PSZ sdef)
 	{
-	char *sval, *s= Hc->GetStringOption(what, sdef);
+	char *sval= NULL, *s= Hc->GetStringOption(what, sdef);
 	
 	if (s) {
 		sval= (char*)PlugSubAlloc(g, NULL, strlen(s) + 1);
@@ -408,8 +408,7 @@ char *MYCAT::GetStringCatInfo(PGLOBAL g, PSZ what, PSZ sdef)
 
       } // endif FileType
 
-  } else
-		sval = NULL;
+  } // endif s
 
 	return sval;
 	}	// end of GetStringCatInfo
@@ -425,6 +424,8 @@ int MYCAT::GetColCatInfo(PGLOBAL g, PTABDEF defp)
   TABTYPE  tc;
   PCOLDEF  cdp, lcdp= NULL, tocols= NULL;
 	PCOLINFO pcf= (PCOLINFO)PlugSubAlloc(g, NULL, sizeof(COLINFO));
+
+  memset(pcf, 0, sizeof(COLINFO));
 
   // Get a unique char identifier for type
   tc= (defp->Catfunc == FNC_NO) ? GetTypeID(type) : TAB_PRX;
@@ -467,9 +468,9 @@ int MYCAT::GetColCatInfo(PGLOBAL g, PTABDEF defp)
         break;
 			} // endswitch tc
 
-		do {
-			field= Hc->GetColumnOption(field, pcf);
-			} while (field && (*pcf->Name =='*' /*|| pcf->Flags & U_VIRTUAL*/));
+//		do {
+			field= Hc->GetColumnOption(g, field, pcf);
+//    } while (field && (*pcf->Name =='*' /*|| pcf->Flags & U_VIRTUAL*/));
 
 		if (tc == TAB_DBF && pcf->Type == TYPE_DATE && !pcf->Datefmt) {
 			// DBF date format defaults to 'YYYMMDD'

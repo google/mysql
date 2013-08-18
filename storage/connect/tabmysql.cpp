@@ -31,7 +31,10 @@
 /*    IBM, Borland, GNU or Microsoft C++ Compiler and Linker            */
 /*                                                                      */
 /************************************************************************/
+#define MYSQL_SERVER 1
 #include "my_global.h"
+#include "sql_class.h"
+#include "sql_servers.h"
 #if defined(WIN32)
 //#include <windows.h>
 #else   // !WIN32
@@ -64,7 +67,6 @@ void PrintResult(PGLOBAL, PSEM, PQRYRES);
 #endif   // _CONSOLE
 
 extern "C" int   trace;
-extern MYSQL_PLUGIN_IMPORT uint mysqld_port;
 
 /* -------------- Implementation of the MYSQLDEF class --------------- */
 
@@ -85,6 +87,45 @@ MYSQLDEF::MYSQLDEF(void)
   Bind = FALSE;
   Delayed = FALSE;
   } // end of MYSQLDEF constructor
+
+/***********************************************************************/
+/*  Get connection info from the declared server.                      */
+/***********************************************************************/
+bool MYSQLDEF::GetServerInfo(PGLOBAL g, const char *server_name)
+{
+  THD      *thd= current_thd;
+  MEM_ROOT *mem= thd->mem_root;
+  FOREIGN_SERVER *server, server_buffer;
+  DBUG_ENTER("GetServerInfo");
+  DBUG_PRINT("info", ("server_name %s", server_name));
+
+  if (!server_name || !strlen(server_name)) {
+    DBUG_PRINT("info", ("server_name not defined!"));
+    strcpy(g->Message, "server_name not defined!");
+    DBUG_RETURN(true);
+    } // endif server_name
+
+  // get_server_by_name() clones the server if exists and allocates
+	// copies of strings in the supplied mem_root
+  if (!(server= get_server_by_name(mem, server_name, &server_buffer))) {
+    DBUG_PRINT("info", ("get_server_by_name returned > 0 error condition!"));
+    /* need to come up with error handling */
+    strcpy(g->Message, "get_server_by_name returned > 0 error condition!");
+    DBUG_RETURN(true);
+    } // endif server
+
+  DBUG_PRINT("info", ("get_server_by_name returned server at %lx",
+                      (long unsigned int) server));
+
+  // TODO: We need to examine which of these can really be NULL
+  Hostname = PlugDup(g, server->host);
+  Database = PlugDup(g, server->db);
+  Username = PlugDup(g, server->username);
+  Password = PlugDup(g, server->password);
+  Portnumber = (server->port) ? server->port : GetDefaultPort();
+
+  DBUG_RETURN(false);
+} // end of GetServerInfo
 
 /***********************************************************************/
 /* Parse connection string                                             */
@@ -135,54 +176,26 @@ bool MYSQLDEF::ParseURL(PGLOBAL g, char *url)
   if ((!strstr(url, "://") && (!strchr(url, '@')))) {
     // No :// or @ in connection string. Must be a straight
     // connection name of either "server" or "server/table"
-    strcpy(g->Message, "Using Federated server not implemented yet");
-    return true;
-#if 0
-    /* ok, so we do a little parsing, but not completely! */
-    share->parsed= FALSE;
-    /*
-      If there is a single '/' in the connection string, this means the user is
-      specifying a table name
-    */
+    // ok, so we do a little parsing, but not completely!
+    if ((Tabname= strchr(url, '/'))) {
+      // If there is a single '/' in the connection string, 
+      // this means the user is specifying a table name
+      *Tabname++= '\0';
 
-    if ((share->table_name= strchr(share->connection_string, '/')))
-    {
-      *share->table_name++= '\0';
-      share->table_name_length= strlen(share->table_name);
+      // there better not be any more '/'s !
+      if (strchr(Tabname, '/'))
+        return true;
 
-      DBUG_PRINT("info", 
-                 ("internal format, parsed table_name "
-                  "share->connection_string: %s  share->table_name: %s",
-                  share->connection_string, share->table_name));
+    } else
+      // Otherwise, straight server name, 
+      // use tablename of federatedx table as remote table name
+      Tabname= Name;
 
-      /*
-        there better not be any more '/'s !
-      */
-      if (strchr(share->table_name, '/'))
-        goto error;
-    }
-    /*
-      Otherwise, straight server name, use tablename of federatedx table
-      as remote table name
-    */
-    else
-    {
-      /*
-        Connection specifies everything but, resort to
-        expecting remote and foreign table names to match
-      */
-      share->table_name= strmake_root(mem_root, table->s->table_name.str,
-                                      (share->table_name_length=
-                                       table->s->table_name.length));
-      DBUG_PRINT("info", 
-                 ("internal format, default table_name "
-                  "share->connection_string: %s  share->table_name: %s",
-                  share->connection_string, share->table_name));
-    }
+    if (trace)
+      htrc("server: %s  Tabname: %s", url, Tabname);
 
-    if ((error_num= get_connection(mem_root, share)))
-      goto error;
-#endif // 0
+    Server = url;
+    return GetServerInfo(g, url);
   } else {
     // URL, parse it
     char *sport, *scheme = url;
@@ -204,8 +217,10 @@ bool MYSQLDEF::ParseURL(PGLOBAL g, char *url)
     if (!(Hostname = strchr(Username, '@'))) {
       strcpy(g->Message, "No host specified in URL");
       return true;
-    } else
+    } else {
       *Hostname++ = 0;                   // End Username
+      Server = Hostname;
+    } // endif Hostname
 
     if ((Password = strchr(Username, ':'))) {
       *Password++ = 0;                   // End username
@@ -247,7 +262,7 @@ bool MYSQLDEF::ParseURL(PGLOBAL g, char *url)
     if ((sport = strchr(Hostname, ':')))
       *sport++ = 0;
 
-    Portnumber = (sport && sport[0]) ? atoi(sport) : mysqld_port;
+    Portnumber = (sport && sport[0]) ? atoi(sport) : GetDefaultPort();
 
     if (Username[0] == 0)
       Username = Cat->GetStringCatInfo(g, "User", "*");
@@ -279,12 +294,14 @@ bool MYSQLDEF::ParseURL(PGLOBAL g, char *url)
 /***********************************************************************/
 bool MYSQLDEF::DefineAM(PGLOBAL g, LPCSTR am, int poff)
   {
-  char *url = Cat->GetStringCatInfo(g, "Connect", NULL);
+  char *url;
 
   Desc = "MySQL Table";
 
   if (stricmp(am, "MYPRX")) {
     // Normal case of specific MYSQL table
+    url = Cat->GetStringCatInfo(g, "Connect", NULL);
+
     if (!url || !*url) { 
       // Not using the connection URL
       Hostname = Cat->GetStringCatInfo(g, "Host", "localhost");
@@ -293,24 +310,38 @@ bool MYSQLDEF::DefineAM(PGLOBAL g, LPCSTR am, int poff)
       Tabname = Cat->GetStringCatInfo(g, "Tabname", Tabname);
       Username = Cat->GetStringCatInfo(g, "User", "*");
       Password = Cat->GetStringCatInfo(g, "Password", NULL);
-      Portnumber = Cat->GetIntCatInfo("Port", mysqld_port);
+      Portnumber = Cat->GetIntCatInfo("Port", GetDefaultPort());
+      Server = Hostname;
     } else if (ParseURL(g, url))
       return TRUE;
 
     Bind = !!Cat->GetIntCatInfo("Bind", 0);
     Delayed = !!Cat->GetIntCatInfo("Delayed", 0);
   } else {
-    // MYSQL access from a PROXY table, not using URL 
+    // MYSQL access from a PROXY table 
     Database = Cat->GetStringCatInfo(g, "Database", "*");
-    Tabname = Name;
     Isview = Cat->GetBoolCatInfo("View", FALSE);
 
-    // We must get connection parms from the calling table
+    // We must get other connection parms from the calling table
     Remove_tshp(Cat);
-    Hostname = Cat->GetStringCatInfo(g, "Host", "localhost");
-    Username = Cat->GetStringCatInfo(g, "User", "*");
-    Password = Cat->GetStringCatInfo(g, "Password", NULL);
-    Portnumber = Cat->GetIntCatInfo("Port", mysqld_port);
+    url = Cat->GetStringCatInfo(g, "Connect", NULL);
+
+    if (!url || !*url) { 
+      Hostname = Cat->GetStringCatInfo(g, "Host", "localhost");
+      Username = Cat->GetStringCatInfo(g, "User", "*");
+      Password = Cat->GetStringCatInfo(g, "Password", NULL);
+      Portnumber = Cat->GetIntCatInfo("Port", GetDefaultPort());
+      Server = Hostname;
+    } else {
+      char *locdb = Database;
+
+      if (ParseURL(g, url))
+        return TRUE;
+
+      Database = locdb;
+    } // endif url
+
+    Tabname = Name;
   } // endif am
 
   if ((Srcdef = Cat->GetStringCatInfo(g, "Srcdef", NULL)))
@@ -339,13 +370,14 @@ PTDB MYSQLDEF::GetTable(PGLOBAL g, MODE m)
 TDBMYSQL::TDBMYSQL(PMYDEF tdp) : TDBASE(tdp)
   {
   if (tdp) {
-    Host = tdp->GetHostname();
-    Database = tdp->GetDatabase();
-    Tabname = tdp->GetTabname();
-    Srcdef = tdp->GetSrcdef();
-    User = tdp->GetUsername();
-    Pwd = tdp->GetPassword();
-    Port = tdp->GetPortnumber();
+    Host = tdp->Hostname;
+    Database = tdp->Database;
+    Tabname = tdp->Tabname;
+    Srcdef = tdp->Srcdef;
+    User = tdp->Username;
+    Pwd = tdp->Password;
+    Server = tdp->Server;
+    Port = tdp->Portnumber;
     Isview = tdp->Isview;
     Prep = tdp->Bind;
     Delayed = tdp->Delayed;
@@ -356,6 +388,7 @@ TDBMYSQL::TDBMYSQL(PMYDEF tdp) : TDBASE(tdp)
     Srcdef = NULL;
     User = NULL;
     Pwd = NULL;
+    Server = NULL;
     Port = 0;
     Isview = FALSE;
     Prep = FALSE;
@@ -447,10 +480,11 @@ bool TDBMYSQL::MakeSelect(PGLOBAL g)
 
   if (Columns) {
     for (colp = Columns; colp; colp = colp->GetNext())
-      if (colp->IsSpecial()) {
-        strcpy(g->Message, MSG(NO_SPEC_COL));
-        return TRUE;
-      } else {
+      if (!colp->IsSpecial()) {
+//      if (colp->IsSpecial()) {
+//        strcpy(g->Message, MSG(NO_SPEC_COL));
+//        return TRUE;
+//      } else {
         if (b)
           strcat(Query, ", ");
         else
@@ -493,10 +527,11 @@ bool TDBMYSQL::MakeInsert(PGLOBAL g)
     return FALSE;        // already done
 
   for (colp = Columns; colp; colp = colp->GetNext())
-    if (colp->IsSpecial()) {
-      strcpy(g->Message, MSG(NO_SPEC_COL));
-      return TRUE;
-    } else {
+    if (!colp->IsSpecial()) {
+//    if (colp->IsSpecial()) {
+//      strcpy(g->Message, MSG(NO_SPEC_COL));
+//      return TRUE;
+//    } else {
       len += (strlen(colp->GetName()) + 4);
       ((PMYCOL)colp)->Rank = Nparm++;
     } // endif colp
@@ -741,11 +776,6 @@ int TDBMYSQL::BindColumns(PGLOBAL g)
     } // endif prep
 #endif   // MYSQL_PREPARED_STATEMENTS
 
-  for (PMYCOL colp = (PMYCOL)Columns; colp; colp = (PMYCOL)colp->Next)
-    if (colp->Buf_Type == TYPE_DATE)
-      // Format must match DATETIME MySQL type
-      ((DTVAL*)colp->GetValue())->SetFormat(g, "YYYY-MM-DD hh:mm:ss", 19);
-
   return RC_OK;
   } // end of BindColumns
 
@@ -774,6 +804,14 @@ bool TDBMYSQL::OpenDB(PGLOBAL g)
       return true;
 
     } // endif Connected
+
+  /*********************************************************************/
+  /*  Take care of DATE columns.                                       */
+  /*********************************************************************/
+  for (PMYCOL colp = (PMYCOL)Columns; colp; colp = (PMYCOL)colp->Next)
+    if (colp->Buf_Type == TYPE_DATE)
+      // Format must match DATETIME MySQL type
+      ((DTVAL*)colp->GetValue())->SetFormat(g, "YYYY-MM-DD hh:mm:ss", 19);
 
   /*********************************************************************/
   /*  Allocate whatever is used for getting results.                   */
@@ -1165,10 +1203,6 @@ void MYSQLCOL::InitBind(PGLOBAL g)
   memset(Bind, 0, sizeof(MYSQL_BIND));
 
   if (Buf_Type == TYPE_DATE) {
-    // Default format must match DATETIME MySQL type
-//  if (!((DTVAL*)Value)->IsFormatted())
-      ((DTVAL*)Value)->SetFormat(g, "YYYY-MM-DD hh:mm:ss", 19);
-
     Bind->buffer_type = PLGtoMYSQL(TYPE_STRING, false);
     Bind->buffer = (char *)PlugSubAlloc(g,NULL, 20);
     Bind->buffer_length = 20;
@@ -1207,7 +1241,7 @@ void MYSQLCOL::ReadColumn(PGLOBAL g)
     if (trace)
       htrc("MySQL ReadColumn: name=%s buf=%s\n", Name, buf);
 
-    Value->SetValue_char(buf, Long);
+    Value->SetValue_char(buf, min((unsigned)Long, strlen(buf)));
   } else {
     if (Nullable)
       Value->SetNull(true);
@@ -1231,7 +1265,7 @@ void MYSQLCOL::WriteColumn(PGLOBAL g)
 #if defined(MYSQL_PREPARED_STATEMENTS)
   if (((PTDBMY)To_Tdb)->Prep) {
     if (Buf_Type == TYPE_DATE) {
-      Value->ShowValue((char *)Bind->buffer, (int)*Bind->length);
+      Value->ShowValue((char *)Bind->buffer, (int)Bind->buffer_length);
       Slen = strlen((char *)Bind->buffer);
     } else if (IsTypeChar(Buf_Type))
       Slen = strlen(Value->GetCharValue());

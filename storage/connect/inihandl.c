@@ -29,6 +29,7 @@
 //#include <sys/types.h>
 //#include <memory.h>
 #include "my_global.h"
+#include "osutil.h"
 #include "global.h"
 #include "inihandl.h"
 
@@ -606,6 +607,31 @@ void PROFILE_Close(LPCSTR filename)
     PROFILE_ReleaseFile();
 
 }  // end of PROFILE_Close
+
+
+/***********************************************************************
+ *           PROFILE_End
+ *
+ * Terminate and release the cache.
+ ***********************************************************************/
+void PROFILE_End(void)
+{
+  int i;
+
+  if (trace)
+    htrc("PROFILE_End: CurProfile=%p N=%d\n", CurProfile, N_CACHED_PROFILES);
+
+  /* Close all opened files and free the cache structure */
+  for (i = 0; i < N_CACHED_PROFILES; i++) {
+    if (trace)
+      htrc("MRU=%s i=%d\n", SVP(MRUProfile[i]->filename), i);
+
+    CurProfile = MRUProfile[i];
+    PROFILE_ReleaseFile();
+    free(MRUProfile[i]);
+    } // endfor i
+
+}  // end of PROFILE_End
 
 
 /***********************************************************************

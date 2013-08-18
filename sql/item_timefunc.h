@@ -14,7 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
 
 
 /* Function items used by mysql */
@@ -115,7 +115,7 @@ public:
   {
     int *input_version= (int*)int_arg;
     /* This function was introduced in 5.5 */
-    int output_version= max(*input_version, 50500);
+    int output_version= MY_MAX(*input_version, 50500);
     *input_version= output_version;
     return 0;
   }
@@ -489,7 +489,6 @@ public:
   Item_temporal_func(Item *a, Item *b) :Item_func(a,b) {}
   Item_temporal_func(Item *a, Item *b, Item *c) :Item_func(a,b,c) {}
   enum Item_result result_type () const { return STRING_RESULT; }
-  CHARSET_INFO *charset_for_protocol(void) const { return &my_charset_bin; }
   enum_field_types field_type() const { return MYSQL_TYPE_DATETIME; }
   Item_result cmp_type() const { return TIME_RESULT; }
   String *val_str(String *str);
@@ -934,7 +933,7 @@ public:
   const char *func_name() const { return "timediff"; }
   void fix_length_and_dec()
   {
-    decimals= max(args[0]->decimals, args[1]->decimals);
+    decimals= MY_MAX(args[0]->decimals, args[1]->decimals);
     Item_timefunc::fix_length_and_dec();
   }
   bool get_date(MYSQL_TIME *ltime, ulonglong fuzzy_date);

@@ -1,8 +1,8 @@
-revision-id: sergii@pisem.net-20130610064025-makoe3xkewwwky8j
-date: 2013-06-10 08:40:25 +0200
-build-date: 2013-06-10 09:12:21 +0200
-revno: 3761
+revision-id: svoj@mariadb.org-20130815124529-axbuocdgi87823na
+date: 2013-08-15 16:45:29 +0400
+build-date: 2013-08-15 16:36:11 +0200
+revno: 3800
 branch-nick: 10.0
 
 
-MySQL source 10.0.3
+MySQL source 10.0.4

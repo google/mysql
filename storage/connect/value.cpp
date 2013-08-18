@@ -27,6 +27,9 @@
 /*  Include relevant MariaDB header file.                              */
 /***********************************************************************/
 #include "my_global.h"
+#include "sql_class.h"
+#include "sql_time.h"
+
 #if defined(WIN32)
 //#include <windows.h>
 #else   // !WIN32
@@ -49,6 +52,7 @@
 #include "valblk.h"
 #define NO_FUNC                           // Already defined in ODBConn
 #include "plgcnx.h"                       // For DB types
+#include "osutil.h"
 
 /***********************************************************************/
 /*  Check macro's.                                                     */
@@ -578,19 +582,25 @@ void TYPVAL<TYPE>::SetValue_char(char *p, int n)
 template <>
 void TYPVAL<double>::SetValue_char(char *p, int n)
   {
-  char *p2, buf[32];
+  if (p) {
+    char buf[32];
 
-  for (p2 = p + n; p < p2 && *p == ' '; p++) ;
+    for (; n > 0 && *p == ' '; p++) 
+      n--;
 
-  n = min(p2 - p, 31);
-  memcpy(buf, p, n);
-  buf[n] = '\0';
-  Tval = atof(buf);
+    memcpy(buf, p, min(n, 31));
+    buf[n] = '\0';
+    Tval = atof(buf);
 
-  if (trace > 1)
-    htrc(" setting double: '%s' -> %lf\n", buf, Tval);
+    if (trace > 1)
+      htrc(" setting double: '%s' -> %lf\n", buf, Tval);
 
-  Null = false;
+    Null = false;
+  } else {
+    Reset();
+    Null = Nullable;
+  } // endif p
+
   } // end of SetValue
 
 /***********************************************************************/
@@ -599,8 +609,14 @@ void TYPVAL<double>::SetValue_char(char *p, int n)
 template <class TYPE>
 void TYPVAL<TYPE>::SetValue_psz(PSZ s)
   {
-  Tval = GetTypedValue(s);
-  Null = false;
+  if (s) {
+    Tval = GetTypedValue(s);
+    Null = false;
+  } else {
+    Reset();
+    Null = Nullable;
+  } // endif p
+
   } // end of SetValue
 
 template <>
@@ -859,12 +875,16 @@ TYPVAL<PSZ>::TYPVAL(PSZ s) : VALUE(TYPE_STRING)
 TYPVAL<PSZ>::TYPVAL(PGLOBAL g, PSZ s, int n, int c)
            : VALUE(TYPE_STRING)
   {
-  assert(Type == TYPE_STRING && (g || s));
+  assert(Type == TYPE_STRING);
   Len = (g) ? n : strlen(s);
 
-  if (g && !s) {
-    Strp = (char *)PlugSubAlloc(g, NULL, Len + 1);
-    Strp[Len] = '\0';
+  if (!s) {
+    if (g) {
+	    Strp = (char *)PlugSubAlloc(g, NULL, Len + 1);
+  	  Strp[Len] = '\0';
+  	} else
+  	  assert(false);
+  	  
   } else
     Strp = s;
 
@@ -895,17 +915,29 @@ bool TYPVAL<PSZ>::SetValue_pval(PVAL valp, bool chktype)
 /***********************************************************************/
 void TYPVAL<PSZ>::SetValue_char(char *p, int n)
   {
-  n = min(n, Len);
-  strncpy(Strp, p, n);
+  if (p) {
+    if ((n = min(n, Len))) {
+    	strncpy(Strp, p, n);
 
-  for (p = Strp + n - 1; (*p == ' ' || *p == '\0') && p >= Strp; p--) ;
+//	  for (p = Strp + n - 1; p >= Strp && (*p == ' ' || *p == '\0'); p--) ;
+      for (p = Strp + n - 1; p >= Strp; p--)
+        if (*p && *p != ' ')
+          break;
 
-  *(++p) = '\0';
+	    *(++p) = '\0';
 
-  if (trace > 1)
-    htrc(" Setting string to: '%s'\n", Strp);
+	    if (trace > 1)
+	      htrc(" Setting string to: '%s'\n", Strp);
+	      
+	  } else
+	  	Reset();
 
-  Null = false;
+    Null = false;
+  } else {
+    Reset();
+    Null = Nullable;
+  } // endif p
+
   } // end of SetValue_char
 
 /***********************************************************************/
@@ -913,8 +945,14 @@ void TYPVAL<PSZ>::SetValue_char(char *p, int n)
 /***********************************************************************/
 void TYPVAL<PSZ>::SetValue_psz(PSZ s)
   {
-  strncpy(Strp, s, Len);
-  Null = false;
+  if (s) {
+    strncpy(Strp, s, Len);
+    Null = false;
+  } else {
+    Reset();
+    Null = Nullable;
+  } // endif s
+
   } // end of SetValue_psz
 
 /***********************************************************************/
@@ -1010,7 +1048,6 @@ void TYPVAL<PSZ>::SetValue(char c)
 void TYPVAL<PSZ>::SetBinValue(void *p)
   {
   SetValue_char((char *)p, Len);
-  Null = false;
   } // end of SetBinValue
 
 /***********************************************************************/
@@ -1226,9 +1263,6 @@ void DTVAL::SetTimeShift(void)
 /*  though the gmtime C function. The purpose of this function is to   */
 /*  extend the range of valid dates by accepting negative time values. */
 /***********************************************************************/
-#include "sql_class.h"
-#include "sql_time.h"
-
 static void TIME_to_localtime(struct tm *tm, const MYSQL_TIME *ltime)
 {
   bzero(tm, sizeof(*tm));

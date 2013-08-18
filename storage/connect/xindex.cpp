@@ -1832,8 +1832,9 @@ int XINDXS::Range(PGLOBAL g, int limit, bool incl)
   /*********************************************************************/
   if (xp->GetType() == TYPE_CONST) {
     kp->Valp->SetValue_pval(xp->GetValue(), !kp->Prefix);
+    k = FastFind(Nval);
 
-    if ((k = FastFind(Nval)) < Num_K)
+    if (k < Num_K || Op != OP_EQ)
       if (limit)
         n = (Mul) ? k : kp->Val_K;
       else 
@@ -2368,7 +2369,6 @@ bool XHUGE::Open(PGLOBAL g, char *filename, int id, MODE mode)
   } // endif Mode
 
 #else   // UNIX
-  int    rc = 0;
   int    oflag = O_LARGEFILE;         // Enable file size > 2G
   mode_t pmod = 0;
 
@@ -2394,7 +2394,7 @@ bool XHUGE::Open(PGLOBAL g, char *filename, int id, MODE mode)
   Hfile= global_open(g, MSGID_OPEN_ERROR_AND_STRERROR, filename, oflag, pmod);
 
   if (Hfile == INVALID_HANDLE_VALUE) {
-    rc = errno;
+    /*rc = errno;*/
 #if defined(TRACE)
     printf("Open: %s\n", g->Message);
 #endif   // TRACE
@@ -2798,7 +2798,7 @@ bool KXYCOL::Init(PGLOBAL g, PCOL colp, int n, bool sm, int kln)
   if (Asc)
     IsSorted = colp->GetOpt() < 0;
 
-//MayHaveNulls = colp->HasNulls();
+//SetNulls(colp->IsNullable()); for when null columns will be indexable
   return false;
   } // end of Init
 
@@ -2957,6 +2957,11 @@ void KXYCOL::InitBinFind(void *vp)
 void KXYCOL::FillValue(PVAL valp)
   {
   valp->SetValue_pvblk(Kblp, Val_K);
+
+  // Set null when applicable (NIY)
+//if (valp->GetNullable())
+//  valp->SetNull(valp->IsZero());
+
   } // end of FillValue
 
 /***********************************************************************/

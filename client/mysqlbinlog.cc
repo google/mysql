@@ -1,6 +1,6 @@
 /*
-   Copyright (c) 2000, 2012, Oracle and/or its affiliates.
-   Copyright (c) 2009, 2012, Monty Program Ab
+   Copyright (c) 2000, 2013, Oracle and/or its affiliates.
+   Copyright (c) 2009, 2013, Monty Program Ab.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@
 /* That one is necessary for defines of OPTION_NO_FOREIGN_KEY_CHECKS etc */
 #include "sql_priv.h"
 #include "log_event.h"
+#include "compat56.h"
 #include "sql_common.h"
 #include "my_dir.h"
 #include <welcome_copyright_notice.h> // ORACLE_WELCOME_COPYRIGHT_NOTICE
@@ -206,10 +207,8 @@ void print_annotate_event(PRINT_EVENT_INFO *print_event_info)
   }
 }
 
-static Exit_status dump_local_log_entries(PRINT_EVENT_INFO *print_event_info,
-                                          const char* logname);
-static Exit_status dump_remote_log_entries(PRINT_EVENT_INFO *print_event_info,
-                                           const char* logname);
+static Exit_status dump_local_log_entries(PRINT_EVENT_INFO *, const char*);
+static Exit_status dump_remote_log_entries(PRINT_EVENT_INFO *, const char*);
 static Exit_status dump_log_entries(const char* logname);
 static Exit_status safe_connect();
 
@@ -858,7 +857,11 @@ static bool print_row_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
   /* 
      end of statement check:
        i) destroy/free ignored maps
-      ii) if skip event, flush cache now
+      ii) if skip event
+            a) since we are skipping the last event,
+               append END-MARKER(') to body cache (if required)
+
+            b) flush cache now
    */
   if (is_stmt_end)
   {
@@ -886,6 +889,12 @@ static bool print_row_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
     */
     if (skip_event)
     {
+      // append END-MARKER(') with delimiter
+      IO_CACHE *const body_cache= &print_event_info->body_cache;
+      if (my_b_tell(body_cache))
+        my_b_printf(body_cache, "'%s\n", print_event_info->delimiter);
+
+      // flush cache
       if ((copy_event_cache_to_file_and_reinit(&print_event_info->head_cache, result_file) ||
           copy_event_cache_to_file_and_reinit(&print_event_info->body_cache, result_file)))
         return 1;
@@ -1541,13 +1550,14 @@ the mysql command line client.\n\n");
 
 static my_time_t convert_str_to_timestamp(const char* str)
 {
-  int was_cut;
+  MYSQL_TIME_STATUS status;
   MYSQL_TIME l_time;
   long dummy_my_timezone;
   uint dummy_in_dst_time_gap;
+  
   /* We require a total specification (date AND time) */
-  if (str_to_datetime(str, (uint) strlen(str), &l_time, 0, &was_cut) !=
-      MYSQL_TIMESTAMP_DATETIME || was_cut)
+  if (str_to_datetime(str, (uint) strlen(str), &l_time, 0, &status) ||
+      l_time.time_type != MYSQL_TIMESTAMP_DATETIME || status.warnings)
   {
     error("Incorrect date and time argument: %s", str);
     exit(1);
@@ -2335,7 +2345,7 @@ static Exit_status dump_local_log_entries(PRINT_EVENT_INFO *print_event_info,
       my_off_t length,tmp;
       for (length= start_position_mot ; length > 0 ; length-=tmp)
       {
-	tmp=min(length,sizeof(buff));
+	tmp= MY_MIN(length,sizeof(buff));
 	if (my_b_read(file, buff, (uint) tmp))
         {
           error("Failed reading from file.");
@@ -2562,3 +2572,4 @@ void *sql_alloc(size_t size)
 #include "sql_string.cc"
 #include "sql_list.cc"
 #include "rpl_filter.cc"
+#include "compat56.cc"
