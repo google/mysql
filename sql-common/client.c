@@ -3300,7 +3300,7 @@ CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
     db=mysql->options.db;
   if (!port)
     port=mysql->options.port;
-  if (!unix_socket)
+  if (!unix_socket || !unix_socket[0])
     unix_socket=mysql->options.unix_socket;
 
   mysql->server_status=SERVER_STATUS_AUTOCOMMIT;
@@ -3349,7 +3349,7 @@ CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
   if (!net->vio &&
       (!mysql->options.protocol ||
        mysql->options.protocol == MYSQL_PROTOCOL_SOCKET) &&
-      (unix_socket || mysql_unix_port) &&
+      ((unix_socket && *unix_socket) || mysql_unix_port) &&
       (!host || !strcmp(host,LOCAL_HOST)))
   {
     my_socket sock= socket(AF_UNIX, SOCK_STREAM, 0);
@@ -3367,20 +3367,35 @@ CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
                       VIO_LOCALHOST | VIO_BUFFERED_READ);
     if (!net->vio)
     {
-      DBUG_PRINT("error",("Unknow protocol %d ", mysql->options.protocol));
+      DBUG_PRINT("error",("Unknown protocol %d ", mysql->options.protocol));
       set_mysql_error(mysql, CR_CONN_UNKNOW_PROTOCOL, unknown_sqlstate);
       closesocket(sock);
       goto error;
     }
 
     host= LOCAL_HOST;
-    if (!unix_socket)
+    if (!unix_socket || !*unix_socket)
       unix_socket= mysql_unix_port;
     host_info= (char*) ER(CR_LOCALHOST_CONNECTION);
     DBUG_PRINT("info", ("Using UNIX sock '%s'", unix_socket));
 
     bzero((char*) &UNIXaddr, sizeof(UNIXaddr));
     UNIXaddr.sun_family= AF_UNIX;
+    if (strlen(unix_socket) > sizeof(UNIXaddr.sun_path) - 1)
+    {
+      DBUG_PRINT("error",("Socket path %s is too long to connect to.",
+                          unix_socket));
+      // This makes an error message that says the errno is (36 "File name too
+      // long") in order to save the user some pain in comparison to (2 "No
+      // such file or directory").
+      set_mysql_extended_error(mysql, CR_CONNECTION_ERROR,
+                               unknown_sqlstate,
+                               ER(CR_CONNECTION_ERROR),
+                               unix_socket, ENAMETOOLONG);
+      vio_delete(net->vio);
+      net->vio= 0;
+      goto error;
+    }
     strmake_buf(UNIXaddr.sun_path, unix_socket);
     if (connect_sync_or_async(mysql, net, sock,
                               (struct sockaddr *) &UNIXaddr, sizeof(UNIXaddr)))
@@ -3544,7 +3559,7 @@ CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
   DBUG_PRINT("info", ("net->vio: %p", net->vio));
   if (!net->vio)
   {
-    DBUG_PRINT("error",("Unknow protocol %d ",mysql->options.protocol));
+    DBUG_PRINT("error",("Unknown protocol %d ",mysql->options.protocol));
     set_mysql_error(mysql, CR_CONN_UNKNOW_PROTOCOL, unknown_sqlstate);
     goto error;
   }
