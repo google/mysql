@@ -201,7 +201,7 @@ static TYPELIB innodb_stats_method_typelib = {
 
 /** Possible values for system variable innodb_default_row_format */
 static const char* innodb_default_row_format_names[] = {
-	"auto", // original DEFAULT behavior -> (key_block_size_specified ? innodb : compact)
+	"auto", // original DEFAULT behavior -> (key_block_size_specified ? compressed : compact)
 	"compact",
 	"compressed",
 	"dynamic",
@@ -6852,6 +6852,14 @@ ha_innobase::update_create_info(
     ha_innobase::info(HA_STATUS_AUTO);
     create_info->auto_increment_value = stats.auto_increment_value;
   }
+
+  if (!(create_info->used_fields & HA_CREATE_USED_ROW_FORMAT)
+      && get_row_type() == ROW_TYPE_COMPRESSED) {
+    create_info->row_type = ROW_TYPE_COMPRESSED;
+    if (!(create_info->used_fields & HA_CREATE_USED_KEY_BLOCK_SIZE)) {
+      create_info->key_block_size = dict_table_zip_size(prebuilt->table) / 1024;
+    }
+  }
 }
 
 /*****************************************************************//**
@@ -10629,7 +10637,9 @@ ha_innobase::check_if_incompatible_data(
 	}
 
 	/* Specifying KEY_BLOCK_SIZE requests a rebuild of the table. */
-	if (info->used_fields & HA_CREATE_USED_KEY_BLOCK_SIZE) {
+        uint current_key_block_size = dict_table_zip_size(prebuilt->table) / 1024;
+	if (info->used_fields & HA_CREATE_USED_KEY_BLOCK_SIZE
+            && info->key_block_size != current_key_block_size) {
 		return(COMPATIBLE_DATA_NO);
 	}
 

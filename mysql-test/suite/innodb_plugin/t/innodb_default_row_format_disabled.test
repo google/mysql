@@ -1,0 +1,6 @@
+# The same series of tests should be run with the innodb_default_row_format
+# option disabled by configuration. To avoid duplicating the exact same
+# contents of the test file, we'll just source it here instead. The result
+# file contents will differ, in that the tables created without a row format
+# will be the system "default" row format.
+--source innodb_default_row_format.test

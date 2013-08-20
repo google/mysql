@@ -48,14 +48,14 @@ SELECT engine, row_format
 FROM information_schema.tables
 WHERE table_schema = DATABASE() AND table_name = 'no_row_format_clause';
 engine	row_format
-InnoDB	Compressed
+InnoDB	Compact
 SHOW CREATE TABLE no_row_format_clause;
 Table	Create Table
 no_row_format_clause	CREATE TABLE `no_row_format_clause` (
   `id` int(11) NOT NULL,
   `msg` blob,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
 DROP TABLE no_row_format_clause;
 SHOW WARNINGS;
 Level	Code	Message
