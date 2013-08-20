@@ -208,6 +208,21 @@ user2	localhost	Y	Y
 user3	localhost	Y	Y
 root	HOSTNAME	Y	Y
 delete from mysql.user where User = 'user3';
+#
+# The gtid_slave_pos table should require SUPER privilege to be changed too
+#
+# Insert a dummy row into gtid_slave_pos.
+insert into mysql.gtid_slave_pos values (0, 1, 1, 1);
+# Verify that user2 is not allowed to modify gtid_slave_pos.
+select * from mysql.gtid_slave_pos;
+domain_id	sub_id	server_id	seq_no
+0	1	1	1
+insert into mysql.gtid_slave_pos values (1, 1, 2, 2);
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+update mysql.gtid_slave_pos set domain_id = 2 where domain_id = 0;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+delete from mysql.gtid_slave_pos where domain_id = 0;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
 # Remove global privileges and add db-specific privileges to user2.
 revoke all on *.* from user2@localhost;
 grant SELECT, INSERT, UPDATE, DELETE on mysql.* to user2@localhost;
@@ -224,9 +239,20 @@ update mysql.system_user set Update_priv = 'Y' where User = 'user1';
 ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
 delete from mysql.system_user where User = 'user1';
 ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+# Verify that user2 is not allowed to modify gtid_slave_pos.
+select * from mysql.gtid_slave_pos;
+domain_id	sub_id	server_id	seq_no
+0	1	1	1
+insert into mysql.gtid_slave_pos values (1, 1, 2, 2);
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+update mysql.gtid_slave_pos set domain_id = 2 where domain_id = 0;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+delete from mysql.gtid_slave_pos where domain_id = 0;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
 # Remove db-specific and add table-specific privileges to user2.
 revoke all on mysql.* from user2@localhost;
 grant SELECT, INSERT, UPDATE, DELETE on mysql.system_user to user2@localhost;
+grant SELECT, INSERT, UPDATE, DELETE on mysql.gtid_slave_pos to user2@localhost;
 # Verify that user2 is not allowed to modify system_user.
 select * from d1.t1;
 ERROR 42000: SELECT command denied to user 'user2'@'localhost' for table 't1'
@@ -240,8 +266,19 @@ update mysql.system_user set Update_priv = 'Y' where User = 'user1';
 ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
 delete from mysql.system_user where User = 'user1';
 ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+# Verify that user2 is not allowed to modify gtid_slave_pos.
+select * from mysql.gtid_slave_pos;
+domain_id	sub_id	server_id	seq_no
+0	1	1	1
+insert into mysql.gtid_slave_pos values (1, 1, 2, 2);
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+update mysql.gtid_slave_pos set domain_id = 2 where domain_id = 0;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+delete from mysql.gtid_slave_pos where domain_id = 0;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
 # Remove table-specific privileges from user2.
 revoke all on mysql.system_user from user2@localhost;
+revoke all on mysql.gtid_slave_pos from user2@localhost;
 delete from mysql.system_user;
 delete from mysql.user where User = 'user1' or User = 'user2';
 #

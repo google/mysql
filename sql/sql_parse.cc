@@ -5671,7 +5671,9 @@ bool check_single_table_access(THD *thd, ulong privilege,
 
   if (opt_system_user_table &&
       !strcmp(all_tables->get_db_name(), "mysql") &&
-      !strcmp(all_tables->get_table_name(), "system_user") &&
+      (!strcmp(all_tables->get_table_name(), "system_user") ||
+       !strcmp(all_tables->get_table_name(),
+               rpl_gtid_slave_state_table_name.str)) &&
       (privilege & ~SELECT_ACL) &&
       !(thd->security_ctx->master_access & SUPER_ACL))
   {
@@ -5915,7 +5917,9 @@ check_table_access(THD *thd, ulong requirements,TABLE_LIST *tables,
 
     if (opt_system_user_table &&
         !strcmp(tables->get_db_name(), "mysql") &&
-        !strcmp(tables->get_table_name(), "system_user") &&
+        (!strcmp(tables->get_table_name(), "system_user") ||
+         !strcmp(tables->get_table_name(),
+                 rpl_gtid_slave_state_table_name.str)) &&
         (want_access & ~SELECT_ACL) &&
         !(sctx->master_access & SUPER_ACL))
     {
