@@ -259,6 +259,7 @@ typedef struct Binlog_relay_IO_param {
   char *host;
   char *user;
   unsigned int port;
+  char *connection;
 
   char *master_log_name;
   my_off_t master_log_pos;

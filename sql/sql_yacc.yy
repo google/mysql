@@ -1299,6 +1299,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  MASTER_PASSWORD_SYM
 %token  MASTER_PORT_SYM
 %token  MASTER_SERVER_ID_SYM
+%token  MASTER_SOCKET_SYM
 %token  MASTER_SSL_CAPATH_SYM
 %token  MASTER_SSL_CA_SYM
 %token  MASTER_SSL_CERT_SYM
@@ -2166,6 +2167,10 @@ master_def:
           MASTER_HOST_SYM EQ TEXT_STRING_sys
           {
             Lex->mi.host = $3.str;
+          }
+        | MASTER_SOCKET_SYM EQ TEXT_STRING_sys
+          {
+            Lex->mi.unix_socket= $3.str;
           }
         | MASTER_USER_SYM EQ TEXT_STRING_sys
           {
@@ -14286,6 +14291,7 @@ keyword_sp:
         | MASTER_PASSWORD_SYM      {}
         | MASTER_SERVER_ID_SYM     {}
         | MASTER_CONNECT_RETRY_SYM {}
+        | MASTER_SOCKET_SYM        {}
         | MASTER_SSL_SYM           {}
         | MASTER_SSL_CA_SYM        {}
         | MASTER_SSL_CAPATH_SYM    {}

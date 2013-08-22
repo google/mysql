@@ -74,9 +74,9 @@ int ReplSemiSyncSlave::slaveStart(Binlog_relay_IO_param *param)
   bool semi_sync= getSlaveEnabled();
   
   sql_print_information("Slave I/O thread: Start %s replication to\
- master '%s@%s:%d' in log '%s' at position %lu",
+ master '%s' in log '%s' at position %lu",
 			semi_sync ? "semi-sync" : "asynchronous",
-			param->user, param->host, param->port,
+			param->connection,
 			param->master_log_name[0] ? param->master_log_name : "FIRST",
 			(unsigned long)param->master_log_pos);
 

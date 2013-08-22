@@ -433,6 +433,7 @@ void Binlog_relay_IO_delegate::init_param(Binlog_relay_IO_param *param,
   param->user= mi->user;
   param->host= mi->host;
   param->port= mi->port;
+  param->connection= mi->connection.c_ptr_safe();
   param->master_log_name= mi->master_log_name;
   param->master_log_pos= mi->master_log_pos;
 }

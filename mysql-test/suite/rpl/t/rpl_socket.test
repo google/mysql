@@ -1,0 +1,72 @@
+#
+# Test for replication over unix domain sockets.
+#
+
+--source include/not_windows.inc
+--source include/not_embedded.inc
+--source include/master-slave.inc
+
+connection slave;
+--echo # Set up replication over the socket.
+
+--source include/stop_slave.inc
+# Need to silence so that we will not print the random socket created by the
+# test suite to the result file.
+--disable_query_log
+--echo CHANGE MASTER TO MASTER_SOCKET='\$MASTER_MYSOCK', MASTER_HOST='localhost', MASTER_PORT=1;
+eval CHANGE MASTER TO MASTER_SOCKET='$MASTER_MYSOCK',
+                      MASTER_HOST='localhost',
+                      MASTER_PORT=1;
+--enable_query_log
+--source include/start_slave.inc
+--let $slave_sock= query_get_value("SHOW SLAVE STATUS", Master_Socket, 1)
+--let $slave_host= query_get_value("SHOW SLAVE STATUS", Master_Host, 1)
+--let $slave_port= query_get_value("SHOW SLAVE STATUS", Master_Port, 1)
+
+--disable_query_log
+--echo # Check that the settings are such that the slave must be using the socket.
+eval select "$slave_sock"="$MASTER_MYSOCK" as "Master_Socket = \$MASTER_MYSOCK";
+eval select "$slave_host"="localhost" as "Master_Host = localhost";
+eval select "$slave_port"!="$MASTER_MYPORT" as "Master_Port != \$MASTER_MYPORT";
+--enable_query_log
+
+
+connection master;
+--echo *** On Master ***
+create table t1 (a int);
+create table t2 (a int);
+insert into t1 values (5);
+show tables;
+select * from t1;
+select * from t2;
+
+--sync_slave_with_master
+connection slave;
+--echo *** On Slave ***
+show tables;
+select * from t1;
+select * from t2;
+
+connection master;
+--echo # Cleanup the tables.
+--echo *** On Master ***
+drop table t1;
+drop table t2;
+show tables;
+
+--sync_slave_with_master
+connection slave;
+--echo *** On Slave ***
+show tables;
+
+--echo # Cleanup on slave. Put replication settings back into expected state.
+--source include/stop_slave.inc
+--echo CHANGE MASTER TO MASTER_SOCKET='', MASTER_PORT=\$MASTER_MYPORT, MASTER_HOST='127.0.0.1';
+--disable_query_log
+eval CHANGE MASTER TO MASTER_SOCKET='', MASTER_PORT=$MASTER_MYPORT, MASTER_HOST='127.0.0.1';
+--enable_query_log
+--source include/start_slave.inc
+
+
+connection default;
+--source include/rpl_end.inc

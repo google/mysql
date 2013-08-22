@@ -23,6 +23,7 @@
 #include "my_sys.h"
 #include "rpl_filter.h"
 #include "keycaches.h"
+#include "sql_string.h"
 
 typedef struct st_mysql MYSQL;
 
@@ -101,6 +102,28 @@ class Master_info : public Slave_reporting_capability
   Relay_log_info rli;
   uint port;
   Rpl_filter* rpl_filter;      /* Each replication can set its filter rule*/
+  String unix_socket;
+  bool using_tcp;
+  String connection;
+  void update_connection()
+  {
+    if (using_tcp)
+    {
+      // The 9 extra is so there is space for the @,:, the port number (6
+      // digits) and the null at the end.
+      char buf[sizeof(user)+sizeof(host)+9];
+      snprintf(buf, sizeof(buf), "%s@%s:%d", user, host, port);
+      connection.copy(buf, strlen(buf), system_charset_info);
+    }
+    else
+    {
+      connection.copy(user, strlen(user), system_charset_info);
+      connection.append(STRING_WITH_LEN("@socket["));
+      connection.append(unix_socket);
+      connection.append(STRING_WITH_LEN("]"));
+    }
+  }
+
   /*
     to hold checksum alg in use until IO thread has received FD.
     Initialized to novalue, then set to the queried from master

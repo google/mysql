@@ -3230,6 +3230,7 @@ bool change_master(THD* thd, Master_info* mi, bool *master_info_added)
   bool need_relay_log_purge= 1;
   bool ret= FALSE;
   char saved_host[HOSTNAME_LENGTH + 1];
+  String saved_unix_socket;
   uint saved_port;
   char saved_log_name[FN_REFLEN];
   Master_info::enum_using_gtid saved_using_gtid;
@@ -3320,6 +3321,7 @@ bool change_master(THD* thd, Master_info* mi, bool *master_info_added)
   */
   strmake_buf(saved_host, mi->host);
   saved_port= mi->port;
+  saved_unix_socket.copy(mi->unix_socket);
   strmake_buf(saved_log_name, mi->master_log_name);
   saved_log_pos= mi->master_log_pos;
   saved_using_gtid= mi->using_gtid;
@@ -3357,6 +3359,10 @@ bool change_master(THD* thd, Master_info* mi, bool *master_info_added)
 
   if (lex_mi->port)
     mi->port = lex_mi->port;
+  if (lex_mi->unix_socket)
+    mi->unix_socket.copy(lex_mi->unix_socket, strlen(lex_mi->unix_socket), &my_charset_latin1);
+  mi->using_tcp= (strcmp(mi->host, LOCAL_HOST) || !mi->unix_socket.length());
+  mi->update_connection();
   if (lex_mi->connect_retry)
     mi->connect_retry = lex_mi->connect_retry;
   if (lex_mi->heartbeat_opt != LEX_MASTER_INFO::LEX_MI_UNCHANGED)
@@ -3538,11 +3544,27 @@ bool change_master(THD* thd, Master_info* mi, bool *master_info_added)
   mi->rli.clear_until_condition();
 
   sql_print_information("'CHANGE MASTER TO executed'. "
-    "Previous state master_host='%s', master_port='%u', master_log_file='%s', "
+    "Previous state "
+    "master_host='%s', "
+    "master_port='%u', "
+    "master_socket='%s', "
+    "master_log_file='%s', "
     "master_log_pos='%ld'. "
-    "New state master_host='%s', master_port='%u', master_log_file='%s', "
-    "master_log_pos='%ld'.", saved_host, saved_port, saved_log_name,
-    (ulong) saved_log_pos, mi->host, mi->port, mi->master_log_name,
+    "New state "
+    "master_host='%s', "
+    "master_port='%u', "
+    "master_socket='%s', "
+    "master_log_file='%s', "
+    "master_log_pos='%ld'.",
+    saved_host,
+    saved_port,
+    saved_unix_socket.c_ptr_safe(),
+    saved_log_name,
+    (ulong) saved_log_pos,
+    mi->host,
+    mi->port,
+    mi->unix_socket.c_ptr_safe(),
+    mi->master_log_name,
     (ulong) mi->master_log_pos);
   if (saved_using_gtid != Master_info::USE_GTID_NO ||
       mi->using_gtid != Master_info::USE_GTID_NO)

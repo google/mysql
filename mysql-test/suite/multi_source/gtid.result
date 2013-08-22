@@ -79,6 +79,7 @@ Executed_log_entries	25
 Slave_received_heartbeats	0
 Slave_heartbeat_period	60.000
 Gtid_Slave_Pos	1-1-4,2-2-3
+Master_Socket	
 *** Now move slave2 to replicate from both master1 and master2 instead of just slave1 ***
 STOP ALL SLAVES;
 Warnings:

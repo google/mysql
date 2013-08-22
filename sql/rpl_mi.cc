@@ -33,7 +33,7 @@ Master_info::Master_info(LEX_STRING *connection_name_arg,
                          bool is_slave_recovery)
   :Slave_reporting_capability("I/O"),
    ssl(0), ssl_verify_server_cert(1), fd(-1), io_thd(0), 
-   rli(is_slave_recovery), port(MYSQL_PORT),
+   rli(is_slave_recovery), port(MYSQL_PORT), using_tcp(0),
    checksum_alg_before_fd(BINLOG_CHECKSUM_ALG_UNDEF),
    connect_retry(DEFAULT_CONNECT_RETRY), inited(0), abort_slave(0),
    slave_running(0), slave_run_id(0), sync_counter(0),
@@ -45,6 +45,8 @@ Master_info::Master_info(LEX_STRING *connection_name_arg,
   ssl_ca[0]= 0; ssl_capath[0]= 0; ssl_cert[0]= 0;
   ssl_cipher[0]= 0; ssl_key[0]= 0;
   ssl_crl[0]= 0; ssl_crlpath[0]= 0;
+  unix_socket.free();
+  connection.free();
 
   /*
     Store connection name and lower case connection name
@@ -356,7 +358,7 @@ file '%s')", fname);
     int ssl= 0, ssl_verify_server_cert= 0;
     float master_heartbeat_period= 0.0;
     char *first_non_digit;
-    char buf[HOSTNAME_LENGTH+1];
+    char buf[FN_REFLEN*2];
 
     /*
        Starting from 4.1.x master.info has new format. Now its
@@ -513,6 +515,12 @@ file '%s')", fname);
             else
               mi->using_gtid= Master_info::USE_GTID_NO;
           }
+          else if (!strncmp(buf, STRING_WITH_LEN("socket=")))
+          {
+            mi->unix_socket.copy(buf + sizeof("socket"),
+                                 strlen(buf+sizeof("socket")),
+                                 system_charset_info);
+          }
         }
       }
     }
@@ -534,6 +542,8 @@ file '%s')", fname);
     mi->ssl= (my_bool) ssl;
     mi->ssl_verify_server_cert= ssl_verify_server_cert;
     mi->heartbeat_period= master_heartbeat_period;
+    mi->using_tcp= (strcmp(mi->host, LOCAL_HOST) || !mi->unix_socket.length());
+    mi->update_connection();
   }
   DBUG_PRINT("master_info",("log_file_name: %s  position: %ld",
                             mi->master_log_name,
@@ -656,7 +666,8 @@ int flush_master_info(Master_info* mi,
   my_b_printf(file,
               "%u\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n%d\n%s\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n%s\n%s\n%d\n%s\n%s\n"
               "\n\n\n\n\n\n\n\n\n\n\n"
-              "using_gtid=%d\n",
+              "using_gtid=%d\n"
+              "socket=%s\n",
               LINES_IN_MASTER_INFO,
               mi->master_log_name, llstr(mi->master_log_pos, lbuf),
               mi->host, mi->user,
@@ -665,7 +676,8 @@ int flush_master_info(Master_info* mi,
               mi->ssl_cipher, mi->ssl_key, mi->ssl_verify_server_cert,
               heartbeat_buf, "", ignore_server_ids_buf,
               "", 0,
-              mi->ssl_crl, mi->ssl_crlpath, mi->using_gtid);
+              mi->ssl_crl, mi->ssl_crlpath, mi->using_gtid,
+              mi->unix_socket.c_ptr_safe());
   my_free(ignore_server_ids_buf);
   err= flush_io_cache(file);
   if (sync_masterinfo_period && !err && 

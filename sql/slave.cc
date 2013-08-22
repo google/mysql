@@ -2561,6 +2561,9 @@ static bool send_show_master_info_header(THD *thd, bool full,
     field_list.push_back(new Item_empty_string("Gtid_Slave_Pos",
                                                gtid_pos_length));
   }
+  // This is at the end so as not to break any tools (like mysqldump) which
+  // directly index into the result of a SHOW SLAVE STATUS query.
+  field_list.push_back(new Item_empty_string("Master_Socket", FN_REFLEN*2));
 
   if (protocol->send_result_set_metadata(&field_list,
                             Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
@@ -2574,9 +2577,10 @@ static bool send_show_master_info_data(THD *thd, Master_info *mi, bool full,
 {
   DBUG_ENTER("send_show_master_info_data");
 
-  if (mi->host[0])
+  if (mi->host[0] || mi->unix_socket.length())
   {
-    DBUG_PRINT("info",("host is set: '%s'", mi->host));
+    DBUG_PRINT("info",("host is set: '%s', socket is set: '%s'",
+                       mi->host, mi->unix_socket.c_ptr_safe()));
     String *packet= &thd->packet;
     Protocol *protocol= thd->protocol;
     Rpl_filter *rpl_filter= mi->rpl_filter;
@@ -2772,6 +2776,9 @@ static bool send_show_master_info_data(THD *thd, Master_info *mi, bool full,
       protocol->store((double)    mi->heartbeat_period, 3, &tmp);
       protocol->store(gtid_pos->ptr(), gtid_pos->length(), &my_charset_bin);
     }
+    // The unix socket path. Put at the end to avoid breaking tools (such as
+    // mysqldump) which uses absolute indexes on the result columns.
+    protocol->store(mi->unix_socket.c_ptr_safe(), &my_charset_bin);
 
     mysql_mutex_unlock(&mi->rli.err_lock);
     mysql_mutex_unlock(&mi->err_lock);
@@ -3854,18 +3861,17 @@ pthread_handler_t handle_slave_io(void *arg)
   if (!safe_connect(thd, mysql, mi))
   {
     if (mi->using_gtid == Master_info::USE_GTID_NO)
-      sql_print_information("Slave I/O thread: connected to master '%s@%s:%d',"
+      sql_print_information("Slave I/O thread: connected to master '%s', "
                             "replication started in log '%s' at position %s",
-                            mi->user, mi->host, mi->port,
-                            IO_RPL_LOG_NAME,
+                            mi->connection.c_ptr_safe(), IO_RPL_LOG_NAME,
                             llstr(mi->master_log_pos,llbuff));
     else
     {
       String tmp;
       mi->gtid_current_pos.to_string(&tmp);
-      sql_print_information("Slave I/O thread: connected to master '%s@%s:%d',"
+      sql_print_information("Slave I/O thread: connected to master '%s', "
                             "replication starts at GTID position '%s'",
-                            mi->user, mi->host, mi->port, tmp.c_ptr_safe());
+                            mi->connection.c_ptr_safe(), tmp.c_ptr_safe());
     }
   }
   else
@@ -5849,10 +5855,19 @@ static int connect_to_master(THD* thd, MYSQL* mysql, Master_info* mi,
                "terminated.");
     DBUG_RETURN(1);
   }
+  uint protocol;
+  if (mi->using_tcp)
+    protocol= MYSQL_PROTOCOL_TCP;
+  else
+    protocol= MYSQL_PROTOCOL_SOCKET;
+  mysql_options(mysql, MYSQL_OPT_PROTOCOL, &protocol);
+  char *socket= mi->unix_socket.c_ptr_safe();
+  if (!*socket)
+    socket= NULL;
   while (!(slave_was_killed = io_slave_killed(mi)) &&
          (reconnect ? mysql_reconnect(mysql) != 0 :
           mysql_real_connect(mysql, mi->host, mi->user, mi->password, 0,
-                             mi->port, 0, client_flag) == 0))
+                             mi->port, socket, client_flag) == 0))
   {
     /* Don't repeat last error */
     if ((int)mysql_errno(mysql) != last_errno)
@@ -5860,10 +5875,10 @@ static int connect_to_master(THD* thd, MYSQL* mysql, Master_info* mi,
       last_errno=mysql_errno(mysql);
       suppress_warnings= 0;
       mi->report(ERROR_LEVEL, last_errno,
-                 "error %s to master '%s@%s:%d'"
+                 "error %s to master '%s'"
                  " - retry-time: %d  retries: %lu  message: %s",
                  (reconnect ? "reconnecting" : "connecting"),
-                 mi->user, mi->host, mi->port,
+                 mi->connection.c_ptr_safe(),
                  mi->connect_retry, master_retry_count,
                  mysql_error(mysql));
     }
@@ -5889,17 +5904,16 @@ static int connect_to_master(THD* thd, MYSQL* mysql, Master_info* mi,
     if (reconnect)
     {
       if (!suppress_warnings && global_system_variables.log_warnings)
-        sql_print_information("Slave: connected to master '%s@%s:%d',\
-replication resumed in log '%s' at position %s", mi->user,
-                        mi->host, mi->port,
-                        IO_RPL_LOG_NAME,
+        sql_print_information("Slave: connected to master '%s', \
+replication resumed in log '%s' at position %s",
+                        mi->connection.c_ptr_safe(), IO_RPL_LOG_NAME,
                         llstr(mi->master_log_pos,llbuff));
     }
     else
     {
       change_rpl_status(RPL_IDLE_SLAVE,RPL_ACTIVE_SLAVE);
-      general_log_print(thd, COM_CONNECT_OUT, "%s@%s:%d",
-                        mi->user, mi->host, mi->port);
+      general_log_print(thd, COM_CONNECT_OUT, "%s",
+                        mi->connection.c_ptr_safe());
     }
 #ifdef SIGNAL_WITH_VIO_CLOSE
     thd->set_active_vio(mysql->net.vio);
@@ -5981,11 +5995,20 @@ MYSQL *rpl_connect_master(MYSQL *mysql)
   /* This one is not strictly needed but we have it here for completeness */
   mysql_options(mysql, MYSQL_SET_CHARSET_DIR, (char *) charsets_dir);
 
+  uint protocol;
+  if (mi->using_tcp)
+    protocol= MYSQL_PROTOCOL_TCP;
+  else
+    protocol= MYSQL_PROTOCOL_SOCKET;
+  mysql_options(mysql, MYSQL_OPT_PROTOCOL, &protocol);
+  char *socket= mi->unix_socket.c_ptr_safe();
+  if (!*socket)
+    socket= NULL;
   if (mi->user == NULL
       || mi->user[0] == 0
       || io_slave_killed( mi)
       || !mysql_real_connect(mysql, mi->host, mi->user, mi->password, 0,
-                             mi->port, 0, 0))
+                             mi->port, socket, 0))
   {
     if (!io_slave_killed( mi))
       sql_print_error("rpl_connect_master: error connecting to master: %s (server_error: %d)",

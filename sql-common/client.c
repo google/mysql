@@ -3377,7 +3377,7 @@ CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
     if (!unix_socket || !*unix_socket)
       unix_socket= mysql_unix_port;
     host_info= (char*) ER(CR_LOCALHOST_CONNECTION);
-    DBUG_PRINT("info", ("Using UNIX sock '%s'", unix_socket));
+    DBUG_PRINT("info", ("Using UNIX socket '%s'", unix_socket));
 
     bzero((char*) &UNIXaddr, sizeof(UNIXaddr));
     UNIXaddr.sun_family= AF_UNIX;

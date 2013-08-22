@@ -1,0 +1,50 @@
+include/master-slave.inc
+[connection master]
+# Set up replication over the socket.
+include/stop_slave.inc
+CHANGE MASTER TO MASTER_SOCKET='$MASTER_MYSOCK', MASTER_HOST='localhost', MASTER_PORT=1;
+include/start_slave.inc
+# Check that the settings are such that the slave must be using the socket.
+Master_Socket = $MASTER_MYSOCK
+1
+Master_Host = localhost
+1
+Master_Port != $MASTER_MYPORT
+1
+*** On Master ***
+create table t1 (a int);
+create table t2 (a int);
+insert into t1 values (5);
+show tables;
+Tables_in_test
+t1
+t2
+select * from t1;
+a
+5
+select * from t2;
+a
+*** On Slave ***
+show tables;
+Tables_in_test
+t1
+t2
+select * from t1;
+a
+5
+select * from t2;
+a
+# Cleanup the tables.
+*** On Master ***
+drop table t1;
+drop table t2;
+show tables;
+Tables_in_test
+*** On Slave ***
+show tables;
+Tables_in_test
+# Cleanup on slave. Put replication settings back into expected state.
+include/stop_slave.inc
+CHANGE MASTER TO MASTER_SOCKET='', MASTER_PORT=$MASTER_MYPORT, MASTER_HOST='127.0.0.1';
+include/start_slave.inc
+include/rpl_end.inc
