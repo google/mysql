@@ -183,3 +183,5 @@ disconnect normal_con;
 drop table ids;
 drop user normal_user;
 drop user super_user;
+--echo # Confirm our kill counts.
+show status like "Sniper_%_killed";

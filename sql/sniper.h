@@ -28,15 +28,22 @@ protected:
   {
     return NO_OPINION;
   }
+  ulong *kill_count_ptr;
 public:
   const char *name;
   const char *description;
-  Sniper_module(const char *module_name, const char *module_desc)
+  Sniper_module(const char *module_name,
+                const char *module_desc,
+                ulong *kill_count)
+      :kill_count_ptr(kill_count), name(module_name), description(module_desc)
   {
-    name= module_name;
-    description= module_desc;
     pthread_mutex_init(&LOCK_config, NULL);
-  };
+  }
+  Sniper_module(const char *module_name, const char *module_desc)
+      :kill_count_ptr(NULL), name(module_name), description(module_desc)
+  {
+    pthread_mutex_init(&LOCK_config, NULL);
+  }
   virtual ~Sniper_module() {}
   virtual void shutdown() {}
   SNIPER_DECISION get_decision(THD *target_thd, SNIPER_SETTINGS *settings)
@@ -46,6 +53,11 @@ public:
     res= decide(target_thd, settings);
     config_exit();
     return res;
+  }
+  virtual void increment_killed_count()
+  {
+    if (kill_count_ptr)
+      (*kill_count_ptr)++;
   }
 protected:
   void config_enter() { pthread_mutex_lock(&LOCK_config); }

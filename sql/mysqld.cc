@@ -554,6 +554,10 @@ ulong max_prepared_stmt_count;
 ulong prepared_stmt_count=0;
 ulong thread_id=1L,current_pid;
 ulong slow_launch_threads = 0;
+ulong sniper_queries_killed;
+ulong sniper_infeasible_queries_killed, sniper_long_queries_killed,
+      sniper_idle_queries_killed, sniper_connectionless_queries_killed;
+ulong sniper_runs;
 uint sync_binlog_period= 0, sync_relaylog_period= 0,
      sync_relayloginfo_period= 0, sync_masterinfo_period= 0;
 ulong expire_logs_days = 0;
@@ -8239,6 +8243,14 @@ SHOW_VAR status_vars[]= {
 #endif
   {"Slow_launch_threads",      (char*) &slow_launch_threads,    SHOW_LONG},
   {"Slow_queries",             (char*) offsetof(STATUS_VAR, long_query_count), SHOW_LONG_STATUS},
+  {"Sniper_queries_killed",    (char*) &sniper_queries_killed, SHOW_LONG},
+  {"Sniper_runs",              (char*) &sniper_runs, SHOW_LONG},
+  {"Sniper_long_queries_killed", (char*) &sniper_long_queries_killed, SHOW_LONG},
+  {"Sniper_idle_queries_killed", (char*) &sniper_idle_queries_killed, SHOW_LONG},
+  {"Sniper_infeasible_queries_killed",
+                               (char*) &sniper_infeasible_queries_killed, SHOW_LONG},
+  {"Sniper_connectionless_queries_killed",
+                               (char*) &sniper_connectionless_queries_killed, SHOW_LONG},
   {"Sort_merge_passes",	       (char*) offsetof(STATUS_VAR, filesort_merge_passes_), SHOW_LONG_STATUS},
   {"Sort_range",	       (char*) offsetof(STATUS_VAR, filesort_range_count_), SHOW_LONG_STATUS},
   {"Sort_rows",		       (char*) offsetof(STATUS_VAR, filesort_rows_), SHOW_LONG_STATUS},

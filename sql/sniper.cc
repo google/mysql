@@ -300,10 +300,11 @@ void Sniper::shoot(THD *target_thd)
 }
 
 // Print out all the modules that approved of a sniping.
-static int walk_action_print_approvals(void *module, void *thread)
+static int walk_action_print_and_incr_approvals(void *module, void *thread)
 {
   Sniper_module *mod= (Sniper_module *)module;
   THD *target_thd= (THD *)thread;
+  mod->increment_killed_count();
   sql_print_information("Sniper: THD id=%lu approved for sniping by "
                         "%s (%s).", target_thd->thread_id, mod->name,
                         mod->description);
@@ -352,7 +353,7 @@ bool Sniper::should_shoot(THD *target_thd)
     // We got no absolute rejections and some provisional approvals. We should
     // print out all modules which approved the sniping.
     list_walk(approvals,
-              (list_walk_action)walk_action_print_approvals,
+              (list_walk_action)walk_action_print_and_incr_approvals,
               (unsigned char *)target_thd);
   }
 end:
@@ -363,6 +364,7 @@ end:
 
 void Sniper::do_sniping()
 {
+  sniper_runs++;
   // Locking this for use in should_shoot. We do this here to prevent
   // a possible deadlock when acl_kill_user_threads locks LOCK_thread_count
   // after locking LOCK_sniper_config when running a DROP USER command.
@@ -385,7 +387,7 @@ void Sniper::do_sniping()
                             target_thd->thread_id,
                             (ctx && ctx->user) ? ctx->user : "",
                             (ctx && ctx->host) ? ctx->host : "");
-
+      sniper_queries_killed++;
       shoot(target_thd);
     }
   }

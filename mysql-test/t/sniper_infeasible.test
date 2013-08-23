@@ -197,3 +197,5 @@ disconnect super_con;
 disconnect root_con;
 drop user normal_user;
 drop user super_user;
+--echo # Confirm our kill counts.
+show status like "Sniper_%_killed";

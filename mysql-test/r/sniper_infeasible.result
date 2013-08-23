@@ -149,3 +149,11 @@ drop table t3;
 drop table t4;
 drop user normal_user;
 drop user super_user;
+# Confirm our kill counts.
+show status like "Sniper_%_killed";
+Variable_name	Value
+Sniper_connectionless_queries_killed	0
+Sniper_idle_queries_killed	0
+Sniper_infeasible_queries_killed	7
+Sniper_long_queries_killed	0
+Sniper_queries_killed	7

@@ -180,6 +180,10 @@ extern ulonglong query_cache_size;
 extern ulong query_cache_limit;
 extern ulong query_cache_min_res_unit;
 extern ulong slow_launch_threads, slow_launch_time;
+extern ulong sniper_queries_killed;
+extern ulong sniper_runs;
+extern ulong sniper_infeasible_queries_killed, sniper_long_queries_killed,
+             sniper_idle_queries_killed, sniper_connectionless_queries_killed;
 extern MYSQL_PLUGIN_IMPORT ulong max_connections;
 extern ulong max_connect_errors, connect_timeout;
 extern my_bool slave_allow_batching;

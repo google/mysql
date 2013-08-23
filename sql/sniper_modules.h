@@ -46,7 +46,8 @@ public:
   Sniper_module_idle(uint timeout)
       :Sniper_module("Sniper_module_idle",
                      "Will APPROVE sniping if the thread has been idle "
-                     "for more the given number of seconds."),
+                     "for more the given number of seconds.",
+                    &sniper_idle_queries_killed),
        max_time(timeout) {};
 
   void set_timeout(uint timeout)
@@ -67,7 +68,7 @@ public:
   Sniper_module_connectionless()
       :Sniper_module("Sniper_module_connectionless",
                      "Will APPROVE sniping if a user is not connected to "
-                     "the server"),
+                     "the server", &sniper_connectionless_queries_killed),
        active(TRUE) {};
   void set_active(bool is_active)
   {
@@ -108,7 +109,8 @@ public:
       :Sniper_module("Sniper_module_long_query",
                      "Will APPROVE sniping if the command is something "
                      "other then \"sleep\" and it has been running for "
-                     "longer then the given time."),
+                     "longer then the given time.",
+                     &sniper_long_queries_killed),
       max_time(time) {};
 
   void set_max_time(uint time)
@@ -138,7 +140,8 @@ public:
                      "query requires the use of filesort or temporary "
                      "tables. This may allow a THD to continue running "
                      "for a short time in order to give it the chance "
-                     "to finish quickly."),
+                     "to finish quickly.",
+                     &sniper_infeasible_queries_killed),
       max_cross_product_rows(max_cross_product_rows_arg),
       max_time(max_time_arg)
   {
