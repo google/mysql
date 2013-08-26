@@ -637,7 +637,10 @@ impossible position";
     if (test_for_non_eof_log_read_errors(error, &errmsg))
       goto err;
 
-    DBUG_EXECUTE_IF("sleep_after_binlog_EOF", my_sleep(6 * 1000 * 1000));
+    DBUG_EXECUTE_IF("sleep_after_binlog_EOF",
+                    {
+                      my_sleep(6 * 1000 * 1000);
+                    });
 
     /*
       We should only move to the next binlog when the last read event
