@@ -1309,7 +1309,7 @@ int Repl_semi_sync::read_slave_reply(THD *thd, NET *net,
     }
   }
 
-  if (packet_len == packet_error || packet_len < 10)
+  if (packet_len == packet_error || packet_len < 9)
   {
     if (packet_len == packet_error)
       *read_errmsg= "Read semi-sync reply network error";
@@ -1320,8 +1320,7 @@ int Repl_semi_sync::read_slave_reply(THD *thd, NET *net,
   }
 
   packet= net->read_pos;
-  if (packet[0] != Repl_semi_sync::packet_magic_num ||
-      packet[9] != Repl_semi_sync::packet_magic_num)
+  if (packet[0] != Repl_semi_sync::packet_magic_num)
   {
     *read_errmsg= "Read semi-sync reply magic number error";
     *read_errno=  ER_UNKNOWN_ERROR;
@@ -1329,7 +1328,10 @@ int Repl_semi_sync::read_slave_reply(THD *thd, NET *net,
   }
 
   log_file_pos= uint8korr(packet + 1);
-  strncpy(log_file_name, (const char*)packet + 10, FN_REFLEN);
+  packet+= 9;
+  if (*packet == Repl_semi_sync::packet_magic_num)
+    ++packet;
+  strncpy(log_file_name, (const char*)packet, FN_REFLEN);
 
   if (trc_level & trace_detail)
     sql_print_information("%s: Got reply (%s, %lu)",

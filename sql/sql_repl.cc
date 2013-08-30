@@ -433,6 +433,38 @@ get_slave_connect_state(THD *thd, String *out_str)
 }
 
 /*
+  XXX: MariaDB 10.0 Migration: Copied from MariaDB
+
+  Get the value of user variable as an integer.
+
+  This function will return the value of variable @a name as an
+  integer. If the original value of the variable is not an integer,
+  the value will be converted into an integer.
+
+  @param name     user variable name
+  @param value    pointer to return the value
+  @param null_value if not NULL, the function will set it to true if
+  the value of variable is null, set to false if not
+
+  @retval 0 Success
+  @retval 1 Variable not found
+*/
+static int
+get_user_var_int(const char *name, long long int *value, int *null_value)
+{
+  my_bool null_val;
+  user_var_entry *entry=
+    (user_var_entry*) my_hash_search(&current_thd->user_vars,
+                                  (uchar*) name, strlen(name));
+  if (!entry)
+    return 1;
+  *value= entry->val_int(&null_val);
+  if (null_value)
+    *null_value= null_val;
+  return 0;
+}
+
+/*
   TODO: Clean up loop to only have one call to send_file()
 */
 
@@ -445,6 +477,13 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
   bool need_sync= false;
 
   thd->semi_sync_slave= (flags & BINLOG_SEMI_SYNC);
+  if (!thd->semi_sync_slave)
+  {
+    int null_value;
+    long long val= 0;
+    get_user_var_int("rpl_semi_sync_slave", &val, &null_value);
+    thd->semi_sync_slave= val != 0;
+  }
 
   int ev_offset;
   if (!thd->semi_sync_slave)

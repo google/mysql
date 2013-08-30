@@ -2074,7 +2074,17 @@ static int request_dump(MYSQL* mysql, Master_info* mi,
 
   /* If semi-synchronous replication is enabled, set the flag. */
   if (semi_sync_slave)
+  {
     binlog_flags|= BINLOG_SEMI_SYNC;
+
+    const char *query= "SET @rpl_semi_sync_slave= 1";
+    if (mysql_real_query(mysql, query, strlen(query)))
+    {
+      sql_print_error("Set 'rpl_semi_sync_slave=1' on master failed");
+      DBUG_RETURN(1);
+    }
+    mysql_free_result(mysql_store_result(mysql));
+  }
   
   *suppress_warnings= FALSE;
 
