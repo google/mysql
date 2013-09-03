@@ -18,6 +18,7 @@
 #include "semisync_slave.h"
 
 char rpl_semi_sync_slave_enabled;
+char rpl_semi_sync_slave_reset_packet_num= 1;
 char rpl_semi_sync_slave_status= 0;
 unsigned long rpl_semi_sync_slave_trace_level;
 
@@ -119,7 +120,8 @@ int ReplSemiSyncSlave::slaveReply(MYSQL *mysql,
     sql_print_information("%s: reply (%s, %lu)", kWho,
                           binlog_filename, (ulong)binlog_filepos);
 
-  net_clear(net, 0);
+  if (rpl_semi_sync_slave_reset_packet_num)
+    net_clear(net, 0);
   /* Send the reply. */
   reply_res = my_net_write(net, reply_buffer,
                            name_len + REPLY_BINLOG_NAME_OFFSET);

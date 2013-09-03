@@ -1,0 +1,80 @@
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+@@global.rpl_semi_sync_slave_reset_packet_num
+1
+SET @start_global_value = @@global.rpl_semi_sync_slave_reset_packet_num;
+select @@global.rpl_semi_sync_slave_reset_packet_num in (0,1);
+@@global.rpl_semi_sync_slave_reset_packet_num in (0,1)
+1
+select @@session.rpl_semi_sync_slave_reset_packet_num;
+ERROR HY000: Variable 'rpl_semi_sync_slave_reset_packet_num' is a GLOBAL variable
+show global variables like 'rpl_semi_sync_slave_reset_packet_num';
+Variable_name	Value
+rpl_semi_sync_slave_reset_packet_num	ON
+show session variables like 'rpl_semi_sync_slave_reset_packet_num';
+Variable_name	Value
+rpl_semi_sync_slave_reset_packet_num	ON
+select * from information_schema.global_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+VARIABLE_NAME	VARIABLE_VALUE
+RPL_SEMI_SYNC_SLAVE_RESET_PACKET_NUM	ON
+select * from information_schema.session_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+VARIABLE_NAME	VARIABLE_VALUE
+RPL_SEMI_SYNC_SLAVE_RESET_PACKET_NUM	ON
+#
+# show that it's writable
+#
+set global rpl_semi_sync_slave_reset_packet_num=0;
+set session rpl_semi_sync_slave_reset_packet_num=0;
+ERROR HY000: Variable 'rpl_semi_sync_slave_reset_packet_num' is a GLOBAL variable and should be set with SET GLOBAL
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+@@global.rpl_semi_sync_slave_reset_packet_num
+0
+select @@session.rpl_semi_sync_slave_reset_packet_num;
+ERROR HY000: Variable 'rpl_semi_sync_slave_reset_packet_num' is a GLOBAL variable
+show global variables like 'rpl_semi_sync_slave_reset_packet_num';
+Variable_name	Value
+rpl_semi_sync_slave_reset_packet_num	OFF
+show session variables like 'rpl_semi_sync_slave_reset_packet_num';
+Variable_name	Value
+rpl_semi_sync_slave_reset_packet_num	OFF
+select * from information_schema.global_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+VARIABLE_NAME	VARIABLE_VALUE
+RPL_SEMI_SYNC_SLAVE_RESET_PACKET_NUM	OFF
+select * from information_schema.session_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+VARIABLE_NAME	VARIABLE_VALUE
+RPL_SEMI_SYNC_SLAVE_RESET_PACKET_NUM	OFF
+set global rpl_semi_sync_slave_reset_packet_num=1;
+set session rpl_semi_sync_slave_reset_packet_num=1;
+ERROR HY000: Variable 'rpl_semi_sync_slave_reset_packet_num' is a GLOBAL variable and should be set with SET GLOBAL
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+@@global.rpl_semi_sync_slave_reset_packet_num
+1
+select @@session.rpl_semi_sync_slave_reset_packet_num;
+ERROR HY000: Variable 'rpl_semi_sync_slave_reset_packet_num' is a GLOBAL variable
+show global variables like 'rpl_semi_sync_slave_reset_packet_num';
+Variable_name	Value
+rpl_semi_sync_slave_reset_packet_num	ON
+show session variables like 'rpl_semi_sync_slave_reset_packet_num';
+Variable_name	Value
+rpl_semi_sync_slave_reset_packet_num	ON
+select * from information_schema.global_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+VARIABLE_NAME	VARIABLE_VALUE
+RPL_SEMI_SYNC_SLAVE_RESET_PACKET_NUM	ON
+select * from information_schema.session_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+VARIABLE_NAME	VARIABLE_VALUE
+RPL_SEMI_SYNC_SLAVE_RESET_PACKET_NUM	ON
+#
+# incorrect types
+#
+set global rpl_semi_sync_slave_reset_packet_num=1.1;
+ERROR 42000: Incorrect argument type to variable 'rpl_semi_sync_slave_reset_packet_num'
+set global rpl_semi_sync_slave_reset_packet_num=1e1;
+ERROR 42000: Incorrect argument type to variable 'rpl_semi_sync_slave_reset_packet_num'
+set global rpl_semi_sync_slave_reset_packet_num="some text";
+ERROR 42000: Variable 'rpl_semi_sync_slave_reset_packet_num' can't be set to the value of 'some text'
+#
+# Cleanup
+#
+SET @@global.rpl_semi_sync_slave_reset_packet_num = @start_global_value;
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+@@global.rpl_semi_sync_slave_reset_packet_num
+1

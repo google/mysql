@@ -1,0 +1,85 @@
+include/master-slave.inc
+[connection master]
+#
+# Setting up semi-sync replication
+#
+# [on master]
+set global rpl_semi_sync_master_enabled= 1;
+set global rpl_semi_sync_master_timeout= 1000000000;
+set global rpl_semi_sync_master_wait_no_slave= 1;
+# [on slave]
+include/stop_slave.inc
+set global rpl_semi_sync_slave_enabled= 1;
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+@@global.rpl_semi_sync_slave_reset_packet_num
+1
+include/start_slave.inc
+#
+# Checking that replication works
+#
+# [on master]
+create table t (n int) engine innodb;
+insert into t values (1);
+select * from t;
+n
+1
+# [on slave]
+select * from t;
+n
+1
+#
+# Now check that replication works without resetting packet number
+#
+include/stop_slave.inc
+set global rpl_semi_sync_slave_reset_packet_num= 0;
+include/start_slave.inc
+# [on master]
+insert into t values (2);
+insert into t values (3);
+select * from t;
+n
+1
+2
+3
+# [on slave]
+select * from t;
+n
+1
+2
+3
+#
+# Return resetting of packet numbers back and check that everything
+# still works
+#
+include/stop_slave.inc
+set global rpl_semi_sync_slave_reset_packet_num= 1;
+include/start_slave.inc
+# [on master]
+insert into t values (4);
+insert into t values (5);
+select * from t;
+n
+1
+2
+3
+4
+5
+# [on slave]
+select * from t;
+n
+1
+2
+3
+4
+5
+#
+# Cleanup
+#
+# [on master]
+drop table t;
+set global rpl_semi_sync_master_enabled= default;
+set global rpl_semi_sync_master_timeout= default;
+set global rpl_semi_sync_master_wait_no_slave= default;
+# [on slave]
+set global rpl_semi_sync_slave_enabled= default;
+include/rpl_end.inc

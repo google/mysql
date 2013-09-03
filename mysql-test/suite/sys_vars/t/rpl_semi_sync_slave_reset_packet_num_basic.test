@@ -1,0 +1,54 @@
+source include/not_embedded.inc;
+source include/have_semisync.inc;
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+SET @start_global_value = @@global.rpl_semi_sync_slave_reset_packet_num;
+
+select @@global.rpl_semi_sync_slave_reset_packet_num in (0,1);
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.rpl_semi_sync_slave_reset_packet_num;
+show global variables like 'rpl_semi_sync_slave_reset_packet_num';
+show session variables like 'rpl_semi_sync_slave_reset_packet_num';
+select * from information_schema.global_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+select * from information_schema.session_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+
+--echo #
+--echo # show that it's writable
+--echo #
+set global rpl_semi_sync_slave_reset_packet_num=0;
+--error ER_GLOBAL_VARIABLE
+set session rpl_semi_sync_slave_reset_packet_num=0;
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.rpl_semi_sync_slave_reset_packet_num;
+show global variables like 'rpl_semi_sync_slave_reset_packet_num';
+show session variables like 'rpl_semi_sync_slave_reset_packet_num';
+select * from information_schema.global_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+select * from information_schema.session_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+set global rpl_semi_sync_slave_reset_packet_num=1;
+--error ER_GLOBAL_VARIABLE
+set session rpl_semi_sync_slave_reset_packet_num=1;
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.rpl_semi_sync_slave_reset_packet_num;
+show global variables like 'rpl_semi_sync_slave_reset_packet_num';
+show session variables like 'rpl_semi_sync_slave_reset_packet_num';
+select * from information_schema.global_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+select * from information_schema.session_variables where variable_name='rpl_semi_sync_slave_reset_packet_num';
+
+--echo #
+--echo # incorrect types
+--echo #
+--error ER_WRONG_TYPE_FOR_VAR
+set global rpl_semi_sync_slave_reset_packet_num=1.1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global rpl_semi_sync_slave_reset_packet_num=1e1;
+--error ER_WRONG_VALUE_FOR_VAR
+set global rpl_semi_sync_slave_reset_packet_num="some text";
+
+
+--echo #
+--echo # Cleanup
+--echo #
+SET @@global.rpl_semi_sync_slave_reset_packet_num = @start_global_value;
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+

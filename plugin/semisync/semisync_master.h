@@ -493,6 +493,9 @@ class ReplSemiSyncMaster
   /* Is the slave servered by the thread requested semi-sync */
   bool is_semi_sync_slave();
 
+  /* Is the slave resetting packet num on each semi-sync ack */
+  bool need_reset_packet_num();
+
   /* In semi-sync replication, reports up to which binlog position we have
    * received replies from the slave indicating that it already get the events.
    *

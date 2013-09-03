@@ -83,6 +83,17 @@ int repl_semi_slave_request_dump(Binlog_relay_IO_param *param,
     return 1;
   }
   mysql_free_result(mysql_store_result(mysql));
+
+  char buf[100];
+  snprintf(buf, sizeof(buf), "SET @rpl_semi_sync_reset_packet_num= %d",
+           (int)rpl_semi_sync_slave_reset_packet_num);
+  if (mysql_real_query(mysql, buf, strlen(buf)))
+  {
+    sql_print_error("Set 'rpl_semi_sync_reset_packet_num=1' on master failed");
+    return 1;
+  }
+  mysql_free_result(mysql_store_result(mysql));
+
   rpl_semi_sync_slave_status= 1;
   return 0;
 }
@@ -166,9 +177,18 @@ static MYSQL_SYSVAR_ULONG(trace_level, rpl_semi_sync_slave_trace_level,
   &fix_rpl_semi_sync_trace_level, // update
   32, 0, ~0UL, 1);
 
+static MYSQL_SYSVAR_BOOL(reset_packet_num, rpl_semi_sync_slave_reset_packet_num,
+  PLUGIN_VAR_OPCMDARG,
+ "Reset packet number in mysql protocol on each semi-sync ack "
+ "(enabled by default). ",
+  NULL,	                           // check
+  NULL,                            // update
+  1);
+
 static SYS_VAR* semi_sync_slave_system_vars[]= {
   MYSQL_SYSVAR(enabled),
   MYSQL_SYSVAR(trace_level),
+  MYSQL_SYSVAR(reset_packet_num),
   NULL,
 };
 

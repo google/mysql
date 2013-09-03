@@ -507,6 +507,14 @@ bool ReplSemiSyncMaster::is_semi_sync_slave()
   return val;
 }
 
+bool ReplSemiSyncMaster::need_reset_packet_num()
+{
+  int null_value;
+  long long val= 0;
+  get_user_var_int("rpl_semi_sync_reset_packet_num", &val, &null_value);
+  return val;
+}
+
 int ReplSemiSyncMaster::reportReplyBinlog(uint32 server_id,
 					  const char *log_file_name,
 					  my_off_t log_file_pos)
@@ -1155,7 +1163,8 @@ int ReplSemiSyncMaster::readSlaveReply(NET *net, uint32 server_id,
     goto l_end;
   }
 
-  net_clear(net, 0);
+  if (need_reset_packet_num())
+    net_clear(net, 0);
   if (trc_level & kTraceDetail)
     sql_print_information("%s: Wait for replica's reply", kWho);
 

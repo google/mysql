@@ -1,0 +1,89 @@
+source include/have_semisync.inc;
+source include/not_embedded.inc;
+source include/have_innodb.inc;
+source include/master-slave.inc;
+
+--echo #
+--echo # Setting up semi-sync replication
+--echo #
+--echo # [on master]
+connection master;
+set global rpl_semi_sync_master_enabled= 1;
+set global rpl_semi_sync_master_timeout= 1000000000;
+set global rpl_semi_sync_master_wait_no_slave= 1;
+
+--echo # [on slave]
+connection slave;
+source include/stop_slave.inc;
+set global rpl_semi_sync_slave_enabled= 1;
+select @@global.rpl_semi_sync_slave_reset_packet_num;
+source include/start_slave.inc;
+
+--echo #
+--echo # Checking that replication works
+--echo #
+--echo # [on master]
+connection master;
+create table t (n int) engine innodb;
+insert into t values (1);
+select * from t;
+sync_slave_with_master;
+
+--echo # [on slave]
+connection slave;
+select * from t;
+
+--echo #
+--echo # Now check that replication works without resetting packet number
+--echo #
+source include/stop_slave.inc;
+set global rpl_semi_sync_slave_reset_packet_num= 0;
+source include/start_slave.inc;
+
+--echo # [on master]
+connection master;
+insert into t values (2);
+insert into t values (3);
+select * from t;
+sync_slave_with_master;
+
+--echo # [on slave]
+connection slave;
+select * from t;
+
+--echo #
+--echo # Return resetting of packet numbers back and check that everything
+--echo # still works
+--echo #
+source include/stop_slave.inc;
+set global rpl_semi_sync_slave_reset_packet_num= 1;
+source include/start_slave.inc;
+
+--echo # [on master]
+connection master;
+insert into t values (4);
+insert into t values (5);
+select * from t;
+sync_slave_with_master;
+
+--echo # [on slave]
+connection slave;
+select * from t;
+
+
+--echo #
+--echo # Cleanup
+--echo #
+--echo # [on master]
+connection master;
+drop table t;
+set global rpl_semi_sync_master_enabled= default;
+set global rpl_semi_sync_master_timeout= default;
+set global rpl_semi_sync_master_wait_no_slave= default;
+
+--echo # [on slave]
+connection slave;
+set global rpl_semi_sync_slave_enabled= default;
+
+
+source include/rpl_end.inc;
