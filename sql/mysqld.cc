@@ -4811,6 +4811,7 @@ static int init_server_components()
   DBUG_ASSERT((uint)global_system_variables.binlog_format <=
               array_elements(binlog_format_names)-1);
 
+#if 0
 #ifdef HAVE_REPLICATION
   if (opt_log_slave_updates && replicate_same_server_id)
   {
@@ -4826,6 +4827,7 @@ server.");
 --log-slave-updates would lead to infinite loops in this server. However this \
 will be ignored as the --log-bin option is not defined.");
   }
+#endif
 #endif
 
   DBUG_ASSERT(!opt_bin_log || opt_bin_logname);
