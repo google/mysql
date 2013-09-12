@@ -34,7 +34,7 @@ Master_info::Master_info()
   :Slave_reporting_capability("I/O"),
    ssl(0), ssl_verify_server_cert(0), fd(-1), io_thd(0), inited(0),
    abort_slave(0), slave_running(0),
-   slave_run_id(0), connect_using_group_id(false)
+   slave_run_id(0), connect_using_group_id(false), has_mariadb_checksum(false)
 {
   host[0] = 0; user[0] = 0; password[0] = 0;
   ssl_ca[0]= 0; ssl_capath[0]= 0; ssl_cert[0]= 0;

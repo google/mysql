@@ -1286,6 +1286,87 @@ when it try to get the value of TIME_ZONE global variable from master.";
     }
   }
 
+  /*
+    In case we connected to MariaDB we need to pretend that we understand
+    checksums, otherwise MariaDB won't send us any binlog events at all.
+  */
+  {
+    const char query[]= "SET @master_binlog_checksum= @@global.binlog_checksum";
+    master_res= NULL;
+    if (mysql_real_query(mysql, query, strlen(query)))
+    {
+      if (mysql_errno(mysql) == ER_UNKNOWN_SYSTEM_VARIABLE)
+      {
+        // this is tolerable for MySQL -> MySQL replication
+      }
+      else
+      {
+        if (is_network_error(mysql_errno(mysql)))
+        {
+          mi->report(WARNING_LEVEL, mysql_errno(mysql),
+                     "Notifying master by %s failed with "
+                     "error: %s", query, mysql_error(mysql));
+          mysql_free_result(mysql_store_result(mysql));
+          goto network_err;
+        }
+        else
+        {
+          errmsg= "The slave I/O thread stops because a fatal error is encountered "
+            "when it tried to SET @master_binlog_checksum on master.";
+          err_code= ER_SLAVE_FATAL_ERROR;
+          sprintf(err_buff, "%s Error: %s", errmsg, mysql_error(mysql));
+          mysql_free_result(mysql_store_result(mysql));
+          goto err;
+        }
+      }
+    }
+    else
+    {
+      mysql_free_result(mysql_store_result(mysql));
+      if (!mysql_real_query(mysql,
+               STRING_WITH_LEN("SELECT @master_binlog_checksum = 'CRC32'")) &&
+          (master_res= mysql_store_result(mysql)) &&
+          (master_row= mysql_fetch_row(master_res)) &&
+          (master_row[0] != NULL))
+      {
+        /*
+          For simplicity we won't replicate from MariaDB that doesn't have
+          binlog checksums turned on.
+        */
+        if (strcmp(master_row[0], "1"))
+        {
+          errmsg= "The slave I/O thread stops because MariaDB master doesn't "
+            "have binlog checksums turned on.";
+          err_code= ER_SLAVE_FATAL_ERROR;
+          sprintf(err_buff, "%s Error: %s", errmsg, mysql_error(mysql));
+          mysql_free_result(mysql_store_result(mysql));
+          goto err;
+        }
+        mi->has_mariadb_checksum= true;
+      }
+      else if (is_network_error(mysql_errno(mysql)))
+      {
+        mi->report(WARNING_LEVEL, mysql_errno(mysql),
+                   "Get master BINLOG_CHECKSUM failed with error: %s", mysql_error(mysql));
+        goto network_err;
+      }
+      else
+      {
+        errmsg= "The slave I/O thread stops because a fatal error is encountered "
+          "when it tried to SELECT @master_binlog_checksum.";
+        err_code= ER_SLAVE_FATAL_ERROR;
+        sprintf(err_buff, "%s Error: %s", errmsg, mysql_error(mysql));
+        mysql_free_result(mysql_store_result(mysql));
+        goto err;
+      }
+    }
+    if (master_res)
+    {
+      mysql_free_result(master_res);
+      master_res= NULL;
+    }
+  }
+
   /* In case we connected to MariaDB announce ourselves as having MariaDB
      slave capabilities.
   */
@@ -2374,11 +2455,9 @@ int apply_event_and_update_pos(Log_event* ev, THD* thd, Relay_log_info* rli)
     has a Rotate etc).
   */
 
+  thd->server_id= ev->server_id; // use the original server id for logging
   if (!rli->is_master_mariadb)
-  {
-    thd->server_id = ev->server_id; // use the original server id for logging
     thd->group_id= ev->group_id;              // ad the same group_id
-  }
   thd->set_time();                            // time the query
   thd->lex->current_select= 0;
   if (!ev->when)
@@ -2556,10 +2635,7 @@ static int exec_relay_log_event(THD* thd, Relay_log_info* rli)
         thd->master_has_group_ids= true;
 
         if (rli->is_master_mariadb)
-        {
-          ev->server_id= thd->server_id;
           ev->group_id= thd->group_id;
-        }
 
         ulonglong grp_id= mysql_bin_log.get_group_id();
         if (ev->get_type_code() != FORMAT_DESCRIPTION_EVENT &&
@@ -4001,7 +4077,8 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
     goto err;
   case ROTATE_EVENT:
   {
-    Rotate_log_event rev(buf,event_len,mi->rli.relay_log.description_event_for_queue);
+    ulong rev_len= mi->has_mariadb_checksum ? event_len - 4 : event_len;
+    Rotate_log_event rev(buf,rev_len,mi->rli.relay_log.description_event_for_queue);
     if (unlikely(process_io_rotate(mi,&rev)))
     {
       error= 1;
@@ -4048,6 +4125,20 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
     DBUG_PRINT("info",("binlog format is now %d",
                        mi->rli.relay_log.description_event_for_queue->binlog_version));
 
+  }
+  break;
+  case GTID_LIST_EVENT:
+  {
+    /*
+      This is copied from MariaDB. It processes fake Gtid_list event and makes
+      proper adjustments to master_log_pos. It's needed because when connecting
+      using GTID MariaDB always sends position 4 in the initial Rotate event.
+    */
+    my_off_t event_pos= uint4korr(buf + LOG_POS_OFFSET);
+    if (event_pos == 0 || event_pos <= mi->master_log_pos)
+      inc_pos= 0;
+    else
+      inc_pos= event_pos - mi->master_log_pos;
   }
   break;
   default:
@@ -4510,7 +4601,8 @@ static Log_event* next_event(Relay_log_info* rli)
       MYSQL_BIN_LOG::open() will write the buffered description event.
     */
     if ((ev=Log_event::read_log_event(cur_log,0,
-                                      rli->relay_log.description_event_for_exec)))
+                                      rli->relay_log.description_event_for_exec,
+                                      rli->is_master_mariadb)))
 
     {
       DBUG_ASSERT(thd==rli->sql_thd);

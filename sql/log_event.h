@@ -1003,7 +1003,8 @@ public:
   static Log_event* read_log_event(IO_CACHE* file,
 				   pthread_mutex_t* log_lock,
                                    const Format_description_log_event
-                                   *description_event);
+                                   *description_event,
+                                   bool is_master_mariadb= false);
 
   /**
     Reads an event from a binlog or relay log. Used by the dump thread

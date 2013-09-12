@@ -110,6 +110,11 @@ class Master_info : public Slave_reporting_capability
     to the slave.
   */
   bool connect_using_group_id;
+
+  /*
+    When set all events are coming with MariaDB-style checksums.
+  */
+  bool has_mariadb_checksum;
 };
 
 void init_master_info_with_options(Master_info* mi);

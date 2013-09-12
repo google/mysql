@@ -1210,7 +1210,8 @@ end:
 Log_event* Log_event::read_log_event(IO_CACHE* file,
 				     pthread_mutex_t* log_lock,
                                      const Format_description_log_event
-                                     *description_event)
+                                     *description_event,
+                                     bool is_master_mariadb)
 #else
 Log_event* Log_event::read_log_event(IO_CACHE* file,
                                      const Format_description_log_event
@@ -1278,6 +1279,11 @@ failed my_b_read"));
     error = "read error";
     goto err;
   }
+#ifndef MYSQL_CLIENT
+  // Take into account 4 bytes of checksum added at the end by MariaDB.
+  if (is_master_mariadb)
+    data_len-= 4;
+#endif
   if ((res= read_log_event(buf, data_len, &error, description_event)))
     res->register_temp_buf(buf);
 
@@ -1320,9 +1326,14 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
   DBUG_DUMP("data", (unsigned char*) buf, event_len);
 
   /* Check the integrity */
+  /*
+    One of the checks below is commented out to make it possible to replicate
+    from MariaDB and dynamically "adjust" interpretable event length to ignore
+    checksum added at the end.
+  */
   if (event_len < EVENT_LEN_OFFSET ||
-      (uchar) buf[EVENT_TYPE_OFFSET] >= ENUM_END_EVENT ||
-      (uint) event_len != uint4korr(buf+EVENT_LEN_OFFSET))
+      (uchar) buf[EVENT_TYPE_OFFSET] >= ENUM_END_EVENT /*||
+      (uint) event_len != uint4korr(buf+EVENT_LEN_OFFSET)*/)
   {
     *error="Sanity check failed";		// Needed to free buffer
     DBUG_RETURN(NULL); // general sanity check - will fail on a partial read
@@ -3835,10 +3846,7 @@ Gtid_log_event::do_apply_event(Relay_log_info const *rli)
     return 1;
   }
 
-  thd->server_id= server_id;
   thd->group_id= seq_no;
-  fprintf(stderr, "Setting is_mariadb to true, rli=%p\n", rli);
-  fflush(stderr);
   const_cast<Relay_log_info *>(rli)->is_master_mariadb= true;
 
   if (flags2 & FL_STANDALONE)
@@ -5514,7 +5522,11 @@ int Rotate_log_event::do_update_pos(Relay_log_info *rli)
                         "old group_master_log_pos: %lu",
                         rli->group_master_log_name,
                         (ulong) rli->group_master_log_pos));
-    memcpy(rli->group_master_log_name, new_log_ident, ident_len+1);
+    uint log_name_len= ident_len;
+    if (rli->mi->has_mariadb_checksum)
+      log_name_len-= 4;
+    memcpy(rli->group_master_log_name, new_log_ident, log_name_len);
+    rli->group_master_log_name[log_name_len]= 0;
     rli->notify_group_master_log_name_update();
     rli->inc_group_relay_log_pos(pos, TRUE /* skip_lock */);
     DBUG_PRINT("info", ("new group_master_log_name: '%s'  "

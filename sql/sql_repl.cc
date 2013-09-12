@@ -1719,6 +1719,7 @@ bool change_master(THD* thd, Master_info* mi)
      strmake(mi->master_log_name, mi->rli.group_master_log_name,
              sizeof(mi->master_log_name)-1);
   }
+  mi->has_mariadb_checksum= false;
   /*
     Relay log's IO_CACHE may not be inited, if rli->inited==0 (server was never
     a slave before).
@@ -1781,6 +1782,7 @@ bool change_master(THD* thd, Master_info* mi)
   /* Clear the errors, for a clean start */
   mi->rli.clear_error();
   mi->rli.clear_until_condition();
+  mi->rli.is_master_mariadb= false;
 
   sql_print_information("'CHANGE MASTER TO executed'. "
     "Previous state master_host='%s', master_port='%u', master_log_file='%s', "
