@@ -89,7 +89,7 @@ n
 1
 3
 5
-select User, Host, Select_priv, Update_priv from mysql.system_user order by 1,2,3,4;
+select User, Host, Select_priv, Update_priv from mysql.system_user;
 User	Host	Select_priv	Update_priv
 user1	localhost	N	N
 insert into mysql.system_user (User, Host, Select_priv, ssl_cipher, x509_issuer, x509_subject)
