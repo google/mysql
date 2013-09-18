@@ -41,6 +41,8 @@ show grants;
 Grants for root@localhost
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
 GRANT EXECUTE ON `test`.* TO 'role2'
+GRANT EXECUTE, ALTER ROUTINE ON PROCEDURE `test`.`pcr` TO 'role1'
+GRANT EXECUTE, ALTER ROUTINE ON PROCEDURE `test`.`pr` TO 'role1'
 GRANT PROXY ON ''@'%' TO 'root'@'localhost' WITH GRANT OPTION
 GRANT USAGE ON *.* TO 'role1'
 GRANT USAGE ON *.* TO 'role2'
