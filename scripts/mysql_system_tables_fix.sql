@@ -639,7 +639,7 @@ UPDATE system_user SET Create_tablespace_priv = Super_priv WHERE @hadCreateTable
 ALTER TABLE user ADD plugin char(64) DEFAULT '',  ADD authentication_string TEXT;
 ALTER TABLE user ADD password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 ALTER TABLE user ADD is_role enum('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
-ALTER TABLE user MODIFY plugin char(64) CHARACTER SET latin1 DEFAULT '' NOT NULL, MODIFY authentication_string TEXT NOT NULL;
+ALTER TABLE user MODIFY plugin char(64) CHARACTER SET latin1 DEFAULT '' NOT NULL, MODIFY authentication_string TEXT NULL;
 -- Somewhere above, we ran ALTER TABLE user .... CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin.
 --  we want password_expired column to have collation utf8_general_ci.
 ALTER TABLE user MODIFY password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
@@ -649,7 +649,7 @@ ALTER TABLE system_user ADD plugin char(64) DEFAULT '',  ADD authentication_stri
 ALTER TABLE system_user ADD password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 ALTER TABLE system_user ADD is_role enum('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 ALTER TABLE system_user MODIFY plugin char(64) CHARACTER SET latin1 DEFAULT '' NOT NULL;
-ALTER TABLE system_user MODIFY authentication_string TEXT NOT NULL;
+ALTER TABLE system_user MODIFY authentication_string TEXT NULL;
 ALTER TABLE system_user MODIFY password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 ALTER TABLE system_user MODIFY is_role enum('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 

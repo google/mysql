@@ -130,7 +130,7 @@ user	CREATE TABLE `user` (
   `max_connections` int(11) unsigned NOT NULL DEFAULT '0',
   `max_user_connections` int(11) NOT NULL DEFAULT '0',
   `plugin` char(64) CHARACTER SET latin1 NOT NULL DEFAULT '',
-  `authentication_string` text COLLATE utf8_bin NOT NULL,
+  `authentication_string` text COLLATE utf8_bin,
   `password_expired` enum('N','Y') CHARACTER SET utf8 NOT NULL DEFAULT 'N',
   `is_role` enum('N','Y') CHARACTER SET utf8 NOT NULL DEFAULT 'N',
   PRIMARY KEY (`Host`,`User`)
