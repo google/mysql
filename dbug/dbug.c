@@ -323,6 +323,11 @@ static unsigned long Clock(void);
 #ifdef THREAD
 #include <my_pthread.h>
 pthread_mutex_t THR_LOCK_dbug;
+/**
+ * lock for @@global debug setting
+ */
+static pthread_mutex_t THR_LOCK_init_settings;
+
 
 static CODE_STATE *code_state(void)
 {
@@ -332,6 +337,7 @@ static CODE_STATE *code_state(void)
   if (!init_done)
   {
     pthread_mutex_init(&THR_LOCK_dbug,MY_MUTEX_INIT_FAST);
+    pthread_mutex_init(&THR_LOCK_init_settings,MY_MUTEX_INIT_FAST);
     bzero(&init_settings, sizeof(init_settings));
     init_settings.out_file=stderr;
     init_settings.flags=OPEN_APPEND;
@@ -352,6 +358,20 @@ static CODE_STATE *code_state(void)
     }
   }
   return cs;
+}
+
+#define lock_init_settings() pthread_mutex_lock(&THR_LOCK_init_settings)
+#define unlock_init_settings() pthread_mutex_unlock(&THR_LOCK_init_settings)
+static void lock_if_init_settings(CODE_STATE * cs)
+{
+  if (cs->stack == &init_settings)
+    lock_init_settings();
+}
+
+static void unlock_if_init_settings(CODE_STATE * cs)
+{
+  if (cs->stack == &init_settings)
+    unlock_init_settings();
 }
 
 #else /* !THREAD */
@@ -376,6 +396,12 @@ static CODE_STATE *code_state(void)
 
 #define pthread_mutex_lock(A) {}
 #define pthread_mutex_unlock(A) {}
+
+#define lock_init_settings() do {} while (0)
+#define unlock_init_settings() do {} while (0)
+#define lock_if_init_settings(cs) do {} while (0)
+#define unlock_if_init_settings(cs) do {} while (0)
+
 #endif
 
 /*
@@ -479,11 +505,13 @@ static void DbugParse(CODE_STATE *cs, const char *control)
     stack->prof_file= stack->next->prof_file;
     if (stack->next == &init_settings)
     {
+      lock_init_settings();
       /* never share with the global parent - it can change under your feet */
       stack->functions= ListCopy(init_settings.functions);
       stack->p_functions= ListCopy(init_settings.p_functions);
       stack->keywords= ListCopy(init_settings.keywords);
       stack->processes= ListCopy(init_settings.processes);
+      unlock_init_settings();
     }
     else
     {
@@ -745,7 +773,9 @@ void _db_set_init_(const char *control)
   bzero((uchar*) &tmp_cs, sizeof(tmp_cs));
   tmp_cs.stack= &init_settings;
   tmp_cs.process= db_process ? db_process : "dbug";
+  lock_init_settings();
   DbugParse(&tmp_cs, control);
+  unlock_init_settings();
 }
 
 /*
@@ -864,6 +894,8 @@ int _db_explain_ (CODE_STATE *cs, char *buf, size_t len)
 
   get_code_state_or_return *buf=0;
 
+  lock_if_init_settings(cs);
+
   op_list_to_buf('d', cs->stack->keywords, DEBUGGING);
   op_int_to_buf ('D', cs->stack->delay, 0);
   op_list_to_buf('f', cs->stack->functions, cs->stack->functions);
@@ -883,6 +915,8 @@ int _db_explain_ (CODE_STATE *cs, char *buf, size_t len)
   op_intf_to_buf('t', cs->stack->maxdepth, MAXDEPTH, TRACING);
   op_bool_to_buf('T', cs->stack->flags & TIMESTAMP_ON);
   op_bool_to_buf('S', cs->stack->flags & SANITY_CHECK_ON);
+
+  unlock_if_init_settings(cs);
 
   *buf= '\0';
   return 0;
@@ -1475,11 +1509,11 @@ static void FreeState(CODE_STATE *cs, struct settings *state, int free_state)
     FreeList(state->processes);
   if (!is_shared(state, p_functions))
     FreeList(state->p_functions);
-  if (!is_shared(state, out_file))
-    DBUGCloseFile(cs, state->out_file);
-  (void) fflush(cs->stack->out_file);
   if (state->prof_file)
     DBUGCloseFile(cs, state->prof_file);
+  (void) fflush(cs->stack->out_file);
+  if (!is_shared(state, out_file))
+    DBUGCloseFile(cs, state->out_file);
   if (free_state)
     free((void*) state);
 }
@@ -1557,9 +1591,17 @@ void _db_end_()
 
 static BOOLEAN DoTrace(CODE_STATE *cs)
 {
-  return (TRACING && cs->level <= cs->stack->maxdepth &&
-          InList(cs->stack->functions, cs->func) &&
+  BOOLEAN res= FALSE;
+
+  if (TRACING && cs->level <= cs->stack->maxdepth)
+  {
+    lock_if_init_settings(cs);
+    res= (InList(cs->stack->functions, cs->func) &&
           InList(cs->stack->processes, cs->process));
+    unlock_if_init_settings(cs);
+  }
+
+  return res;
 }
 
 
@@ -1656,13 +1698,20 @@ BOOLEAN _db_strict_keyword_(const char *keyword)
 
 BOOLEAN _db_keyword_(CODE_STATE *cs, const char *keyword)
 {
+  BOOLEAN res= FALSE;
   get_code_state_or_return FALSE;
 
-  return (DEBUGGING &&
-          (!TRACING || cs->level <= cs->stack->maxdepth) &&
-          InList(cs->stack->functions, cs->func) &&
+  if (DEBUGGING &&
+      (!TRACING || cs->level <= cs->stack->maxdepth))
+  {
+    lock_if_init_settings(cs);
+    res= (InList(cs->stack->functions, cs->func) &&
           InList(cs->stack->keywords, keyword) &&
           InList(cs->stack->processes, cs->process));
+    unlock_if_init_settings(cs);
+  }
+
+  return res;
 }
 
 /*
