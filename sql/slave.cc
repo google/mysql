@@ -4060,7 +4060,8 @@ static int queue_event(Master_info* mi,const char* buf, ulong event_len)
   LINT_INIT(inc_pos);
   pthread_mutex_lock(&mi->data_lock);
 
-  switch (buf[EVENT_TYPE_OFFSET]) {
+  // switch on unsigned char rather than signed char since new events are > 128
+  switch (static_cast<uchar>(buf[EVENT_TYPE_OFFSET])) {
   case STOP_EVENT:
     /*
       We needn't write this event to the relay log. Indeed, it just indicates a
