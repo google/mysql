@@ -1733,7 +1733,7 @@ sub command_line_setup {
     $opt_valgrind= 1;
   }
 
-  if ($opt_valgrind)
+  if ($opt_valgrind || $ENV{'VALGRIND_TEST'})
   {
     # Increase the timeouts when running with valgrind
     $opt_testcase_timeout*= 10;
@@ -2490,7 +2490,10 @@ sub environment_setup {
 
   # Create an environment variable to make it possible
   # to detect that valgrind is being used from test cases
-  $ENV{'VALGRIND_TEST'}= $opt_valgrind;
+  if (!$ENV{'VALGRIND_TEST'})
+  {
+    $ENV{'VALGRIND_TEST'}= $opt_valgrind;
+  }
 
   # Add dir of this perl to aid mysqltest in finding perl
   my $perldir= dirname($^X);

@@ -4350,6 +4350,15 @@ You should consider changing lower_case_table_names to 1 or 2",
 static int init_thread_environment()
 {
   DBUG_ENTER("init_thread_environment");
+
+  /* create keys early so that safe mutex can use them */
+  if (pthread_key_create(&THR_THD,NULL) ||
+      pthread_key_create(&THR_MALLOC,NULL))
+  {
+    sql_print_error("Can't create thread-keys");
+    DBUG_RETURN(1);
+  }
+
   mysql_mutex_init(key_LOCK_thread_count, &LOCK_thread_count, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_thread_cache, &LOCK_thread_cache, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_status, &LOCK_status, MY_MUTEX_INIT_FAST);

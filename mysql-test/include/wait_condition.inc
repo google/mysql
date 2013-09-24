@@ -26,6 +26,10 @@
 --disable_query_log
 
 let $wait_counter= 300;
+if ($VALGRIND_TEST)
+{
+  let $wait_counter= `SELECT $wait_counter * 10`;
+}
 if ($wait_timeout)
 {
   let $wait_counter= `SELECT $wait_timeout * 10`;

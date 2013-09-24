@@ -1136,6 +1136,31 @@
    fun:SSL_library_init
 }
 
+{
+   Bug#12856915 VALGRIND FAILURE IN FILESORT/CREATE_SORT_INDEX / four
+   Memcheck:Param
+   write(buf)
+   obj:*/libpthread*.so
+   fun:my_write
+   ...
+   fun:my_b_flush_io_cache
+   fun:_Z8filesortP3THDP5TABLEP13st_sort_fieldjP10SQL_SELECTybPyS7_
+   fun:_ZL17create_sort_indexP3THDP4JOINP8st_orderyyb
+}
+
+{
+   Bug#12856915 VALGRIND FAILURE IN FILESORT/CREATE_SORT_INDEX / five
+   Memcheck:Param
+   write(buf)
+   obj:*/libpthread*.so
+   fun:my_write
+   ...
+   fun:my_b_flush_io_cache
+   fun:_my_b_write
+   fun:_ZL10write_keysP10Sort_paramP13Filesort_infojP11st_io_cacheS4_
+   fun:_Z8filesortP3THDP5TABLEP13st_sort_fieldjP10SQL_SELECTybPyS7_
+   fun:_ZL17create_sort_indexP3THDP4JOINP8st_orderyyb
+}
 
 {
   Problem with udf and libresolve
@@ -1247,3 +1272,13 @@
   fun:__tls_get_addr
 }
 
+#
+# memory "leak" with getaddrinfo glibc 2.15
+#   see https://bugzilla.redhat.com/show_bug.cgi?id=859717
+{
+   memory "leak" with glibc 2.15
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:getaddrinfo
+}

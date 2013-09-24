@@ -1516,7 +1516,10 @@ size_t print_file_stack(char *s, const char *end)
   char *start= s;
   struct st_test_file* err_file= cur_file;
   if (err_file == file_stack)
+  {
+    *start = '\0';
     return 0;
+  }
 
   for (;;)
   {

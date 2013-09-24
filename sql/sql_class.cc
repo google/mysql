@@ -1396,6 +1396,7 @@ void THD::init(void)
   select_commands= update_commands= other_commands= 0;
   /* Set to handle counting of aborted connections */
   userstat_running= opt_userstat_running;
+  start_cpu_time= my_getcputime();
   last_global_update_time= current_connect_time= time(NULL);
 #if defined(ENABLED_DEBUG_SYNC)
   /* Initialize the Debug Sync Facility. See debug_sync.cc. */
