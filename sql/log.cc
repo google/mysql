@@ -2325,6 +2325,10 @@ bool MYSQL_QUERY_LOG::write(THD *thd, time_t current_time,
         if (my_b_write(&log_file, (uchar*) buff, buff_len))
           tmp_errno= errno;
       }
+      char buff[64];
+      int length= my_snprintf(buff, 64, "# Thread id: %5lu\n", thd->thread_id);
+      if (my_b_write(&log_file, (uchar*) buff, length))
+        tmp_errno= errno;
       const uchar uh[]= "# User@Host: ";
       if (my_b_write(&log_file, uh, sizeof(uh) - 1))
         tmp_errno= errno;
