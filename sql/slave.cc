@@ -4603,7 +4603,7 @@ static Log_event* next_event(Relay_log_info* rli)
     */
     if ((ev=Log_event::read_log_event(cur_log,0,
                                       rli->relay_log.description_event_for_exec,
-                                      rli->is_master_mariadb)))
+                                      rli->mi->has_mariadb_checksum)))
 
     {
       DBUG_ASSERT(thd==rli->sql_thd);

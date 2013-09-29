@@ -5523,8 +5523,6 @@ int Rotate_log_event::do_update_pos(Relay_log_info *rli)
                         rli->group_master_log_name,
                         (ulong) rli->group_master_log_pos));
     uint log_name_len= ident_len;
-    if (rli->mi->has_mariadb_checksum)
-      log_name_len-= 4;
     memcpy(rli->group_master_log_name, new_log_ident, log_name_len);
     rli->group_master_log_name[log_name_len]= 0;
     rli->notify_group_master_log_name_update();
