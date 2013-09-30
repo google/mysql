@@ -57,12 +57,12 @@
   and C++, zero-length array is gcc-specific).
 */
 typedef char my_atomic_rwlock_t __attribute__ ((unused));
-#define my_atomic_rwlock_destroy(name)
-#define my_atomic_rwlock_init(name)
-#define my_atomic_rwlock_rdlock(name)
-#define my_atomic_rwlock_wrlock(name)
-#define my_atomic_rwlock_rdunlock(name)
-#define my_atomic_rwlock_wrunlock(name)
+#define my_atomic_rwlock_destroy(name) (void)name
+#define my_atomic_rwlock_init(name) (void)name
+#define my_atomic_rwlock_rdlock(name) (void)name
+#define my_atomic_rwlock_wrlock(name) (void)name
+#define my_atomic_rwlock_rdunlock(name) (void)name
+#define my_atomic_rwlock_wrunlock(name) (void)name
 
 #endif
 

@@ -4477,7 +4477,7 @@ for (;; ptr++)
   BOOL xclass_has_prop;
 #endif
   int newoptions;
-  int recno;
+  int recno = 0;
   int refsign;
   int skipbytes;
   pcre_uint32 subreqchar, subfirstchar;
@@ -6545,9 +6545,9 @@ for (;; ptr++)
 
     else if (*ptr == CHAR_QUESTION_MARK)
       {
-      int i, set, unset, namelen;
+      int i, set, unset, namelen = 0;
       int *optset;
-      const pcre_uchar *name;
+      const pcre_uchar *name = NULL;
       pcre_uchar *slot;
 
       switch (*(++ptr))

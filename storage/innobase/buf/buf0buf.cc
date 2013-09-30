@@ -4204,7 +4204,7 @@ corrupt:
 		}
 
 		DBUG_EXECUTE_IF("buf_page_is_corrupt_failure",
-				page_not_corrupt:  bpage = bpage; );
+				page_not_corrupt:  ; );
 
 		if (recv_recovery_is_on()) {
 			/* Pages must be uncompressed for crash recovery. */

@@ -17279,7 +17279,7 @@ ib_senderrf(
 
 	va_start(args, code);
 
-	myf	l;
+	myf	l = 0;
 
 	switch(level) {
 	case IB_LOG_LEVEL_INFO:

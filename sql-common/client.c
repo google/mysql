@@ -3653,11 +3653,15 @@ CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
   /*
     remove the rpl hack from the version string,
     see RPL_VERSION_HACK comment
+    NOTE: EMBEDDED_LIBRARY defines RPL_VERSION_HACK as empty string "",
+          so remove code below to avoid compiler warning
   */
+#ifndef EMBEDDED_LIBRARY
   if ((mysql->server_capabilities & CLIENT_PLUGIN_AUTH) &&
       strncmp(mysql->server_version, RPL_VERSION_HACK,
               sizeof(RPL_VERSION_HACK) - 1) == 0)
     mysql->server_version+= sizeof(RPL_VERSION_HACK) - 1;
+#endif
 
   if (pkt_end >= end + SCRAMBLE_LENGTH - SCRAMBLE_LENGTH_323 + 1)
   {

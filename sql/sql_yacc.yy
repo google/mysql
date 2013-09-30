@@ -12811,6 +12811,7 @@ flush_options:
             YYPS->m_mdl_type= MDL_SHARED_HIGH_PRIO;
           }
           opt_table_list opt_flush_lock
+          { }
         | flush_options_list
         ;
 
@@ -12840,6 +12841,7 @@ flush_lock:
             } 
             Lex->type|= REFRESH_FOR_EXPORT;
           } EXPORT_SYM
+          { }
         ;
 
 flush_options_list:

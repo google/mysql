@@ -1862,7 +1862,7 @@ loop:
 		goto loop;
 	}
 
-	ut_ad(!allow_ibuf == mutex_own(&log_sys->mutex));
+	ut_ad(allow_ibuf != mutex_own(&log_sys->mutex));
 
 	if (!allow_ibuf) {
 		recv_no_ibuf_operations = TRUE;

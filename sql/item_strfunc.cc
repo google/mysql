@@ -515,7 +515,7 @@ String *Item_func_from_base64::val_str(String *str)
 {
   String *res= args[0]->val_str_ascii(str);
   bool too_long= false;
-  int length;
+  int length= -1;
   const char *end_ptr;
 
   if (!res ||
