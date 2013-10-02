@@ -292,6 +292,12 @@ uint strconvert(CHARSET_INFO *from_cs, const char *from, uint from_length,
       from++;
       wc= '?';
     }
+    else if (cnvres == MY_CS_TOOSMALL3 || cnvres == MY_CS_TOOSMALL4)
+    {
+      error_count++;
+      wc= *from;
+      from++;
+    }
     else
       break; // Impossible char.
 

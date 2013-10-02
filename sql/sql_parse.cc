@@ -824,6 +824,7 @@ void do_handle_bootstrap(THD *thd)
   handle_bootstrap_impl(thd);
 
 end:
+  set_current_thd(NULL);
   delete thd;
 
 #ifndef EMBEDDED_LIBRARY
