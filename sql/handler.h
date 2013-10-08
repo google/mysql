@@ -435,10 +435,28 @@ enum legacy_db_type
   DB_TYPE_CSV_DB=17,
   DB_TYPE_FEDERATED_DB=18,
   DB_TYPE_BLACKHOLE_DB=19,
-  DB_TYPE_PARTITION_DB=20,
-  DB_TYPE_BINLOG=21,
-  DB_TYPE_PBXT=23,
-  DB_TYPE_PERFORMANCE_SCHEMA=28,
+  /*
+    WARNING!
+
+    Google added the GoogleStats storage engine with value 20 in MySQL 5.0,
+    and kept this value through the upgrade to MySQL 5.1, which added the
+    DB_TYPE_PARTITION_DB value in conflict with GoogleStats. This caused
+    the values of DB_TYPE_PARTITION_DB and all storage engines after that,
+    until a gap, to be incremented by 1 compared to the upstream codebase.
+    Because this value is stored in a byte in the FRM files, this renumbering
+    must now be maintained during all changes to this list until a suitable
+    migration of all existing data has occurred, whether GoogleStats is
+    compiled into any given build or not.
+  */
+  /* DB_TYPE_GOOGLESTATS=20, */
+  DB_TYPE_PARTITION_DB=21,              /* Upstream: 20 */
+  DB_TYPE_BINLOG=22,                    /* Upstream: 21 */
+  DB_TYPE_PBXT=24,                      /* Upstream: 23 */
+  DB_TYPE_PERFORMANCE_SCHEMA=29,        /* Upstream: 28 */
+  /*
+    NB: Any storage engines added here in future merges must be renumbered
+    to increment their value by 1.
+  */
   DB_TYPE_ARIA=42,
   DB_TYPE_TOKUDB=43,
   DB_TYPE_FIRST_DYNAMIC=44,
