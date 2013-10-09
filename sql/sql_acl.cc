@@ -1037,6 +1037,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   char tmp_name[SAFE_NAME_LEN+1];
   int password_length;
   ulonglong old_sql_mode= thd->variables.sql_mode;
+  int rr_status;
   DBUG_ENTER("acl_load");
 
   thd->variables.sql_mode&= ~MODE_PAD_CHAR_TO_FULL_LENGTH;
@@ -1052,7 +1053,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
                          NULL, 1, 1, FALSE))
       goto end;
     table->use_all_columns();
-    while (!(read_record_info.read_record(&read_record_info)))
+    while (!(rr_status= read_record_info.read_record(&read_record_info)))
     {
       ACL_HOST host;
       update_hostname(&host.host,get_field(&acl_memroot, table->field[0]));
@@ -1100,6 +1101,12 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
     my_qsort((uchar*) dynamic_element(&acl_hosts,0,ACL_HOST*),acl_hosts.elements,
              sizeof(ACL_HOST),(qsort_cmp) acl_compare);
     end_read_record(&read_record_info);
+    if (rr_status != READ_RECORD::RR_EOF)
+    {
+      sql_print_error("Failure while reading %s.%s: %d",
+                      table->s->db.str, table->s->table_name.str, rr_status);
+      goto end;
+    }
   }
   freeze_size(&acl_hosts);
 
@@ -1156,7 +1163,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   }
 
   allow_all_hosts=0;
-  while (!(read_record_info.read_record(&read_record_info)))
+  while (!(rr_status= read_record_info.read_record(&read_record_info)))
   {
     ACL_USER user;
     bool is_role= FALSE;
@@ -1344,6 +1351,12 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   my_qsort((uchar*) dynamic_element(&acl_users,0,ACL_USER*),acl_users.elements,
 	   sizeof(ACL_USER),(qsort_cmp) acl_compare);
   end_read_record(&read_record_info);
+  if (rr_status != READ_RECORD::RR_EOF)
+  {
+    sql_print_error("Failure while reading %s.%s: %d",
+                    table->s->db.str, table->s->table_name.str, rr_status);
+    goto end;
+  }
   freeze_size(&acl_users);
 
   table= tables[GRANT_DB].table;
@@ -1351,7 +1364,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
     goto end;
   table->use_all_columns();
   (void) my_init_dynamic_array(&acl_dbs,sizeof(ACL_DB), 50, 100, MYF(0));
-  while (!(read_record_info.read_record(&read_record_info)))
+  while (!(rr_status= read_record_info.read_record(&read_record_info)))
   {
     ACL_DB db;
     db.user=get_field(&acl_memroot, table->field[MYSQL_DB_FIELD_USER]);
@@ -1410,6 +1423,12 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
   my_qsort((uchar*) dynamic_element(&acl_dbs,0,ACL_DB*),acl_dbs.elements,
 	   sizeof(ACL_DB),(qsort_cmp) acl_compare);
   end_read_record(&read_record_info);
+  if (rr_status != READ_RECORD::RR_EOF)
+  {
+    sql_print_error("Failure while reading %s.%s: %d",
+                    table->s->db.str, table->s->table_name.str, rr_status);
+    goto end;
+  }
   freeze_size(&acl_dbs);
 
   (void) my_init_dynamic_array(&acl_proxy_users, sizeof(ACL_PROXY_USER),
@@ -1420,7 +1439,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
     if (init_read_record(&read_record_info, thd, table, NULL, 1, 1, FALSE))
       goto end;
     table->use_all_columns();
-    while (!(read_record_info.read_record(&read_record_info)))
+    while (!(rr_status= read_record_info.read_record(&read_record_info)))
     {
       ACL_PROXY_USER proxy;
       proxy.init(table, &acl_memroot);
@@ -1436,6 +1455,12 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
              acl_proxy_users.elements,
              sizeof(ACL_PROXY_USER), (qsort_cmp) acl_compare);
     end_read_record(&read_record_info);
+    if (rr_status != READ_RECORD::RR_EOF)
+    {
+      sql_print_error("Failure while reading %s.%s: %d",
+                      table->s->db.str, table->s->table_name.str, rr_status);
+      goto end;
+    }
   }
   else
   {
@@ -1457,7 +1482,7 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
                          (my_hash_get_key) acl_role_map_get_key, 0, 0, 0);
     MEM_ROOT temp_root;
     init_alloc_root(&temp_root, ACL_ALLOC_BLOCK_SIZE, 0, MYF(0));
-    while (!(read_record_info.read_record(&read_record_info)))
+    while (!(rr_status= read_record_info.read_record(&read_record_info)))
     {
       char *hostname= safe_str(get_field(&temp_root, table->field[0]));
       char *username= safe_str(get_field(&temp_root, table->field[1]));
@@ -1480,6 +1505,12 @@ static my_bool acl_load(THD *thd, TABLE_LIST *tables)
 
     free_root(&temp_root, MYF(0));
     end_read_record(&read_record_info);
+    if (rr_status != READ_RECORD::RR_EOF)
+    {
+      sql_print_error("Failure while reading %s.%s: %d",
+                      table->s->db.str, table->s->table_name.str, rr_status);
+      goto end;
+    }
   }
   else
   {
@@ -1516,14 +1547,25 @@ void acl_free(bool end)
   delete_dynamic(&acl_proxy_users);
   my_hash_free(&acl_check_hosts);
   my_hash_free(&acl_roles_mappings);
-  plugin_unlock(0, native_password_plugin);
-  plugin_unlock(0, old_password_plugin);
-  if (!end)
-    acl_cache->clear(1); /* purecov: inspected */
-  else
+
+  if (end)
   {
+    /*
+      this is server shutdown:
+      - delete objects and unlock plugins
+    */
+    plugin_unlock(0, native_password_plugin);
+    plugin_unlock(0, old_password_plugin);
     delete acl_cache;
     acl_cache=0;
+  }
+  else
+  {
+    /*
+      this is part of restore snapshot after failed acl_load
+      - clear cache (will be reconstructed)
+    */
+    acl_cache->clear(1);
   }
 }
 
@@ -1555,6 +1597,26 @@ my_bool acl_reload(THD *thd)
   MEM_ROOT old_mem;
   my_bool return_val= TRUE;
   DBUG_ENTER("acl_reload");
+
+  struct
+  {
+    /*
+      reference to DYNAMIC_ARRAY saving original values
+    */
+    DYNAMIC_ARRAY & save;
+
+    /*
+      reference to "real" DYNAMIC_ARRAY (e.g acl_hosts).
+      The reference is stored in struct for automatic save/restore without
+      having to enumerate the pairs multiple times
+    */
+    DYNAMIC_ARRAY & acl_array_ref;
+  } acl_arrays[] = {
+    { old_acl_hosts,          acl_hosts },
+    { old_acl_users,          acl_users },
+    { old_acl_proxy_users,    acl_proxy_users },
+    { old_acl_dbs,            acl_dbs },
+  };
 
   /*
     To avoid deadlocks we should obtain table locks before
@@ -1602,12 +1664,28 @@ my_bool acl_reload(THD *thd)
   acl_cache->clear(0);
   mysql_mutex_lock(&acl_cache->lock);
 
-  old_acl_hosts= acl_hosts;
-  old_acl_users= acl_users;
+  for (uint i= 0; i < array_elements(acl_arrays); i++)
+  {
+    acl_arrays[i].save= acl_arrays[i].acl_array_ref;
+    /*
+      in case acl_load fails half-way,
+      prevent acl_free from releasing arrays
+      that are to be restored
+    */
+    my_init_dynamic_array2(&acl_arrays[i].acl_array_ref,
+                           acl_arrays[i].acl_array_ref.size_of_element,
+                           NULL,
+                           0,
+                           1,
+                           acl_arrays[i].acl_array_ref.malloc_flags);
+  }
   old_acl_roles= acl_roles;
   old_acl_roles_mappings= acl_roles_mappings;
-  old_acl_proxy_users= acl_proxy_users;
-  old_acl_dbs= acl_dbs;
+  (void) my_hash_init2(&acl_roles,50, &my_charset_utf8_bin,
+                       0,0,0, (my_hash_get_key) acl_role_get_key,
+                       0, (void (*)(void *))free_acl_role, 0);
+  (void) my_hash_init2(&acl_roles_mappings, 50, system_charset_info,
+                       0,0,0, (my_hash_get_key) acl_role_map_get_key, 0,0,0);
   old_mem= acl_memroot;
   delete_dynamic(&acl_wild_hosts);
   my_hash_free(&acl_check_hosts);
@@ -1615,13 +1693,15 @@ my_bool acl_reload(THD *thd)
   if ((return_val= acl_load(thd, tables)))
   {					// Error. Revert to old list
     DBUG_PRINT("error",("Reverting to old privileges"));
-    acl_free();				/* purecov: inspected */
-    acl_hosts= old_acl_hosts;
-    acl_users= old_acl_users;
+    /* free potentially half initialized structures */
+    acl_free();
+    /* restore snapshot */
+    for (uint i= 0; i < array_elements(acl_arrays); i++)
+    {
+      acl_arrays[i].acl_array_ref= acl_arrays[i].save;
+    }
     acl_roles= old_acl_roles;
     acl_roles_mappings= old_acl_roles_mappings;
-    acl_proxy_users= old_acl_proxy_users;
-    acl_dbs= old_acl_dbs;
     acl_memroot= old_mem;
     init_check_host();
   }

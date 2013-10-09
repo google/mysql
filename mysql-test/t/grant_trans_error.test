@@ -1,0 +1,129 @@
+--source include/not_embedded.inc
+
+call mtr.add_suppression("Failure while reading mysql.*");
+
+SET @save_lock_wait_timeout = @@innodb_lock_wait_timeout;
+
+# short enough to cope, long enough to avoid spurious errors
+SET GLOBAL innodb_lock_wait_timeout=3;
+
+# increase timeout for valgrind runs
+--disable_query_log
+--disable_result_log
+if ($VALGRIND_TEST) {
+   SET GLOBAL innodb_lock_wait_timeout=30;
+}
+--enable_result_log
+--enable_query_log
+
+--connect (con1, localhost, root,,)
+--connect (con2, localhost, root,,)
+
+--echo #
+--echo # Test error when reading mysql.host
+--echo #
+--connection con1
+BEGIN;
+INSERT INTO mysql.host VALUES ();
+
+--connection con2
+--error ER_LOCK_WAIT_TIMEOUT
+FLUSH PRIVILEGES;
+
+--connection con1
+ROLLBACK;
+FLUSH PRIVILEGES;
+
+--echo #
+--echo # Test error when reading mysql.user
+--echo #
+--connection con1
+BEGIN;
+DELETE FROM mysql.user;
+
+--connection con2
+--error ER_LOCK_WAIT_TIMEOUT
+FLUSH PRIVILEGES;
+
+--connection con1
+ROLLBACK;
+FLUSH PRIVILEGES;
+
+--echo #
+--echo # Test error when reading mysql.db
+--echo #
+--connection con1
+BEGIN;
+DELETE FROM mysql.db;
+
+--connection con2
+--error ER_LOCK_WAIT_TIMEOUT
+FLUSH PRIVILEGES;
+
+--connection con1
+ROLLBACK;
+FLUSH PRIVILEGES;
+
+--echo #
+--echo # Test error when reading mysql.proxies_priv
+--echo #
+--connection con1
+BEGIN;
+DELETE FROM mysql.proxies_priv;
+
+--connection con2
+--error ER_LOCK_WAIT_TIMEOUT
+FLUSH PRIVILEGES;
+
+--connection con1
+ROLLBACK;
+FLUSH PRIVILEGES;
+
+#--echo #
+#--echo # Test error when reading mysql.system_user
+#--echo #
+#--connection con1
+#BEGIN;
+#INSERT INTO mysql.system_user SELECT * from mysql.user;
+#
+#--connection con2
+#--error ER_LOCK_WAIT_TIMEOUT
+#FLUSH PRIVILEGES;
+#
+#--connection con1
+#ROLLBACK;
+#FLUSH PRIVILEGES;
+#
+#--echo #
+#--echo # Test error when reading mysql.sniper_settings
+#--echo #
+#--connection con1
+#BEGIN;
+#INSERT INTO mysql.sniper_settings VALUES ();
+#
+#--connection con2
+#--error ER_LOCK_WAIT_TIMEOUT
+#FLUSH PRIVILEGES;
+#
+#--connection con1
+#ROLLBACK;
+#FLUSH PRIVILEGES;
+#
+#--echo #
+#--echo # Test error when reading mysql.mapped_user
+#--echo #
+#--connection con1
+#BEGIN;
+#INSERT INTO mysql.mapped_user(role,user,password)
+#SELECT DISTINCT 'role', user, password from mysql.user;
+#
+#--connection con2
+#--error ER_LOCK_WAIT_TIMEOUT
+#FLUSH PRIVILEGES;
+#
+#--connection con1
+#ROLLBACK;
+#FLUSH PRIVILEGES;
+
+--connection default
+SET GLOBAL innodb_lock_wait_timeout=@save_lock_wait_timeout;

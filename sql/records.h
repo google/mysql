@@ -43,6 +43,8 @@ class Copy_field;
 
 struct READ_RECORD
 {
+  static const int RR_EOF = -1;
+
   typedef int (*Read_func)(READ_RECORD*);
   typedef void (*Unlock_row_func)(st_join_table *);
   typedef int (*Setup_func)(struct st_join_table*);

@@ -1,0 +1,40 @@
+call mtr.add_suppression("Failure while reading mysql.*");
+SET @save_lock_wait_timeout = @@innodb_lock_wait_timeout;
+SET GLOBAL innodb_lock_wait_timeout=3;
+#
+# Test error when reading mysql.host
+#
+BEGIN;
+INSERT INTO mysql.host VALUES ();
+FLUSH PRIVILEGES;
+ERROR HY000: Lock wait timeout exceeded; try restarting transaction
+ROLLBACK;
+FLUSH PRIVILEGES;
+#
+# Test error when reading mysql.user
+#
+BEGIN;
+DELETE FROM mysql.user;
+FLUSH PRIVILEGES;
+ERROR HY000: Lock wait timeout exceeded; try restarting transaction
+ROLLBACK;
+FLUSH PRIVILEGES;
+#
+# Test error when reading mysql.db
+#
+BEGIN;
+DELETE FROM mysql.db;
+FLUSH PRIVILEGES;
+ERROR HY000: Lock wait timeout exceeded; try restarting transaction
+ROLLBACK;
+FLUSH PRIVILEGES;
+#
+# Test error when reading mysql.proxies_priv
+#
+BEGIN;
+DELETE FROM mysql.proxies_priv;
+FLUSH PRIVILEGES;
+ERROR HY000: Lock wait timeout exceeded; try restarting transaction
+ROLLBACK;
+FLUSH PRIVILEGES;
+SET GLOBAL innodb_lock_wait_timeout=@save_lock_wait_timeout;
