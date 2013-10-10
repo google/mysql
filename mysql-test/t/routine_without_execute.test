@@ -1,0 +1,52 @@
+--source include/not_embedded.inc
+
+--echo # Create a user with permission to use CREATE PROCEDURE
+--echo # but without EXECUTE privilege. The user specifically
+--echo # uses the '%' host in order to never exactly match
+--echo # the source host of the connection (e.g. "localhost").
+CREATE USER 'test_user'@'%' IDENTIFIED BY 'test_password';
+GRANT ALL ON *.* TO 'test_user'@'%';
+REVOKE SUPER, EXECUTE ON *.* FROM 'test_user'@'%';
+connect (test_user_conn, localhost, test_user, test_password,);
+
+--echo # Confirm that automatic_sp_privileges is enabled, which
+--echo # should be the default.
+SELECT @@global.automatic_sp_privileges AS should_be_1;
+
+--echo # Confirm that exactly 1 test_user entry exists (as added above).
+connection default;
+SELECT COUNT(*) AS should_be_1 FROM mysql.user WHERE user='test_user';
+SELECT user, host, password FROM mysql.user WHERE user='test_user';
+SELECT COUNT(*) AS should_be_0 FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+SELECT user, host, routine_name FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+
+--echo # Create a procedure using the test_user user. Since the test_user
+--echo # user does not have EXECUTE privileges, with automatic_sp_privileges,
+--echo # procedure-specific EXECUTE privilege should be added to this user.
+connection test_user_conn;
+CREATE PROCEDURE test_proc() BEGIN END;
+
+--echo # Confirm that exactly 1 test_user user entry still exists, and
+--echo # a new procs_priv row has been added for the procedure above.
+connection default;
+SELECT COUNT(*) AS should_be_1 FROM mysql.user WHERE user='test_user';
+SELECT user, host, password FROM mysql.user WHERE user='test_user';
+SELECT COUNT(*) AS should_be_1 FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+SELECT user, host, routine_name FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+
+--echo # Drop the created procedure.
+connection test_user_conn;
+DROP PROCEDURE test_proc;
+
+--echo # Ensure that the permissions are restored to the previous state.
+connection default;
+SELECT COUNT(*) AS should_be_1 FROM mysql.user WHERE user='test_user';
+SELECT user, host, password FROM mysql.user WHERE user='test_user';
+SELECT COUNT(*) AS should_be_0 FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+SELECT user, host, routine_name FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+
+--echo # Clean up.
+connection default;
+disconnect test_user_conn;
+DELETE FROM mysql.user WHERE user='test_user';
+FLUSH PRIVILEGES;

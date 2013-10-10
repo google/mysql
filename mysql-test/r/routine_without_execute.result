@@ -1,0 +1,59 @@
+# Create a user with permission to use CREATE PROCEDURE
+# but without EXECUTE privilege. The user specifically
+# uses the '%' host in order to never exactly match
+# the source host of the connection (e.g. "localhost").
+CREATE USER 'test_user'@'%' IDENTIFIED BY 'test_password';
+GRANT ALL ON *.* TO 'test_user'@'%';
+REVOKE SUPER, EXECUTE ON *.* FROM 'test_user'@'%';
+# Confirm that automatic_sp_privileges is enabled, which
+# should be the default.
+SELECT @@global.automatic_sp_privileges AS should_be_1;
+should_be_1
+1
+# Confirm that exactly 1 test_user entry exists (as added above).
+SELECT COUNT(*) AS should_be_1 FROM mysql.user WHERE user='test_user';
+should_be_1
+1
+SELECT user, host, password FROM mysql.user WHERE user='test_user';
+user	host	password
+test_user	%	*4414E26EDED6D661B5386813EBBA95065DBC4728
+SELECT COUNT(*) AS should_be_0 FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+should_be_0
+0
+SELECT user, host, routine_name FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+user	host	routine_name
+# Create a procedure using the test_user user. Since the test_user
+# user does not have EXECUTE privileges, with automatic_sp_privileges,
+# procedure-specific EXECUTE privilege should be added to this user.
+CREATE PROCEDURE test_proc() BEGIN END;
+# Confirm that exactly 1 test_user user entry still exists, and
+# a new procs_priv row has been added for the procedure above.
+SELECT COUNT(*) AS should_be_1 FROM mysql.user WHERE user='test_user';
+should_be_1
+1
+SELECT user, host, password FROM mysql.user WHERE user='test_user';
+user	host	password
+test_user	%	*4414E26EDED6D661B5386813EBBA95065DBC4728
+SELECT COUNT(*) AS should_be_1 FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+should_be_1
+1
+SELECT user, host, routine_name FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+user	host	routine_name
+test_user	%	test_proc
+# Drop the created procedure.
+DROP PROCEDURE test_proc;
+# Ensure that the permissions are restored to the previous state.
+SELECT COUNT(*) AS should_be_1 FROM mysql.user WHERE user='test_user';
+should_be_1
+1
+SELECT user, host, password FROM mysql.user WHERE user='test_user';
+user	host	password
+test_user	%	*4414E26EDED6D661B5386813EBBA95065DBC4728
+SELECT COUNT(*) AS should_be_0 FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+should_be_0
+0
+SELECT user, host, routine_name FROM mysql.procs_priv WHERE user='test_user' AND routine_name='test_proc';
+user	host	routine_name
+# Clean up.
+DELETE FROM mysql.user WHERE user='test_user';
+FLUSH PRIVILEGES;
