@@ -1809,6 +1809,7 @@ public:
   bool	     locked, some_tables_deleted;
   bool       last_cuted_field;
   bool	     no_errors, password;
+  uint8      failed_com_change_user;
   /**
     Set to TRUE if execution of the current compound statement
     can not continue. In particular, disables activation of
