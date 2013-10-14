@@ -891,9 +891,12 @@ get_gtid_list_event(IO_CACHE *cache, Gtid_list_log_event **out_gtid_list)
   to start at the very first GTID in domain D.
 */
 static bool
-contains_all_slave_gtid(slave_connection_state *st, Gtid_list_log_event *glev)
+contains_all_slave_gtid(slave_connection_state *st,
+                        Gtid_list_log_event *glev,
+                        bool slave_gtid_strict_mode)
 {
   uint32 i;
+  bool has_greater_seq_no= false;
 
   for (i= 0; i < glev->count; ++i)
   {
@@ -906,6 +909,14 @@ contains_all_slave_gtid(slave_connection_state *st, Gtid_list_log_event *glev)
         is in an earlier binlog file. So we need to search back further.
       */
       return false;
+    }
+    if (slave_gtid_strict_mode)
+    {
+      if (gtid->seq_no < glev->list[i].seq_no)
+      {
+        has_greater_seq_no= true;
+        break;
+      }
     }
     if (gtid->server_id == glev->list[i].server_id &&
         gtid->seq_no <= glev->list[i].seq_no)
@@ -933,7 +944,7 @@ contains_all_slave_gtid(slave_connection_state *st, Gtid_list_log_event *glev)
     }
   }
 
-  return true;
+  return !slave_gtid_strict_mode || !has_greater_seq_no;
 }
 
 
@@ -991,9 +1002,11 @@ check_slave_start_position(binlog_send_info *info, const char **errormsg,
     rpl_gtid master_gtid;
     rpl_gtid master_replication_gtid;
     rpl_gtid start_gtid;
-    bool start_at_own_slave_pos=
+    bool master_repl_gtid_found=
       rpl_global_gtid_slave_state.domain_to_gtid(slave_gtid->domain_id,
-                                                 &master_replication_gtid) &&
+                                                 &master_replication_gtid);
+    bool start_at_own_slave_pos=
+      master_repl_gtid_found &&
       slave_gtid->server_id == master_replication_gtid.server_id &&
       slave_gtid->seq_no == master_replication_gtid.seq_no;
 
@@ -1064,6 +1077,29 @@ check_slave_start_position(binlog_send_info *info, const char **errormsg,
         if(until_gtid)
           until_gtid_state->remove(until_gtid);
         continue;
+      }
+
+      if (info->slave_gtid_strict_mode)
+      {
+        if (master_repl_gtid_found &&
+            master_replication_gtid.seq_no == slave_gtid->seq_no)
+        {
+          *errormsg= "Requested slave GTID state have different server id "
+                     "than the one in gtid_slave_pos";
+          *error_gtid= *slave_gtid;
+          err= ER_GTID_POSITION_NOT_FOUND_IN_BINLOG2;
+          goto end;
+        }
+        if (domain_gtid.seq_no >= slave_gtid->seq_no)
+        {
+          /*
+            Slave requested GTID which is not present as is in the binlog. This
+            can mean either the slave is from alternate future or it requests
+            GTID that is before the start of binlog. We'll distinguish these two
+            situations later.
+          */
+          continue;
+        }
       }
 
       *error_gtid= *slave_gtid;
@@ -1180,21 +1216,25 @@ end:
   that might turn up if that domain becomes active again, vainly looking for
   the requested GTID that was already purged.
 */
-static const char *
-gtid_find_binlog_file(slave_connection_state *state, char *out_name,
-                      slave_connection_state *until_gtid_state)
+static int
+gtid_find_binlog_file(slave_connection_state *state,
+                      const char **errormsg, rpl_gtid *error_gtid,
+                      char *out_name,
+                      slave_connection_state *until_gtid_state,
+                      bool slave_gtid_strict_mode)
 {
   MEM_ROOT memroot;
   binlog_file_entry *list;
   Gtid_list_log_event *glev= NULL;
-  const char *errormsg= NULL;
+  int error= 0;
   char buf[FN_REFLEN];
 
   init_alloc_root(&memroot, 10*(FN_REFLEN+sizeof(binlog_file_entry)), 0,
                   MYF(MY_THREAD_SPECIFIC));
   if (!(list= get_binlog_list(&memroot)))
   {
-    errormsg= "Out of memory while looking for GTID position in binlog";
+    *errormsg= "Out of memory while looking for GTID position in binlog";
+    error= ER_MASTER_FATAL_ERROR_READING_BINLOG;
     goto end;
   }
 
@@ -1219,20 +1259,27 @@ gtid_find_binlog_file(slave_connection_state *state, char *out_name,
     */
     if (normalize_binlog_name(buf, list->name, false))
     {
-      errormsg= "Failed to determine binlog file name while looking for "
+      *errormsg= "Failed to determine binlog file name while looking for "
         "GTID position in binlog";
+      error= ER_MASTER_FATAL_ERROR_READING_BINLOG;
       goto end;
     }
     bzero((char*) &cache, sizeof(cache));
-    if ((file= open_binlog(&cache, buf, &errormsg)) == (File)-1)
+    if ((file= open_binlog(&cache, buf, errormsg)) == (File)-1)
+    {
+      error= ER_MASTER_FATAL_ERROR_READING_BINLOG;
       goto end;
-    errormsg= get_gtid_list_event(&cache, &glev);
+    }
+    *errormsg= get_gtid_list_event(&cache, &glev);
     end_io_cache(&cache);
     mysql_file_close(file, MYF(MY_WME));
-    if (errormsg)
+    if (*errormsg)
+    {
+      error= ER_MASTER_FATAL_ERROR_READING_BINLOG;
       goto end;
+    }
 
-    if (!glev || contains_all_slave_gtid(state, glev))
+    if (!glev || contains_all_slave_gtid(state, glev, slave_gtid_strict_mode))
     {
       strmake(out_name, buf, FN_REFLEN);
 
@@ -1276,6 +1323,15 @@ gtid_find_binlog_file(slave_connection_state *state, char *out_name,
             */
             state->remove(gtid);
           }
+          else if (slave_gtid_strict_mode &&
+                   gtid->seq_no == glev->list[i].seq_no)
+          {
+            *errormsg= "Requested slave GTID state have different server id "
+                       "than the one in binlog";
+            *error_gtid= *gtid;
+            error= ER_GTID_POSITION_NOT_FOUND_IN_BINLOG2;
+            goto end;
+          }
 
           if (until_gtid_state &&
               (gtid= until_gtid_state->find(glev->list[i].domain_id)) &&
@@ -1299,16 +1355,17 @@ gtid_find_binlog_file(slave_connection_state *state, char *out_name,
   }
 
   /* We reached the end without finding anything. */
-  errormsg= "Could not find GTID state requested by slave in any binlog "
+  *errormsg= "Could not find GTID state requested by slave in any binlog "
     "files. Probably the slave state is too old and required binlog files "
     "have been purged.";
+  error= ER_MASTER_FATAL_ERROR_READING_BINLOG;
 
 end:
   if (glev)
     delete glev;
 
   free_root(&memroot, MYF(0));
-  return errormsg;
+  return error;
 }
 
 
@@ -1675,13 +1732,24 @@ send_event_to_slave(binlog_send_info *info, Log_event_type event_type,
           }
 
           /* Skip this event group if we have not yet reached slave start pos. */
-          if (event_gtid.server_id != gtid->server_id ||
+          if ((!info->slave_gtid_strict_mode &&
+               event_gtid.server_id != gtid->server_id) ||
               event_gtid.seq_no <= gtid->seq_no)
             info->gtid_skip_group= (flags2 & Gtid_log_event::FL_STANDALONE ?
                                 GTID_SKIP_STANDALONE : GTID_SKIP_TRANSACTION);
-          if (event_gtid.server_id == gtid->server_id &&
+          if ((info->slave_gtid_strict_mode ||
+               event_gtid.server_id == gtid->server_id) &&
               event_gtid.seq_no >= gtid->seq_no)
           {
+            if (info->slave_gtid_strict_mode &&
+                event_gtid.seq_no == gtid->seq_no &&
+                event_gtid.server_id != gtid->server_id)
+            {
+              my_errno= ER_GTID_POSITION_NOT_FOUND_IN_BINLOG2;
+              *error_gtid= *gtid;
+              return "Requested slave GTID state have different server id "
+                     "than the one in binlog.";
+            }
             if (info->slave_gtid_strict_mode &&
                 event_gtid.seq_no > gtid->seq_no &&
                 !(gtid_entry->flags & slave_connection_state::START_OWN_SLAVE_POS))
@@ -2079,7 +2147,7 @@ void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos,
     if ((errmsg= gtid_find_binlog_file(&info.gtid_state, search_file_name,
                                        info.until_gtid_state)))
     {
-      my_errno= ER_MASTER_FATAL_ERROR_READING_BINLOG;
+      my_errno= error;
       goto err;
     }
     pos= 4;

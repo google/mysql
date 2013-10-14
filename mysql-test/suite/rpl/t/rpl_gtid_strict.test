@@ -11,11 +11,11 @@ call mtr.add_suppression("Error writing file .*errno: 1950");
 
 SET sql_log_bin= 1;
 
-SET @old_gtid_strict_mode= @@GLOBAL.gtid_strict_mode;
+let $old_gtid_strict_mode_1= `SELECT @@GLOBAL.gtid_strict_mode`;
 SET GLOBAL gtid_strict_mode= 1;
 --connection server_2
 --source include/stop_slave.inc
-SET @old_gtid_strict_mode= @@GLOBAL.gtid_strict_mode;
+let $old_gtid_strict_mode_2= `SELECT @@GLOBAL.gtid_strict_mode`;
 SET GLOBAL gtid_strict_mode=1;
 CHANGE MASTER TO master_use_gtid=slave_pos;
 --source include/start_slave.inc
@@ -168,11 +168,256 @@ SELECT * FROM t1 ORDER BY a;
 SET GLOBAL gtid_strict_mode= 1;
 
 
+--echo *** Check that gap in seq_no without binlogs doesn't allow to replicate. ***
+SET sql_log_bin= 0;
+call mtr.add_suppression("slave state is too old");
+SET sql_log_bin= 1;
+--connection server_1
+--echo # On the master
+SELECT @@global.gtid_current_pos;
+--connection server_2
+--source include/stop_slave.inc
+
+--echo # Restarting server_1 without binlogs
+--connection server_1
+--let $MYSQLD_DATADIR= `select @@datadir`
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--shutdown_server 10
+--source include/wait_until_disconnected.inc
+
+--exec rm $MYSQLD_DATADIR/master-bin.*
+
+--enable_reconnect
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--source include/wait_until_connected_again.inc
+
+--echo # Making a gap and restarting slave
+--connection server_1
+SET GLOBAL gtid_binlog_state = '0-1-105';
+SET GLOBAL gtid_slave_pos = '0-1-105';
+INSERT INTO t1 VALUES (13);
+--save_master_pos
+
+--connection server_2
+START SLAVE;
+--let $slave_io_errno=1236
+--source include/wait_for_slave_io_error.inc
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+SET GLOBAL gtid_slave_pos = '0-1-105';
+--source include/start_slave.inc
+--sync_with_master
+SET GLOBAL gtid_strict_mode= 1;
+
+
+--echo # The same test but with starting master GTID from different server_id
+--connection server_2
+--source include/stop_slave.inc
+
+--echo # Restarting server_1 without binlogs
+--connection server_1
+--let $MYSQLD_DATADIR= `select @@datadir`
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--shutdown_server 10
+--source include/wait_until_disconnected.inc
+
+--exec rm $MYSQLD_DATADIR/master-bin.*
+
+--enable_reconnect
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--source include/wait_until_connected_again.inc
+
+--echo # Making a gap and restarting slave
+--connection server_1
+SET GLOBAL gtid_binlog_state = '0-5-110';
+SET GLOBAL gtid_slave_pos = '0-5-110';
+INSERT INTO t1 VALUES (14);
+--save_master_pos
+
+--connection server_2
+START SLAVE;
+--let $slave_io_errno=1236
+--source include/wait_for_slave_io_error.inc
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+--source include/start_slave.inc
+--sync_with_master
+SET GLOBAL gtid_strict_mode= 1;
+
+
+--echo # The same test but with starting slave GTID from server_id not related
+--echo # to either master or slave.
+--connection server_2
+--source include/stop_slave.inc
+
+--echo # Restarting server_1 without binlogs
+--connection server_1
+--let $MYSQLD_DATADIR= `select @@datadir`
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--shutdown_server 10
+--source include/wait_until_disconnected.inc
+
+--exec rm $MYSQLD_DATADIR/master-bin.*
+
+--enable_reconnect
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--source include/wait_until_connected_again.inc
+
+--echo # Making a gap and restarting slave
+--connection server_1
+SET GLOBAL gtid_binlog_state = '0-5-113';
+SET GLOBAL gtid_slave_pos = '0-5-113';
+INSERT INTO t1 VALUES (15);
+--save_master_pos
+
+--connection server_2
+RESET MASTER;
+SET GLOBAL gtid_binlog_state = '0-10-110';
+SET GLOBAL gtid_slave_pos = '0-10-110';
+START SLAVE;
+--let $slave_io_errno=1236
+--source include/wait_for_slave_io_error.inc
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+SET GLOBAL gtid_slave_pos = '0-5-113';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+--source include/start_slave.inc
+--sync_with_master
+SET GLOBAL gtid_strict_mode= 1;
+
+
+--echo *** Check processing of alternate futures
+SET sql_log_bin= 0;
+call mtr.add_suppression("the slave has diverged");
+SET sql_log_bin= 1;
+--echo # First check alt future with binlogs
+--connection server_2
+--source include/stop_slave.inc
+CHANGE MASTER TO MASTER_USE_GTID = current_pos;
+--echo # On the slave (when slave threads are stopped)
+INSERT INTO t1 VALUES (16);
+SELECT @@global.gtid_current_pos;
+--connection server_1
+--echo # On the master
+INSERT INTO t1 VALUES (17);
+INSERT INTO t1 VALUES (18);
+SELECT @@global.gtid_current_pos;
+--save_master_pos
+
+--connection server_2
+--echo # On the slave
+START SLAVE;
+--let $slave_io_errno=1236
+--source include/wait_for_slave_io_error.inc
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+--source include/start_slave.inc
+--sync_with_master
+SET GLOBAL gtid_strict_mode= 1;
+
+
+--echo # Check alt future when divergence is in last event in binlog file
+--connection server_2
+--source include/stop_slave.inc
+--echo # On the slave (when slave threads are stopped)
+CHANGE MASTER TO MASTER_USE_GTID = current_pos;
+INSERT INTO t1 VALUES (19);
+SELECT @@global.gtid_current_pos;
+--connection server_1
+--echo # On the master
+INSERT INTO t1 VALUES (20);
+FLUSH LOGS;
+INSERT INTO t1 VALUES (21);
+SELECT @@global.gtid_current_pos;
+--save_master_pos
+
+--connection server_2
+--echo # On the slave
+START SLAVE;
+--let $slave_io_errno=1236
+--source include/wait_for_slave_io_error.inc
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+--source include/start_slave.inc
+--sync_with_master
+SET GLOBAL gtid_strict_mode= 1;
+
+
+--echo # Check alt future without binlogs
+--connection server_2
+--source include/stop_slave.inc
+--echo # On the slave (when slave threads are stopped)
+CHANGE MASTER TO MASTER_USE_GTID = current_pos;
+INSERT INTO t1 VALUES (22);
+SELECT @@global.gtid_current_pos;
+
+--echo # Restarting server_1 without binlogs
+--connection server_1
+--let $MYSQLD_DATADIR= `select @@datadir`
+--exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--shutdown_server 10
+--source include/wait_until_disconnected.inc
+
+--exec rm $MYSQLD_DATADIR/master-bin.*
+
+--enable_reconnect
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+--source include/wait_until_connected_again.inc
+
+--echo # Creating alt future and restarting slave
+--connection server_1
+SET GLOBAL gtid_binlog_state = '0-1-119';
+SET GLOBAL gtid_slave_pos = '0-1-119';
+--connection server_2
+START SLAVE;
+--let $slave_io_errno=1236
+--source include/wait_for_slave_io_error.inc
+--echo # Recovering from replication error
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+SET GLOBAL gtid_slave_pos = '0-1-119';
+--source include/start_slave.inc
+--connection server_1
+INSERT INTO t1 VALUES (23);
+--save_master_pos
+--connection server_2
+--sync_with_master
+
+
+--echo #
+--echo # Check that all tests above had correct errors in slave's error log.
+--echo #
+--connection server_2
+create temporary table error_log (
+  row int auto_increment primary key,
+  line varchar(1024) default null
+);
+eval load data infile './mysql_slave.err' into table error_log
+  fields terminated by 'xykls37' escaped by ''
+  ignore 1 lines
+  (line);
+--echo # substr() will exclude date and time
+select substr(line, 17) from error_log
+ where line like '%Error reading packet from server%1236%'
+ order by row;
+
+
 # Clean up.
+--disable_query_log
 --connection server_1
 DROP TABLE t1, t2, t3;
-SET GLOBAL gtid_strict_mode= @old_gtid_strict_mode;
+eval SET GLOBAL gtid_strict_mode= $old_gtid_strict_mode_1;
 --connection server_2
-SET GLOBAL gtid_strict_mode= @old_gtid_strict_mode;
+--source include/stop_slave.inc
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+eval SET GLOBAL gtid_strict_mode= $old_gtid_strict_mode_2;
+--source include/start_slave.inc
+--enable_query_log
+--connection default
+--enable_reconnect
+--source include/wait_until_connected_again.inc
 
 --source include/rpl_end.inc

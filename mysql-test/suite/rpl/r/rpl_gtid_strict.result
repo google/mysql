@@ -3,10 +3,8 @@ ALTER TABLE mysql.gtid_slave_pos ENGINE=InnoDB;
 SET sql_log_bin= 0;
 call mtr.add_suppression("Error writing file .*errno: 1950");
 SET sql_log_bin= 1;
-SET @old_gtid_strict_mode= @@GLOBAL.gtid_strict_mode;
 SET GLOBAL gtid_strict_mode= 1;
 include/stop_slave.inc
-SET @old_gtid_strict_mode= @@GLOBAL.gtid_strict_mode;
 SET GLOBAL gtid_strict_mode=1;
 CHANGE MASTER TO master_use_gtid=slave_pos;
 include/start_slave.inc
@@ -176,7 +174,152 @@ a
 11
 12
 SET GLOBAL gtid_strict_mode= 1;
-DROP TABLE t1, t2, t3;
-SET GLOBAL gtid_strict_mode= @old_gtid_strict_mode;
-SET GLOBAL gtid_strict_mode= @old_gtid_strict_mode;
+*** Check that gap in seq_no without binlogs doesn't allow to replicate. ***
+SET sql_log_bin= 0;
+call mtr.add_suppression("slave state is too old");
+SET sql_log_bin= 1;
+# On the master
+SELECT @@global.gtid_current_pos;
+@@global.gtid_current_pos
+0-1-101
+include/stop_slave.inc
+# Restarting server_1 without binlogs
+# Making a gap and restarting slave
+SET GLOBAL gtid_binlog_state = '0-1-105';
+SET GLOBAL gtid_slave_pos = '0-1-105';
+INSERT INTO t1 VALUES (13);
+START SLAVE;
+include/wait_for_slave_io_error.inc [errno=1236]
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+SET GLOBAL gtid_slave_pos = '0-1-105';
+include/start_slave.inc
+SET GLOBAL gtid_strict_mode= 1;
+# The same test but with starting master GTID from different server_id
+include/stop_slave.inc
+# Restarting server_1 without binlogs
+# Making a gap and restarting slave
+SET GLOBAL gtid_binlog_state = '0-5-110';
+SET GLOBAL gtid_slave_pos = '0-5-110';
+INSERT INTO t1 VALUES (14);
+START SLAVE;
+include/wait_for_slave_io_error.inc [errno=1236]
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+include/start_slave.inc
+SET GLOBAL gtid_strict_mode= 1;
+# The same test but with starting slave GTID from server_id not related
+# to either master or slave.
+include/stop_slave.inc
+# Restarting server_1 without binlogs
+# Making a gap and restarting slave
+SET GLOBAL gtid_binlog_state = '0-5-113';
+SET GLOBAL gtid_slave_pos = '0-5-113';
+INSERT INTO t1 VALUES (15);
+RESET MASTER;
+SET GLOBAL gtid_binlog_state = '0-10-110';
+SET GLOBAL gtid_slave_pos = '0-10-110';
+START SLAVE;
+include/wait_for_slave_io_error.inc [errno=1236]
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+SET GLOBAL gtid_slave_pos = '0-5-113';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+include/start_slave.inc
+SET GLOBAL gtid_strict_mode= 1;
+*** Check processing of alternate futures
+SET sql_log_bin= 0;
+call mtr.add_suppression("the slave has diverged");
+SET sql_log_bin= 1;
+# First check alt future with binlogs
+include/stop_slave.inc
+CHANGE MASTER TO MASTER_USE_GTID = current_pos;
+# On the slave (when slave threads are stopped)
+INSERT INTO t1 VALUES (16);
+SELECT @@global.gtid_current_pos;
+@@global.gtid_current_pos
+0-2-115
+# On the master
+INSERT INTO t1 VALUES (17);
+INSERT INTO t1 VALUES (18);
+SELECT @@global.gtid_current_pos;
+@@global.gtid_current_pos
+0-1-116
+# On the slave
+START SLAVE;
+include/wait_for_slave_io_error.inc [errno=1236]
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+include/start_slave.inc
+SET GLOBAL gtid_strict_mode= 1;
+# Check alt future when divergence is in last event in binlog file
+include/stop_slave.inc
+# On the slave (when slave threads are stopped)
+CHANGE MASTER TO MASTER_USE_GTID = current_pos;
+INSERT INTO t1 VALUES (19);
+SELECT @@global.gtid_current_pos;
+@@global.gtid_current_pos
+0-2-117
+# On the master
+INSERT INTO t1 VALUES (20);
+FLUSH LOGS;
+INSERT INTO t1 VALUES (21);
+SELECT @@global.gtid_current_pos;
+@@global.gtid_current_pos
+0-1-118
+# On the slave
+START SLAVE;
+include/wait_for_slave_io_error.inc [errno=1236]
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+include/start_slave.inc
+SET GLOBAL gtid_strict_mode= 1;
+# Check alt future without binlogs
+include/stop_slave.inc
+# On the slave (when slave threads are stopped)
+CHANGE MASTER TO MASTER_USE_GTID = current_pos;
+INSERT INTO t1 VALUES (22);
+SELECT @@global.gtid_current_pos;
+@@global.gtid_current_pos
+0-2-119
+# Restarting server_1 without binlogs
+# Creating alt future and restarting slave
+SET GLOBAL gtid_binlog_state = '0-1-119';
+SET GLOBAL gtid_slave_pos = '0-1-119';
+START SLAVE;
+include/wait_for_slave_io_error.inc [errno=1236]
+# Recovering from replication error
+STOP SLAVE;
+SET GLOBAL gtid_strict_mode= 0;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+SET GLOBAL gtid_slave_pos = '0-1-119';
+include/start_slave.inc
+INSERT INTO t1 VALUES (23);
+#
+# Check that all tests above had correct errors in slave's error log.
+#
+create temporary table error_log (
+row int auto_increment primary key,
+line varchar(1024) default null
+);
+load data infile './mysql_slave.err' into table error_log
+fields terminated by 'xykls37' escaped by ''
+  ignore 1 lines
+(line);
+# substr() will exclude date and time
+select substr(line, 17) from error_log
+where line like '%Error reading packet from server%1236%'
+ order by row;
+substr(line, 17)
+[ERROR] Error reading packet from server: The binlog on the master is missing the GTID 0-1-50 requested by the slave (even though both a prior and a subsequent sequence number does exist), and GTID strict mode is enabled ( server_errno=1236)
+[ERROR] Error reading packet from server: Could not find GTID state requested by slave in any binlog files. Probably the slave state is too old and required binlog files have been purged. ( server_errno=1236)
+[ERROR] Error reading packet from server: Could not find GTID state requested by slave in any binlog files. Probably the slave state is too old and required binlog files have been purged. ( server_errno=1236)
+[ERROR] Error reading packet from server: Could not find GTID state requested by slave in any binlog files. Probably the slave state is too old and required binlog files have been purged. ( server_errno=1236)
+[ERROR] Error reading packet from server: Error: connecting slave requested to start from GTID 0-2-115, which is not in the master's binlog. Since the master's binlog contains GTIDs with higher sequence numbers, it probably means that the slave has diverged due to executing extra errorneous transactions ( server_errno=1236)
+[ERROR] Error reading packet from server: Error: connecting slave requested to start from GTID 0-2-117, which is not in the master's binlog. Since the master's binlog contains GTIDs with higher sequence numbers, it probably means that the slave has diverged due to executing extra errorneous transactions ( server_errno=1236)
+[ERROR] Error reading packet from server: Error: connecting slave requested to start from GTID 0-2-119, which is not in the master's binlog. Since the master's binlog contains GTIDs with higher sequence numbers, it probably means that the slave has diverged due to executing extra errorneous transactions ( server_errno=1236)
+include/stop_slave.inc
+include/start_slave.inc
 include/rpl_end.inc
