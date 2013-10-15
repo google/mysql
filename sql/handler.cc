@@ -1462,7 +1462,8 @@ int ha_commit_trans(THD *thd, bool all)
 
 done:
   DBUG_EXECUTE_IF("crash_commit_after", DBUG_SUICIDE(););
-  RUN_HOOK(transaction, after_commit, (thd, FALSE));
+  if (RUN_HOOK(transaction, after_commit, (thd, FALSE)))
+    error= 2;
   goto end;
 
   /* Come here if error and we need to rollback. */

@@ -407,6 +407,7 @@ int ReplSemiSyncMaster::disableMaster()
 
   if (getMasterEnabled())
   {
+    bool reply_file_name_was_inited= reply_file_name_inited_;
     /* Switch off the semi-sync first so that waiting transaction will be
      * waken up.
      */
@@ -422,6 +423,11 @@ int ReplSemiSyncMaster::disableMaster()
 
     set_master_enabled(false);
     sql_print_information("Semi-sync replication disabled on the master.");
+    if (reply_file_name_was_inited)
+      sql_print_information("Semi-sync up to file %s, position %lu",
+                            reply_file_name_, (ulong)reply_file_pos_);
+    else
+      sql_print_information("Master did not receive any semi-sync ACKs.");
   }
 
   unlock();
@@ -515,11 +521,41 @@ int ReplSemiSyncMaster::reportReplyBinlog(uint32 server_id,
 
   function_enter(kWho);
 
+  /*
+    Sanity check the log and pos from the reply. If it is from the 'future'
+    then the the slave is horked in some way or the packet was corrupted
+    on the network. In either case we should ignore the reply.
+
+    NOTE: get_current_log acquires LOCK_log so must be called prior to
+    calling lock() to avoid a deadlock between this thread and a thread
+    inside Repl_semi_sync::write_tranx_in_binlog which also acquires both
+    locks.
+  */
+  LOG_INFO linfo;
+  if (mysql_bin_log.get_current_log(&linfo))
+  {
+    sql_print_error("Repl_semi_sync::report_reply_binlog failed to read "
+                    "current binlog position for sanity check.");
+    return function_exit(kWho, 0);
+  }
+
   lock();
 
   /* This is the real check inside the mutex. */
   if (!getMasterEnabled())
     goto l_end;
+
+  if (ActiveTranx::compare(log_file_name, log_file_pos,
+                           base_name(linfo.log_file_name), linfo.pos) > 0)
+  {
+    sql_print_error("Bad semi-sync reply received from %s: "
+                    "reply position (%s, %lu), "
+                    "current binlog position (%s, %lu).",
+                    current_thd->security_ctx->host_or_ip,
+                    log_file_name, (ulong) log_file_pos,
+                    base_name(linfo.log_file_name), (ulong) linfo.pos);
+    goto l_end;
+  }
 
   if (!is_on())
     /* We check to see whether we can switch semi-sync ON. */
@@ -601,6 +637,7 @@ int ReplSemiSyncMaster::commitTrx(const char* trx_wait_binlog_name,
 				  my_off_t trx_wait_binlog_pos)
 {
   const char *kWho = "ReplSemiSyncMaster::commitTrx";
+  int error = 0;
 
   function_enter(kWho);
 
@@ -705,18 +742,33 @@ int ReplSemiSyncMaster::commitTrx(const char* trx_wait_binlog_name,
       
       wait_result = cond_timewait(&abstime);
       rpl_semi_sync_master_wait_sessions--;
-      
-      if (wait_result != 0)
+
+      bool thd_was_killed= thd_kill_level(NULL) != THD_IS_NOT_KILLED;
+      if (wait_result != 0 || thd_was_killed)
       {
-        /* This is a real wait timeout. */
-        sql_print_warning("Timeout waiting for reply of binlog (file: %s, pos: %lu), "
+        /* This is a real wait timeout, or the waiting thread was killed. */
+        sql_print_warning("%s waiting for reply of binlog (file: %s, pos: %lu), "
                           "semi-sync up to file %s, position %lu.",
+                          thd_was_killed ? "Killed" : "Timeout",
                           trx_wait_binlog_name, (unsigned long)trx_wait_binlog_pos,
                           reply_file_name_, (unsigned long)reply_file_pos_);
+
+        if (thd_was_killed)
+        {
+          /* Return error to client. */
+          error= 1;
+          my_printf_error(ER_ERROR_DURING_COMMIT,
+                          "Killed while waiting for replication semi-sync ack.",
+                          MYF(0));
+        }
+
         rpl_semi_sync_master_wait_timeouts++;
-        
+
         /* switch semi-sync off */
-        switch_off();
+        if (!rpl_semi_sync_master_wait_no_slave)
+          switch_off();
+        else
+          break;
       }
       else
       {
@@ -731,6 +783,12 @@ int ReplSemiSyncMaster::commitTrx(const char* trx_wait_binlog_name,
                             "wait position (%s, %lu)",
                             trx_wait_binlog_name, (unsigned long)trx_wait_binlog_pos);
           }
+
+          /* Return error to client. */
+          error= 1;
+          my_printf_error(ER_ERROR_DURING_COMMIT,
+                          "Replication semi-sync getWaitTime fail", MYF(0));
+
           rpl_semi_sync_master_timefunc_fails++;
         }
         else
@@ -741,14 +799,6 @@ int ReplSemiSyncMaster::commitTrx(const char* trx_wait_binlog_name,
       }
     }
 
-    /*
-      At this point, the binlog file and position of this transaction
-      must have been removed from ActiveTranx.
-    */
-    assert(thd_killed(NULL) ||
-           !active_tranxs_->is_tranx_end_pos(trx_wait_binlog_name,
-                                             trx_wait_binlog_pos));
-    
   l_end:
     /* Update the status counter. */
     if (is_on())
@@ -759,9 +809,15 @@ int ReplSemiSyncMaster::commitTrx(const char* trx_wait_binlog_name,
     /* The lock held will be released by thd_exit_cond, so no need to
        call unlock() here */
     THD_EXIT_COND(NULL, & old_stage);
+    if (error)
+    {
+      mysql_mutex_lock(&current_thd->LOCK_thd_data);
+      current_thd->awake(KILL_CONNECTION);
+      mysql_mutex_unlock(&current_thd->LOCK_thd_data);
+    }
   }
 
-  return function_exit(kWho, 0);
+  return function_exit(kWho, error);
 }
 
 /* Indicate that semi-sync replication is OFF now.
@@ -786,6 +842,9 @@ int ReplSemiSyncMaster::switch_off()
 {
   const char *kWho = "ReplSemiSyncMaster::switch_off";
   int result;
+
+  if (!is_on())
+    return 0;
 
   function_enter(kWho);
   state_ = false;
@@ -1024,7 +1083,10 @@ int ReplSemiSyncMaster::writeTranxInBinlog(const char* log_file_name,
       */
       sql_print_warning("Semi-sync failed to insert tranx_node for binlog file: %s, position: %lu",
                         log_file_name, (ulong)log_file_pos);
-      switch_off();
+      if (!rpl_semi_sync_master_wait_no_slave)
+        switch_off();
+      else
+        result = 1;
     }
   }
 

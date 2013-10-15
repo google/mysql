@@ -62,37 +62,6 @@ show status like 'Rpl_semi_sync_master_status';
 --replace_result 305 304
 show status like 'Rpl_semi_sync_master_yes_tx';
 
---echo #
---echo # BUG#45672 Semisync repl: ActiveTranx:insert_tranx_node: transaction node allocation failed
---echo # BUG#45673 Semisynch reports correct operation even if no slave is connected
---echo #
-
-# BUG#45672 When semi-sync is enabled on master, it would allocate
-# transaction node even without semi-sync slave connected, and would
-# finally result in transaction node allocation error.
-#
-# Semi-sync master will pre-allocate 'max_connections' transaction
-# nodes, so here we do more than that much transactions to check if it
-# will fail or not.
-# select @@global.max_connections + 1;
-let $i= `select @@global.max_connections + 1`;
-disable_query_log;
-eval create table t1 (a int) engine=$engine_type;
-while ($i)
-{
-  eval insert into t1 values ($i);
-  dec $i;
-}
-drop table t1;
-enable_query_log;
-
-# BUG#45673
-echo [ status of semi-sync on master should be OFF ];
-show status like 'Rpl_semi_sync_master_clients';
-show status like 'Rpl_semi_sync_master_status';
---replace_result 305 304
-show status like 'Rpl_semi_sync_master_yes_tx';
-
 # reset master to make sure the following test will start with a clean environment
 reset master;
 
@@ -197,99 +166,10 @@ sync_slave_with_master;
 
 
 --echo #
---echo # Test semi-sync master will switch OFF after one transaction
---echo # timeout waiting for slave reply.
---echo #
-connection slave;
-source include/stop_slave.inc;
-
-connection master;
-echo [ on master ];
-set global rpl_semi_sync_master_timeout= 5000;
-
-# The first semi-sync check should be on because after slave stop,
-# there are no transactions on the master.
-echo [ master status should be ON ];
-show status like 'Rpl_semi_sync_master_status';
-show status like 'Rpl_semi_sync_master_no_tx';
---replace_result 305 304
-show status like 'Rpl_semi_sync_master_yes_tx';
-show status like 'Rpl_semi_sync_master_clients';
-
-echo [ semi-sync replication of these transactions will fail ];
-insert into t1 values (500);
-
-# Wait for the semi-sync replication of this transaction to timeout
-let $status_var= Rpl_semi_sync_master_status;
-let $status_var_value= OFF;
-source include/wait_for_status_var.inc;
-
-# The second semi-sync check should be off because one transaction
-# times out during waiting.
-echo [ master status should be OFF ];
-show status like 'Rpl_semi_sync_master_status';
-show status like 'Rpl_semi_sync_master_no_tx';
---replace_result 305 304
-show status like 'Rpl_semi_sync_master_yes_tx';
-
-# Semi-sync status on master is now OFF, so all these transactions
-# will be replicated asynchronously.
-delete from t1 where a=10;
-delete from t1 where a=9;
-delete from t1 where a=8;
-delete from t1 where a=7;
-delete from t1 where a=6;
-delete from t1 where a=5;
-delete from t1 where a=4;
-delete from t1 where a=3;
-delete from t1 where a=2;
-delete from t1 where a=1;
-
-insert into t1 values (100);
-
-echo [ master status should be OFF ];
-show status like 'Rpl_semi_sync_master_status';
-show status like 'Rpl_semi_sync_master_no_tx';
---replace_result 305 304
-show status like 'Rpl_semi_sync_master_yes_tx';
-
---echo #
---echo # Test semi-sync status on master will be ON again when slave catches up
---echo #
-
-# Save the master position for later use.
-save_master_pos;
-
-connection slave;
-echo [ on slave ];
-
-echo [ slave status should be OFF ];
-show status like 'Rpl_semi_sync_slave_status';
-source include/start_slave.inc;
-sync_with_master;
-
-echo [ slave status should be ON ];
-show status like 'Rpl_semi_sync_slave_status';
-
-select count(distinct a) from t1;
-select min(a) from t1;
-select max(a) from t1;
-
-connection master;
-echo [ on master ];
-
-# The master semi-sync status should be on again after slave catches up.
-echo [ master status should be ON again after slave catches up ];
-show status like 'Rpl_semi_sync_master_status';
-show status like 'Rpl_semi_sync_master_no_tx';
---replace_result 305 304
-show status like 'Rpl_semi_sync_master_yes_tx';
-show status like 'Rpl_semi_sync_master_clients';
-
---echo #
 --echo # Test disable/enable master semi-sync on the fly.
 --echo #
 
+connection master;
 drop table t1;
 sync_slave_with_master;
 echo [ on slave ];

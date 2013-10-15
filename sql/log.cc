@@ -6182,6 +6182,7 @@ err:
                  (thd, log_file_name, file->pos_in_file, synced))))
         {
           sql_print_error("Failed to run 'after_flush' hooks");
+          error= 1;
         } 
         else
         {
