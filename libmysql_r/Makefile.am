@@ -28,7 +28,8 @@ INCLUDES =	-I$(top_builddir)/include -I$(top_srcdir)/include \
 ## automake barfs if you don't use $(srcdir) or $(top_srcdir) in include
 include $(top_srcdir)/libmysql/Makefile.shared
 
-nodist_libmysqlclient_r_la_SOURCES = $(target_sources)
+nodist_libmysqlclient_r_la_SOURCES = $(target_sources) \
+                                     $(top_srcdir)/mysys/checksum.c
 libmysqlclient_r_la_LIBADD = $(target_libadd) $(yassl_las)
 libmysqlclient_r_la_LDFLAGS = $(target_ldflags)
 

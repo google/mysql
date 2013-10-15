@@ -28,7 +28,7 @@ INCLUDES =	-I$(top_builddir)/include -I$(top_srcdir)/include \
 
 include $(srcdir)/Makefile.shared
 
-libmysqlclient_la_SOURCES = $(target_sources)
+libmysqlclient_la_SOURCES = $(target_sources) $(top_srcdir)/mysys/checksum.c
 libmysqlclient_la_LIBADD = $(target_libadd) $(yassl_las)
 libmysqlclient_la_LDFLAGS = $(target_ldflags)
 EXTRA_DIST = Makefile.shared libmysql.def dll.c CMakeLists.txt

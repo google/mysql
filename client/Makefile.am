@@ -68,6 +68,9 @@ mysqlbinlog_SOURCES =		mysqlbinlog.cc \
 				$(top_srcdir)/mysys/base64.c
 mysqlbinlog_LDADD =		$(LDADD) $(CXXLDFLAGS)
 
+mysqlcheck_SOURCES =		mysqlcheck.cc \
+				$(top_srcdir)/mysys/checksum.c
+
 mysqldump_SOURCES=              mysqldump.c \
 				my_user.c \
 	                        $(top_srcdir)/mysys/mf_getdate.c
