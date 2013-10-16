@@ -531,7 +531,15 @@ typedef struct st_io_cache		/* Used when cacheing files */
   /*
     Maximum allowed size of this IO_CACHE. Unlimited, if 0.
   */
-  my_off_t max_size;
+  ulonglong max_size;
+
+  /*
+    error code to emit if exceeding max_size
+
+    Allow user of IO_CACHE to specify error code so that different
+    use-cases can get different error if exceeding max_size
+  */
+  int max_size_error_code;
 } IO_CACHE;
 
 typedef int (*qsort2_cmp)(const void *, const void *, const void *);
@@ -820,6 +828,7 @@ extern my_bool open_cached_file(IO_CACHE *cache,const char *dir,
 				 myf cache_myflags);
 extern my_bool real_open_cached_file(IO_CACHE *cache);
 extern void close_cached_file(IO_CACHE *cache);
+extern void set_cached_file_max_size(IO_CACHE * cache, ulonglong sz, int error);
 File create_temp_file(char *to, const char *dir, const char *pfx,
 		      int mode, myf MyFlags);
 #define my_init_dynamic_array(A,B,C,D) init_dynamic_array2(A,B,NULL,C,D CALLER_INFO)

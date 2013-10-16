@@ -251,6 +251,8 @@ ha_rows filesort(THD *thd, TABLE *table, SORT_FIELD *sortorder, uint s_length,
   if (open_cached_file(&buffpek_pointers,mysql_tmpdir,TEMP_PREFIX,
 		       DISK_BUFFER_SIZE, MYF(MY_WME)))
     goto err;
+  set_cached_file_max_size(&buffpek_pointers, limit_tmp_disk_space,
+                           ER_OVER_LIMIT_TMP_DISK_SPACE);
 
   param.keys--;  			/* TODO: check why we do this */
   param.sort_form= table;
@@ -290,6 +292,8 @@ ha_rows filesort(THD *thd, TABLE *table, SORT_FIELD *sortorder, uint s_length,
       goto err;
     if (reinit_io_cache(outfile,WRITE_CACHE,0L,0,0))
       goto err;
+    set_cached_file_max_size(outfile, limit_tmp_disk_space,
+                             ER_OVER_LIMIT_TMP_DISK_SPACE);
 
     /*
       Use also the space previously used by string pointers in sort_buffer
@@ -723,6 +727,8 @@ write_keys(SORTPARAM *param, register uchar **sort_keys, uint count,
       open_cached_file(tempfile, mysql_tmpdir, TEMP_PREFIX, DISK_BUFFER_SIZE,
                        MYF(MY_WME)))
     goto err;                                   /* purecov: inspected */
+  set_cached_file_max_size(tempfile, limit_tmp_disk_space,
+                           ER_OVER_LIMIT_TMP_DISK_SPACE);
   /* check we won't have more buffpeks than we can possibly keep in memory */
   if (my_b_tell(buffpek_pointers) + sizeof(BUFFPEK) > (ulonglong)UINT_MAX)
     goto err;
@@ -1084,6 +1090,8 @@ int merge_many_buff(SORTPARAM *param, uchar *sort_buffer,
       open_cached_file(&t_file2,mysql_tmpdir,TEMP_PREFIX,DISK_BUFFER_SIZE,
 			MYF(MY_WME)))
     DBUG_RETURN(1);				/* purecov: inspected */
+  set_cached_file_max_size(&t_file2, limit_tmp_disk_space,
+                           ER_OVER_LIMIT_TMP_DISK_SPACE);
 
   from_file= t_file ; to_file= &t_file2;
   while (*maxbuffer >= MERGEBUFF2)
@@ -1092,6 +1100,8 @@ int merge_many_buff(SORTPARAM *param, uchar *sort_buffer,
       goto cleanup;
     if (reinit_io_cache(to_file,WRITE_CACHE,0L,0,0))
       goto cleanup;
+    set_cached_file_max_size(to_file, limit_tmp_disk_space,
+                             ER_OVER_LIMIT_TMP_DISK_SPACE);
     lastbuff=buffpek;
     for (i=0 ; i <= *maxbuffer-MERGEBUFF*3/2 ; i+=MERGEBUFF)
     {

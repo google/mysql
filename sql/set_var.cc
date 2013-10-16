@@ -654,6 +654,10 @@ static sys_var_const    sys_block_user_access(&vars, "block_user_access",
                                               OPT_GLOBAL, SHOW_LONG,
                                               (uchar*) &opt_block_user_access);
 
+static sys_var_ulonglong_ptr sys_limit_tmp_disk_space(&vars,
+                                        "limit_tmp_disk_space",
+                                        &limit_tmp_disk_space);
+
 #ifdef HAVE_THR_SETCONCURRENCY
 /* purecov: begin tested */
 static sys_var_const    sys_thread_concurrency(&vars, "thread_concurrency",

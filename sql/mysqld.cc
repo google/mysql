@@ -6127,7 +6127,7 @@ enum options_mysqld
   OPT_DEFAULT_COLLATION_OLD,
   OPT_CHARACTER_SET_CLIENT_HANDSHAKE,
   OPT_CHARACTER_SET_FILESYSTEM,
-  OPT_IO_CACHE_MAX_SIZE,
+  OPT_LIMIT_TMP_DISK_SPACE,
   OPT_LC_TIME_NAMES,
   OPT_INIT_CONNECT,
   OPT_INIT_SLAVE,
@@ -6443,10 +6443,10 @@ struct my_option my_long_options[] =
 each time the SQL thread starts.",
    &opt_init_slave, &opt_init_slave, 0, GET_STR_ALLOC,
    REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
-  {"io-cache-max-size", OPT_IO_CACHE_MAX_SIZE,
-   "If an IO Cache grows to greater than this size (in bytes), it will kill "
-   "the query responsible.",
-   &io_cache_max_size, &io_cache_max_size, 0,
+  {"limit-tmp-disk-space", OPT_LIMIT_TMP_DISK_SPACE,
+   "Limit usage of temporary disk space, "
+   "abort query if this limit is exceeded (in bytes)",
+   &limit_tmp_disk_space, &limit_tmp_disk_space, 0,
    GET_ULL, REQUIRED_ARG, 0, 0, (longlong) ULONGLONG_MAX, 0, 0, 0},
   {"language", 'L',
    "Client error messages in given language. May be given as a full path.",
@@ -8500,7 +8500,7 @@ static int mysql_init_variables(void)
   mysqld_user= mysqld_chroot= opt_init_file= opt_bin_logname = 0;
   prepared_stmt_count= 0;
   errmesg= 0;
-  io_cache_max_size= 0;
+  limit_tmp_disk_space= 0;
   mysqld_unix_port= opt_mysql_tmpdir= my_bind_addr_str= NullS;
   bzero((uchar*) &mysql_tmpdir_list, sizeof(mysql_tmpdir_list));
   bzero((char *) &global_status_var, sizeof(global_status_var));

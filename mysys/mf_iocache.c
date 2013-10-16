@@ -71,8 +71,6 @@ static void my_aiowait(my_aio_result *result);
 #define IO_ROUND_UP(X) (((X)+IO_SIZE-1) & ~(IO_SIZE-1))
 #define IO_ROUND_DN(X) ( (X)            & ~(IO_SIZE-1))
 
-ulonglong io_cache_max_size;
-
 static my_bool ensure_below_size_limit(IO_CACHE* info,
                                        my_off_t bytes_to_be_written) {
   if (info->max_size &&
@@ -80,7 +78,7 @@ static my_bool ensure_below_size_limit(IO_CACHE* info,
   {
       fprintf(stderr, "ERROR: IO Cache exceeded maximum size of %llu bytes\n",
               (ulonglong) info->max_size);
-      my_error(EE_OVER_IO_CACHE_LIMIT, MYF(MY_WME));
+      my_error(info->max_size_error_code, MYF(MY_WME));
       info->error= -1;
       return FALSE;
   }

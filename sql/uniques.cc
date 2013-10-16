@@ -71,6 +71,8 @@ Unique::Unique(qsort_cmp2 comp_func, void * comp_func_fixed_arg,
                          ALIGN_SIZE(sizeof(TREE_ELEMENT)+size));
   VOID(open_cached_file(&file, mysql_tmpdir,TEMP_PREFIX, DISK_BUFFER_SIZE,
 		   MYF(MY_WME)));
+  set_cached_file_max_size(&file, limit_tmp_disk_space,
+                           ER_OVER_LIMIT_TMP_DISK_SPACE);
 }
 
 
@@ -611,6 +613,8 @@ bool Unique::get(TABLE *table)
 		       MYF(MY_WME))))
     return 1;
   reinit_io_cache(outfile,WRITE_CACHE,0L,0,0);
+  set_cached_file_max_size(outfile, limit_tmp_disk_space,
+                           ER_OVER_LIMIT_TMP_DISK_SPACE);
 
   bzero((char*) &sort_param,sizeof(sort_param));
   sort_param.max_rows= elements;

@@ -277,6 +277,35 @@ bool handle_select(THD *thd, LEX *lex, select_result *result,
   DBUG_RETURN(res);
 }
 
+/**
+ limit usage tmp disk space for filesort and internal tmp tables
+*/
+
+ulonglong limit_tmp_disk_space= 0;
+
+/**
+  Check that limit_tmp_disk_space is not exceeded
+*/
+
+static
+int
+check_limit_tmp_disk_space(TABLE * table)
+{
+  if (table->s->db_type() == heap_hton || limit_tmp_disk_space == 0)
+    return 0;
+
+  table->file->info(HA_STATUS_NO_LOCK | HA_STATUS_VARIABLE);
+
+  ulonglong size=
+      table->file->stats.data_file_length +
+      table->file->stats.index_file_length;
+  if (size > limit_tmp_disk_space)
+  {
+    my_error(ER_OVER_LIMIT_TMP_DISK_SPACE, MYF(MY_WME));
+    return 1;
+  }
+  return 0;
+}
 
 /**
   Fix fields referenced from inner selects.
@@ -12591,6 +12620,9 @@ end_write(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
 	  DBUG_RETURN(NESTED_LOOP_ERROR);        // Not a table_is_full error
 	table->s->uniques=0;			// To ensure rows are the same
       }
+      if (check_limit_tmp_disk_space(table))
+        DBUG_RETURN(NESTED_LOOP_ERROR);
+
       if (++join->send_records >= join->tmp_table_param.end_write_records &&
 	  join->do_send_rows)
       {
@@ -12679,6 +12711,8 @@ end_update(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
     table->file->ha_index_init(0, 0);
     join->join_tab[join->tables-1].next_select=end_unique_update;
   }
+  if (check_limit_tmp_disk_space(table))
+    DBUG_RETURN(NESTED_LOOP_ERROR);
   join->send_records++;
   DBUG_RETURN(NESTED_LOOP_OK);
 }
@@ -12731,6 +12765,8 @@ end_unique_update(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
       DBUG_RETURN(NESTED_LOOP_ERROR);            /* purecov: inspected */
     }
   }
+  if (check_limit_tmp_disk_space(table))
+    DBUG_RETURN(NESTED_LOOP_ERROR);
   DBUG_RETURN(NESTED_LOOP_OK);
 }
 
@@ -12774,6 +12810,9 @@ end_write_group(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
                                                error, 0))
 	    DBUG_RETURN(NESTED_LOOP_ERROR);
         }
+        if (check_limit_tmp_disk_space(table))
+          DBUG_RETURN(NESTED_LOOP_ERROR);
+
         if (join->rollup.state != ROLLUP::STATE_NONE)
 	{
 	  if (join->rollup_write_data((uint) (idx+1), table))
@@ -16501,6 +16540,8 @@ int JOIN::rollup_write_data(uint idx, TABLE *table_arg)
                                     write_error, 0))
 	  return 1;		     
       }
+      if (check_limit_tmp_disk_space(table_arg))
+        return 1;
     }
   }
   /* Restore ref_pointer_array */
