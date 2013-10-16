@@ -6,9 +6,9 @@ select User, Concurrent_connections from information_schema.user_statistics;
 User	Concurrent_connections
 root	1
 Connections for root should be 1
-mysqltest: At line 1: change user failed: Unknown database 'inexistent'
-mysqltest: At line 1: change user failed: Access denied for user 'inexistent'@'localhost' (using password: NO)
-mysqltest: At line 1: change user failed: Access denied for user 'root'@'localhost' (using password: YES)
+mysqltest: At line 1: query 'change_user root,,inexistent' failed: 1049: Unknown database 'inexistent'
+mysqltest: At line 1: query 'change_user inexistent,,test' failed: 1045: Access denied for user 'inexistent'@'localhost' (using password: NO)
+mysqltest: At line 1: query 'change_user root,inexistent,test' failed: 1045: Access denied for user 'root'@'localhost' (using password: YES)
 select user(), current_user();
 user()	current_user()
 root@localhost	root@localhost
