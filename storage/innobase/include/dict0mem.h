@@ -38,6 +38,7 @@ Created 1/8/1996 Heikki Tuuri
 # include "lock0types.h"
 # include "que0types.h"
 # include "sync0rw.h"
+# include "ut0rbt.h"
 #endif /* !UNIV_HOTBACKUP */
 #include "ut0mem.h"
 #include "ut0lst.h"
@@ -486,6 +487,24 @@ struct dict_field_t{
 };
 
 /**********************************************************************//**
+Create state for given type of padding algorithm.
+@return created state for given type of padding algorithm  */
+UNIV_INTERN
+void*
+dict_padding_state_create(
+/*==============*/
+	uint type);
+
+/**********************************************************************//**
+Free state for given type of padding algorithm. */
+UNIV_INTERN
+void
+dict_padding_state_free(
+/*===================*/
+	uint type,
+	void *state);
+
+/**********************************************************************//**
 PADDING HEURISTIC BASED ON LINEAR INCREASE OF PADDING TO AVOID
 COMPRESSION FAILURES
 (Note: this is relevant only for compressed indexes)
@@ -624,6 +643,11 @@ struct dict_index_t{
 	ulint		stat_n_leaf_pages;
 				/*!< approximate number of leaf pages in the
 				index tree */
+        uint		padding_algo;
+				/*!< padding algorithm used to compute padding
+				for compressed pages */
+	void*		padding_state;
+				/*!< state used by the padding algorithm */
 	/* @} */
 	rw_lock_t	lock;	/*!< read-write lock protecting the
 				upper levels of the index tree */

@@ -1,0 +1,68 @@
+#
+# Added 2013-11-16
+#
+#
+# Test for the permission to read or write innodb compression or padding variables.
+#
+
+# This test should be skipped for embedded, as it relies on permissions.
+--source include/not_embedded.inc
+
+--source include/have_innodb.inc
+
+--echo #
+--echo # Preparation
+--echo #
+
+# Set up a user with all privileges except SUPER.
+
+CREATE USER non_super;
+GRANT ALL ON *.* to non_super;
+REVOKE SUPER ON *.* from non_super;
+
+# Create connections for our 'non_super' user.
+
+connect (non_super, localhost, non_super,,);
+
+connection default;
+
+--echo # Make sure it can remember its value.
+SET GLOBAL innodb_log_compressed_pages = ON;
+SHOW GLOBAL VARIABLES LIKE 'innodb_log_compressed_pages';
+SELECT @@global.innodb_log_compressed_pages;
+
+
+--echo # Test non-Super users should fail write to compression or padding variables.
+connection non_super;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_log_compressed_pages = ON;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_log_compressed_pages = OFF;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_padding_algo = 0;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_padding_max = 10;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_padding_max_fail_rate = 10;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_padding_tree_samples = 10;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_padding_tree_size = 10;
+--error ER_SPECIFIC_ACCESS_DENIED_ERROR
+SET GLOBAL innodb_simulate_comp_failures = 10;
+
+--echo #
+--echo # Cleanup
+--echo #
+
+disconnect non_super;
+connection default;
+SET GLOBAL innodb_log_compressed_pages = DEFAULT;
+SET GLOBAL innodb_padding_algo = DEFAULT;
+SET GLOBAL innodb_padding_max = DEFAULT;
+SET GLOBAL innodb_padding_max_fail_rate = DEFAULT;
+SET GLOBAL innodb_padding_tree_samples = DEFAULT;
+SET GLOBAL innodb_padding_tree_size = DEFAULT;
+SET GLOBAL innodb_simulate_comp_failures = DEFAULT;
+
+DROP USER non_super;

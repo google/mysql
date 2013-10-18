@@ -48,7 +48,6 @@ red-black properties:
 #warning "Testing enabled!"
 #endif
 
-#define ROOT(t)		(t->root->left)
 #define	SIZEOF_NODE(t)	((sizeof(ib_rbt_node_t) + t->sizeof_value) - 1)
 
 /**********************************************************************//**
@@ -265,7 +264,7 @@ rbt_tree_insert(
 	ib_rbt_node_t*	node)
 {
 	ib_rbt_bound_t	parent;
-	ib_rbt_node_t*	current = ROOT(tree);
+	ib_rbt_node_t*	current = rbt_root(tree);
 
 	parent.result = 0;
 	parent.last = tree->root;
@@ -311,7 +310,7 @@ rbt_balance_tree(
 	/* Restore the red-black property. */
 	node->color = IB_RBT_RED;
 
-	while (node != ROOT(tree) && parent->color == IB_RBT_RED) {
+	while (node != rbt_root(tree) && parent->color == IB_RBT_RED) {
 		ib_rbt_node_t*	grand_parent = parent->parent;
 
 		if (parent == grand_parent->left) {
@@ -383,7 +382,7 @@ rbt_balance_tree(
 	}
 
 	/* Color the root black. */
-	ROOT(tree)->color = IB_RBT_BLACK;
+	rbt_root(tree)->color = IB_RBT_BLACK;
 }
 
 /**********************************************************************//**
@@ -696,7 +695,7 @@ rbt_remove_node_and_rebalance(
 	if (node->color == IB_RBT_BLACK) {
 		ib_rbt_node_t*	last = child;
 
-		ROOT(tree)->color = IB_RBT_RED;
+		rbt_root(tree)->color = IB_RBT_RED;
 
 		while (child && child->color == IB_RBT_BLACK) {
 			ib_rbt_node_t*	parent = child->parent;
@@ -725,7 +724,7 @@ rbt_remove_node_and_rebalance(
 		ut_a(last);
 
 		last->color = IB_RBT_BLACK;
-		ROOT(tree)->color = IB_RBT_BLACK;
+		rbt_root(tree)->color = IB_RBT_BLACK;
 	}
 
 	/* Note that we have removed a node from the tree. */
@@ -853,6 +852,38 @@ rbt_insert(
 	return(node);
 }
 
+/****************************************************************//**
+Remove the last node and insert a new node into the tree. The pointer to
+last node is reused for inserting the new node. This is mainly for reusing
+the malloc'd memory.
+@return inserted node */
+UNIV_INTERN
+const ib_rbt_node_t*
+rbt_remove_last_and_insert(
+/*=======*/
+	ib_rbt_t*	tree,			/*!< in: rb tree */
+	const void*	key,			/*!< in: key for ordering */
+	const void*	value)			/*!< in: value of key, this value
+						is copied to the node */
+{
+	ib_rbt_node_t*  node;
+
+	/* remove the last node */
+	node = rbt_remove_node(tree, rbt_last(tree));
+	memset(node, 0, SIZEOF_NODE(tree));
+
+	memcpy(node->value, value, tree->sizeof_value);
+	node->parent = node->left = node->right = tree->nil;
+
+	/* Insert in the tree in the usual way. */
+	rbt_tree_insert(tree, key, node);
+	rbt_balance_tree(tree, node);
+
+	++tree->n_nodes;
+
+	return(node);
+}
+
 /**********************************************************************//**
 Add a new node to the tree, useful for data that is pre-sorted.
 @return	appended node */
@@ -901,7 +932,7 @@ rbt_lookup(
 	const ib_rbt_t*	tree,			/*!< in: rb tree */
 	const void*	key)			/*!< in: key to use for search */
 {
-	const ib_rbt_node_t*	current = ROOT(tree);
+	const ib_rbt_node_t*	current = rbt_root(tree);
 
 	/* Regular binary search. */
 	while (current != tree->nil) {
@@ -984,7 +1015,7 @@ rbt_lower_bound(
 	const void*	key)			/*!< in: key to search */
 {
 	ib_rbt_node_t*	lb_node = NULL;
-	ib_rbt_node_t*	current = ROOT(tree);
+	ib_rbt_node_t*	current = rbt_root(tree);
 
 	while (current != tree->nil) {
 		int	result;
@@ -1025,7 +1056,7 @@ rbt_upper_bound(
 	const void*	key)			/*!< in: key to search */
 {
 	ib_rbt_node_t*	ub_node = NULL;
-	ib_rbt_node_t*	current = ROOT(tree);
+	ib_rbt_node_t*	current = rbt_root(tree);
 
 	while (current != tree->nil) {
 		int	result;
@@ -1066,7 +1097,7 @@ rbt_search(
 	ib_rbt_bound_t*	parent,			/*!< in: search bounds */
 	const void*	key)			/*!< in: key to search */
 {
-	ib_rbt_node_t*	current = ROOT(tree);
+	ib_rbt_node_t*	current = rbt_root(tree);
 
 	/* Every thing is greater than the NULL root. */
 	parent->result = 1;
@@ -1111,7 +1142,7 @@ rbt_search_cmp(
 			arg_compare)		/*!< in: fn to compare items
 						with argument */
 {
-	ib_rbt_node_t*	current = ROOT(tree);
+	ib_rbt_node_t*	current = rbt_root(tree);
 
 	/* Every thing is greater than the NULL root. */
 	parent->result = 1;
@@ -1151,7 +1182,7 @@ rbt_first(
 	const ib_rbt_t*	tree)			/* in: rb tree */
 {
 	ib_rbt_node_t*	first = NULL;
-	ib_rbt_node_t*	current = ROOT(tree);
+	ib_rbt_node_t*	current = rbt_root(tree);
 
 	while (current != tree->nil) {
 		first = current;
@@ -1171,7 +1202,7 @@ rbt_last(
 	const ib_rbt_t*	tree)			/*!< in: rb tree */
 {
 	ib_rbt_node_t*	last = NULL;
-	ib_rbt_node_t*	current = ROOT(tree);
+	ib_rbt_node_t*	current = rbt_root(tree);
 
 	while (current != tree->nil) {
 		last = current;
@@ -1215,7 +1246,7 @@ rbt_clear(
 /*======*/
 	ib_rbt_t*	tree)			/*!< in: rb tree */
 {
-	rbt_free_node(ROOT(tree), tree->nil);
+	rbt_free_node(rbt_root(tree), tree->nil);
 
 	tree->n_nodes = 0;
 	tree->root->left = tree->root->right = tree->nil;
@@ -1308,7 +1339,7 @@ rbt_validate(
 /*=========*/
 	const ib_rbt_t*	tree)		/*!< in: RB tree to validate */
 {
-	if (rbt_count_black_nodes(tree, ROOT(tree)) > 0) {
+	if (rbt_count_black_nodes(tree, rbt_root(tree)) > 0) {
 		return(rbt_check_ordering(tree));
 	}
 
@@ -1324,5 +1355,26 @@ rbt_print(
 	const ib_rbt_t*		tree,		/*!< in: tree to traverse */
 	ib_rbt_print_node	print)		/*!< in: print function */
 {
-	rbt_print_subtree(tree, ROOT(tree), print);
+	rbt_print_subtree(tree, rbt_root(tree), print);
+}
+
+/****************************************************************//**
+Print the nodes of the tree in order. */
+UNIV_INTERN
+void
+rbt_print_in_order(
+	const ib_rbt_t*		tree,		/*!< in: tree to traverse */
+	ib_rbt_print_node	print)		/*!< in: print function */
+{
+	const ib_rbt_node_t*	node;
+	const ib_rbt_node_t*	prev = NULL;
+
+	/* Iterate over all the nodes, call print function on each */
+	for (node = rbt_first(tree); node; node = rbt_next(tree, prev)) {
+		if (rbt_root(tree) == node)
+			fprintf(stderr, "(ROOT)");
+		print(node);
+		prev = node;
+	}
+	fprintf(stderr, "\n");
 }

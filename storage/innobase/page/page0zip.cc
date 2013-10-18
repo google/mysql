@@ -331,6 +331,26 @@ page_zip_dir_get(
 }
 
 #ifndef UNIV_HOTBACKUP
+
+/**********************************************************************//**
+Write a log record of compressing an index page without the data on the page. */
+UNIV_INTERN
+void
+page_zip_compress_write_log_no_data(
+/*================================*/
+	uint		compression_level,
+	const page_t*	page,
+	dict_index_t*	index,
+	mtr_t*		mtr)
+{
+	byte* log_ptr = mlog_open_and_write_index(mtr, page, index,
+						  MLOG_ZIP_PAGE_COMPRESS_NO_DATA, 1);
+	if (!log_ptr)
+		return;
+	mach_write_to_1(log_ptr, compression_level);
+	mlog_close(mtr, log_ptr + 1);
+}
+
 /**********************************************************************//**
 Write a log record of compressing an index page. */
 static
@@ -1223,6 +1243,7 @@ page_zip_compress(
 	ulint		n_blobs	= 0;
 	byte*		storage;/* storage of uncompressed columns */
 #ifndef UNIV_HOTBACKUP
+	page_zip_stat_t		*zip_stat;
 	ullint		usec = ut_time_us(NULL);
 #endif /* !UNIV_HOTBACKUP */
 #ifdef PAGE_ZIP_COMPRESS_DBG
@@ -1293,7 +1314,8 @@ page_zip_compress(
 	}
 #endif /* PAGE_ZIP_COMPRESS_DBG */
 #ifndef UNIV_HOTBACKUP
-	page_zip_stat[page_zip->ssize - 1].compressed++;
+	zip_stat = &page_zip_stat[page_zip->ssize - 1];
+	zip_stat->compressed++;
 	if (cmp_per_index_enabled) {
 		mutex_enter(&page_zip_stat_per_index_mutex);
 		page_zip_stat_per_index[index->id].compressed++;
@@ -1304,6 +1326,23 @@ page_zip_compress(
 	if (UNIV_UNLIKELY(n_dense * PAGE_ZIP_DIR_SLOT_SIZE
 			  >= page_zip_get_size(page_zip))) {
 
+		goto err_exit;
+	}
+
+	/* Simulate a compression failure with a probability determined by
+	srv_simulate_comp_failures, only if the page has 2 or more records and
+	the padding computation is finished. */
+	if (srv_simulate_comp_failures
+		&& index->padding_algo == PADDING_ALGO_NONE
+		&& page_get_n_recs(page) >= 2
+		&& (((uint)(rand() % 100)) < srv_simulate_comp_failures)) {
+		fprintf(stderr,
+			"InnoDB: Simulating a compression failure"
+			" for table %s, index %s, page %lu (%s)\n",
+			index->table_name,
+			index->name,
+			page_get_page_no(page),
+			page_is_leaf(page) ? "leaf" : "non-leaf");
 		goto err_exit;
 	}
 
@@ -1449,8 +1488,7 @@ err_exit:
 		}
 
 		ullint	time_diff = ut_time_us(NULL) - usec;
-		page_zip_stat[page_zip->ssize - 1].compressed_usec
-			+= time_diff;
+		zip_stat->compressed_usec += time_diff;
 		if (cmp_per_index_enabled) {
 			mutex_enter(&page_zip_stat_per_index_mutex);
 			page_zip_stat_per_index[index->id].compressed_usec
@@ -1517,8 +1555,8 @@ err_exit:
 #endif /* PAGE_ZIP_COMPRESS_DBG */
 #ifndef UNIV_HOTBACKUP
 	ullint	time_diff = ut_time_us(NULL) - usec;
-	page_zip_stat[page_zip->ssize - 1].compressed_ok++;
-	page_zip_stat[page_zip->ssize - 1].compressed_usec += time_diff;
+	zip_stat->compressed_ok++;
+	zip_stat->compressed_usec += time_diff;
 	if (cmp_per_index_enabled) {
 		mutex_enter(&page_zip_stat_per_index_mutex);
 		page_zip_stat_per_index[index->id].compressed_ok++;
@@ -1572,8 +1610,7 @@ page_zip_fields_free(
 {
 	if (index) {
 		dict_table_t*	table = index->table;
-		os_fast_mutex_free(&index->zip_pad.mutex);
-		mem_heap_free(index->heap);
+		dict_mem_index_free(index);
 
 		dict_mem_table_free(table);
 	}
@@ -3152,8 +3189,9 @@ err_exit:
 	mem_heap_free(heap);
 #ifndef UNIV_HOTBACKUP
 	ullint	time_diff = ut_time_us(NULL) - usec;
-	page_zip_stat[page_zip->ssize - 1].decompressed++;
-	page_zip_stat[page_zip->ssize - 1].decompressed_usec += time_diff;
+	page_zip_stat_t* zip_stat = &page_zip_stat[page_zip->ssize - 1];
+	zip_stat->decompressed++;
+	zip_stat->decompressed_usec += time_diff;
 
 	index_id_t	index_id = btr_page_get_index_id(page);
 

@@ -32,6 +32,8 @@ extern bool throw_bounds_warning(THD *thd, const char *name,
                                  bool fixed, bool is_unsigned, longlong v);
 extern bool throw_bounds_warning(THD *thd, const char *name, bool fixed,
                                  double v);
+extern bool throw_bounds_warning_real(THD *thd, bool fixed, const char *name,
+                                      double val);
 extern sys_var *intern_find_sys_var(const char *str, uint length);
 
 extern sys_var_chain all_sys_vars;

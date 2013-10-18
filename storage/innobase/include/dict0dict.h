@@ -46,6 +46,30 @@ Created 1/8/1996 Heikki Tuuri
 #ifndef UNIV_HOTBACKUP
 # include "sync0sync.h"
 # include "sync0rw.h"
+
+#define PADDING_ALGO_NONE 0
+#define PADDING_ALGO_TREE 1
+#define PADDING_ALGO_LINEAR 2
+#define PADDING_ALGO_MAX 2 /* should be the max value padding algo can be */
+
+/** Number of page size samples collected from pages that fail to compress to
+determine the ideal page size that won't fail to compress. Used by the
+PADDING_ALGO_TREE algorithm */
+extern ulint dict_padding_tree_samples;
+/** Size of the red black tree for computing the average page size
+for pages that fail to compress. Used by the PADDING_ALGO_TREE algorithm */
+extern ulint dict_padding_tree_size;
+/** If the compression failure rate of a table is greater than this number
+ then the padding will continue to increase even after
+dict_padding_tree_samples. Used by all padding algorithms. */
+extern uint dict_padding_max_fail_rate;
+/** This determines the maximum amount of empty space that can be reserved on a
+page to make the page compressible as a fraction of the page size. Used by all
+padding algorithms. */
+extern uint dict_padding_max;
+/** Current padding algorithm. */
+extern uint dict_padding_algo;
+
 /******************************************************************//**
 Makes all characters in a NUL-terminated UTF-8 string lower case. */
 UNIV_INTERN
@@ -1581,6 +1605,30 @@ struct dict_sys_t{
 			table_non_LRU;	/*!< List of tables that can't be
 					evicted from the cache */
 };
+
+/**********************************************************************//**
+Return the optimal page size, for which page will likely compress.
+@return Max page size beyond which page may not compress*/
+UNIV_INTERN
+ulint
+dict_index_comp_max_page_size(dict_index_t* index);
+
+/**********************************************************************//**
+This function is called whenever a page is successfully compressed. */
+UNIV_INTERN
+void
+dict_index_comp_success(
+/*=======================*/
+	dict_index_t* index,
+	ulint page_size);
+
+/**********************************************************************//**
+This function is called whenever there is a compression failure. */
+UNIV_INTERN
+void
+dict_index_comp_fail(
+	dict_index_t* index,
+	ulint page_size);
 #endif /* !UNIV_HOTBACKUP */
 
 /** dummy index for ROW_FORMAT=REDUNDANT supremum and infimum records */

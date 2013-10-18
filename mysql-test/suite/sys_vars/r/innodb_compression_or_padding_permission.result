@@ -1,0 +1,42 @@
+#
+# Preparation
+#
+CREATE USER non_super;
+GRANT ALL ON *.* to non_super;
+REVOKE SUPER ON *.* from non_super;
+# Make sure it can remember its value.
+SET GLOBAL innodb_log_compressed_pages = ON;
+SHOW GLOBAL VARIABLES LIKE 'innodb_log_compressed_pages';
+Variable_name	Value
+innodb_log_compressed_pages	ON
+SELECT @@global.innodb_log_compressed_pages;
+@@global.innodb_log_compressed_pages
+1
+# Test non-Super users should fail write to compression or padding variables.
+SET GLOBAL innodb_log_compressed_pages = ON;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+SET GLOBAL innodb_log_compressed_pages = OFF;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+SET GLOBAL innodb_padding_algo = 0;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+SET GLOBAL innodb_padding_max = 10;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+SET GLOBAL innodb_padding_max_fail_rate = 10;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+SET GLOBAL innodb_padding_tree_samples = 10;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+SET GLOBAL innodb_padding_tree_size = 10;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+SET GLOBAL innodb_simulate_comp_failures = 10;
+ERROR 42000: Access denied; you need (at least one of) the SUPER privilege(s) for this operation
+#
+# Cleanup
+#
+SET GLOBAL innodb_log_compressed_pages = DEFAULT;
+SET GLOBAL innodb_padding_algo = DEFAULT;
+SET GLOBAL innodb_padding_max = DEFAULT;
+SET GLOBAL innodb_padding_max_fail_rate = DEFAULT;
+SET GLOBAL innodb_padding_tree_samples = DEFAULT;
+SET GLOBAL innodb_padding_tree_size = DEFAULT;
+SET GLOBAL innodb_simulate_comp_failures = DEFAULT;
+DROP USER non_super;

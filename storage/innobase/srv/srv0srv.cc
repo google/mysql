@@ -122,6 +122,14 @@ dictionary tables are in the system tablespace 0 */
 UNIV_INTERN my_bool	srv_file_per_table;
 /** The file format to use on new *.ibd files. */
 UNIV_INTERN ulint	srv_file_format = 0;
+
+/** If true, simulate a compression failure with a probability
+determined by srv_simulate_comp_failures. */
+UNIV_INTERN uint srv_simulate_comp_failures = 0;
+/** If true, always log the images of compressed pages when the page is
+recompressed */
+UNIV_INTERN my_bool srv_log_compressed_pages = FALSE;
+
 /** Whether to check file format during startup.  A value of
 UNIV_FORMAT_MAX + 1 means no checking ie. FALSE.  The default is to
 set it to the highest format we support. */

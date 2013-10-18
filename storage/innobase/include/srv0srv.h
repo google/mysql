@@ -190,6 +190,13 @@ extern my_bool	srv_read_only_mode;
 /** store to its own file each table created by an user; data
 dictionary tables are in the system tablespace 0 */
 extern my_bool	srv_file_per_table;
+
+/** If true, always log the images of compressed pages when the page is
+recompressed */
+extern my_bool srv_log_compressed_pages;
+/** Percentage to simulate compression failures. */
+extern uint srv_simulate_comp_failures;
+
 /** Sleep delay for threads waiting to enter InnoDB. In micro-seconds. */
 extern	ulong	srv_thread_sleep_delay;
 #if defined(HAVE_ATOMIC_BUILTINS)

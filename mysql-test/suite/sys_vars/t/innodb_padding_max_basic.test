@@ -1,0 +1,62 @@
+
+
+# 2013-11-12 - Added
+#
+
+--source include/have_innodb.inc
+
+SET @start_global_value = @@global.innodb_padding_max;
+SELECT @start_global_value;
+
+#
+# exists as global only
+#
+--echo Valid values are between 0 and 100
+select @@global.innodb_padding_max between 0 and 100;
+select @@global.innodb_padding_max;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.innodb_padding_max;
+show global variables like 'innodb_padding_max';
+show session variables like 'innodb_padding_max';
+select * from information_schema.global_variables where variable_name='innodb_padding_max';
+select * from information_schema.session_variables where variable_name='innodb_padding_max';
+
+#
+# show that it's writable
+#
+set global innodb_padding_max=10;
+select @@global.innodb_padding_max;
+select * from information_schema.global_variables where variable_name='innodb_padding_max';
+select * from information_schema.session_variables where variable_name='innodb_padding_max';
+--error ER_GLOBAL_VARIABLE
+set session innodb_padding_max=1;
+
+#
+# incorrect types
+#
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_max=1.1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_max=1e1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_max="foo";
+
+--echo Expect min value 0
+set global innodb_padding_max=-7;
+select @@global.innodb_padding_max;
+select * from information_schema.global_variables where variable_name='innodb_padding_max';
+--echo Expect max value 100
+set global innodb_padding_max=101;
+select @@global.innodb_padding_max;
+select * from information_schema.global_variables where variable_name='innodb_padding_max';
+
+#
+# min/max values
+#
+set global innodb_padding_max=0;
+select @@global.innodb_padding_max;
+set global innodb_padding_max=100;
+select @@global.innodb_padding_max;
+
+SET @@global.innodb_padding_max = @start_global_value;
+SELECT @@global.innodb_padding_max;

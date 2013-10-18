@@ -43,6 +43,8 @@ Created 10/25/1995 Heikki Tuuri
 #include "dict0dict.h"
 #include "page0page.h"
 #include "page0zip.h"
+#include "btr0btr.h"
+#include "btr0sea.h"
 #include "trx0sys.h"
 #include "row0mysql.h"
 #ifndef UNIV_HOTBACKUP

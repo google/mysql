@@ -40,6 +40,7 @@ Created 1/8/1996 Heikki Tuuri
 				innobase_get_lower_case_table_names */
 # include "mysql_com.h"		/* NAME_LEN */
 # include "lock0lock.h"
+# include "srv0srv.h"
 #endif /* !UNIV_HOTBACKUP */
 #ifdef UNIV_BLOB_DEBUG
 # include "ut0rbt.h"
@@ -462,6 +463,10 @@ dict_mem_index_create(
 
 	dict_mem_fill_index_struct(index, heap, table_name, index_name,
 				   space, type, n_fields);
+#ifndef UNIV_HOTBACKUP
+	index->padding_algo = dict_padding_algo;
+	index->padding_state = dict_padding_state_create(index->padding_algo);
+#endif /* !UNIV_HOTBACKUP */
 
 	os_fast_mutex_init(zip_pad_mutex_key, &index->zip_pad.mutex);
 
@@ -590,6 +595,11 @@ dict_mem_index_free(
 {
 	ut_ad(index);
 	ut_ad(index->magic_n == DICT_INDEX_MAGIC_N);
+
+#ifndef UNIV_HOTBACKUP
+	dict_padding_state_free(index->padding_algo, index->padding_state);
+#endif /* !UNIV_HOTBACKUP */
+
 #ifdef UNIV_BLOB_DEBUG
 	if (index->blobs) {
 		mutex_free(&index->blobs_mutex);

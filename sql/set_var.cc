@@ -448,6 +448,42 @@ bool throw_bounds_warning(THD *thd, const char *name, bool fixed, double v)
   return false;
 }
 
+/**
+  Throw warning (error in STRICT mode) if value for variable needed bounding.
+  Only call from check(), not update(), because an error in update() would be
+  bad mojo. Plug-in interface also uses this.
+
+  @param thd      thread handle
+  @param fixed    did we have to correct the value? (throw warn/err if so)
+  @param name     variable's name
+  @param val      variable's value
+
+  @retval         TRUE on error, FALSE otherwise (warning or OK)
+ */
+bool throw_bounds_warning_real(THD *thd, bool fixed, const char *name, double val)
+{
+  if (fixed)
+  {
+    char buf[64];
+    const char *bufp= buf;
+
+    int r= snprintf(buf, sizeof(buf) - 1, "%f", val);
+    if (!r)
+      bufp= "?";
+
+    if (thd->variables.sql_mode & MODE_STRICT_ALL_TABLES)
+    {
+      my_error(ER_WRONG_VALUE_FOR_VAR, MYF(0), name, bufp);
+      return TRUE;
+    }
+
+    push_warning_printf(thd, Sql_condition::WARN_LEVEL_WARN,
+                        ER_TRUNCATED_WRONG_VALUE,
+                        ER(ER_TRUNCATED_WRONG_VALUE), name, bufp);
+  }
+  return FALSE;
+}
+
 CHARSET_INFO *sys_var::charset(THD *thd)
 {
   return is_os_charset ? thd->variables.character_set_filesystem :

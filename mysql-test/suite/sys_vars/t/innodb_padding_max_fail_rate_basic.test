@@ -1,0 +1,62 @@
+
+
+# 2013-11-12 - Added
+#
+
+--source include/have_innodb.inc
+
+SET @start_global_value = @@global.innodb_padding_max_fail_rate;
+SELECT @start_global_value;
+
+#
+# exists as global only
+#
+--echo Valid values are between 0 and 99
+select @@global.innodb_padding_max_fail_rate between 0 and 99;
+select @@global.innodb_padding_max_fail_rate;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.innodb_padding_max_fail_rate;
+show global variables like 'innodb_padding_max_fail_rate';
+show session variables like 'innodb_padding_max_fail_rate';
+select * from information_schema.global_variables where variable_name='innodb_padding_max_fail_rate';
+select * from information_schema.session_variables where variable_name='innodb_padding_max_fail_rate';
+
+#
+# show that it's writable
+#
+set global innodb_padding_max_fail_rate=10;
+select @@global.innodb_padding_max_fail_rate;
+select * from information_schema.global_variables where variable_name='innodb_padding_max_fail_rate';
+select * from information_schema.session_variables where variable_name='innodb_padding_max_fail_rate';
+--error ER_GLOBAL_VARIABLE
+set session innodb_padding_max_fail_rate=1;
+
+#
+# incorrect types
+#
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_max_fail_rate=1.1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_max_fail_rate=1e1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_max_fail_rate="foo";
+
+--echo Expect min value 0
+set global innodb_padding_max_fail_rate=-7;
+select @@global.innodb_padding_max_fail_rate;
+select * from information_schema.global_variables where variable_name='innodb_padding_max_fail_rate';
+--echo Expect max value 99
+set global innodb_padding_max_fail_rate=101;
+select @@global.innodb_padding_max_fail_rate;
+select * from information_schema.global_variables where variable_name='innodb_padding_max_fail_rate';
+
+#
+# min/max values
+#
+set global innodb_padding_max_fail_rate=0;
+select @@global.innodb_padding_max_fail_rate;
+set global innodb_padding_max_fail_rate=99;
+select @@global.innodb_padding_max_fail_rate;
+
+SET @@global.innodb_padding_max_fail_rate = @start_global_value;
+SELECT @@global.innodb_padding_max_fail_rate;

@@ -16774,6 +16774,42 @@ static MYSQL_SYSVAR_BOOL(random_read_ahead, srv_random_read_ahead,
   "Whether to use read ahead for random access within an extent.",
   NULL, NULL, FALSE);
 
+static MYSQL_SYSVAR_ULONG(padding_tree_samples,
+  dict_padding_tree_samples, PLUGIN_VAR_OPCMDARG,
+  "Number of page size samples collected from pages that fail to compress to "
+  "determine the ideal page size that won't fail to compress.",
+  NULL, NULL, 200, 0, 1000, 0);
+
+static MYSQL_SYSVAR_ULONG(padding_tree_size,
+  dict_padding_tree_size, PLUGIN_VAR_OPCMDARG,
+  "Number of nodes of the red black tree for computing the average page size "
+  "for pages that fail to compress.",
+  NULL, NULL, 10, 0, 1000, 0);
+
+static MYSQL_SYSVAR_UINT(padding_max_fail_rate,
+  dict_padding_max_fail_rate, PLUGIN_VAR_OPCMDARG,
+  "Maximum compression ratio of failures to successes in percentage before "
+  "increasing the padding size to attempt to reduce the failure rate."
+  "If the compression failure rate of a table is greater than this number "
+  "InnoDB will continue to increase the padding size.",
+  NULL, NULL, 5, 1, 99, 0);
+
+static MYSQL_SYSVAR_UINT(padding_max,
+  dict_padding_max, PLUGIN_VAR_OPCMDARG,
+  "Maximum fraction of an index page in percentage that can be reserved "
+  "(and kept empty) as padding to make the page compressible.",
+  NULL, NULL, 75, 0, 100, 0);
+
+static MYSQL_SYSVAR_UINT(padding_algo,
+  dict_padding_algo, PLUGIN_VAR_OPCMDARG,
+  "Padding algorithm to be used for compressed pages.",
+  NULL, NULL, PADDING_ALGO_LINEAR, 0, PADDING_ALGO_MAX, 0);
+
+static MYSQL_SYSVAR_UINT(simulate_comp_failures, srv_simulate_comp_failures,
+  PLUGIN_VAR_NOCMDARG,
+  "Percentage to simulate compression failures.",
+  NULL, NULL, 0, 0, 99, 0);
+
 static MYSQL_SYSVAR_ULONG(read_ahead_threshold, srv_read_ahead_threshold,
   PLUGIN_VAR_RQCMDARG,
   "Number of pages that must be accessed sequentially for InnoDB to "
@@ -16941,6 +16977,12 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
 #endif /* UNIV_LOG_ARCHIVE */
   MYSQL_SYSVAR(page_size),
   MYSQL_SYSVAR(log_buffer_size),
+  MYSQL_SYSVAR(padding_tree_samples),
+  MYSQL_SYSVAR(padding_tree_size),
+  MYSQL_SYSVAR(padding_max_fail_rate),
+  MYSQL_SYSVAR(padding_max),
+  MYSQL_SYSVAR(padding_algo),
+  MYSQL_SYSVAR(simulate_comp_failures),
   MYSQL_SYSVAR(log_file_size),
   MYSQL_SYSVAR(log_files_in_group),
   MYSQL_SYSVAR(log_group_home_dir),

@@ -1,0 +1,80 @@
+
+
+# 2013-11-12 - Added
+#
+
+--source include/have_innodb.inc
+
+SET @start_global_value = @@global.innodb_padding_algo;
+SELECT @start_global_value;
+
+#
+# exists as global only
+#
+--echo Valid values are 0, 1 and 2
+select @@global.innodb_padding_algo in (0, 1, 2);
+select @@global.innodb_padding_algo;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.innodb_padding_algo;
+show global variables like 'innodb_padding_algo';
+show session variables like 'innodb_padding_algo';
+select * from information_schema.global_variables where variable_name='innodb_padding_algo';
+select * from information_schema.session_variables where variable_name='innodb_padding_algo';
+
+#
+# show that it's writable
+#
+set global innodb_padding_algo=0;
+select @@global.innodb_padding_algo;
+select * from information_schema.global_variables where variable_name='innodb_padding_algo';
+select * from information_schema.session_variables where variable_name='innodb_padding_algo';
+set @@global.innodb_padding_algo=1;
+select @@global.innodb_padding_algo;
+select * from information_schema.global_variables where variable_name='innodb_padding_algo';
+select * from information_schema.session_variables where variable_name='innodb_padding_algo';
+set @@global.innodb_padding_algo=2;
+select @@global.innodb_padding_algo;
+select * from information_schema.global_variables where variable_name='innodb_padding_algo';
+select * from information_schema.session_variables where variable_name='innodb_padding_algo';
+--error ER_GLOBAL_VARIABLE
+set session innodb_padding_algo=0;
+--error ER_GLOBAL_VARIABLE
+set @@session.innodb_padding_algo=1;
+--error ER_GLOBAL_VARIABLE
+set @@session.innodb_padding_algo=2;
+
+#
+# incorrect types
+#
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_algo=1.1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_algo=1e1;
+select @@global.innodb_padding_algo;
+select * from information_schema.global_variables where variable_name='innodb_padding_algo';
+select * from information_schema.session_variables where variable_name='innodb_padding_algo';
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_algo='AUTO';
+
+#
+# min/max values
+#
+set global innodb_padding_algo=0;
+select @@global.innodb_padding_algo;
+set @@global.innodb_padding_algo=2;
+select @@global.innodb_padding_algo;
+-- echo Expect min value: 0
+set global innodb_padding_algo=-3;
+select @@global.innodb_padding_algo;
+select * from information_schema.global_variables where variable_name='innodb_padding_algo';
+--echo Expect max value: 2
+set global innodb_padding_algo=3;
+select @@global.innodb_padding_algo;
+select * from information_schema.global_variables where variable_name='innodb_padding_algo';
+
+#
+# Cleanup
+#
+
+SET @@global.innodb_padding_algo = @start_global_value;
+SELECT @@global.innodb_padding_algo;

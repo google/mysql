@@ -1,0 +1,62 @@
+
+
+# 2013-11-12 - Added
+#
+
+--source include/have_innodb.inc
+
+SET @start_global_value = @@global.innodb_padding_tree_samples;
+SELECT @start_global_value;
+
+#
+# exists as global only
+#
+--echo Valid values are between 0 and 1000
+select @@global.innodb_padding_tree_samples between 0 and 1000;
+select @@global.innodb_padding_tree_samples;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.innodb_padding_tree_samples;
+show global variables like 'innodb_padding_tree_samples';
+show session variables like 'innodb_padding_tree_samples';
+select * from information_schema.global_variables where variable_name='innodb_padding_tree_samples';
+select * from information_schema.session_variables where variable_name='innodb_padding_tree_samples';
+
+#
+# show that it's writable
+#
+set global innodb_padding_tree_samples=10;
+select @@global.innodb_padding_tree_samples;
+select * from information_schema.global_variables where variable_name='innodb_padding_tree_samples';
+select * from information_schema.session_variables where variable_name='innodb_padding_tree_samples';
+--error ER_GLOBAL_VARIABLE
+set session innodb_padding_tree_samples=1;
+
+#
+# incorrect types
+#
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_tree_samples=1.1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_tree_samples=1e1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global innodb_padding_tree_samples="foo";
+
+--echo Expect min value 0
+set global innodb_padding_tree_samples=-7;
+select @@global.innodb_padding_tree_samples;
+select * from information_schema.global_variables where variable_name='innodb_padding_tree_samples';
+--echo Expect max value 1000
+set global innodb_padding_tree_samples=1001;
+select @@global.innodb_padding_tree_samples;
+select * from information_schema.global_variables where variable_name='innodb_padding_tree_samples';
+
+#
+# min/max values
+#
+set global innodb_padding_tree_samples=0;
+select @@global.innodb_padding_tree_samples;
+set global innodb_padding_tree_samples=1000;
+select @@global.innodb_padding_tree_samples;
+
+SET @@global.innodb_padding_tree_samples = @start_global_value;
+SELECT @@global.innodb_padding_tree_samples;
