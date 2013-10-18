@@ -8434,6 +8434,7 @@ static int mysql_init_variables(void)
   max_used_connections= slow_launch_threads = 0;
   mysqld_user= mysqld_chroot= opt_init_file= opt_bin_logname = 0;
   prepared_stmt_count= 0;
+  limit_tmp_disk_space= 0;
   mysqld_unix_port= opt_mysql_tmpdir= my_bind_addr_str= NullS;
   bzero((uchar*) &mysql_tmpdir_list, sizeof(mysql_tmpdir_list));
   bzero((char *) &global_status_var, sizeof(global_status_var));

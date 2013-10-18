@@ -1,0 +1,22 @@
+SELECT @@global.limit_tmp_disk_space;
+@@global.limit_tmp_disk_space
+1234567890
+SET @start_value = @@global.limit_tmp_disk_space;
+'#---------------------FN_DYNVARS_004_01-------------------------#'
+SET @@global.limit_tmp_disk_space = DEFAULT;
+SELECT @@global.limit_tmp_disk_space;
+@@global.limit_tmp_disk_space
+0
+'#--------------------FN_DYNVARS_004_02------------------------#'
+SET @@global.limit_tmp_disk_space = 12;
+SET @@global.limit_tmp_disk_space = 'foo';
+ERROR 42000: Incorrect argument type to variable 'limit_tmp_disk_space'
+SET @@global.limit_tmp_disk_space = bar;
+ERROR 42000: Incorrect argument type to variable 'limit_tmp_disk_space'
+'#----------------------FN_DYNVARS_004_03------------------------#'
+SELECT @@global.limit_tmp_disk_space = VARIABLE_VALUE
+FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES
+WHERE VARIABLE_NAME='limit_tmp_disk_space';
+@@global.limit_tmp_disk_space = VARIABLE_VALUE
+1
+SET @@global.limit_tmp_disk_space= @start_value;

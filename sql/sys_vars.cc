@@ -1015,6 +1015,15 @@ static Sys_var_ulong Sys_interactive_timeout(
        CMD_LINE(REQUIRED_ARG),
        VALID_RANGE(1, LONG_TIMEOUT), DEFAULT(NET_WAIT_TIMEOUT), BLOCK_SIZE(1));
 
+static Sys_var_ulonglong Sys_limit_tmp_disk_space(
+       "limit_tmp_disk_space",
+       "Limit usage of temporary disk space, "
+       "abort query if this limit is exceeded (in bytes)",
+       GLOBAL_VAR(limit_tmp_disk_space), CMD_LINE(REQUIRED_ARG),
+       VALID_RANGE(0, ULONGLONG_MAX),
+       DEFAULT(0),
+       BLOCK_SIZE(1));
+
 static Sys_var_ulonglong Sys_join_buffer_size(
        "join_buffer_size",
        "The size of the buffer that is used for joins",

@@ -1,0 +1,112 @@
+# This is based on main.checksum_io_cache, and is simply designed
+# to cause a large enough IO_CACHE to be generated.
+
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+--enable_warnings
+
+SET @start_tmp_table_size = @@global.tmp_table_size;
+SET @start_max_heap_table_size = @@global.max_heap_table_size;
+SET @start_limit_tmp_disk_space = @@global.limit_tmp_disk_space;
+
+--echo # Set tmp_table_size low to force internal tmp tables out to disk
+set tmp_table_size = 1024;
+
+CREATE TABLE t1 (
+  id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  gender CHAR(1),
+  name CHAR(255)
+);
+
+--disable_query_log
+INSERT INTO t1 (gender, name) VALUES (NULL, NULL);
+INSERT INTO t1 (gender, name) VALUES (NULL, NULL);
+INSERT INTO t1 (gender, name) VALUES (NULL, NULL);
+
+let $i = 100;
+while ($i)
+{
+  INSERT INTO t1 (gender, name) VALUES ('F', 'Helen'), ('F', 'Anastasia'),
+  ('F', 'Katherine'), ('F', 'Margo'), ('F', 'Magdalene'), ('F', 'Mary');
+
+  INSERT INTO t1 (gender, name) VALUES ('F', 'Eva'), ('F', 'Sofia'),
+  ('F', 'Sara'), ('F', 'Golda'), ('F', 'Toba'), ('F', 'Victory'),
+  ('F', 'Faina'), ('F', 'Miriam'), ('F', 'Beki'), ('F', 'America'),
+  ('F', 'Susan'), ('F', 'Glory'), ('F', 'Priscilla'), ('F', 'Rosmary'),
+  ('F', 'Rose'), ('F', 'Margareth'), ('F', 'Elizabeth'), ('F', 'Meredith'),
+  ('F', 'Julie'), ('F', 'Xenia'), ('F', 'Zena'), ('F', 'Olga'),
+  ('F', 'Brunhilda'), ('F', 'Nataly'), ('F', 'Lara'), ('F', 'Svetlana'),
+  ('F', 'Grethem'), ('F', 'Irene');
+  dec $i;
+}
+--enable_query_log
+
+--echo #
+--echo # test order by (filesort)
+--echo #
+EXPLAIN SELECT *
+FROM t1
+ORDER BY t1.name, t1.gender, t1.id;
+
+SET @@global.limit_tmp_disk_space = 1;
+--error ER_OVER_LIMIT_TMP_DISK_SPACE
+SELECT *
+FROM t1
+ORDER BY t1.name, t1.gender, t1.id;
+
+SET @@global.limit_tmp_disk_space = 0;
+--disable_result_log
+SELECT *
+FROM t1
+ORDER BY t1.name, t1.gender, t1.id;
+--enable_result_log
+
+--echo #
+--echo # test internal temporary table
+--echo #
+--echo # note: use ORDER BY NULL to prevent filesort
+
+--echo # (first decrease size of table...so that query doesn't take forever)
+DELETE FROM t1 WHERE t1.id >= 25;
+
+EXPLAIN SELECT
+  SUM(DISTINCT LENGTH(g1.name)) s1,
+  SUM(DISTINCT SUBSTRING(g2.name, 1, 3)) s2,
+  SUM(DISTINCT LENGTH(SUBSTRING(g3.name, 1, 4))) s3
+FROM t1 g1, t1 g2, t1 g3 GROUP BY LENGTH(SUBSTRING(g3.name, 5, 10))
+ORDER BY NULL;
+
+SET @@global.limit_tmp_disk_space = 1;
+--error ER_OVER_LIMIT_TMP_DISK_SPACE
+SELECT
+  SUM(DISTINCT LENGTH(g1.name)) s1,
+  SUM(DISTINCT SUBSTRING(g2.name, 1, 3)) s2,
+  SUM(DISTINCT LENGTH(SUBSTRING(g3.name, 1, 4))) s3
+FROM t1 g1, t1 g2, t1 g3 GROUP BY LENGTH(SUBSTRING(g3.name, 5, 10))
+ORDER BY NULL;
+
+SET @@global.limit_tmp_disk_space = 0;
+SELECT
+  SUM(DISTINCT LENGTH(g1.name)) s1,
+  SUM(DISTINCT SUBSTRING(g2.name, 1, 3)) s2,
+  SUM(DISTINCT LENGTH(SUBSTRING(g3.name, 1, 4))) s3
+FROM t1 g1, t1 g2, t1 g3 GROUP BY LENGTH(SUBSTRING(g3.name, 5, 10))
+ORDER BY NULL;
+
+DROP TABLE t1;
+
+--echo #
+--echo # testcase from https://bugs.launchpad.net/maria/+bug/424553
+--echo #
+SET @@global.limit_tmp_disk_space = 1;
+
+CREATE TABLE t1(a INT);
+INSERT INTO t1 VALUES (1), (2), (3), (4), (5);
+--error ER_OVER_LIMIT_TMP_DISK_SPACE
+INSERT INTO t1 SELECT t1.a FROM t1,t1 t2,t1 t3,t1 t4,t1 t5,t1 t6,t1 t7;
+
+DROP TABLE t1;
+
+SET @@global.tmp_table_size = @start_tmp_table_size;
+SET @@global.max_heap_table_size = @start_max_heap_table_size;
+SET @@global.limit_tmp_disk_space = @start_limit_tmp_disk_space;

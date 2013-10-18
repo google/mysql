@@ -1,0 +1,4 @@
+USE test;
+CREATE TABLE log_test (col1 INT, col2 INT);
+INSERT INTO log_test (col1, col2) VALUES (1, 2);
+DROP TABLE log_test;

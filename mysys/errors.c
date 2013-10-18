@@ -102,6 +102,7 @@ void init_glob_errs()
   EE(EE_CANT_SEEK)      = "Can't seek in file '%s' (Errcode: %M)";
   EE(EE_CANT_CHMOD)    = "Can't change mode for file '%s' to 0x%lx (Errcode: %M)";
   EE(EE_CANT_COPY_OWNERSHIP)= "Warning: Can't copy ownership for file '%s' (Errcode: %M)";
+  EE(EE_OVER_IO_CACHE_LIMIT)= "Query creates a temporary file larger than io_cache_max_size (%llu).";
 }
 #endif
 

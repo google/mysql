@@ -119,3 +119,10 @@ void close_cached_file(IO_CACHE *cache)
   }
   DBUG_VOID_RETURN;
 }
+
+
+void set_cached_file_max_size(IO_CACHE* cache, ulonglong sz, int error_code)
+{
+  cache->max_size= sz;
+  cache->max_size_error_code= error_code;
+}

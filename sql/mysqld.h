@@ -154,6 +154,7 @@ extern my_bool opt_super_to_set_timestamp;
 extern my_bool rpl_allow_implicit_commit;
 extern my_bool opt_system_user_table;
 extern ulong opt_block_user_access;
+extern ulonglong limit_tmp_disk_space;
 extern const char *log_output_str;
 extern const char *log_backup_output_str;
 extern char *mysql_home_ptr, *pidfile_name_ptr;
