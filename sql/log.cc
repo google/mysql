@@ -5610,39 +5610,6 @@ public:
   }
 };
 
-/**
-   Traverses the list of columns in #lex collecting all column names into #out.
-
-   Item::print does not expose OOM conditions, a silent failure is
-   possible. With luck, next separate_with_comma will notice. At least
-   we are fortunate enough that memory corruption won't happen as
-   String class just starts short-circuiting append calls when it
-   fails to allocate memory.
-
-   @param[in]      lex   the LEX object containing column data
-   @param[in,out]  out   the string to which we are printing our
-                         column data
-
-   @return  Operation status
-     @retval  true   memory allocation failure
-     @retval  false  OK
-*/
-
-static bool compose_column_list(LEX* lex, String& out)
-{
-  List_iterator<Item> li(lex->select_lex.item_list);
-  Item *pos;
-  while ((pos=li++))
-  {
-    if (separate_with_comma(out))
-    {
-      return true;
-    }
-    pos->print(&out, QT_ORDINARY);
-  }
-  return false;
-}
-
 class AuditComputer : public TableVisitingAlgorithm
 {
 public:
@@ -5796,7 +5763,6 @@ void write_audit_record(LEX *lex, THD *thd)
     return;
   }
 
-  String columns;
   char *detail= NULL;
   int count= -1;
   /*
@@ -5808,29 +5774,19 @@ void write_audit_record(LEX *lex, THD *thd)
   switch (lex->sql_command)
   {
   case SQLCOM_SELECT:
-    if (compose_column_list(lex, columns))
-    {
-      break;
-    }
     count= asprintf(&detail,
-                    "SELECT [%s] FROM [%s] [Sent %lu Rows]",
-                    columns.c_ptr_safe(),
+                    "SELECT FROM [%s] [Sent %lu Rows]",
                     alias_collector.aliases_.c_ptr_safe(),
                     (unsigned long) thd->sent_row_count);
     break;
   case SQLCOM_UPDATE:
-    if (compose_column_list(lex, columns))
-    {
-      break;
-    }
     /*
        TODO: Fix these and following with row counts after stats functionality
        has been ported.
     */
     count= asprintf(&detail,
-                    "UPDATE [%s] SET [%s]",
-                    alias_collector.aliases_.c_ptr_safe(),
-                    columns.c_ptr_safe());
+                    "UPDATE [%s]",
+                    alias_collector.aliases_.c_ptr_safe());
     break;
   case SQLCOM_INSERT:
   case SQLCOM_INSERT_SELECT:

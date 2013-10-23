@@ -30,22 +30,22 @@ drop table log_test;
 drop table log_test2;
 root@localhost (22): SHOW SLAVE STATUS
 root@localhost (94): call mtr.check_testcase()
-root@localhost (0): SELECT [(version() like '%embedded%')] FROM [] [Sent 1 Rows]
+root@localhost (0): SELECT FROM [] [Sent 1 Rows]
 root@localhost (35): use test
-root@localhost (0): SELECT [@@datadir] FROM [] [Sent 1 Rows]
+root@localhost (0): SELECT FROM [] [Sent 1 Rows]
 root@localhost (1): create table log_test (col1 int, col2 int)
 root@localhost (1): create table log_test2 (col1 int, col2 int)
 root@localhost (5): INSERT INTO [log_test]
 root@localhost (5): INSERT INTO [log_test]
 root@localhost (5): INSERT INTO [log_test2]
 root@localhost (5): INSERT INTO [log_test2]
-root@localhost (0): SELECT [`test`.`log_test`.`col1`,`test`.`log_test`.`col2`] FROM [log_test] [Sent 2 Rows]
-root@localhost (0): SELECT [`test`.`log_test`.`col1`,`test`.`log_test`.`col2`] FROM [log_test] [Sent 2 Rows]
-root@localhost (0): SELECT [`test`.`log_test`.`col1`,`test`.`log_test`.`col2`] FROM [log_test] [Sent 1 Rows]
-root@localhost (0): SELECT [`test`.`log_test`.`col1`,`test`.`log_test`.`col2`] FROM [log_test] [Sent 0 Rows]
+root@localhost (0): SELECT FROM [log_test] [Sent 2 Rows]
+root@localhost (0): SELECT FROM [log_test] [Sent 2 Rows]
+root@localhost (0): SELECT FROM [log_test] [Sent 1 Rows]
+root@localhost (0): SELECT FROM [log_test] [Sent 0 Rows]
 root@localhost (6): INSERT INTO [log_test,log_test2]
-root@localhost (4): UPDATE [log_test] SET [`test`.`log_test`.`col1`]
-root@localhost (0): SELECT ['7','8'] FROM [log_test2] [Sent 1 Rows]
-root@localhost (4): UPDATE [log_test2] SET [`test`.`log_test2`.`col2`]
+root@localhost (4): UPDATE [log_test]
+root@localhost (0): SELECT FROM [log_test2] [Sent 1 Rows]
+root@localhost (4): UPDATE [log_test2]
 root@localhost (9): drop table log_test
 root@localhost (9): drop table log_test2

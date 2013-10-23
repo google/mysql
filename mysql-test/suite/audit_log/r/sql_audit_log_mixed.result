@@ -38,7 +38,7 @@ root@localhost (5): INSERT INTO [log_test]
 root@localhost (5): INSERT INTO [log_test2]
 root@localhost (5): INSERT INTO [log_test2]
 root@localhost (6): INSERT INTO [log_test,log_test2]
-root@localhost (4): UPDATE [log_test] SET [`test`.`log_test`.`col1`]
-root@localhost (4): UPDATE [log_test2] SET [`test`.`log_test2`.`col2`]
+root@localhost (4): UPDATE [log_test]
+root@localhost (4): UPDATE [log_test2]
 root@localhost (9): drop table log_test
 root@localhost (9): drop table log_test2

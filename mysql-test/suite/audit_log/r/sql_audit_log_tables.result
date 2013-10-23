@@ -33,6 +33,6 @@ root@localhost (5): INSERT INTO [log_test2]
 root@localhost (5): INSERT INTO [log_test2]
 root@localhost (6): INSERT INTO [log_test,log_test2]
 root@localhost (7): DELETE FROM [log_test2]
-root@localhost (0): SELECT ['7','8'] FROM [log_test2] [Sent 1 Rows]
-root@localhost (4): UPDATE [log_test2] SET [`test`.`log_test2`.`col2`]
+root@localhost (0): SELECT FROM [log_test2] [Sent 1 Rows]
+root@localhost (4): UPDATE [log_test2]
 root@localhost (9): drop table log_test2
