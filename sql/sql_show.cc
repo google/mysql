@@ -1791,6 +1791,25 @@ public:
 template class I_List<thread_info>;
 #endif
 
+const char *thread_state_info(THD *tmp)
+{
+  const char *state_info;
+#ifndef EMBEDDED_LIBRARY
+  state_info= tmp->locked ? "Locked" :
+              tmp->net.reading_or_writing ?
+              (tmp->net.reading_or_writing == 2 ?
+               "Writing to net" :
+               tmp->command == COM_SLEEP ? "" :
+               "Reading from net") :
+              tmp->proc_info ? tmp->proc_info :
+              tmp->mysys_var && tmp->mysys_var->current_cond ?
+              "Waiting on cond" : NullS;
+#else
+  state_info= "Writing to net";
+#endif
+  return state_info;
+}
+
 void mysqld_list_processes(THD *thd,const char *user, bool verbose)
 {
   Item *field;
@@ -1852,20 +1871,7 @@ void mysqld_list_processes(THD *thd,const char *user, bool verbose)
         if ((mysys_var= tmp->mysys_var))
           pthread_mutex_lock(&mysys_var->mutex);
         thd_info->proc_info= (char*) (tmp->killed == THD::KILL_CONNECTION? "Killed" : 0);
-#ifndef EMBEDDED_LIBRARY
-        thd_info->state_info= (char*) (tmp->locked ? "Locked" :
-                                       tmp->net.reading_or_writing ?
-                                       (tmp->net.reading_or_writing == 2 ?
-                                        "Writing to net" :
-                                        thd_info->command == COM_SLEEP ? "" :
-                                        "Reading from net") :
-                                       tmp->proc_info ? tmp->proc_info :
-                                       tmp->mysys_var &&
-                                       tmp->mysys_var->current_cond ?
-                                       "Waiting on cond" : NullS);
-#else
-        thd_info->state_info= (char*)"Writing to net";
-#endif
+        thd_info->state_info= thread_state_info(tmp);
         if (mysys_var)
           pthread_mutex_unlock(&mysys_var->mutex);
 
@@ -1977,18 +1983,8 @@ int fill_schema_processlist(THD* thd, TABLE_LIST* tables, COND* cond)
       table->field[5]->store((longlong)(tmp->start_time ?
                                       now - tmp->start_time : 0), FALSE);
       /* STATE */
-#ifndef EMBEDDED_LIBRARY
-      val= (char*) (tmp->locked ? "Locked" :
-                    tmp->net.reading_or_writing ?
-                    (tmp->net.reading_or_writing == 2 ?
-                     "Writing to net" :
-                     tmp->command == COM_SLEEP ? "" :
-                     "Reading from net") :
-                    tmp->proc_info ? tmp->proc_info :
-                    tmp->mysys_var &&
-                    tmp->mysys_var->current_cond ?
-                    "Waiting on cond" : NullS);
-#else
+      val= thread_state_info(tmp);
+#ifdef EMBEDDED_LIBRARY
       val= (char *) (tmp->proc_info ? tmp->proc_info : NullS);
 #endif
       if (val)

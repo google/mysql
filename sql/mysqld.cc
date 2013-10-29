@@ -21,6 +21,7 @@
 #include "slave.h"
 #include "rpl_mi.h"
 #include "sql_repl.h"
+#include "sql_show.h"       // thread_state_info
 #include "rpl_filter.h"
 #include "repl_failsafe.h"
 #include <my_stacktrace.h>
@@ -746,6 +747,8 @@ static char *mysql_home_ptr, *pidfile_name_ptr;
 static int defaults_argc;
 static char **defaults_argv;
 static char *opt_bin_logname;
+static bool abort_log_processlist;
+static pthread_t processlist_thread;
 
 int orig_argc;
 char **orig_argv;
@@ -1321,6 +1324,8 @@ void clean_up(bool print_message)
 
   stop_handle_manager();
   release_ddl_log();
+  abort_log_processlist= true;
+  pthread_join(processlist_thread, NULL);
 
   /*
     make sure that handlers finish up
@@ -4100,6 +4105,130 @@ static void create_shutdown_thread()
 #endif /* __WIN__ */
 }
 
+/*
+  Log last process list
+*/
+static void processlist_print()
+{
+  File fd= -1;
+  time_t now= my_time(0);
+  I_List_iterator<THD> it(threads);
+  THD *tmp;
+  IO_CACHE log_file;
+
+  /*
+    TODO: handle swapping the next version without a period of
+    where there is no last_processlist file
+  */
+  if ((fd= my_open("last_processlist", O_CREAT | O_WRONLY | O_TRUNC,
+                   MYF(MY_WME | ME_WAITTANG))) < 0)
+  {
+    sql_print_error("Failed to open last_processlist file, errno %d)",
+                    my_errno);
+    goto err;
+  }
+  if (init_io_cache(&log_file, fd, IO_SIZE, WRITE_CACHE, 0L, 0, 0))
+  {
+    sql_print_error("Failed to create a cache on last_processlist file");
+    goto err;
+  }
+
+  pthread_mutex_lock(&LOCK_thread_count);
+  if (!threads.is_empty())
+  {
+    my_b_printf(&log_file, "Process List: \n");
+  } else {
+    pthread_mutex_unlock(&LOCK_thread_count);
+    goto err;
+  }
+
+  while ((tmp= it++))
+  {
+    my_b_printf(&log_file, "*****\n");
+    Security_context *tmp_sctx= tmp->security_ctx;
+    struct st_my_thread_var *mysys_var;
+    if (tmp->vio_ok() || tmp->system_thread)
+    {
+      /* Id */
+      my_b_printf(&log_file, "Id: %d \n", tmp->thread_id);
+      /* User */
+      my_b_printf(&log_file, "User: %s \n",
+                  (tmp_sctx->user) ? tmp_sctx->user :
+                  (tmp->system_thread ?
+                   "system user" : "unauthenticated user"));
+
+      /* Host */
+      my_b_printf(&log_file, "Host: ");
+      if (tmp->peer_port && (tmp_sctx->host || tmp_sctx->ip)
+          && tmp->security_ctx->host_or_ip[0])
+        my_b_printf(&log_file, "%d %d ", tmp_sctx->host_or_ip, tmp->peer_port);
+      else
+        my_b_printf(&log_file, "%d ",
+                    (tmp_sctx->host_or_ip[0]) ? tmp_sctx->host_or_ip
+                    : (tmp_sctx->host) ? tmp_sctx->host : "");
+      my_b_printf(&log_file, "\n");
+
+      /* DB */
+      my_b_printf(&log_file, "DB: %s \n", (tmp->db) ? tmp->db : "");
+
+      /* Command */
+      my_b_printf(&log_file, "Command: %s \n", command_name[tmp->command].str);
+
+      /* Time */
+      my_b_printf(&log_file, "Time: %d \n", tmp->start_time ? now - tmp->start_time : 0);
+
+      /* State */
+      my_b_printf(&log_file, "State: ");
+      if (tmp->killed == THD::KILL_CONNECTION)
+        my_b_printf(&log_file, "Killed");
+      else
+      {
+        if ((mysys_var= tmp->mysys_var))
+          pthread_mutex_lock(&tmp->mysys_var->mutex);
+        const char *state_info= thread_state_info(tmp);
+        my_b_printf(&log_file, state_info ? state_info : "NULL");
+        if (mysys_var)
+          pthread_mutex_unlock(&tmp->mysys_var->mutex);
+      }
+      my_b_printf(&log_file, "\n");
+
+      /* Info */
+      my_b_printf(&log_file, "Info: %s\n", (tmp->query()) ? tmp->query() : "");
+    }
+  }
+  pthread_mutex_unlock(&LOCK_thread_count);
+  flush_io_cache(&log_file);
+
+err:
+  if (fd >= 0) {
+    my_close(fd, MYF(0));
+    end_io_cache(&log_file);
+  }
+}
+
+pthread_handler_t log_processlist_thread(void *arg)
+{
+  for (;;)
+  {
+    if (abort_log_processlist)
+    {
+        break;
+    }
+    processlist_print();
+    sleep(10);
+  }
+  return 0;
+}
+
+static void create_processlist_log_thread()
+{
+  abort_log_processlist= false;
+  if (pthread_create(&processlist_thread, &connection_attrib,
+                     log_processlist_thread, 0))
+  {
+    sql_print_warning("Can't create thread to log process list");
+  }
+}
 #endif /* EMBEDDED_LIBRARY */
 
 
@@ -4453,6 +4582,7 @@ we force server id to 2, but this MySQL server will not act as a slave.");
 
   create_shutdown_thread();
   start_handle_manager();
+  create_processlist_log_thread();
 
   sql_print_information(ER(ER_STARTUP),my_progname,server_version,
                         ((unix_sock == INVALID_SOCKET) ? (char*) ""

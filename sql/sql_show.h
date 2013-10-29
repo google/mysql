@@ -41,4 +41,5 @@ int view_store_create_info(THD *thd, TABLE_LIST *table, String *buff);
 
 int copy_event_to_schema_table(THD *thd, TABLE *sch_table, TABLE *event_table);
 
+const char *thread_state_info(THD *thd);
 #endif /* SQL_SHOW_H */
