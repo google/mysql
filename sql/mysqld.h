@@ -786,4 +786,9 @@ extern uint internal_tmp_table_max_key_segments;
 extern uint volatile global_disable_checkpoint;
 extern my_bool opt_help;
 
+#ifndef EMBEDDED_LIBRARY
+extern char opt_last_processlist_path[FN_REFLEN];
+extern const char *opt_last_processlist_path_ptr;
+#endif
+
 #endif /* MYSQLD_INCLUDED */

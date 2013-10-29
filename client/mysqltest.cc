@@ -2536,6 +2536,15 @@ void var_set_int(const char* name, int value)
   var_set_string(name, buf);
 }
 
+/*
+  Store an integer in the mysqltest builtin variable $builtin_errno
+*/
+
+void var_set_builtin_errno(int built_errno)
+{
+  var_set_int("$builtin_errno", built_errno);
+}
+
 
 /*
   Store an integer (typically the returncode of the last SQL)
@@ -3448,6 +3457,7 @@ void do_exec(struct st_command *command)
   }
 
   dynstr_free(&ds_cmd);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -3647,6 +3657,7 @@ void do_remove_file(struct st_command *command)
   error= my_delete(ds_filename.str, MYF(disable_warnings ? 0 : MY_WME)) != 0;
   handle_command_error(command, error, my_errno);
   dynstr_free(&ds_filename);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -3728,6 +3739,7 @@ end:
   dynstr_free(&ds_directory);
   dynstr_free(&ds_wild);
   dynstr_free(&ds_file_to_remove);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -3767,6 +3779,7 @@ void do_copy_file(struct st_command *command)
   handle_command_error(command, error, my_errno);
   dynstr_free(&ds_from_file);
   dynstr_free(&ds_to_file);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -3803,6 +3816,7 @@ void do_move_file(struct st_command *command)
   handle_command_error(command, error, my_errno);
   dynstr_free(&ds_from_file);
   dynstr_free(&ds_to_file);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -3847,6 +3861,7 @@ void do_chmod_file(struct st_command *command)
   handle_command_error(command, err_code, errno);
   dynstr_free(&ds_mode);
   dynstr_free(&ds_file);
+  var_set_builtin_errno(err_code);
   DBUG_VOID_RETURN;
 }
 
@@ -3879,6 +3894,7 @@ void do_file_exist(struct st_command *command)
   error= (access(ds_filename.str, F_OK) != 0);
   handle_command_error(command, error, errno);
   dynstr_free(&ds_filename);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -3910,6 +3926,7 @@ void do_mkdir(struct st_command *command)
   error= my_mkdir(ds_dirname.str, 0777, MYF(MY_WME)) != 0;
   handle_command_error(command, error, my_errno);
   dynstr_free(&ds_dirname);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -3940,6 +3957,7 @@ void do_rmdir(struct st_command *command)
   error= rmdir(ds_dirname.str) != 0;
   handle_command_error(command, error, errno);
   dynstr_free(&ds_dirname);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -4013,6 +4031,7 @@ static void do_list_files(struct st_command *command)
   handle_command_error(command, error, my_errno);
   dynstr_free(&ds_dirname);
   dynstr_free(&ds_wild);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -4059,6 +4078,7 @@ static void do_list_files_write_file_command(struct st_command *command,
   dynstr_free(&ds_filename);
   dynstr_free(&ds_dirname);
   dynstr_free(&ds_wild);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -4279,6 +4299,7 @@ void do_cat_file(struct st_command *command)
   error= cat_file(&ds_res, ds_filename.str);
   handle_command_error(command, error, my_errno);
   dynstr_free(&ds_filename);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 
@@ -4337,6 +4358,7 @@ void do_diff_files(struct st_command *command)
   dynstr_free(&ds_filename);
   dynstr_free(&ds_filename2);
   handle_command_error(command, error, -1);
+  var_set_builtin_errno(error);
   DBUG_VOID_RETURN;
 }
 

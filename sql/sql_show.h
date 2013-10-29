@@ -90,6 +90,7 @@ bool mysqld_show_create_db(THD *thd, LEX_STRING *db_name,
                            LEX_STRING *orig_db_name,
                            HA_CREATE_INFO *create);
 
+const char *thread_state_info(THD *thd);
 void mysqld_list_processes(THD *thd,const char *user,bool verbose);
 int mysqld_show_status(THD *thd);
 int mysqld_show_variables(THD *thd,const char *wild);

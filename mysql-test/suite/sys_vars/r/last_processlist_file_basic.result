@@ -1,0 +1,18 @@
+SELECT @@GLOBAL.last_processlist_file;
+@@GLOBAL.last_processlist_file
+test-lastprocess-list
+SELECT VARIABLE_VALUE
+FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES
+WHERE VARIABLE_NAME='last_processlist_file';
+VARIABLE_VALUE
+test-lastprocess-list
+# Expect error 'Read only variable'
+SET @@GLOBAL.last_processlist_file=1;
+ERROR HY000: Variable 'last_processlist_file' is a read only variable
+# Check with and without GLOBAL point to same variable
+SELECT @@last_processlist_file = @@GLOBAL.last_processlist_file as expect_1;
+expect_1
+1
+# Check that there is a last_processlist_file
+# Wait max 60s min for file to show up
+# Check if file showed up, or we timed out

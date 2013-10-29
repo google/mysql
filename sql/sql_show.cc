@@ -2206,7 +2206,7 @@ public:
   double progress;
 };
 
-static const char *thread_state_info(THD *tmp)
+const char *thread_state_info(THD *tmp)
 {
 #ifndef EMBEDDED_LIBRARY
   if (tmp->net.reading_or_writing)

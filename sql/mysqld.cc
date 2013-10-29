@@ -764,6 +764,21 @@ my_bool opt_require_super_for_mysql_schema_ddl = 0;
 
 /* Static variables */
 
+#ifndef EMBEDDED_LIBRARY
+char opt_last_processlist_path[FN_REFLEN] = "last_processlist";
+const char *opt_last_processlist_path_ptr = opt_last_processlist_path;
+static bool create_processlist_log_thread_called= false;
+static bool abort_log_processlist;
+static pthread_t processlist_thread;
+static mysql_mutex_t LOCK_processlist_thread;
+static mysql_cond_t COND_processlist_thread;
+#ifdef HAVE_PSI_INTERFACE
+static PSI_mutex_key key_LOCK_processlist_thread;
+static PSI_cond_key key_COND_processlist_thread;
+#endif
+static void stop_processlist_log_thread();
+#endif
+
 static volatile sig_atomic_t kill_in_progress;
 static volatile sig_atomic_t cleanup_done;
 my_bool opt_stack_trace;
@@ -976,6 +991,9 @@ static PSI_mutex_info all_server_mutexes[]=
   { &key_LOCK_rpl_thread_pool, "LOCK_rpl_thread_pool", 0},
   { &key_LOCK_parallel_entry, "LOCK_parallel_entry", 0},
   { &key_LOCK_cleanup, "LOCK_cleanup", 0}
+#ifndef EMBEDDED_LIBRARY
+  ,{ &key_LOCK_processlist_thread, "LOCK_processlist_thread", 0 }
+#endif
 };
 
 PSI_rwlock_key key_rwlock_LOCK_grant, key_rwlock_LOCK_logger,
@@ -1072,6 +1090,9 @@ static PSI_cond_info all_server_conds[]=
   { &key_COND_prepare_ordered, "COND_prepare_ordered", 0},
   { &key_COND_wait_gtid, "COND_wait_gtid", 0},
   { &key_COND_gtid_ignore_duplicates, "COND_gtid_ignore_duplicates", 0}
+#ifndef EMBEDDED_LIBRARY
+  ,{ &key_COND_processlist_thread, "COND_processlist_thread", PSI_FLAG_GLOBAL}
+#endif
 };
 
 PSI_thread_key key_thread_bootstrap, key_thread_delayed_insert,
@@ -2023,6 +2044,9 @@ void clean_up(bool print_message)
 #endif
   stop_handle_manager();
   release_ddl_log();
+#ifndef EMBEDDED_LIBRARY
+  stop_processlist_log_thread();
+#endif
 
   /*
     make sure that handlers finish up
@@ -5053,6 +5077,183 @@ static void create_shutdown_thread()
 #endif /* __WIN__ */
 }
 
+/*
+  Log last process list
+*/
+static void processlist_print()
+{
+  File fd= -1;
+  time_t now= my_time(0);
+  I_List_iterator<THD> it(threads);
+  THD *tmp;
+  IO_CACHE log_file;
+  char tmp_processlist[FN_REFLEN];
+  snprintf(tmp_processlist, sizeof(tmp_processlist),
+           "%s.tmp", opt_last_processlist_path_ptr);
+
+  /*
+    Write to a temporary last processlist file first,
+    to avoid a period where there is no last_processlist file
+    or an unfinished last_processlist file .
+  */
+  if ((fd= my_open(tmp_processlist, O_CREAT | O_WRONLY | O_TRUNC,
+                   MYF(MY_WME | ME_WAITTANG))) < 0)
+  {
+    sql_print_error("Failed to open file '%s' (errno %d)", tmp_processlist,
+                    my_errno);
+    goto err;
+  }
+  if (init_io_cache(&log_file, fd, IO_SIZE, WRITE_CACHE, 0L, 0, 0))
+  {
+    sql_print_error("Failed to create a cache on file '%s'", tmp_processlist);
+    goto err;
+  }
+
+  mysql_mutex_lock(&LOCK_thread_count);
+  if (!threads.is_empty())
+  {
+    my_b_printf(&log_file, "Process List: \n");
+  } else {
+    mysql_mutex_unlock(&LOCK_thread_count);
+    goto err;
+  }
+
+  while ((tmp= it++))
+  {
+    my_b_printf(&log_file, "*****\n");
+    Security_context *tmp_sctx= tmp->security_ctx;
+    struct st_my_thread_var *mysys_var;
+    if (tmp->vio_ok() || tmp->system_thread)
+    {
+      /* Id */
+      my_b_printf(&log_file, "Id: %d \n", tmp->thread_id);
+      /* User */
+      my_b_printf(&log_file, "User: %s \n",
+                  (tmp_sctx->user) ? tmp_sctx->user :
+                  (tmp->system_thread ?
+                   "system user" : "unauthenticated user"));
+
+      /* Host */
+      my_b_printf(&log_file, "Host: ");
+      if (tmp->peer_port && (tmp_sctx->host || tmp_sctx->ip)
+          && tmp->security_ctx->host_or_ip[0])
+        my_b_printf(&log_file, "%d %d ", tmp_sctx->host_or_ip, tmp->peer_port);
+      else
+        my_b_printf(&log_file, "%d ",
+                    (tmp_sctx->host_or_ip[0]) ? tmp_sctx->host_or_ip
+                    : (tmp_sctx->host) ? tmp_sctx->host : "");
+      my_b_printf(&log_file, "\n");
+
+      /* Lock THD mutex that protects its data when looking at it. */
+      mysql_mutex_lock(&tmp->LOCK_thd_data);
+
+      /* DB */
+      my_b_printf(&log_file, "DB: %s \n", (tmp->db) ? tmp->db : "");
+
+      /* Command */
+      my_b_printf(&log_file, "Command: %s \n", command_name[tmp->get_command()].str);
+
+      /* Time */
+      my_b_printf(&log_file, "Time: %d \n",
+                  tmp->start_time ? now - tmp->start_time : 0);
+
+      /* State */
+      my_b_printf(&log_file, "State: ");
+      if (tmp->killed == KILL_CONNECTION)
+        my_b_printf(&log_file, "Killed");
+      else
+      {
+        if ((mysys_var= tmp->mysys_var))
+          mysql_mutex_lock(&mysys_var->mutex);
+        const char *state_info= thread_state_info(tmp);
+        my_b_printf(&log_file, state_info ? state_info : "NULL");
+        if (mysys_var)
+          mysql_mutex_unlock(&mysys_var->mutex);
+      }
+      my_b_printf(&log_file, "\n");
+
+      /* Info */
+      my_b_printf(&log_file, "Info: %s\n", (tmp->query()) ? tmp->query() : "");
+      mysql_mutex_unlock(&tmp->LOCK_thd_data);
+    }
+  }
+  mysql_mutex_unlock(&LOCK_thread_count);
+  flush_io_cache(&log_file);
+
+err:
+  if (fd >= 0) {
+    my_close(fd, MYF(0));
+    end_io_cache(&log_file);
+  }
+
+  /*
+    Rename the temporary file for last processlist.
+    Note my_rename() deletes the target file before rename.
+  */
+  my_rename(tmp_processlist, opt_last_processlist_path_ptr, MYF(MY_WME));
+}
+
+pthread_handler_t log_processlist_thread(void *arg)
+{
+  for (;;)
+  {
+    struct timespec abstime;
+    set_timespec(abstime, 10); // print every 10 seconds
+
+    mysql_mutex_lock(&LOCK_processlist_thread);
+    mysql_cond_timedwait(&COND_processlist_thread,
+                           &LOCK_processlist_thread,
+                           &abstime);
+    bool stop= abort_log_processlist;
+    mysql_mutex_unlock(&LOCK_processlist_thread);
+
+    if (stop)
+    {
+      break;
+    }
+    processlist_print();
+  }
+  return 0;
+}
+
+static void create_processlist_log_thread()
+{
+  create_processlist_log_thread_called= true;
+  (void) mysql_mutex_init(key_LOCK_processlist_thread,
+                          &LOCK_processlist_thread,MY_MUTEX_INIT_SLOW);
+  (void) mysql_cond_init(key_COND_processlist_thread,
+                         &COND_processlist_thread, NULL);
+
+  abort_log_processlist= false;
+  if (mysql_thread_create(0, /* Not instrumented */
+                          &processlist_thread, NULL,
+                          log_processlist_thread, 0))
+  {
+    // indicate that we can't join thread that was never created
+    abort_log_processlist= true;
+    sql_print_warning("Can't create thread to log process list");
+  }
+}
+
+static void stop_processlist_log_thread()
+{
+  if (!create_processlist_log_thread_called)
+    return;
+
+  mysql_mutex_lock(&LOCK_processlist_thread);
+  bool started= !abort_log_processlist;
+  abort_log_processlist= true;
+  mysql_cond_signal(&COND_processlist_thread);
+  mysql_mutex_unlock(&LOCK_processlist_thread);
+  if (started)
+  {
+    pthread_join(processlist_thread, NULL);
+  }
+
+  (void) mysql_mutex_destroy(&LOCK_processlist_thread);
+  (void) mysql_cond_destroy(&COND_processlist_thread);
+}
+
 #endif /* EMBEDDED_LIBRARY */
 
 
@@ -5531,6 +5732,7 @@ int mysqld_main(int argc, char **argv)
 
   create_shutdown_thread();
   start_handle_manager();
+  create_processlist_log_thread();
 
   /* Copy default global rpl_filter to global_rpl_filter */
   copy_filter_setting(global_rpl_filter, get_or_create_rpl_filter("", 0));

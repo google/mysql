@@ -1,0 +1,40 @@
+-- source include/not_embedded.inc
+
+# Display default value
+SELECT @@GLOBAL.last_processlist_file;
+
+SELECT VARIABLE_VALUE
+FROM INFORMATION_SCHEMA.GLOBAL_VARIABLES
+WHERE VARIABLE_NAME='last_processlist_file';
+
+# Check if value can be set
+--echo # Expect error 'Read only variable'
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+SET @@GLOBAL.last_processlist_file=1;
+
+--echo # Check with and without GLOBAL point to same variable
+SELECT @@last_processlist_file = @@GLOBAL.last_processlist_file as expect_1;
+
+
+--echo # Check that there is a last_processlist_file
+let $MYSQLD_DATADIR= `select @@datadir`;
+let $file = $MYSQLD_DATADIR/test-lastprocess-list;
+
+--echo # Wait max 60s min for file to show up
+let $cnt=60;
+while ($cnt)
+{
+    --error 0,1
+    --file_exists $file
+    if (!$builtin_errno)
+    {
+        let $cnt=0;
+    }
+    if ($builtin_errno)
+    {
+      real_sleep 1;
+      dec $cnt;
+    }
+}
+--echo # Check if file showed up, or we timed out
+--file_exists $file
