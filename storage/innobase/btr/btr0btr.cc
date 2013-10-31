@@ -1089,8 +1089,6 @@ btr_page_alloc_for_ibuf(
 	flst_remove(root + PAGE_HEADER + PAGE_BTR_IBUF_FREE_LIST,
 		    new_page + PAGE_HEADER + PAGE_BTR_IBUF_FREE_LIST_NODE,
 		    mtr);
-	ut_ad(flst_validate(root + PAGE_HEADER + PAGE_BTR_IBUF_FREE_LIST,
-			    mtr));
 
 	return(new_block);
 }
