@@ -221,6 +221,8 @@
 /* Characters shown for the command in 'information_schema.processlist' */
 #define PROCESS_LIST_INFO_WIDTH 65535
 
+#define PROCESS_LIST_STATE_WIDTH 255
+
 #define PRECISION_FOR_DOUBLE 53
 #define PRECISION_FOR_FLOAT  24
 

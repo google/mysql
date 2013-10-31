@@ -247,7 +247,7 @@ def	information_schema	PROCESSLIST	MEMORY_USED	13	0	NO	int	NULL	NULL	10	0	NULL	N
 def	information_schema	PROCESSLIST	PROGRESS	12	0.000	NO	decimal	NULL	NULL	7	3	NULL	NULL	NULL	decimal(7,3)			select	
 def	information_schema	PROCESSLIST	QUERY_ID	15	0	NO	bigint	NULL	NULL	19	0	NULL	NULL	NULL	bigint(4)			select	
 def	information_schema	PROCESSLIST	STAGE	10	0	NO	tinyint	NULL	NULL	3	0	NULL	NULL	NULL	tinyint(2)			select	
-def	information_schema	PROCESSLIST	STATE	7	NULL	YES	varchar	64	192	NULL	NULL	NULL	utf8	utf8_general_ci	varchar(64)			select	
+def	information_schema	PROCESSLIST	STATE	7	NULL	YES	varchar	255	765	NULL	NULL	NULL	utf8	utf8_general_ci	varchar(255)			select	
 def	information_schema	PROCESSLIST	TIME	6	0	NO	int	NULL	NULL	10	0	NULL	NULL	NULL	int(7)			select	
 def	information_schema	PROCESSLIST	TIME_MS	9	0.000	NO	decimal	NULL	NULL	22	3	NULL	NULL	NULL	decimal(22,3)			select	
 def	information_schema	PROCESSLIST	USER	2		NO	varchar	128	384	NULL	NULL	NULL	utf8	utf8_general_ci	varchar(128)			select	
@@ -730,7 +730,7 @@ NULL	information_schema	PROCESSLIST	ID	bigint	NULL	NULL	NULL	NULL	bigint(4)
 3.0000	information_schema	PROCESSLIST	DB	varchar	64	192	utf8	utf8_general_ci	varchar(64)
 3.0000	information_schema	PROCESSLIST	COMMAND	varchar	16	48	utf8	utf8_general_ci	varchar(16)
 NULL	information_schema	PROCESSLIST	TIME	int	NULL	NULL	NULL	NULL	int(7)
-3.0000	information_schema	PROCESSLIST	STATE	varchar	64	192	utf8	utf8_general_ci	varchar(64)
+3.0000	information_schema	PROCESSLIST	STATE	varchar	255	765	utf8	utf8_general_ci	varchar(255)
 1.0000	information_schema	PROCESSLIST	INFO	longblob	4294967295	4294967295	NULL	NULL	longblob
 NULL	information_schema	PROCESSLIST	TIME_MS	decimal	NULL	NULL	NULL	NULL	decimal(22,3)
 NULL	information_schema	PROCESSLIST	STAGE	tinyint	NULL	NULL	NULL	NULL	tinyint(2)

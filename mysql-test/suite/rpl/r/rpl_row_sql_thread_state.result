@@ -1,0 +1,45 @@
+include/master-slave.inc
+[connection master]
+#
+# Test locks rows to block a RBR delete rows event
+# so that the SQL thread state can be checked.
+#
+# connection: slave
+SET GLOBAL innodb_lock_wait_timeout = 100;
+# connection: master
+CREATE TABLE t1 (a INT PRIMARY KEY, b INT) ENGINE=InnoDB;
+INSERT INTO t1 VALUES (1,1),(2,2),(3,3),(4,4),(5,5);
+# connection: slave
+START TRANSACTION;
+SELECT * FROM t1 WHERE a > 2 LOCK IN SHARE MODE;
+a	b
+3	3
+4	4
+5	5
+# connection: slave1
+START TRANSACTION;
+SELECT * FROM t1 WHERE a > 4 LOCK IN SHARE MODE;
+a	b
+5	5
+# connection: master
+DELETE FROM t1 WHERE a > 2;
+# connection: slave
+SELECT STATE
+FROM INFORMATION_SCHEMA.PROCESSLIST
+WHERE STATE LIKE
+"Executing Delete_rows_v1 event at position %";
+STATE
+Executing Delete_rows_v1 event at position 787
+ROLLBACK;
+# connection: slave
+SELECT STATE
+FROM INFORMATION_SCHEMA.PROCESSLIST
+WHERE STATE LIKE
+"Handling row % of 3 for a Delete_rows_v1 event at position % on table `test`.`t1`";
+STATE
+Handling row 2 of 3 for a Delete_rows_v1 event at position 787 on table `test`.`t1`
+SET GLOBAL innodb_lock_wait_timeout = DEFAULT;
+# connection: slave1
+ROLLBACK;
+DROP TABLE t1;
+include/rpl_end.inc

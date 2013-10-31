@@ -1926,6 +1926,15 @@ public:
   */
   const char *proc_info;
 
+  /*
+    In places where a dynamic string needs to be used for proc_info but
+    its lifecycle can't be managed, proc_info can point to this static
+    buffer instead. No ownership of this buffer is implied by any function
+    using it. (Its contents may be overwritten within this thread at any
+    time.)
+  */
+  char proc_info_buffer[PROCESS_LIST_STATE_WIDTH+1];
+
 private:
   unsigned int m_current_stage_key;
 

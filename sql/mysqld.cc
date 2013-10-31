@@ -9893,6 +9893,9 @@ PSI_stage_info stage_waiting_for_the_next_event_in_relay_log= { 0, "Waiting for 
 PSI_stage_info stage_waiting_for_the_slave_thread_to_advance_position= { 0, "Waiting for the slave SQL thread to advance position", 0};
 PSI_stage_info stage_waiting_to_finalize_termination= { 0, "Waiting to finalize termination", 0};
 PSI_stage_info stage_waiting_to_get_readlock= { 0, "Waiting to get readlock", 0};
+PSI_stage_info stage_slave_preparing_to_execute_row_event= { 0, "Preparing to execute row event", 0};
+PSI_stage_info stage_slave_executing_row_event= { 0, "Executing row event", 0};
+PSI_stage_info stage_slave_handling_row_for_row_event= { 0, "Handling row for row event", 0};
 PSI_stage_info stage_slave_waiting_workers_to_exit= { 0, "Waiting for workers to exit", 0};
 PSI_stage_info stage_slave_waiting_worker_to_release_partition= { 0, "Waiting for Slave Worker to release partition", 0};
 PSI_stage_info stage_slave_waiting_worker_to_free_events= { 0, "Waiting for Slave Workers to free pending events", 0};
@@ -9984,6 +9987,9 @@ PSI_stage_info *all_server_stages[]=
   & stage_sending_cached_result_to_client,
   & stage_sending_data,
   & stage_setup,
+  & stage_slave_preparing_to_execute_row_event,
+  & stage_slave_executing_row_event,
+  & stage_slave_handling_row_for_row_event,
   & stage_show_explain,
   & stage_slave_has_read_all_relay_log,
   & stage_slave_waiting_event_from_coordinator,

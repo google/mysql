@@ -2248,7 +2248,7 @@ void mysqld_list_processes(THD *thd,const char *user, bool verbose)
   field_list.push_back(new Item_empty_string("Command",16));
   field_list.push_back(field= new Item_return_int("Time",7, MYSQL_TYPE_LONG));
   field->unsigned_flag= 0;
-  field_list.push_back(field=new Item_empty_string("State",30));
+  field_list.push_back(field=new Item_empty_string("State", PROCESS_LIST_STATE_WIDTH));
   field->maybe_null=1;
   field_list.push_back(field=new Item_empty_string("Info",max_query_length));
   field->maybe_null=1;
@@ -2304,7 +2304,10 @@ void mysqld_list_processes(THD *thd,const char *user, bool verbose)
           mysql_mutex_lock(&mysys_var->mutex);
         thd_info->proc_info= (char*) (tmp->killed >= KILL_QUERY ?
                                       "Killed" : 0);
-        thd_info->state_info= thread_state_info(tmp);
+
+        const char *state_info= thread_state_info(tmp);
+        thd_info->state_info= state_info ? thd->strdup(state_info) : NULL;
+
         if (mysys_var)
           mysql_mutex_unlock(&mysys_var->mutex);
 
@@ -8808,7 +8811,7 @@ ST_FIELD_INFO processlist_fields_info[]=
   {"DB", NAME_CHAR_LEN, MYSQL_TYPE_STRING, 0, 1, "Db", SKIP_OPEN_TABLE},
   {"COMMAND", 16, MYSQL_TYPE_STRING, 0, 0, "Command", SKIP_OPEN_TABLE},
   {"TIME", 7, MYSQL_TYPE_LONG, 0, 0, "Time", SKIP_OPEN_TABLE},
-  {"STATE", 64, MYSQL_TYPE_STRING, 0, 1, "State", SKIP_OPEN_TABLE},
+  {"STATE", PROCESS_LIST_STATE_WIDTH, MYSQL_TYPE_STRING, 0, 1, "State", SKIP_OPEN_TABLE},
   {"INFO", (uint) -1, MYSQL_TYPE_LONG_BLOB, 0, 1, "Info",
    SKIP_OPEN_TABLE},
   {"TIME_MS", 100 * (MY_INT64_NUM_DECIMAL_DIGITS + 1) + 3, MYSQL_TYPE_DECIMAL,

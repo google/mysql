@@ -3453,6 +3453,23 @@ static int exec_relay_log_event(THD* thd, Relay_log_info* rli,
     int exec_res;
     Log_event_type typ= ev->get_type_code();
 
+    switch(ev->get_type_code())
+    {
+    case DELETE_ROWS_EVENT:
+    case UPDATE_ROWS_EVENT:
+    case WRITE_ROWS_EVENT:
+      THD_STAGE_INFO(thd, stage_slave_preparing_to_execute_row_event);
+      mysql_mutex_lock(&thd->LOCK_thd_data);
+      my_snprintf(thd->proc_info_buffer, sizeof(thd->proc_info_buffer),
+                  "Preparing to execute %s event at position %lu",
+                  ev->get_type_str(), ev->log_pos);
+      thd->proc_info= thd->proc_info_buffer;
+      mysql_mutex_unlock(&thd->LOCK_thd_data);
+      break;
+    default:
+      break;
+    }
+
     /*
       This tests if the position of the beginning of the current event
       hits the UNTIL barrier.

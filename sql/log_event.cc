@@ -9798,6 +9798,14 @@ int Rows_log_event::do_apply_event(rpl_group_info *rgi)
 
     this->slave_exec_mode= slave_exec_mode_options; // fix the mode
 
+    THD_STAGE_INFO(thd, stage_slave_executing_row_event);
+    mysql_mutex_lock(&thd->LOCK_thd_data);
+    my_snprintf(thd->proc_info_buffer, sizeof(thd->proc_info_buffer),
+                "Executing %s event at position %lu",
+                get_type_str(), log_pos);
+    thd->proc_info= thd->proc_info_buffer;
+    mysql_mutex_unlock(&thd->LOCK_thd_data);
+
     // Do event specific preparations 
     error= do_before_row_operations(rli);
 
@@ -9821,7 +9829,8 @@ int Rows_log_event::do_apply_event(rpl_group_info *rgi)
      */
     rgi->set_row_stmt_start_timestamp();
 
-    THD_STAGE_INFO(thd, stage_executing);
+    ulong processed_rows= 0, estimated_rows= 0;
+
     while (error == 0 && m_curr_row < m_rows_end)
     {
       /* in_use can have been set to NULL in close_tables_for_reopen */
@@ -9836,6 +9845,30 @@ int Rows_log_event::do_apply_event(rpl_group_info *rgi)
       DBUG_ASSERT(error != HA_ERR_RECORD_DELETED);
 
       table->in_use = old_thd;
+
+      /*
+        Estimate the number of rows in this event based on the size of
+        the current row image, which should be the first in the event
+        if we've not yet calculated estimated_rows.
+      */
+      if (estimated_rows == 0 && (m_curr_row_end > m_curr_row))
+        estimated_rows= (m_rows_end - m_curr_row) / (m_curr_row_end - m_curr_row);
+
+      if (m_curr_row < m_rows_end)
+      {
+        processed_rows++;
+
+        THD_STAGE_INFO(thd, stage_slave_handling_row_for_row_event);
+        mysql_mutex_lock(&thd->LOCK_thd_data);
+        my_snprintf(thd->proc_info_buffer, sizeof(thd->proc_info_buffer),
+                    "Handling row %lu of %lu for a %s event at position %lu on table `%.*s`.`%.*s`",
+                    processed_rows, estimated_rows,
+                    get_type_str(), (long)log_pos,
+                    (int) table->s->db.length, table->s->db.str,
+                    (int) table->s->table_name.length, table->s->table_name.str);
+        thd->proc_info= thd->proc_info_buffer;
+        mysql_mutex_unlock(&thd->LOCK_thd_data);
+      }
 
       if (error)
       {
