@@ -3782,8 +3782,7 @@ bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &list,
       The tables must be marked "updating" so that tables_ok() takes them into
       account in tests.
     */
-    tables[GRANT_USER].updating= tables[GRANT_DB].updating=
-      tables[GRANT_SYSTEM_USER].updating= 1;
+    tables[GRANT_USER].updating= tables[GRANT_DB].updating= 1;
     if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
     {
       /* Restore the state of binlog format */
@@ -5452,12 +5451,12 @@ int open_grant_tables(THD *thd, TABLE_LIST *tables)
     */
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
       tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
-      tables[GRANT_PROCS_PRIV].updating= tables[GRANT_SYSTEM_USER].updating= 1;
+      tables[GRANT_PROCS_PRIV].updating= 1;
     if (!(thd->spcont || rpl_filter->tables_ok(0, &tables[GRANT_USER])))
       DBUG_RETURN(1);
     tables[GRANT_USER].updating= tables[GRANT_DB].updating=
       tables[GRANT_TABLES_PRIV].updating= tables[GRANT_COLUMNS_PRIV].updating=
-      tables[GRANT_PROCS_PRIV].updating= tables[GRANT_SYSTEM_USER].updating= 0;
+      tables[GRANT_PROCS_PRIV].updating= 0;
   }
 #endif
 
