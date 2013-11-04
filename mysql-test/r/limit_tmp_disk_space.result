@@ -2,6 +2,8 @@ DROP TABLE IF EXISTS t1;
 SET @start_tmp_table_size = @@global.tmp_table_size;
 SET @start_max_heap_table_size = @@global.max_heap_table_size;
 SET @start_limit_tmp_disk_space = @@global.limit_tmp_disk_space;
+# Set tmp_table_size low to force internal tmp tables out to disk
+set tmp_table_size = 1024;
 CREATE TABLE t1 (
 id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
 gender CHAR(1),
