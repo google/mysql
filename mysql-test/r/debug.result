@@ -1,0 +1,22 @@
+CREATE PROCEDURE p1 ()
+begin
+set @a = 0;
+while @a < 100 do
+SET GLOBAL debug='';
+SET debug='';
+SET GLOBAL debug='+dkalle';
+SET debug=@tmp;
+set @a = @a + 1;
+end while;
+end;|
+CREATE PROCEDURE p2 ()
+begin
+set @a = 0;
+while @a < 100 do
+select @@debug;
+set @a = @a + 1;
+end while;
+end;|
+drop procedure p1;
+drop procedure p2;
+Resetting global.debug to initial state

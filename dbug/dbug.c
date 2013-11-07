@@ -272,6 +272,9 @@ static void PushState(CODE_STATE *cs);
 static void FreeState (CODE_STATE *cs, int free_state);
         /* Test for tracing enabled */
 static int DoTrace(CODE_STATE *cs);
+        /* Check keyword */
+static BOOLEAN DBUGKeyword(CODE_STATE *cs, const char *keyword, int strict);
+
 /*
   return values of DoTrace.
   Can also be used as bitmask: ret & DO_TRACE
@@ -1267,7 +1270,7 @@ void _db_doprnt_(const char *format,...)
 
   if (!cs->locked)
     pthread_mutex_lock(&THR_LOCK_dbug);
-  if (_db_keyword_(cs, cs->u_keyword, 0))
+  if (DBUGKeyword(cs, cs->u_keyword, 0))
   {
     int save_errno=errno;
     DoPrefix(cs, cs->u_line);
@@ -1326,7 +1329,7 @@ void _db_dump_(uint _line_, const char *keyword,
 
   if (!cs->locked)
     pthread_mutex_lock(&THR_LOCK_dbug);
-  if (_db_keyword_(cs, keyword, 0))
+  if (DBUGKeyword(cs, keyword, 0))
   {
     DoPrefix(cs, _line_);
     if (TRACING)
@@ -1707,8 +1710,23 @@ FILE *_db_fp_(void)
 
 BOOLEAN _db_keyword_(CODE_STATE *cs, const char *keyword, int strict)
 {
+  BOOLEAN res;
+  get_code_state_or_return FALSE;
+
+  if (!cs->locked)
+    pthread_mutex_lock(&THR_LOCK_dbug);
+
+  res= DBUGKeyword(cs, keyword, strict);
+
+  if (!cs->locked)
+    pthread_mutex_unlock(&THR_LOCK_dbug);
+
+  return res;
+}
+
+static BOOLEAN DBUGKeyword(CODE_STATE *cs, const char *keyword, int strict)
+{
   int match= strict ? INCLUDE : INCLUDE|MATCHED;
-  get_code_state_if_not_set_or_return FALSE;
 
   return (DEBUGGING && DoTrace(cs) & DO_TRACE &&
           InList(cs->stack->keywords, keyword, strict) & match);
