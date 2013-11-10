@@ -1471,7 +1471,10 @@ static bool mysql_test_delete(Prepared_statement *stmt,
     goto error;
   }
 
-  DBUG_RETURN(mysql_prepare_delete(thd, table_list, &lex->select_lex.where));
+  DBUG_RETURN(mysql_prepare_delete(thd, table_list, 
+                                   lex->select_lex.with_wild, 
+                                   lex->select_lex.item_list,
+                                   &lex->select_lex.where));
 error:
   DBUG_RETURN(TRUE);
 }
@@ -2520,6 +2523,7 @@ void reinit_stmt_before_use(THD *thd, LEX *lex)
     object and because of this can be used in different threads.
   */
   lex->thd= thd;
+  DBUG_ASSERT(!lex->explain);
 
   if (lex->empty_field_list_on_rset)
   {
@@ -2580,7 +2584,13 @@ void reinit_stmt_before_use(THD *thd, LEX *lex)
       /* Fix ORDER list */
       for (order= sl->order_list.first; order; order= order->next)
         order->item= &order->item_ptr;
-      sl->handle_derived(lex, DT_REINIT);
+      {
+#ifndef DBUG_OFF
+        bool res=
+#endif
+          sl->handle_derived(lex, DT_REINIT);
+        DBUG_ASSERT(res == 0);
+      }
     }
     {
       SELECT_LEX_UNIT *unit= sl->master_unit();
@@ -3945,6 +3955,12 @@ bool Prepared_statement::execute(String *expanded_query, bool open_cursor)
       thd->m_statement_psi= parent_locker;
       MYSQL_QUERY_EXEC_DONE(error);
     }
+    else
+    {
+      thd->lex->sql_command= SQLCOM_SELECT;
+      status_var_increment(thd->status_var.com_stat[SQLCOM_SELECT]);
+      thd->update_stats();
+    }
   }
 
   /*
@@ -3963,6 +3979,21 @@ bool Prepared_statement::execute(String *expanded_query, bool open_cursor)
 
   if (! cursor)
     cleanup_stmt();
+  
+  /*
+    EXECUTE command has its own dummy "explain data". We don't need it,
+    instead, we want to keep the query plan of the statement that was 
+    executed.
+  */
+  if (!stmt_backup.lex->explain || 
+      !stmt_backup.lex->explain->have_query_plan())
+  {
+    delete_explain_query(stmt_backup.lex);
+    stmt_backup.lex->explain = thd->lex->explain;
+    thd->lex->explain= NULL;
+  }
+  else
+    delete_explain_query(thd->lex);
 
   thd->set_statement(&stmt_backup);
   thd->stmt_arena= old_stmt_arena;

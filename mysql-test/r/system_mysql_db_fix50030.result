@@ -19,6 +19,7 @@ plugin
 proc
 procs_priv
 proxies_priv
+roles_mapping
 servers
 slow_log
 table_stats
@@ -125,6 +126,7 @@ user	CREATE TABLE `user` (
   `max_updates` int(11) unsigned NOT NULL DEFAULT '0',
   `max_connections` int(11) unsigned NOT NULL DEFAULT '0',
   `max_user_connections` int(11) NOT NULL DEFAULT '0',
+  `is_role` enum('N','Y') CHARACTER SET utf8 NOT NULL DEFAULT 'N',
   `plugin` char(64) CHARACTER SET latin1 NOT NULL DEFAULT '',
   `authentication_string` text COLLATE utf8_bin NOT NULL,
   `password_expired` enum('N','Y') CHARACTER SET utf8 NOT NULL DEFAULT 'N',
@@ -224,7 +226,7 @@ event	CREATE TABLE `event` (
   `db` char(64) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `name` char(64) NOT NULL DEFAULT '',
   `body` longblob NOT NULL,
-  `definer` char(77) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `definer` char(141) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
   `execute_at` datetime DEFAULT NULL,
   `interval_value` int(11) DEFAULT NULL,
   `interval_field` enum('YEAR','QUARTER','MONTH','DAY','HOUR','MINUTE','WEEK','SECOND','MICROSECOND','YEAR_MONTH','DAY_HOUR','DAY_MINUTE','DAY_SECOND','HOUR_MINUTE','HOUR_SECOND','MINUTE_SECOND','DAY_MICROSECOND','HOUR_MICROSECOND','MINUTE_MICROSECOND','SECOND_MICROSECOND') DEFAULT NULL,

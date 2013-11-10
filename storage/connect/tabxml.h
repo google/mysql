@@ -6,8 +6,6 @@
 /*                                                                     */
 /*  This file contains the XML table classes declares.                 */
 /***********************************************************************/
-#define TYPE_AM_XML  (AMT)127
-
 typedef class XMLDEF *PXMLDEF;
 typedef class TDBXML *PTDBXML;
 typedef class XMLCOL *PXMLCOL;
@@ -81,7 +79,7 @@ class DllExport TDBXML : public TDBASE {
   virtual void  ResetDB(void) {N = 0;}
   virtual void  ResetSize(void) {MaxSize = -1;}
   virtual int   RowNumber(PGLOBAL g, bool b = false);
-          int   LoadTableFile(PGLOBAL g);
+          int   LoadTableFile(PGLOBAL g, char *filename);
           bool  Initialize(PGLOBAL g);
           bool  SetTabNode(PGLOBAL g);
           void  SetNodeAttr(PGLOBAL g, char *attr, PXNODE node);
@@ -211,6 +209,7 @@ class XMLCOLX : public XMLCOL {
   void * operator new(size_t size, PXMLCOL colp) {return colp;}
 #if !defined(__BORLANDC__)
   // Avoid warning C4291 by defining a matching dummy delete operator
+  void operator delete(void *, size_t size) {}
   void operator delete(void *, PXMLCOL) {}
 #endif
   }; // end of class XMLCOLX

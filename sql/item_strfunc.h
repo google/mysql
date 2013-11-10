@@ -64,7 +64,6 @@ public:
   enum Item_result result_type () const { return STRING_RESULT; }
   void left_right_max_length();
   bool fix_fields(THD *thd, Item **ref);
-  String *val_str_from_val_str_ascii(String *str, String *str2);
 };
 
 
@@ -117,6 +116,27 @@ public:
   const char *func_name() const { return "sha2"; }
 };
 
+class Item_func_to_base64 :public Item_str_ascii_func
+{
+  String tmp_value;
+public:
+  Item_func_to_base64(Item *a) :Item_str_ascii_func(a) {}
+  String *val_str_ascii(String *);
+  void fix_length_and_dec();
+  const char *func_name() const { return "to_base64"; }
+};
+
+class Item_func_from_base64 :public Item_str_func
+{
+  String tmp_value;
+public:
+  Item_func_from_base64(Item *a) :Item_str_func(a) {}
+  String *val_str(String *);
+  void fix_length_and_dec();
+  const char *func_name() const { return "from_base64"; }
+};
+
+
 class Item_func_aes_encrypt :public Item_str_func
 {
 public:
@@ -158,7 +178,7 @@ public:
   {
     collation.set(system_charset_info);
     max_length= MAX_BLOB_WIDTH;
-    set_persist_maybe_null(1);
+    maybe_null= 1;
   }
   const char *func_name() const { return "decode_histogram"; }
 };
@@ -194,6 +214,49 @@ public:
   String *val_str(String *);
   void fix_length_and_dec();
   const char *func_name() const { return "replace"; }
+};
+
+
+class Item_func_regexp_replace :public Item_str_func
+{
+  Regexp_processor_pcre re;
+  bool append_replacement(String *str,
+                          const LEX_CSTRING *source,
+                          const LEX_CSTRING *replace);
+public:
+  Item_func_regexp_replace(Item *a, Item *b, Item *c) 
+    :Item_str_func(a, b, c)
+    {}
+  void cleanup()
+  {
+    DBUG_ENTER("Item_func_regex::cleanup");
+    Item_str_func::cleanup();
+    re.cleanup();
+    DBUG_VOID_RETURN;
+  }
+  String *val_str(String *str);
+  void fix_length_and_dec();
+  const char *func_name() const { return "regexp_replace"; }
+};
+
+
+class Item_func_regexp_substr :public Item_str_func
+{
+  Regexp_processor_pcre re;
+public:
+  Item_func_regexp_substr(Item *a, Item *b) 
+    :Item_str_func(a, b)
+    {}
+  void cleanup()
+  {
+    DBUG_ENTER("Item_func_regex::cleanup");
+    Item_str_func::cleanup();
+    re.cleanup();
+    DBUG_VOID_RETURN;
+  }
+  String *val_str(String *str);
+  void fix_length_and_dec();
+  const char *func_name() const { return "regexp_substr"; }
 };
 
 
@@ -380,7 +443,7 @@ public:
   String *val_str(String *);
   void fix_length_and_dec()
   {
-    set_persist_maybe_null(1);
+    maybe_null=1;
     /* 9 = MAX ((8- (arg_len % 8)) + 1) */
     max_length = args[0]->max_length + 9;
   }
@@ -396,7 +459,7 @@ public:
   String *val_str(String *);
   void fix_length_and_dec()
   {
-    set_persist_maybe_null(1);
+    maybe_null=1;
     /* 9 = MAX ((8- (arg_len % 8)) + 1) */
     max_length= args[0]->max_length;
     if (max_length >= 9U)
@@ -424,7 +487,7 @@ public:
     constructor_helper();
   }
   String *val_str(String *);
-  void fix_length_and_dec() { set_persist_maybe_null(1); max_length = 13; }
+  void fix_length_and_dec() { maybe_null=1; max_length = 13; }
   const char *func_name() const { return "encrypt"; }
   bool check_vcol_func_processor(uchar *int_arg) 
   {
@@ -494,7 +557,7 @@ public:
   void fix_length_and_dec()
   {
     max_length= MAX_FIELD_NAME * system_charset_info->mbmaxlen;
-    set_persist_maybe_null(1);
+    maybe_null=1;
   }
   const char *func_name() const { return "database"; }
   const char *fully_qualified_func_name() const { return "database()"; }
@@ -541,6 +604,28 @@ public:
   bool fix_fields(THD *thd, Item **ref);
   const char *func_name() const { return "current_user"; }
   const char *fully_qualified_func_name() const { return "current_user()"; }
+};
+
+
+class Item_func_current_role :public Item_func_sysconst
+{
+  Name_resolution_context *context;
+
+public:
+  Item_func_current_role(Name_resolution_context *context_arg)
+    : context(context_arg) {}
+  bool fix_fields(THD *thd, Item **ref);
+  void fix_length_and_dec()
+  { max_length= username_char_length * SYSTEM_CHARSET_MBMAXLEN; }
+  int save_in_field(Field *field, bool no_conversions)
+  { return save_str_value_in_field(field, &str_value); }
+  const char *func_name() const { return "current_role"; }
+  const char *fully_qualified_func_name() const { return "current_role()"; }
+  String *val_str(String *)
+  {
+    DBUG_ASSERT(fixed == 1);
+    return (null_value ? 0 : &str_value);
+  }
 };
 
 
@@ -668,7 +753,7 @@ public:
   {
     collation.set(default_charset());
     max_length=64;
-    set_persist_maybe_null(1);
+    maybe_null= 1;
   }
 };
 
@@ -695,7 +780,7 @@ public:
   Item_func_unhex(Item *a) :Item_str_func(a) 
   { 
     /* there can be bad hex strings */
-    set_persist_maybe_null(1);
+    maybe_null= 1; 
   }
   const char *func_name() const { return "unhex"; }
   String *val_str(String *);
@@ -781,7 +866,7 @@ public:
   void fix_length_and_dec()
   {
     collation.set(&my_charset_bin, DERIVATION_COERCIBLE);
-    set_persist_maybe_null(1);
+    maybe_null=1;
     max_length=MAX_BLOB_WIDTH;
   }
   bool check_vcol_func_processor(uchar *int_arg) 
@@ -814,7 +899,7 @@ public:
   { 
     decimals= 0; 
     fix_length_and_charset(3 * 8 + 7, default_charset()); 
-    set_persist_maybe_null(1);
+    maybe_null= 1;
   }
 };
 
@@ -941,7 +1026,7 @@ public:
   {
      collation.set(system_charset_info);
      max_length= 64 * collation.collation->mbmaxlen; // should be enough
-     set_persist_maybe_null(0);
+     maybe_null= 0;
   };
   table_map not_null_tables() const { return 0; }
 };
@@ -956,9 +1041,29 @@ public:
   {
      collation.set(system_charset_info);
      max_length= 64 * collation.collation->mbmaxlen; // should be enough
-     set_persist_maybe_null(0);
+     maybe_null= 0;
   };
   table_map not_null_tables() const { return 0; }
+};
+
+class Item_func_weight_string :public Item_str_func
+{
+  String tmp_value;
+  uint flags;
+  uint nweights;
+  uint result_length;
+public:
+  Item_func_weight_string(Item *a, uint result_length_arg,
+                          uint nweights_arg, uint flags_arg)
+  :Item_str_func(a)
+  {
+    nweights= nweights_arg;
+    flags= flags_arg;
+    result_length= result_length_arg;
+  }
+  const char *func_name() const { return "weight_string"; }
+  String *val_str(String *);
+  void fix_length_and_dec();
 };
 
 class Item_func_crc32 :public Item_int_func
@@ -1002,8 +1107,7 @@ class Item_func_uncompress: public Item_str_func
   String buffer;
 public:
   Item_func_uncompress(Item *a): Item_str_func(a){}
-  void fix_length_and_dec()
-  { set_persist_maybe_null(1); max_length= MAX_BLOB_WIDTH; }
+  void fix_length_and_dec(){ maybe_null= 1; max_length= MAX_BLOB_WIDTH; }
   const char *func_name() const{return "uncompress";}
   String *val_str(String *) ZLIB_DEPENDED_FUNCTION
 };
@@ -1068,7 +1172,7 @@ public:
   String *val_str(String *);
   void fix_length_and_dec()
   {
-    set_persist_maybe_null(1);
+    maybe_null= 1;
     collation.set(&my_charset_bin);
     decimals= 0;
   }
@@ -1085,7 +1189,7 @@ public:
     :Item_str_func(str, num)
   {}
   void fix_length_and_dec()
-  { set_persist_maybe_null(1); max_length= MAX_BLOB_WIDTH; }
+  { maybe_null= 1;; max_length= MAX_BLOB_WIDTH; }
   /* Mark that collation can change between calls */
   bool dynamic_result() { return 1; }
 
@@ -1104,8 +1208,7 @@ class Item_func_dyncol_list: public Item_str_func
 {
 public:
   Item_func_dyncol_list(Item *str) :Item_str_func(str) {};
-  void fix_length_and_dec()
-  { set_persist_maybe_null(1); max_length= MAX_BLOB_WIDTH; };
+  void fix_length_and_dec() { maybe_null= 1; max_length= MAX_BLOB_WIDTH; };
   const char *func_name() const{ return "column_list"; }
   String *val_str(String *);
 };
