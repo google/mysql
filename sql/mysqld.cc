@@ -4115,21 +4115,24 @@ static void processlist_print()
   I_List_iterator<THD> it(threads);
   THD *tmp;
   IO_CACHE log_file;
+  const char *processlist= "last_processlist";
+  const char *tmp_processlist= "last_processlist.tmp";
 
   /*
-    TODO: handle swapping the next version without a period of
-    where there is no last_processlist file
+    Write to a temporary last processlist file first,
+    to avoid a period where there is no last_processlist file
+    or an unfinished last_processlist file .
   */
-  if ((fd= my_open("last_processlist", O_CREAT | O_WRONLY | O_TRUNC,
+  if ((fd= my_open(tmp_processlist, O_CREAT | O_WRONLY | O_TRUNC,
                    MYF(MY_WME | ME_WAITTANG))) < 0)
   {
-    sql_print_error("Failed to open last_processlist file, errno %d)",
+    sql_print_error("Failed to open file '%s' (errno %d)", tmp_processlist,
                     my_errno);
     goto err;
   }
   if (init_io_cache(&log_file, fd, IO_SIZE, WRITE_CACHE, 0L, 0, 0))
   {
-    sql_print_error("Failed to create a cache on last_processlist file");
+    sql_print_error("Failed to create a cache on file '%s'", tmp_processlist);
     goto err;
   }
 
@@ -4204,6 +4207,12 @@ err:
     my_close(fd, MYF(0));
     end_io_cache(&log_file);
   }
+
+  /*
+    Rename the temporary file for last processlist.
+    Note my_rename() deletes the target file before rename.
+  */
+  my_rename(tmp_processlist, processlist, MYF(MY_WME));
 }
 
 pthread_handler_t log_processlist_thread(void *arg)
