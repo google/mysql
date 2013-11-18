@@ -4232,8 +4232,7 @@ pthread_handler_t log_processlist_thread(void *arg)
 static void create_processlist_log_thread()
 {
   abort_log_processlist= false;
-  if (pthread_create(&processlist_thread, &connection_attrib,
-                     log_processlist_thread, 0))
+  if (pthread_create(&processlist_thread, NULL, log_processlist_thread, 0))
   {
     sql_print_warning("Can't create thread to log process list");
   }
