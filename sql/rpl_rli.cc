@@ -1325,7 +1325,7 @@ rpl_load_gtid_slave_state(THD *thd)
     goto end;
   array_inited= true;
 
-  mysql_reset_thd_for_next_command(thd, 0);
+  mysql_reset_thd_for_next_command(thd);
 
   tlist.init_one_table(STRING_WITH_LEN("mysql"),
                        rpl_gtid_slave_state_table_name.str,
@@ -1490,6 +1490,7 @@ rpl_group_info::rpl_group_info(Relay_log_info *rli_)
 rpl_group_info::~rpl_group_info()
 {
   free_annotate_event();
+  delete deferred_events;
   mysql_mutex_destroy(&sleep_lock);
   mysql_cond_destroy(&sleep_cond);
 }

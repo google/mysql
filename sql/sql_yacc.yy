@@ -955,10 +955,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %parse-param { THD *thd }
 %lex-param { THD *thd }
 /*
-  Currently there are 186 shift/reduce conflicts.
+  Currently there are 163 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 186
+%expect 163
 
 /*
    Comments for TOKENS.
@@ -5900,7 +5900,7 @@ key_def:
             if (add_create_index (Lex, $1, $3))
               MYSQL_YYABORT;
           }
-        | opt_constraint constraint_key_type opt_ident key_alg
+        | opt_constraint constraint_key_type opt_if_not_exists_ident key_alg
           '(' key_list ')'
           { Lex->option_list= NULL; }
           normal_key_options
@@ -14005,6 +14005,7 @@ keyword:
         | SAVEPOINT_SYM         {}
         | SECURITY_SYM          {}
         | SERVER_SYM            {}
+        | SHUTDOWN              {}
         | SIGNED_SYM            {}
         | SOCKET_SYM            {}
         | SLAVE                 {}
@@ -14275,7 +14276,6 @@ keyword_sp:
         | SESSION_SYM              {}
         | SIMPLE_SYM               {}
         | SHARE_SYM                {}
-        | SHUTDOWN                 {}
         | SLAVE_POS_SYM            {}
         | SLOW                     {}
         | SNAPSHOT_SYM             {}

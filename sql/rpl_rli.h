@@ -592,7 +592,10 @@ public:
   void cleanup_after_session()
   {
     if (deferred_events)
+    {
       delete deferred_events;
+      deferred_events= NULL;
+    }
   };
 
   /**
@@ -688,8 +691,7 @@ public:
 
   inline void inc_event_relay_log_pos()
   {
-    if (!is_parallel_exec ||
-        rli->event_relay_log_pos < future_event_relay_log_pos)
+    if (!is_parallel_exec)
       rli->event_relay_log_pos= future_event_relay_log_pos;
   }
 };

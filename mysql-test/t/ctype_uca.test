@@ -65,8 +65,11 @@ select group_concat(c1 order by c1) from t1 group by c1 collate utf8_spanish2_ci
 select group_concat(c1 order by c1) from t1 group by c1 collate utf8_roman_ci;
 select group_concat(c1 order by c1) from t1 group by c1 collate utf8_esperanto_ci;
 select group_concat(c1 order by c1) from t1 group by c1 collate utf8_hungarian_ci;
+select group_concat(c1 order by c1) from t1 group by c1 collate utf8_croatian_mysql561_ci;
 select group_concat(c1 order by c1) from t1 group by c1 collate utf8_croatian_ci;
 select group_concat(c1 order by c1) from t1 group by c1 collate utf8_german2_ci;
+select group_concat(c1 order by c1) from t1 group by c1 collate utf8_unicode_520_ci;
+select group_concat(c1 order by c1) from t1 group by c1 collate utf8_vietnamese_ci;
 
 ALTER TABLE t1 CONVERT TO CHARACTER SET ucs2 COLLATE ucs2_bin;
 SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_unicode_ci;
@@ -87,8 +90,11 @@ SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_spanish2_ci
 SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_roman_ci;
 SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_esperanto_ci;
 SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_hungarian_ci;
+SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_croatian_mysql561_ci;
 SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_croatian_ci;
 SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_german2_ci;
+SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_unicode_520_ci;
+SELECT GROUP_CONCAT(c1 ORDER BY c1) FROM t1 GROUP BY c1 COLLATE ucs2_vietnamese_ci;
 
 drop table t1;
 
@@ -485,7 +491,7 @@ SET collation_connection=ucs2_czech_ci;
 --source include/ctype_czech.inc
 --source include/ctype_like_ignorable.inc
 
-create table t1 (a int, c1 varchar(200) collate utf8_croatian_ci, key (c1));
+create table t1 (a int, c1 varchar(200) collate utf8_croatian_mysql561_ci, key (c1));
 insert into t1 values (1,'=> DZ'),(2,'=> Dz'),(3,'=> dz'),(4,'=> dZ');
 insert into t1 values (5,'=> DŽ'),(6,'=> Dž'),(7,'=> dž'),(8,'=> dŽ');
 insert into t1 values (9,'=> ǆ'),(10,'=> Ǆ');
@@ -549,6 +555,11 @@ DROP TABLE t1;
 SET collation_connection=utf8_german2_ci;
 --source include/ctype_german.inc
 
+--echo #
+--echo # WL#2673 Unicode Collation Algorithm new version
+--echo #
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_520_ci;
+--source include/ctype_unicode520.inc
 
 --echo #
 --echo # End of 5.6 tests

@@ -4582,8 +4582,9 @@ err_during_init:
   serial_rgi->thd= rli->sql_driver_thd= 0;
   mysql_mutex_lock(&LOCK_thread_count);
   THD_CHECK_SENTRY(thd);
-  delete thd;
+  thd->rgi_fake= thd->rgi_slave= NULL;
   delete serial_rgi;
+  delete thd;
   mysql_mutex_unlock(&LOCK_thread_count);
  /*
   Note: the order of the broadcast and unlock calls below (first broadcast, then unlock)
@@ -6037,6 +6038,7 @@ static Log_event* next_event(rpl_group_info *rgi, ulonglong *event_size)
       The other case is much simpler:
         We just have a read only log that nobody else will be updating.
     */
+    ulonglong old_pos;
     bool hot_log;
     if ((hot_log = (cur_log != &rli->cache_buf)))
     {
@@ -6088,12 +6090,12 @@ static Log_event* next_event(rpl_group_info *rgi, ulonglong *event_size)
       But if the relay log is created by new_file(): then the solution is:
       MYSQL_BIN_LOG::open() will write the buffered description event.
     */
+    old_pos= rli->event_relay_log_pos;
     if ((ev= Log_event::read_log_event(cur_log,0,
                                        rli->relay_log.description_event_for_exec,
                                        opt_slave_sql_verify_checksum)))
 
     {
-      ulonglong old_pos= rli->future_event_relay_log_pos;
       /*
         read it while we have a lock, to avoid a mutex lock in
         inc_event_relay_log_pos()

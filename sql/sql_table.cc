@@ -4579,7 +4579,7 @@ bool create_table_impl(THD *thd,
 
     if (!hton->discover_table_structure)
     {
-      my_error(ER_ILLEGAL_HA, MYF(0), hton_name(hton)->str, db, table_name);
+      my_error(ER_TABLE_MUST_HAVE_COLUMNS, MYF(0));
       goto err;
     }
 
@@ -5309,7 +5309,7 @@ handle_if_exists_options(THD *thd, TABLE *table, Alter_info *alter_info)
       for (f_ptr=table->field; *f_ptr; f_ptr++)
       {
         if (my_strcasecmp(system_charset_info,
-              sql_field->field_name, (*f_ptr)->field_name) == 0)
+              sql_field->change, (*f_ptr)->field_name) == 0)
         {
           break;
         }
@@ -5389,17 +5389,29 @@ handle_if_exists_options(THD *thd, TABLE *table, Alter_info *alter_info)
     Key *key;
     List_iterator<Key> key_it(alter_info->key_list);
     uint n_key;
+    const char *keyname;
     while ((key=key_it++))
     {
       if (!key->create_if_not_exists)
         continue;
+      /* If the name of the key is not specified,     */
+      /* let us check the name of the first key part. */
+      if ((keyname= key->name.str) == NULL)
+      {
+        List_iterator<Key_part_spec> part_it(key->columns);
+        Key_part_spec *kp;
+        if ((kp= part_it++))
+          keyname= kp->field_name.str;
+        if (keyname == NULL)
+          continue;
+      }
       for (n_key=0; n_key < table->s->keys; n_key++)
       {
         if (my_strcasecmp(system_charset_info,
-              key->name.str, table->key_info[n_key].name) == 0)
+              keyname, table->key_info[n_key].name) == 0)
         {
           push_warning_printf(thd, Sql_condition::WARN_LEVEL_NOTE,
-              ER_DUP_KEYNAME, ER(ER_DUP_KEYNAME), key->name.str);
+              ER_DUP_KEYNAME, ER(ER_DUP_KEYNAME), keyname);
           key_it.remove();
           if (key->type == Key::FOREIGN_KEY)
           {
@@ -6740,13 +6752,21 @@ mysql_prepare_alter_table(THD *thd, TABLE *table,
   List<Key_part_spec> key_parts;
   uint db_create_options= (table->s->db_create_options
                            & ~(HA_OPTION_PACK_RECORD));
-  uint used_fields= create_info->used_fields;
+  uint used_fields;
   KEY *key_info=table->key_info;
   bool rc= TRUE;
   bool modified_primary_key= FALSE;
   Create_field *def;
   Field **f_ptr,*field;
   DBUG_ENTER("mysql_prepare_alter_table");
+
+  /*
+    Merge incompatible changes flag in case of upgrade of a table from an
+    old MariaDB or MySQL version.  This ensures that we don't try to do an
+    online alter table if field packing or character set changes are required.
+  */
+  create_info->used_fields|= table->s->incompatible_version;
+  used_fields= create_info->used_fields;
 
   create_info->varchar= FALSE;
   /* Let new create options override the old ones */
@@ -7732,8 +7752,11 @@ bool mysql_alter_table(THD *thd,char *new_db, char *new_name,
 
   DEBUG_SYNC(thd, "alter_table_before_open_tables");
   uint tables_opened;
+
+  thd->open_options|= HA_OPEN_FOR_ALTER;
   bool error= open_tables(thd, &table_list, &tables_opened, 0,
                           &alter_prelocking_strategy);
+  thd->open_options&= ~HA_OPEN_FOR_ALTER;
 
   DEBUG_SYNC(thd, "alter_opened_table");
 
@@ -7924,7 +7947,8 @@ bool mysql_alter_table(THD *thd,char *new_db, char *new_name,
   if (alter_info->flags == 0)
   {
     my_snprintf(alter_ctx.tmp_name, sizeof(alter_ctx.tmp_name),
-                ER(ER_INSERT_INFO), 0L, 0L, 0L);
+                ER(ER_INSERT_INFO), 0L, 0L,
+                thd->get_stmt_da()->current_statement_warn_count());
     my_ok(thd, 0L, 0L, alter_ctx.tmp_name);
     DBUG_RETURN(false);
   }
