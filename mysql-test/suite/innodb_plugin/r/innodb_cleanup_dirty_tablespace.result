@@ -1,5 +1,23 @@
 DROP TABLE IF EXISTS t1;
 SET SQL_WARNINGS=1;
+#
+# Test restart after clean shutdown
+#
 create table t1 (a int) engine="innodb";
+List files initial
 t1.frm
 t1.ibd
+List files after restart
+show tables;
+Tables_in_test
+call mtr.add_suppression("Error trying to clean up dirty tablespace");
+#
+# Test restart after non-clean shutdown
+#
+create table t2 (a int) engine="innodb";
+List files initial
+t2.frm
+t2.ibd
+List files after restart
+show tables;
+Tables_in_test

@@ -3785,6 +3785,12 @@ fil_space_for_table_exists_in_mem(
 	}
 
 	if (space == NULL) {
+		if (namespace == NULL && srv_cleanup_dirty_tablespace) {
+			fil_cleanup_dirty_tablespace(name);
+		}
+		if (namespace == NULL && srv_supw_dirty_tablespace) {
+			goto error_exit_silent;
+		}
 		if (namespace == NULL) {
 			ut_print_timestamp(stderr);
 			fputs("  InnoDB: Error: table ", stderr);
@@ -3821,7 +3827,7 @@ error_exit:
 		fputs("InnoDB: Please refer to\n"
 		      "InnoDB: " REFMAN "innodb-troubleshooting-datadict.html\n"
 		      "InnoDB: for how to resolve the issue.\n", stderr);
-
+error_exit_silent:
 		mem_free(path);
 		mutex_exit(&fil_system->mutex);
 
