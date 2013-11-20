@@ -747,8 +747,14 @@ static char *mysql_home_ptr, *pidfile_name_ptr;
 static int defaults_argc;
 static char **defaults_argv;
 static char *opt_bin_logname;
+
+#ifndef EMBEDDED_LIBRARY
+static bool create_processlist_log_thread_called= false;
 static bool abort_log_processlist;
 static pthread_t processlist_thread;
+static pthread_mutex_t LOCK_processlist_thread;
+static pthread_cond_t COND_processlist_thread;
+#endif
 
 int orig_argc;
 char **orig_argv;
@@ -871,6 +877,10 @@ static ulong find_bit_type_or_exit(const char *x, TYPELIB *bit_lib,
                                    const char *option, int *error);
 static void clean_up(bool print_message);
 static int test_if_case_insensitive(const char *dir_name);
+
+#ifndef EMBEDDED_LIBRARY
+static void stop_processlist_log_thread();
+#endif
 
 #ifndef EMBEDDED_LIBRARY
 static void usage(void);
@@ -1324,8 +1334,9 @@ void clean_up(bool print_message)
 
   stop_handle_manager();
   release_ddl_log();
-  abort_log_processlist= true;
-  pthread_join(processlist_thread, NULL);
+#ifndef EMBEDDED_LIBRARY
+  stop_processlist_log_thread();
+#endif
 
   /*
     make sure that handlers finish up
@@ -4178,7 +4189,8 @@ static void processlist_print()
       my_b_printf(&log_file, "Command: %s \n", command_name[tmp->command].str);
 
       /* Time */
-      my_b_printf(&log_file, "Time: %d \n", tmp->start_time ? now - tmp->start_time : 0);
+      my_b_printf(&log_file, "Time: %d \n",
+                  tmp->start_time ? now - tmp->start_time : 0);
 
       /* State */
       my_b_printf(&log_file, "State: ");
@@ -4196,7 +4208,10 @@ static void processlist_print()
       my_b_printf(&log_file, "\n");
 
       /* Info */
+      /* Lock THD mutex that protects its data when looking at it. */
+      pthread_mutex_lock(&tmp->LOCK_thd_data);
       my_b_printf(&log_file, "Info: %s\n", (tmp->query()) ? tmp->query() : "");
+      pthread_mutex_unlock(&tmp->LOCK_thd_data);
     }
   }
   pthread_mutex_unlock(&LOCK_thread_count);
@@ -4219,24 +4234,59 @@ pthread_handler_t log_processlist_thread(void *arg)
 {
   for (;;)
   {
-    if (abort_log_processlist)
+    struct timespec abstime;
+    set_timespec(abstime, 10); // print every 10 seconds
+
+    pthread_mutex_lock(&LOCK_processlist_thread);
+    pthread_cond_timedwait(&COND_processlist_thread,
+                           &LOCK_processlist_thread,
+                           &abstime);
+    bool stop= abort_log_processlist;
+    pthread_mutex_unlock(&LOCK_processlist_thread);
+
+    if (stop)
     {
-        break;
+      break;
     }
     processlist_print();
-    sleep(10);
   }
   return 0;
 }
 
 static void create_processlist_log_thread()
 {
+  create_processlist_log_thread_called= true;
+  (void) pthread_mutex_init(&LOCK_processlist_thread,MY_MUTEX_INIT_SLOW);
+  (void) pthread_cond_init(&COND_processlist_thread, NULL);
+
   abort_log_processlist= false;
   if (pthread_create(&processlist_thread, NULL, log_processlist_thread, 0))
   {
+    // indicate that we can't join thread that was never created
+    abort_log_processlist= true;
     sql_print_warning("Can't create thread to log process list");
   }
 }
+
+static void stop_processlist_log_thread()
+{
+  if (!create_processlist_log_thread_called)
+    return;
+
+  pthread_mutex_lock(&LOCK_processlist_thread);
+  bool started= !abort_log_processlist;
+  abort_log_processlist= true;
+  pthread_cond_signal(&COND_processlist_thread);
+  pthread_mutex_unlock(&LOCK_processlist_thread);
+  if (started)
+  {
+    pthread_join(processlist_thread, NULL);
+  }
+
+  (void) pthread_mutex_destroy(&LOCK_processlist_thread);
+  (void) pthread_cond_destroy(&COND_processlist_thread);
+}
+
 #endif /* EMBEDDED_LIBRARY */
 
 
