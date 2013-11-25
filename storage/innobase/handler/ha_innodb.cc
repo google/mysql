@@ -17010,6 +17010,11 @@ static MYSQL_SYSVAR_UINT(encryption_rotation_iops, srv_n_fil_crypt_iops,
 			 innodb_encryption_rotation_iops_update,
 			 srv_n_fil_crypt_iops, 0, UINT_MAX32, 0);
 
+static MYSQL_SYSVAR_BOOL(encrypt_log, srv_encrypt_log,
+  PLUGIN_VAR_OPCMDARG | PLUGIN_VAR_READONLY,
+  "Enable redo log encryption/decryption.",
+  NULL, NULL, FALSE);
+
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(additional_mem_pool_size),
   MYSQL_SYSVAR(api_trx_level),
@@ -17178,6 +17183,7 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(encryption_threads),
   MYSQL_SYSVAR(encryption_rotate_key_age),
   MYSQL_SYSVAR(encryption_rotation_iops),
+  MYSQL_SYSVAR(encrypt_log),
   NULL
 };
 
