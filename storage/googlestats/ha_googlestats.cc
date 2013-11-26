@@ -56,13 +56,12 @@ ulonglong google_nonfetch = 0;
 ulonglong google_nonfetch_mics = 0;
 ulonglong google_nonfetch_mics_per = 0;
 
-char *googlestats_servers_tbl = NULL; // usually LocalStatsServers
-char *googlestats_version_tbl = NULL; // usually CommittedStatsVersions
+char *googlestats_servers_table = NULL; // usually LocalStatsServers
+char *googlestats_version_table = NULL; // usually CommittedStatsVersions
 
 int googlestats_timeout = 0;
 int googlestats_retry_interval = 0;
 int googlestats_log_level = 0;
-int googlestats_slow_threshold = 10000;
 
 // Count failed connection attempts. A request for a connection
 // for a user session may increment this 1 or more times.
@@ -159,7 +158,7 @@ ulong google_requests = 0;
 // The maximum size of a packet that the table handler will try to read
 // from a stats server. Packets larger than this will be rejected and
 // cause the query to fail. Set in mysqld.cc.
-int googlestats_max_packet = 0;
+int googlestats_max_packet_size = 0;
 
 // When TRUE, use a temp table to sort rows from a stats table. The alternative
 // is to sort the pair (rowid, sort_key) and then fetch rows from the stats
@@ -1460,11 +1459,11 @@ ha_googlestats::read_version_3_header(int32* packed_length,
                kWho, *bytes_for_rows, *unpacked_length);
     return GSS_ERR_BAD_HEADER_VALUES;
   }
-  if (*packed_length > googlestats_max_packet ||
-      *unpacked_length > googlestats_max_packet) {
+  if (*packed_length > googlestats_max_packet_size ||
+      *unpacked_length > googlestats_max_packet_size) {
     // TODO close the socket because data from it will not be read
     printError("%s: packet is too large, max(%d), packed(%d), unpacked(%d)",
-               kWho, googlestats_max_packet, *packed_length,
+               kWho, googlestats_max_packet_size, *packed_length,
                *unpacked_length);
     return GSS_ERR_BAD_HEADER_VALUES;
   }
@@ -1860,7 +1859,7 @@ ha_googlestats::server_scan_start(
   }
 
   // TODO send the new optional commands
-  //   'MAX_PACKET_SIZE=googlestats_max_packet'
+  //   'MAX_PACKET_SIZE=googlestats_max_packet_size'
   //   'LIMIT=X'
   std::string request;
   char numstr[21];
@@ -3524,11 +3523,11 @@ static struct st_mysql_storage_engine googlestats_storage_engine=
 { MYSQL_HANDLERTON_INTERFACE_VERSION };
 
 /* plugin options */
-static MYSQL_SYSVAR_STR(servers_table, googlestats_servers_tbl,
+static MYSQL_SYSVAR_STR(servers_table, googlestats_servers_table,
   PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
   "Table that contains stats servers configuration data", NULL, NULL, NULL);
 
-static MYSQL_SYSVAR_STR(version_table, googlestats_version_tbl,
+static MYSQL_SYSVAR_STR(version_table, googlestats_version_table,
   PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
   "Table that contains current version number", NULL, NULL, NULL);
 
@@ -3543,16 +3542,11 @@ static MYSQL_SYSVAR_INT(retry_interval, googlestats_retry_interval,
   NULL, NULL, 0, 0, 600, 0);
 
 static MYSQL_SYSVAR_INT(log_level, googlestats_log_level,
-  PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
+  PLUGIN_VAR_RQCMDARG,
   "Level of logging (0: none, 1: low, 2: medium, 3: high)",
   NULL, NULL, 0, 0, 3, 0);
 
-static MYSQL_SYSVAR_INT(slow_threshold, googlestats_slow_threshold,
-  PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
-  "Number of Fetch requests above which query will be logged in slow-query log",
-  NULL, NULL, 10000, 0, 1000000000, 0);
-
-static MYSQL_SYSVAR_INT(max_packet_size, googlestats_max_packet,
+static MYSQL_SYSVAR_INT(max_packet_size, googlestats_max_packet_size,
   PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_READONLY,
   "Maximum size of a packet accepted from a stats server",
   NULL, NULL, 8388608, 0, 1000000000, 0);
@@ -3591,7 +3585,6 @@ static struct st_mysql_sys_var* googlestats_system_variables[]= {
   MYSQL_SYSVAR(pushdown_max_in_size),
   MYSQL_SYSVAR(retry_interval),
   MYSQL_SYSVAR(servers_table),
-  MYSQL_SYSVAR(slow_threshold),
   MYSQL_SYSVAR(timeout),
   MYSQL_SYSVAR(version_table),
   MYSQL_SYSVAR(estimate_interval),

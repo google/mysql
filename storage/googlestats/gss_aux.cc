@@ -496,13 +496,13 @@ int StatsServerAux::getVersionNumber(THD* thd, TABLE_LIST* tables)
                                thd->query() ? thd->query() : "<no query>");
   }
 
-  if (!googlestats_version_tbl) {
+  if (!googlestats_version_table) {
     printError("getVersionNumber: googlestats_version_table is not set");
     DBUG_RETURN(-1);
   }
 
   // Open and lock the table that contains version numbers and hashes.
-  if (lockVersionTable(dbName, googlestats_version_tbl, &tbl, &lock)) {
+  if (lockVersionTable(dbName, googlestats_version_table, &tbl, &lock)) {
     DBUG_RETURN(-1);
   }
 

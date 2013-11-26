@@ -16,13 +16,13 @@ class StatsServerConnectState;       // gss_cache.h
 // Used for FLUSH STATS_SERVERS. Returns false on success.
 extern bool googlestats_reinit(THD*);
 
-extern char *googlestats_servers_tbl;
-extern char *googlestats_version_tbl;
-extern int googlestats_timeout, googlestats_retry_interval;
+extern char *googlestats_servers_table;
+extern char *googlestats_version_table;
+extern int googlestats_timeout;
+extern int googlestats_retry_interval;
 extern int googlestats_log_level;
-extern int googlestats_slow_threshold;
 extern my_bool buffer_table_sort;
-extern int googlestats_max_packet;
+extern int googlestats_max_packet_size;
 
 extern int get_versions_for_googlestats_tables(THD* thd, TABLE_LIST* tables);
 

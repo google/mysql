@@ -262,7 +262,7 @@ private:
                StatsServerConnectState* state,
                int* errorCode);
 
-  // Query googlestats_servers_tbl (LocalStatsServers), clear and
+  // Query googlestats_servers_table (LocalStatsServers), clear and
   // repopulate the server cache (tblMap, servers). mutex must no be locked
   // when this is called. Calls ::load and then ::initCache. Return true on
   // success. Does not change instance state on failure.
@@ -281,7 +281,7 @@ private:
   // LOCK_status.
   int _setStatus();
 
-  // Stores one row from googlestats_servers_tbl
+  // Stores one row from googlestats_servers_table
   struct ServerTblRecord {
     std::string serverName;
     std::string dbName;
@@ -295,7 +295,7 @@ private:
   };
   typedef std::vector<ServerTblRecord> ServerRecordVector;
 
-  // Scans googlestats_servers_tbl (LocalStatsServers) for the database dbName
+  // Scans googlestats_servers_table (LocalStatsServers) for the database dbName
   // and returns the results in serverRecords. Don't change instance state on
   // failure. Return 0 on success.
   int load(THD* thd, const char* dbName, ServerRecordVector* serverRecords);
@@ -380,7 +380,7 @@ private:
       const std::map<std::string, std::vector<std::string> >& qualNameToParts,
       std::vector<std::pair<TblMapKey, TableAtServer> >* insertItems);
 
-  // Confirms that the schema for googlestats_servers_tbl (LocalStatsServers)
+  // Confirms that the schema for googlestats_servers_table (LocalStatsServers)
   // is correct.
   int checkSchema(TABLE* tbl);
 

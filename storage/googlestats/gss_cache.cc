@@ -570,11 +570,11 @@ StatsServerCache::load(THD* thd,
 
   if (googlestats_log_level >= GsLogLevelMed) {
     StatsServerAux::printError("%s: loading %s for database %s",
-                               kWho, googlestats_servers_tbl, dbName);
+                               kWho, googlestats_servers_table, dbName);
   }
 
   // open table to start scan of stats servers config table
-  if (googlestats_servers_tbl == 0) {
+  if (googlestats_servers_table == 0) {
     StatsServerAux::printError("%s: googlestats_servers_table not set", kWho);
     return -1;
   }
@@ -587,8 +587,8 @@ StatsServerCache::load(THD* thd,
 
   TABLE_LIST table_list;
   memset(&table_list, 0, sizeof(table_list));
-  table_list.table_name = googlestats_servers_tbl;
-  table_list.alias = googlestats_servers_tbl;
+  table_list.table_name = googlestats_servers_table;
+  table_list.alias = googlestats_servers_table;
   table_list.db = const_cast<char*>(dbName);
   table_list.lock_type = TL_READ;
   TABLE_LIST* table_list_ptr = &table_list;
@@ -611,7 +611,7 @@ StatsServerCache::load(THD* thd,
   if ((lock = mysql_lock_tables(thd, &tbl, 1, 0, &need_reopen)) == 0 ||
       need_reopen) {
     StatsServerAux::printError("%s: can't lock table %s.%s", kWho,
-                               dbName, googlestats_servers_tbl);
+                               dbName, googlestats_servers_table);
     return -1;
   }
 
@@ -628,7 +628,7 @@ StatsServerCache::load(THD* thd,
   if (checkSchema(tbl)) {
     // doesn't look like we got the right table
     StatsServerAux::printError("%s: bad schema for %s.%s", kWho,
-                               dbName, googlestats_servers_tbl);
+                               dbName, googlestats_servers_table);
     result = -1;
     goto cleanup;
   }
