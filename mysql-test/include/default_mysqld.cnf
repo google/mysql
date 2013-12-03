@@ -119,6 +119,8 @@ loose-aria
 
 # enable encryption by default in mtr
 enable-example_key_management_plugin
+loose-encrypt-tmp-disk-tables=ON
+loose-aria-encrypt-tables=ON
 loose-innodb-encryption-threads=4
 # with example_key_management_plugin key-age is measured in seconds...
 loose-innodb-encryption-rotate-key-age=15

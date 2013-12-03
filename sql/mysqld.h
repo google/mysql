@@ -294,6 +294,8 @@ extern bool hide_sensitive_information;
 
 extern const char * const hidden_information;
 
+extern my_bool encrypt_tmp_disk_tables;
+
 #ifdef HAVE_REPLICATION
 extern my_bool rpl_crash_on_binlog_io_error;
 #endif

@@ -662,6 +662,8 @@ bool hide_sensitive_information;
 
 const char * const hidden_information= "(hidden)";
 
+my_bool encrypt_tmp_disk_tables= FALSE;
+
 /** name of reference on left expression in rewritten IN subquery */
 const char *in_left_expr_name= "<left expr>";
 /** name of additional condition */

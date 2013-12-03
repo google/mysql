@@ -5374,6 +5374,12 @@ static Sys_var_mybool Sys_pseudo_slave_mode(
        SESSION_ONLY(pseudo_slave_mode), NO_CMD_LINE, DEFAULT(FALSE),
        NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(check_pseudo_slave_mode));
 
+static Sys_var_mybool Sys_encrypt_tmp_disk_tables(
+       "encrypt_tmp_disk_tables",
+       "Encrypt tmp disk tables (created as part of query execution)",
+       GLOBAL_VAR(encrypt_tmp_disk_tables),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+
 #ifndef EMBEDDED_LIBRARY
 static Sys_var_charptr Sys_last_processlist_path(
        "last_processlist_file",

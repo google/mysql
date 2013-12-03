@@ -21,6 +21,7 @@
 */
 
 #include "maria_def.h"
+#include "ma_crypt.h"
 
 int maria_close(register MARIA_HA *info)
 {
@@ -236,6 +237,7 @@ int maria_close(register MARIA_HA *info)
   }
   if (share_can_be_freed)
   {
+    ma_crypt_free(share);
     (void) mysql_mutex_destroy(&share->intern_lock);
     (void) mysql_mutex_destroy(&share->close_lock);
     (void) mysql_cond_destroy(&share->key_del_cond);
