@@ -1,0 +1,6 @@
+--googlestats=ON
+--googlestats_servers_table=LocalStatsServers
+--googlestats_version_table=CommittedStatsVersions
+--googlestats_timeout=1
+--googlestats_retry_interval=20
+--googlestats_max_packet_size=16777216

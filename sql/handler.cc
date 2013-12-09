@@ -361,6 +361,8 @@ int ha_init_errors(void)
   SETMSG(HA_ERR_DISK_FULL,              ER_DEFAULT(ER_DISK_FULL));
   SETMSG(HA_ERR_FTS_TOO_MANY_WORDS_IN_PHRASE,  "Too many words in a FTS phrase or proximity search");
   SETMSG(HA_ERR_SQL_LOG_TXN,            ER_DEFAULT(ER_SQL_LOG_TXN));
+  SETMSG(HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE,
+         ER_DEFAULT(ER_NO_QUERY_GOOGLESTATS_ON_UPDATE));
 
   /* Register the error messages for use with my_error(). */
   return my_error_register(get_handler_errmsgs, HA_ERR_FIRST, HA_ERR_LAST);
@@ -3509,6 +3511,9 @@ void handler::print_error(int error, myf errflag)
     errflag|= ME_NOREFRESH;
     break;
   }
+  case HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE:
+    textno=ER_NO_QUERY_GOOGLESTATS_ON_UPDATE;
+    break;
   case HA_ERR_LOCK_WAIT_TIMEOUT:
     textno=ER_LOCK_WAIT_TIMEOUT;
     break;

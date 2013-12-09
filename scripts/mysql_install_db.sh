@@ -307,8 +307,9 @@ fill_help_tables="$pkgdatadir/fill_help_tables.sql"
 create_system_tables="$pkgdatadir/mysql_system_tables.sql"
 create_system_tables2="$pkgdatadir/mysql_performance_tables.sql"
 fill_system_tables="$pkgdatadir/mysql_system_tables_data.sql"
+create_stats_tables="$pkgdatadir/mysql_googlestats_tables.sql"
 
-for f in "$fill_help_tables" "$create_system_tables" "$create_system_tables2" "$fill_system_tables"
+for f in "$fill_help_tables" "$create_system_tables" "$create_system_tables2" "$fill_system_tables" "$create_stats_tables"
 do
   if test ! -f "$f"
   then
@@ -418,13 +419,14 @@ mysqld_install_cmd_line()
   "$mysqld_bootstrap" $defaults "$mysqld_opt" --bootstrap \
   "--basedir=$basedir" "--datadir=$ldata" --log-warnings=0 \
   --loose-skip-ndbcluster $args --max_allowed_packet=8M \
+  --loose-skip-googlestats \
   --net_buffer_length=16K
 }
 
 
 # Create the system and help tables by passing them to "mysqld --bootstrap"
 s_echo "Installing MariaDB/MySQL system tables in '$ldata' ..."
-if { echo "use mysql;"; cat "$create_system_tables" "$create_system_tables2" "$fill_system_tables"; } | eval "$filter_cmd_line" | mysqld_install_cmd_line > /dev/null
+if { echo "use mysql;"; cat "$create_system_tables" "$create_system_tables2" "$fill_system_tables" "$create_stats_tables"; } | eval "$filter_cmd_line" | mysqld_install_cmd_line > /dev/null
 then
   s_echo "OK"
 else

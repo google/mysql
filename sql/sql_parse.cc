@@ -103,6 +103,9 @@
 #include "../storage/maria/ha_maria.h"
 #endif
 
+// For googlestats_{set,show}_status
+#include "../storage/googlestats/googlestats_ext.h"
+
 /**
   @defgroup Runtime_Environment Runtime Environment
   @{
@@ -410,6 +413,7 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_SHOW_INDEX_STATS]=  CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_TABLES]=       (CF_STATUS_COMMAND | CF_SHOW_TABLE_COMMAND | CF_REEXECUTION_FRAGILE);
   sql_command_flags[SQLCOM_SHOW_TABLE_STATUS]= (CF_STATUS_COMMAND | CF_SHOW_TABLE_COMMAND | CF_REEXECUTION_FRAGILE);
+  sql_command_flags[SQLCOM_SHOW_STATSSERVERS_STATUS]= CF_STATUS_COMMAND;
 
 
   sql_command_flags[SQLCOM_CREATE_USER]=       CF_CHANGES_DATA;
@@ -2499,6 +2503,14 @@ mysql_execute_command(THD *thd)
   case SQLCOM_SHOW_STATUS:
   {
     execute_show_status(thd, all_tables);
+    break;
+  }
+  case SQLCOM_SHOW_STATSSERVERS_STATUS:
+  {
+    if (check_global_access(thd, SUPER_ACL | PROCESS_ACL))
+      goto error;
+    res= googlestats_show_status(thd, lex->verbose,
+                                 (lex->wild ? lex->wild->ptr() : NullS));
     break;
   }
   case SQLCOM_SHOW_EXPLAIN:

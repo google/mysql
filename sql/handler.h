@@ -248,6 +248,9 @@ enum enum_alter_inplace_result {
  */
 #define HA_CAN_FULLTEXT_EXT              (1LL << 44)
 
+/* Indicates no support for rnd_pos and force the new filesort */
+#define HA_NO_RND_POS          (1LL << 43)
+
 /*
   Storage engine supports table export using the
   FLUSH TABLE <table_list> FOR EXPORT statement
@@ -282,6 +285,9 @@ enum enum_alter_inplace_result {
   you also get the row data without any additional disk reads.
 */
 #define HA_CLUSTERED_INDEX      512
+
+/* Does not support index_last using a prefix of the key */
+#define HA_NO_READ_PREFIX_LAST  1024
 
 /*
   bits in alter_table_flags:
@@ -448,7 +454,7 @@ enum legacy_db_type
     migration of all existing data has occurred, whether GoogleStats is
     compiled into any given build or not.
   */
-  /* DB_TYPE_GOOGLESTATS=20, */
+  DB_TYPE_GOOGLESTATS=20,
   DB_TYPE_PARTITION_DB=21,              /* Upstream: 20 */
   DB_TYPE_BINLOG=22,                    /* Upstream: 21 */
   DB_TYPE_PBXT=24,                      /* Upstream: 23 */

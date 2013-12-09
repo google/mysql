@@ -28,6 +28,9 @@
 #include "debug_sync.h"
 #include "rpl_mi.h"
 
+// For googlestats_reinit
+#include "../storage/googlestats/googlestats_ext.h"
+
 static void disable_checkpoints(THD *thd);
 
 /**
@@ -375,6 +378,9 @@ bool reload_acl_and_cache(THD *thd, unsigned long long options,
    mysql_mutex_unlock(&LOCK_active_mi);
  }
 #endif
+ if (options & REFRESH_GOOGLESTATS)
+   if (googlestats_reinit(thd))
+     result= 1;
  if (options & REFRESH_USER_RESOURCES)
    reset_mqh((LEX_USER *) NULL, 0);             /* purecov: inspected */
   if (options & REFRESH_TABLE_STATS)

@@ -74,6 +74,18 @@ typedef struct system_status_var STATUS_VAR;
 #define IS_FILES_STATUS              36
 #define IS_FILES_EXTRA               37
 
+enum find_files_result {
+  FIND_FILES_OK,
+  FIND_FILES_OOM,
+  FIND_FILES_DIR
+};
+
+find_files_result find_files(THD *thd,
+                             Dynamic_array<LEX_STRING*> *files,
+                             LEX_STRING *db,
+                             const char *path,
+                             const LEX_STRING *wild);
+
 int store_create_info(THD *thd, TABLE_LIST *table_list, String *packet,
                       HA_CREATE_INFO  *create_info_arg, bool show_database,
                       bool create_or_replace);

@@ -15,7 +15,7 @@ Build prerequisites
 -------------------
 
 To build MySQL, you need to install the following packages:
-  $ sudo apt-get install automake libtool cmake bison
+  $ sudo apt-get install automake libtool cmake bison liblzo2-dev
 
 
 Building Debian packages

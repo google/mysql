@@ -7118,3 +7118,5 @@ ER_OVER_LIMIT_TMP_DISK_SPACE
         eng "Query has consumed more temporary disk space than allowed by limit_tmp_disk_space"
 ER_SQL_LOG_TXN
         eng "SQL transaction logging failed"
+ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+        eng "Cannot query a GoogleStats table during insert, update, delete, replace"

@@ -349,7 +349,11 @@ instance_mysqld_start() {
     --character-sets-dir=${BIN_DIR}/sql/share/charsets \
     --sock=${INSTANCE_FULL_SOCK} \
     --port=${INSTANCE_PORT} \
-    --server_id=${INSTANCE_SERVER_ID}"
+    --server_id=${INSTANCE_SERVER_ID} \
+    --googlestats=ON \
+    --googlestats_servers_table=LocalStatsServers \
+    --googlestats_version_table=CommittedStatsVersions \
+    --join_cache_level=8"
 
   if [[ ! -a ${INSTANCE_DATADIR}/mysql/user.frm ]]
   then

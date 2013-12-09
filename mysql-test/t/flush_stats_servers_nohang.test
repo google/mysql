@@ -1,0 +1,7 @@
+# This will generate some noise in mysql.err. This is expected.
+call mtr.add_suppression("StatsServerCache: not initialized!");
+
+# Test FLUSH STATS_SERVERS. This should error, not hang.
+# should fail, but not hang.
+--error 1105
+FLUSH STATS_SERVERS;

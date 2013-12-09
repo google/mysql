@@ -59,6 +59,9 @@
 #include "debug_sync.h"
 #include "keycaches.h"
 #include "transaction.h"
+/* For set_google_stats() */
+#include "../storage/googlestats/googlestats_ext.h"
+#include "../storage/googlestats/status_vars.h"
 
 #ifdef WITH_PARTITION_STORAGE_ENGINE
 #include "ha_partition.h"
@@ -158,6 +161,40 @@ typedef struct st_lookup_field_values
 
 
 bool get_lookup_field_values(THD *, COND *, TABLE_LIST *, LOOKUP_FIELD_VALUES *);
+
+/**
+  Prepare GoogleStats status variables.
+
+  Synthesizes two variables ({non,}fetch_mics_per) and calls into
+  the GoogleStats table handler to do the same for its own internal
+  variables.
+*/
+static void set_google_stats()
+{
+  mysql_mutex_assert_owner(&LOCK_status);
+  if (google_fetch)
+  {
+    google_fetch_mics_per=
+        (ulonglong) ((double)google_fetch_mics / (double) google_fetch);
+  }
+  else
+  {
+    google_fetch_mics_per= 0;
+  }
+
+  if (google_nonfetch)
+  {
+    google_nonfetch_mics_per=
+        (ulonglong) ((double)google_nonfetch_mics / (double) google_nonfetch);
+  }
+  else
+  {
+    google_nonfetch_mics_per= 0;
+  }
+
+  // Export more GoogleStats status variables.
+  googlestats_set_status();
+}
 
 /***************************************************************************
 ** List all table types supported
@@ -787,12 +824,6 @@ db_name_is_in_ignore_db_dirs_list(const char *directory)
   return my_hash_search(&ignore_db_dirs_hash, (uchar *) buff, buff_len)!=NULL;
 }
 
-enum find_files_result {
-  FIND_FILES_OK,
-  FIND_FILES_OOM,
-  FIND_FILES_DIR
-};
-
 /*
   find_files() - find files in a given directory.
 
@@ -812,7 +843,7 @@ enum find_files_result {
 */
 
 
-static find_files_result
+find_files_result
 find_files(THD *thd, Dynamic_array<LEX_STRING*> *files, LEX_STRING *db,
            const char *path, const LEX_STRING *wild)
 {
@@ -1043,7 +1074,8 @@ mysqld_show_create(THD *thd, TABLE_LIST *table_list)
     thd->push_internal_handler(&view_error_suppressor);
     bool open_error=
       open_tables(thd, &table_list, &counter,
-                  MYSQL_OPEN_FORCE_SHARED_HIGH_PRIO_MDL) ||
+                  MYSQL_OPEN_FORCE_SHARED_HIGH_PRIO_MDL |
+                  MYSQL_OPEN_IGNORE_CSV) ||
                   mysql_handle_derived(thd->lex, DT_PREPARE);
     thd->pop_internal_handler();
     if (open_error && (thd->killed || thd->is_error()))
@@ -4258,6 +4290,7 @@ fill_schema_table_by_open(THD *thd, bool is_show_fields_or_keys,
            open_normal_and_derived_tables(thd, table_list,
                                           (MYSQL_OPEN_IGNORE_FLUSH |
                                            MYSQL_OPEN_FORCE_SHARED_HIGH_PRIO_MDL |
+                                           MYSQL_OPEN_IGNORE_CSV |
                                            (can_deadlock ?
                                             MYSQL_OPEN_FAIL_ON_MDL_CONFLICT : 0)),
                                           DT_PREPARE | DT_CREATE));
@@ -7372,7 +7405,10 @@ int fill_status(THD *thd, TABLE_LIST *tables, COND *cond)
 
   mysql_mutex_lock(&LOCK_status);
   if (option_type == OPT_GLOBAL)
+  {
     calc_sum_of_all_status(&tmp);
+    set_google_stats();
+  }
   res= show_status_array(thd, wild,
                          (SHOW_VAR *)all_status_vars.buffer,
                          option_type, tmp1, "", tables->table,

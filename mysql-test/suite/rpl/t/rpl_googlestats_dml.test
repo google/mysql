@@ -1,0 +1,160 @@
+# Confirm that DML statements cannot query a GoogleStats table when
+# googlestats_query_on_update=OFF. This test will fail if binlogging
+# is turned off.
+
+-- source include/have_innodb.inc
+-- source include/master-slave.inc
+
+# Use instead of SHOW ENGINES so we can filter and get a consistent ordering.
+select * from information_schema.engines
+where engine in ('GoogleStats', 'InnoDB', 'MyISAM')
+order by engine;
+
+show variables like 'log_bin';
+show variables like 'googlestats_query_on_update';
+
+create database google;
+use google;
+create table gs (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+create table mi (a int not null, b int not null, primary key (a)) engine=MyISAM;
+insert into mi values (0,0);
+
+CREATE TABLE `CommittedStatsVersions` (
+  `TableName` varchar(128) NOT NULL default '',
+  `LastVersion` int(11) NOT NULL default '0',
+  `CumulativeVersionHash` bigint(20) NOT NULL default '0',
+  PRIMARY KEY  (`TableName`)
+) ENGINE=InnoDB;
+
+CREATE TABLE `LocalStatsServers` (
+  `Host` varchar(128) NOT NULL default '',
+  `Port` int(11) NOT NULL default '0',
+  `TableName` varchar(128) NOT NULL default '',
+  `Tier` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`TableName`,`Host`,`Port`)
+) ENGINE=InnoDB;
+
+insert into LocalStatsServers values ('localhost', 1111, 'gs', 1);
+insert into CommittedStatsVersions values ('gs', 2, 1111);
+
+# Confirm that INSERT SELECT fails when googlestats_query_on_update
+# is set at the session or global level.
+
+set session googlestats_query_on_update = 0;
+show session variables like 'googlestats_query_on_update';
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+insert into mi select * from gs;
+
+set session googlestats_query_on_update = 1;
+show session variables like 'googlestats_query_on_update';
+--error ER_GET_ERRMSG
+insert into mi select * from gs;
+flush stats_servers;
+
+set session googlestats_query_on_update = 0;
+set global googlestats_query_on_update = 1;
+connect (conn, localhost, root, , google);
+
+show session variables like 'googlestats_query_on_update';
+--error ER_GET_ERRMSG
+insert into mi select * from gs;
+flush stats_servers;
+
+connection default;
+disconnect conn;
+set global googlestats_query_on_update = 0;
+connect (conn, localhost, root, , google);
+
+show session variables like 'googlestats_query_on_update';
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+insert into mi select * from gs;
+
+connection default;
+disconnect conn;
+use google;
+
+# Now check that other DML statements fail
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+replace into mi select * from gs;
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+create table mi2 as select * from gs;
+
+create table gs2 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+delete mi from mi, gs where mi.a = gs.a;
+
+# Now check that the DML statements do not fail when
+# googlestats_query_on_update = ON
+
+set session googlestats_query_on_update = 1;
+--error ER_GET_ERRMSG
+replace into mi select * from gs;
+
+--error ER_GET_ERRMSG
+create table mi2 as select * from gs;
+
+create table gs3 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+
+--error ER_GET_ERRMSG
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+
+--error ER_GET_ERRMSG
+delete mi from mi, gs where mi.a = gs.a;
+
+set session googlestats_query_on_update = 0;
+
+sync_slave_with_master;
+use google;
+set session googlestats_query_on_update = 0;
+show variables like 'log_bin';
+show variables like 'log_slave_updates';
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+insert into mi select * from gs;
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+replace into mi select * from gs;
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+create table mi2 as select * from gs;
+
+create table gs4 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+
+--error ER_NO_QUERY_GOOGLESTATS_ON_UPDATE
+delete mi from mi, gs where mi.a = gs.a;
+
+# Now check that the DML statements fail when run on a slave
+# because a StatsServer is not up
+
+set session googlestats_query_on_update = 1;
+
+--error ER_GET_ERRMSG
+insert into mi select * from gs;
+
+--error ER_GET_ERRMSG
+replace into mi select * from gs;
+
+--error ER_GET_ERRMSG
+create table mi2 as select * from gs;
+
+create table gs5 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+
+--error ER_GET_ERRMSG
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+
+--error ER_GET_ERRMSG
+delete mi from mi, gs where mi.a = gs.a;
+
+connection default;
+drop database google;
+
+-- source include/rpl_end.inc

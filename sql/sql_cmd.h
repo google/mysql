@@ -95,6 +95,9 @@ enum enum_sql_command {
   SQLCOM_SHOW_EXPLAIN, SQLCOM_SHUTDOWN,
   SQLCOM_CREATE_ROLE, SQLCOM_DROP_ROLE, SQLCOM_GRANT_ROLE, SQLCOM_REVOKE_ROLE,
 
+  /* GoogleStats */
+  SQLCOM_SHOW_STATSSERVERS_STATUS,
+
   /*
     When a command is added here, be sure it's also added in mysqld.cc
     in "struct show_var_st status_vars[]= {" ...

@@ -95,7 +95,8 @@ static const char *handler_error_messages[]=
   "Disk full",
   "Incompatible key or row definition between the MariaDB .frm file and the information in the storage engine. You have to dump and restore the table to fix this",
   "Too many words in a FTS phrase or proximity search",
-  "SQL transaction logging failed"
+  "SQL transaction logging failed",
+  "Cannot query a GoogleStats table during insert, update, delete, replace"
 };
 
 #endif /* MYSYS_MY_HANDLER_ERRORS_INCLUDED */

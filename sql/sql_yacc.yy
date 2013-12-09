@@ -991,6 +991,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
    INTERNAL   : Not a real token, lex optimization
    OPERATOR   : SQL operator
    FUTURE-USE : Reserved for future use
+   GOOGLE     : Google-specific.
 
    This makes the code grep-able, and helps maintenance.
 */
@@ -1206,6 +1207,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  GET_FORMAT                    /* MYSQL-FUNC */
 %token  GET_SYM                       /* SQL-2003-R */
 %token  GLOBAL_SYM                    /* SQL-2003-R */
+%token  GOOGLESTATS_SYM               /* GOOGLE */
 %token  GRANT                         /* SQL-2003-R */
 %token  GRANTS
 %token  GROUP_SYM                     /* SQL-2003-R */
@@ -1528,6 +1530,8 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  STATS_AUTO_RECALC_SYM
 %token  STATS_PERSISTENT_SYM
 %token  STATS_SAMPLE_PAGES_SYM
+%token  STATS_SERVER_SYM              /* GOOGLE */
+%token  STATS_SERVERS_SYM             /* GOOGLE */
 %token  STATUS_SYM
 %token  STDDEV_SAMP_SYM               /* SQL-2003-N */
 %token  STD_SYM
@@ -12568,6 +12572,8 @@ show_param:
             if (prepare_schema_table(thd, lex, NULL, SCH_PROFILES) != 0)
               YYABORT;
           }
+        | opt_changed STATS_SERVER_SYM STATUS_SYM wild_and_where
+          { Lex->sql_command = SQLCOM_SHOW_STATSSERVERS_STATUS; }
         | opt_var_type STATUS_SYM wild_and_where
           {
             LEX *lex= Lex;
@@ -12772,6 +12778,11 @@ opt_full:
         | FULL        { Lex->verbose=1; }
         ;
 
+opt_changed:
+          /* empty */ { Lex->verbose=1; }
+        | CHANGED     { Lex->verbose=0; }
+        ;
+
 from_or_in:
           FROM
         | IN_SYM
@@ -12966,6 +12977,8 @@ flush_option:
           }
         | STATUS_SYM
           { Lex->type|= REFRESH_STATUS; }
+        | STATS_SERVERS_SYM
+          { Lex->type|= REFRESH_GOOGLESTATS; }
         | SLAVE optional_connection_name 
           { 
             LEX *lex= Lex;
@@ -14143,6 +14156,7 @@ keyword:
         | EXECUTE_SYM           {}
         | FLUSH_SYM             {}
         | GET_SYM               {}
+        | GOOGLESTATS_SYM       {}
         | HANDLER_SYM           {}
         | HELP_SYM              {}
         | HOST_SYM              {}

@@ -58,6 +58,10 @@
 #include "datadict.h"   // dd_frm_is_view()
 #include "sql_hset.h"   // Hash_set
 #include "rpl_rli.h"   // rpl_group_info
+
+// For get_versions_for_googlestats_tables().
+#include "../storage/googlestats/googlestats_ext.h"
+
 #ifdef  __WIN__
 #include <io.h>
 #endif
@@ -4588,6 +4592,17 @@ restart:
 err:
   THD_STAGE_INFO(thd, stage_after_opening_tables);
   free_root(&new_frm_mem, MYF(0));              // Free pre-alloced block
+
+  // GoogleStats addition. Open and populate stats table versions.
+  if (!error && !(flags & MYSQL_OPEN_IGNORE_CSV)) {
+    const char* info= thd->proc_info;
+    thd_proc_info(thd, "Get GoogleStats version number");
+    error= get_versions_for_googlestats_tables(thd, *start);
+    thd_proc_info(thd, info);
+    if (error) {
+      my_message(ER_UNKNOWN_ERROR, "Can't read GoogleStats version.", MYF(0));
+    }
+  }
 
   if (error && *table_to_open)
   {

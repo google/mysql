@@ -1,0 +1,116 @@
+include/master-slave.inc
+[connection master]
+select * from information_schema.engines
+where engine in ('GoogleStats', 'InnoDB', 'MyISAM')
+order by engine;
+ENGINE	SUPPORT	COMMENT	TRANSACTIONS	XA	SAVEPOINTS
+GoogleStats	YES	Supports Stats Server tables	NO	NO	NO
+InnoDB	YES	Supports transactions, row-level locking, and foreign keys	YES	YES	YES
+MyISAM	DEFAULT	MyISAM storage engine	NO	NO	NO
+show variables like 'log_bin';
+Variable_name	Value
+log_bin	ON
+show variables like 'googlestats_query_on_update';
+Variable_name	Value
+googlestats_query_on_update	OFF
+create database google;
+use google;
+create table gs (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+create table mi (a int not null, b int not null, primary key (a)) engine=MyISAM;
+insert into mi values (0,0);
+CREATE TABLE `CommittedStatsVersions` (
+`TableName` varchar(128) NOT NULL default '',
+`LastVersion` int(11) NOT NULL default '0',
+`CumulativeVersionHash` bigint(20) NOT NULL default '0',
+PRIMARY KEY  (`TableName`)
+) ENGINE=InnoDB;
+CREATE TABLE `LocalStatsServers` (
+`Host` varchar(128) NOT NULL default '',
+`Port` int(11) NOT NULL default '0',
+`TableName` varchar(128) NOT NULL default '',
+`Tier` int(11) NOT NULL default '0',
+PRIMARY KEY  (`TableName`,`Host`,`Port`)
+) ENGINE=InnoDB;
+insert into LocalStatsServers values ('localhost', 1111, 'gs', 1);
+insert into CommittedStatsVersions values ('gs', 2, 1111);
+set session googlestats_query_on_update = 0;
+show session variables like 'googlestats_query_on_update';
+Variable_name	Value
+googlestats_query_on_update	OFF
+insert into mi select * from gs;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+set session googlestats_query_on_update = 1;
+show session variables like 'googlestats_query_on_update';
+Variable_name	Value
+googlestats_query_on_update	ON
+insert into mi select * from gs;
+ERROR HY000: Got error 318 'No stats-servers exist for this table.  Check LocalStatsServers table.' from GoogleStats
+flush stats_servers;
+set session googlestats_query_on_update = 0;
+set global googlestats_query_on_update = 1;
+show session variables like 'googlestats_query_on_update';
+Variable_name	Value
+googlestats_query_on_update	ON
+insert into mi select * from gs;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+flush stats_servers;
+set global googlestats_query_on_update = 0;
+show session variables like 'googlestats_query_on_update';
+Variable_name	Value
+googlestats_query_on_update	OFF
+insert into mi select * from gs;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+use google;
+replace into mi select * from gs;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+create table mi2 as select * from gs;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+create table gs2 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+delete mi from mi, gs where mi.a = gs.a;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+set session googlestats_query_on_update = 1;
+replace into mi select * from gs;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+create table mi2 as select * from gs;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+create table gs3 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+delete mi from mi, gs where mi.a = gs.a;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+set session googlestats_query_on_update = 0;
+use google;
+set session googlestats_query_on_update = 0;
+show variables like 'log_bin';
+Variable_name	Value
+log_bin	ON
+show variables like 'log_slave_updates';
+Variable_name	Value
+log_slave_updates	ON
+insert into mi select * from gs;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+replace into mi select * from gs;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+create table mi2 as select * from gs;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+create table gs4 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+delete mi from mi, gs where mi.a = gs.a;
+ERROR HY000: Cannot query a GoogleStats table during insert, update, delete, replace
+set session googlestats_query_on_update = 1;
+insert into mi select * from gs;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+replace into mi select * from gs;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+create table mi2 as select * from gs;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+create table gs5 (a int not null, b int not null, primary key (a)) engine=GoogleStats;
+update mi, gs set mi.a = 2 where mi.b = gs.b;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+delete mi from mi, gs where mi.a = gs.a;
+ERROR HY000: Got error 316 'Could not connect to any stats-server for this table.' from GoogleStats
+drop database google;
+include/rpl_end.inc

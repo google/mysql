@@ -503,7 +503,8 @@ enum ha_base_keytype {
 #define HA_ERR_INCOMPATIBLE_DEFINITION 190
 #define HA_ERR_FTS_TOO_MANY_WORDS_IN_PHRASE 191 /* Too many words in a phrase */
 #define HA_ERR_SQL_LOG_TXN        192    /* Failed to log an SQL statement during TXN. */
-#define HA_ERR_LAST               192    /* Copy of last error nr */
+#define HA_ERR_NO_QUERY_GOOGLESTATS_ON_UPDATE 193
+#define HA_ERR_LAST               193    /* Copy of last error nr */
 
 /* Number of different errors */
 #define HA_ERR_ERRORS            (HA_ERR_LAST - HA_ERR_FIRST + 1)
