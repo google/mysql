@@ -11313,6 +11313,7 @@ ha_innobase::info_low(
 			stats.delete_length = 0;
 		} else {
 			ullint	avail_space;
+			ulint	space_size;
 
 			avail_space = fsp_get_available_space_in_free_extents(
 				ib_table->space);
@@ -11338,6 +11339,9 @@ ha_innobase::info_low(
 			} else {
 				stats.delete_length = avail_space * 1024;
 			}
+
+			space_size = fil_space_get_size(ib_table->space);
+			stats.max_data_file_length = space_size * page_size;
 		}
 
 		stats.check_time = 0;

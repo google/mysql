@@ -18,10 +18,9 @@ ORDER BY index_name, seq_in_index;
 seq_in_index	1
 column_name	a
 cardinality	0
-SELECT table_rows, avg_row_length, max_data_length, index_length
+SELECT table_rows, avg_row_length, index_length
 FROM information_schema.tables WHERE table_name = 'test_ps_fetch_nonexistent';
 table_rows	0
 avg_row_length	0
-max_data_length	0
 index_length	0
 DROP TABLE test_ps_fetch_nonexistent;
