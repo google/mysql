@@ -466,6 +466,8 @@ Id	User	Host	db	Command	Time	State	Info
 #	root	#	test	Sleep	#		NULL
 #	root	#	test	Query	#	Waiting to send binlog to semi-sync slave.	insert into t1 values (NULL)
 kill id;
+# Wait for INSERT thread to actually disappear (KILL closes connection
+# before thread actually finishes its processing).
 show processlist;
 Id	User	Host	db	Command	Time	State	Info
 #	root	#	test	Sleep	#		NULL
@@ -473,7 +475,7 @@ Id	User	Host	db	Command	Time	State	Info
 #	root	#	test	Sleep	#		NULL
 #	root	#	test	Query	#	NULL	show processlist
 #	root	#	test	Sleep	#		NULL
-ERROR HY000: Killed while waiting for replication semi-sync ack.
+ERROR HY000: Lost connection to MySQL server during query
 show status like 'Rpl_semi_sync_status';
 Variable_name	Value
 Rpl_semi_sync_status	1

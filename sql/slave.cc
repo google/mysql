@@ -1079,8 +1079,9 @@ static int get_master_version_and_clock(MYSQL* mysql, Master_info* mi)
   }
   else if (is_network_error(mysql_errno(mysql)))
   {
-    mi->report(WARNING_LEVEL, mysql_errno(mysql),
-               "Get master clock failed with error: %s", mysql_error(mysql));
+    if (!check_io_slave_killed(mi->io_thd, mi, NULL))
+      mi->report(WARNING_LEVEL, mysql_errno(mysql),
+                 "Get master clock failed with error: %s", mysql_error(mysql));
     goto network_err;
   }
   else 
@@ -1139,8 +1140,9 @@ not always make sense; please check the manual before using it).";
   {
     if (is_network_error(mysql_errno(mysql)))
     {
-      mi->report(WARNING_LEVEL, mysql_errno(mysql),
-                 "Get master SERVER_ID failed with error: %s", mysql_error(mysql));
+      if (!check_io_slave_killed(mi->io_thd, mi, NULL))
+        mi->report(WARNING_LEVEL, mysql_errno(mysql),
+                   "Get master SERVER_ID failed with error: %s", mysql_error(mysql));
       goto network_err;
     }
     /* Fatal error */

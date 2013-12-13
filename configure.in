@@ -24,6 +24,9 @@ AC_PROG_LIBTOOL
 
 AM_CONFIG_HEADER([include/my_config.h])
 
+AC_DEFINE([SIGNAL_WITH_VIO_CLOSE], [1],
+          [Close socket when killing connection])
+
 # Request support for automake silent-rules if available.
 # Default to verbose output. One can use the configure-time
 # option --enable-silent-rules or make V=0 to activate
