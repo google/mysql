@@ -7,3 +7,123 @@ GTID_CURRENT_POS
 SELECT @@gtid_current_pos;
 SELECT @@session.gtid_current_pos;
 ERROR HY000: Variable 'gtid_current_pos' is a GLOBAL variable
+#
+# Test that gtid_current_pos always has values with maximum seq_no from
+# each domain.
+#
+# Simple case of binlog_state and slave_pos having only one server_id.
+RESET MASTER;
+SET GLOBAL gtid_binlog_state= '0-1-50';
+SET GLOBAL gtid_slave_pos= '0-1-20';
+Warnings:
+Warning	1947	Specified GTID 0-1-20 conflicts with the binary log which contains a more recent GTID 0-1-50. If MASTER_GTID_POS=CURRENT_POS is used, the binlog position will override the new value of @@gtid_slave_pos.
+SELECT @@global.gtid_current_pos as should_be_0_1_50;
+should_be_0_1_50
+0-1-50
+SET GLOBAL gtid_slave_pos= '0-1-60';
+SELECT @@global.gtid_current_pos as should_be_0_1_60;
+should_be_0_1_60
+0-1-60
+SET GLOBAL gtid_slave_pos= '0-2-20';
+Warnings:
+Warning	1947	Specified GTID 0-2-20 conflicts with the binary log which contains a more recent GTID 0-1-50. If MASTER_GTID_POS=CURRENT_POS is used, the binlog position will override the new value of @@gtid_slave_pos.
+SELECT @@global.gtid_current_pos as should_be_0_1_50;
+should_be_0_1_50
+0-1-50
+SET GLOBAL gtid_slave_pos= '0-2-60';
+SELECT @@global.gtid_current_pos as should_be_0_2_60;
+should_be_0_2_60
+0-2-60
+# Simple case with multiple domains
+RESET MASTER;
+SET GLOBAL gtid_binlog_state= '0-1-50,1-2-50';
+SET GLOBAL gtid_slave_pos= '0-1-20,1-2-60';
+Warnings:
+Warning	1947	Specified GTID 0-1-20 conflicts with the binary log which contains a more recent GTID 0-1-50. If MASTER_GTID_POS=CURRENT_POS is used, the binlog position will override the new value of @@gtid_slave_pos.
+SELECT @@global.gtid_current_pos as should_be_50_and_60;
+should_be_50_and_60
+1-2-60,0-1-50
+SET GLOBAL gtid_slave_pos= '0-1-60,1-2-20';
+SELECT @@global.gtid_current_pos as should_be_60_and_50;
+should_be_60_and_50
+1-2-50,0-1-60
+SET GLOBAL gtid_slave_pos= '0-10-20,1-20-60';
+Warnings:
+Warning	1947	Specified GTID 0-10-20 conflicts with the binary log which contains a more recent GTID 0-1-50. If MASTER_GTID_POS=CURRENT_POS is used, the binlog position will override the new value of @@gtid_slave_pos.
+SELECT @@global.gtid_current_pos as should_be_50_and_60;
+should_be_50_and_60
+1-20-60,0-1-50
+SET GLOBAL gtid_slave_pos= '0-10-60,1-20-20';
+SELECT @@global.gtid_current_pos as should_be_60_and_50;
+should_be_60_and_50
+1-2-50,0-10-60
+# The case when binlog_state has several server ids.
+RESET MASTER;
+SET GLOBAL gtid_binlog_state= '0-1-50,0-2-100';
+SET GLOBAL gtid_slave_pos= '0-1-20';
+SELECT @@global.gtid_current_pos as should_be_0_2_100;
+should_be_0_2_100
+0-2-100
+SET GLOBAL gtid_slave_pos= '0-2-20';
+SELECT @@global.gtid_current_pos as should_be_0_2_100;
+should_be_0_2_100
+0-2-100
+SET GLOBAL gtid_slave_pos= '0-2-60';
+SELECT @@global.gtid_current_pos as should_be_0_2_100;
+should_be_0_2_100
+0-2-100
+SET GLOBAL gtid_slave_pos= '0-3-20';
+SELECT @@global.gtid_current_pos as should_be_0_2_100;
+should_be_0_2_100
+0-2-100
+SET GLOBAL gtid_slave_pos= '0-3-60';
+SELECT @@global.gtid_current_pos as should_be_0_2_100;
+should_be_0_2_100
+0-2-100
+SET GLOBAL gtid_slave_pos= '0-1-150';
+SELECT @@global.gtid_current_pos as should_be_0_1_150;
+should_be_0_1_150
+0-1-150
+SET GLOBAL gtid_slave_pos= '0-2-150';
+SELECT @@global.gtid_current_pos as should_be_0_2_150;
+should_be_0_2_150
+0-2-150
+SET GLOBAL gtid_slave_pos= '0-3-150';
+SELECT @@global.gtid_current_pos as should_be_0_3_150;
+should_be_0_3_150
+0-3-150
+# The case when binlog_state has several server ids and several domains.
+RESET MASTER;
+SET GLOBAL gtid_binlog_state= '0-1-50,1-10-30,0-2-100,1-11-60';
+SET GLOBAL gtid_slave_pos= '0-1-20,1-10-10';
+SELECT @@global.gtid_current_pos as should_be_100_and_60;
+should_be_100_and_60
+1-11-60,0-2-100
+SET GLOBAL gtid_slave_pos= '0-2-20,1-10-10';
+SELECT @@global.gtid_current_pos as should_be_100_and_60;
+should_be_100_and_60
+1-11-60,0-2-100
+SET GLOBAL gtid_slave_pos= '0-2-60,1-11-50';
+SELECT @@global.gtid_current_pos as should_be_100_and_60;
+should_be_100_and_60
+1-11-60,0-2-100
+SET GLOBAL gtid_slave_pos= '0-3-20,1-12-10';
+SELECT @@global.gtid_current_pos as should_be_100_and_60;
+should_be_100_and_60
+1-11-60,0-2-100
+SET GLOBAL gtid_slave_pos= '0-3-60,1-12-50';
+SELECT @@global.gtid_current_pos as should_be_100_and_60;
+should_be_100_and_60
+1-11-60,0-2-100
+SET GLOBAL gtid_slave_pos= '0-1-150,1-10-100';
+SELECT @@global.gtid_current_pos as should_be_150_and_100;
+should_be_150_and_100
+1-10-100,0-1-150
+SET GLOBAL gtid_slave_pos= '0-2-150,1-11-100';
+SELECT @@global.gtid_current_pos as should_be_150_and_100;
+should_be_150_and_100
+1-11-100,0-2-150
+SET GLOBAL gtid_slave_pos= '0-3-150,1-12-100';
+SELECT @@global.gtid_current_pos as should_be_150_and_100;
+should_be_150_and_100
+1-12-100,0-3-150

@@ -741,8 +741,7 @@ rpl_slave_state::iterate(int (*cb)(rpl_gtid *, void *), void *data,
   my_hash_init(&gtid_hash, &my_charset_bin, 32, offsetof(rpl_gtid, domain_id),
                sizeof(uint32), NULL, NULL, HASH_UNIQUE);
   for (i= 0; i < num_extra; ++i)
-    if (extra_gtids[i].server_id == global_system_variables.server_id &&
-        my_hash_insert(&gtid_hash, (uchar *)(&extra_gtids[i])))
+    if (my_hash_insert(&gtid_hash, (uchar *)(&extra_gtids[i])))
       goto err;
 
   mysql_mutex_lock(&LOCK_slave_state);
