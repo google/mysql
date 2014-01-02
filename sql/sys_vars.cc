@@ -66,6 +66,7 @@
 
 #include "sniper.h"
 #include "sniper_modules.h"
+#include "my_crypt_key_management.h"
 
 /*
   The rule for this file: everything should be 'static'. When a sys_var
@@ -1123,6 +1124,25 @@ static Sys_var_mybool Sys_locked_in_memory(
 static Sys_var_mybool Sys_log_bin(
        "log_bin", "Whether the binary log is enabled",
        READ_ONLY GLOBAL_VAR(opt_bin_log), NO_CMD_LINE, DEFAULT(FALSE));
+
+
+#ifndef DBUG_OFF
+static Sys_var_mybool Sys_danger_danger_use_dbug_keys(
+       "danger_danger_use_dbug_keys",
+       "Enable use of nonrandom keys for crypto",
+       READ_ONLY GLOBAL_VAR(opt_danger_danger_use_dbug_keys),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+
+static PolyLock_rwlock PLock_sys_danger_danger_dbug_crypto_key_version(
+       &LOCK_dbug_crypto_key_version);
+
+static Sys_var_uint Sys_danger_danger_dbug_crypto_key_version(
+       "danger_danger_dbug_crypto_key_version",
+       "Crypto key version for debugging only",
+       GLOBAL_VAR(opt_danger_danger_dbug_crypto_key_version),
+       CMD_LINE(REQUIRED_ARG), VALID_RANGE(0,UINT_MAX), DEFAULT(0),
+       BLOCK_SIZE(1), &PLock_sys_danger_danger_dbug_crypto_key_version);
+#endif
 
 static Sys_var_mybool Sys_trust_function_creators(
        "log_bin_trust_function_creators",

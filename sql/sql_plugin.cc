@@ -175,6 +175,9 @@ static struct
   { "performance_schema", PLUGIN_FORCE },
 
   /* we disable few other plugins by default */
+  // TODO(jonaso): Make it possible to default disable built-in
+  // plugins wo/ editing this file.
+  { "example_key_management_plugin", PLUGIN_OFF },
   { "ndbcluster", PLUGIN_OFF },
   { "feedback", PLUGIN_OFF }
 };
