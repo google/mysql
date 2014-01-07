@@ -1,0 +1,102 @@
+#
+# Preparation
+#
+# It's okay to see "Killed" but we should not see "Timeout" in the log.
+call mtr.add_suppression("Killed waiting for reply of binlog");
+call mtr.add_suppression("Run function 'after_commit' in plugin 'rpl_semi_sync_master' failed");
+SET @saved_rpl_semi_sync_master_timeout         = @@global.rpl_semi_sync_master_timeout;
+SET @@global.rpl_semi_sync_master_timeout       = 60000;
+SET @saved_rpl_semi_sync_master_wait_no_slave   = @@global.rpl_semi_sync_master_wait_no_slave;
+SET @@global.rpl_semi_sync_master_wait_no_slave = 1;
+CREATE TABLE t1 (i INT NOT NULL AUTO_INCREMENT, PRIMARY KEY (i)) ENGINE=InnoDB;
+RESET MASTER;
+SET GLOBAL rpl_semi_sync_master_enabled = 1;
+#
+# Test: kill at rpl_semisync_master_commit_trx_before_lock
+#
+# Setup connection 'inserter'
+# Setup connection 'inserter' done
+SET DEBUG_SYNC = 'RESET';
+# Go ahead and send the INSERT; it should block.
+SET DEBUG_SYNC = "rpl_semisync_master_commit_trx_before_lock WAIT_FOR killed";
+INSERT INTO t1 (i) VALUES (NULL);
+# The INSERT thread should now be waiting.
+SELECT state AS should_be_waiting
+FROM information_schema.processlist
+WHERE id = @inserter_connection_id;
+should_be_waiting
+debug sync point: rpl_semisync_master_commit_trx_before_lock
+# Kill the waiting thread
+KILL @inserter_connection_id;
+SET DEBUG_SYNC= "now SIGNAL killed";
+# Collect the error from the INSERT thread
+ERROR HY000: Lost connection to MySQL server during query
+# Wait for INSERT thread to actually disappear
+# The INSERT thread should now be gone.
+SELECT state AS should_be_empty_set
+FROM information_schema.processlist
+WHERE id = @inserter_connection_id;
+should_be_empty_set
+# Disconnect 'inserter'
+#
+# Test: kill at rpl_semisync_master_commit_trx_after_lock
+#
+# Setup connection 'inserter'
+# Setup connection 'inserter' done
+SET DEBUG_SYNC = 'RESET';
+# Go ahead and send the INSERT; it should block.
+SET DEBUG_SYNC = "rpl_semisync_master_commit_trx_after_lock WAIT_FOR killed";
+INSERT INTO t1 (i) VALUES (NULL);
+# The INSERT thread should now be waiting.
+SELECT state AS should_be_waiting
+FROM information_schema.processlist
+WHERE id = @inserter_connection_id;
+should_be_waiting
+debug sync point: rpl_semisync_master_commit_trx_after_lock
+# Kill the waiting thread
+KILL @inserter_connection_id;
+SET DEBUG_SYNC= "now SIGNAL killed";
+# Collect the error from the INSERT thread
+ERROR HY000: Lost connection to MySQL server during query
+# Wait for INSERT thread to actually disappear
+# The INSERT thread should now be gone.
+SELECT state AS should_be_empty_set
+FROM information_schema.processlist
+WHERE id = @inserter_connection_id;
+should_be_empty_set
+# Disconnect 'inserter'
+#
+# Test: kill at rpl_semisync_master_commit_trx_after_enter_cond
+#
+# Setup connection 'inserter'
+# Setup connection 'inserter' done
+SET DEBUG_SYNC = 'RESET';
+# Go ahead and send the INSERT; it should block.
+SET DEBUG_SYNC = "rpl_semisync_master_commit_trx_after_enter_cond WAIT_FOR killed";
+INSERT INTO t1 (i) VALUES (NULL);
+# The INSERT thread should now be waiting.
+SELECT state AS should_be_waiting
+FROM information_schema.processlist
+WHERE id = @inserter_connection_id;
+should_be_waiting
+debug sync point: rpl_semisync_master_commit_trx_after_enter_cond
+# Kill the waiting thread
+KILL @inserter_connection_id;
+SET DEBUG_SYNC= "now SIGNAL killed";
+# Collect the error from the INSERT thread
+ERROR HY000: Lost connection to MySQL server during query
+# Wait for INSERT thread to actually disappear
+# The INSERT thread should now be gone.
+SELECT state AS should_be_empty_set
+FROM information_schema.processlist
+WHERE id = @inserter_connection_id;
+should_be_empty_set
+# Disconnect 'inserter'
+#
+# Cleanup
+#
+SET DEBUG_SYNC = 'RESET';
+SET GLOBAL rpl_semi_sync_master_enabled = 0;
+SET @@global.rpl_semi_sync_master_timeout       = @saved_rpl_semi_sync_master_timeout;
+SET @@global.rpl_semi_sync_master_wait_no_slave = @saved_rpl_semi_sync_master_wait_no_slave;
+DROP TABLE t1;

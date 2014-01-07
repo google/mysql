@@ -1,0 +1,122 @@
+source include/not_embedded.inc;
+source include/have_semisync.inc;
+source include/have_debug_sync.inc;
+source include/have_innodb.inc;
+source include/have_log_bin.inc;
+
+#
+# This test is a continuation of rpl_semi_sync_killed,
+# but since it also needs debug_sync it's split into a different test file
+#
+
+--echo #
+--echo # Preparation
+--echo #
+
+connect (wakeup,localhost,root,,);
+
+connection default;
+
+--echo # It's okay to see "Killed" but we should not see "Timeout" in the log.
+call mtr.add_suppression("Killed waiting for reply of binlog");
+call mtr.add_suppression("Run function 'after_commit' in plugin 'rpl_semi_sync_master' failed");
+
+SET @saved_rpl_semi_sync_master_timeout         = @@global.rpl_semi_sync_master_timeout;
+SET @@global.rpl_semi_sync_master_timeout       = 60000;
+
+SET @saved_rpl_semi_sync_master_wait_no_slave   = @@global.rpl_semi_sync_master_wait_no_slave;
+SET @@global.rpl_semi_sync_master_wait_no_slave = 1;
+
+CREATE TABLE t1 (i INT NOT NULL AUTO_INCREMENT, PRIMARY KEY (i)) ENGINE=InnoDB;
+
+RESET MASTER;
+SET GLOBAL rpl_semi_sync_master_enabled = 1;
+
+let $1=3;
+disable_query_log;
+while ($1)
+{
+let $state = `SELECT CASE $1
+              WHEN 3 THEN 'rpl_semisync_master_commit_trx_before_lock'
+              WHEN 2 THEN 'rpl_semisync_master_commit_trx_after_lock'
+              WHEN 1 THEN 'rpl_semisync_master_commit_trx_after_enter_cond'
+              END`;
+
+        --echo #
+        --echo # Test: kill at $state
+        --echo #
+
+        --echo # Setup connection 'inserter'
+        connection default;
+        connect (inserter,localhost,root,,);
+        connection inserter;
+        let $inserter_connection_id = `SELECT CONNECTION_ID()`;
+
+        connection default;
+        --disable_query_log
+        eval SET @inserter_connection_id = $inserter_connection_id;
+        --enable_query_log
+        --echo # Setup connection 'inserter' done
+
+        SET DEBUG_SYNC = 'RESET';
+
+        --echo # Go ahead and send the INSERT; it should block.
+        connection inserter;
+        eval SET DEBUG_SYNC = "$state WAIT_FOR killed";
+        send INSERT INTO t1 (i) VALUES (NULL);
+
+        connection default;
+
+        let $wait_condition =
+          SELECT COUNT(*) > 0 AS should_be_true
+          FROM information_schema.processlist
+          WHERE id = @inserter_connection_id
+          AND state = "debug sync point: $state";
+        --source include/wait_condition.inc
+
+        --echo # The INSERT thread should now be waiting.
+        SELECT state AS should_be_waiting
+        FROM information_schema.processlist
+        WHERE id = @inserter_connection_id;
+
+        --echo # Kill the waiting thread
+        KILL @inserter_connection_id;
+
+        connection wakeup;
+        SET DEBUG_SYNC= "now SIGNAL killed";
+
+        --echo # Collect the error from the INSERT thread
+        connection inserter;
+        --error 2013
+        reap;
+
+        connection default;
+        --echo # Wait for INSERT thread to actually disappear
+        let $wait_condition =
+          SELECT COUNT(*) = 0 AS should_be_true
+          FROM information_schema.processlist
+          WHERE id = @inserter_connection_id;
+        --source include/wait_condition.inc
+
+        --echo # The INSERT thread should now be gone.
+        SELECT state AS should_be_empty_set
+        FROM information_schema.processlist
+        WHERE id = @inserter_connection_id;
+
+        --echo # Disconnect 'inserter'
+        disconnect inserter;
+
+        dec $1;
+}
+
+--echo #
+--echo # Cleanup
+--echo #
+
+connection default;
+SET DEBUG_SYNC = 'RESET';
+disconnect wakeup;
+SET GLOBAL rpl_semi_sync_master_enabled = 0;
+SET @@global.rpl_semi_sync_master_timeout       = @saved_rpl_semi_sync_master_timeout;
+SET @@global.rpl_semi_sync_master_wait_no_slave = @saved_rpl_semi_sync_master_wait_no_slave;
+DROP TABLE t1;

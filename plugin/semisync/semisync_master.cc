@@ -654,10 +654,30 @@ int ReplSemiSyncMaster::commitTrx(const char* trx_wait_binlog_name,
     /* Acquire the mutex. */
     lock();
 
+    DEBUG_SYNC(current_thd, "rpl_semisync_master_commit_trx_after_lock");
+
     /* This must be called after acquired the lock */
     THD_ENTER_COND(NULL, &COND_binlog_send_, &LOCK_binlog_,
                    & stage_waiting_for_semi_sync_ack_from_slave,
                    & old_stage);
+
+    DEBUG_SYNC(current_thd, "rpl_semisync_master_commit_trx_after_enter_cond");
+
+    /* check kill_level after THD_ENTER_COND but *before* cond_wait
+     * to avoid missing kills */
+    if (thd_kill_level(NULL) != THD_IS_NOT_KILLED)
+    {
+      /* switch semi-sync off */
+      if (!rpl_semi_sync_master_wait_no_slave)
+        switch_off();
+
+      /* Return error to client. */
+      error= 1;
+      my_printf_error(ER_ERROR_DURING_COMMIT,
+                      "Killed while waiting for replication semi-sync ack.",
+                      MYF(0));
+      goto l_end;
+    }
 
     /* This is the real check inside the mutex. */
     if (!getMasterEnabled() || !is_on())
