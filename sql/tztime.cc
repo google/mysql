@@ -2428,9 +2428,12 @@ print_tz_as_sql(const char* tz_name, const TIME_ZONE_INFO *sp)
 (Time_zone_id, Transition_type_id, Offset, Is_DST, Abbreviation) VALUES\n");
 
   for (i= 0; i < sp->typecnt; i++)
+  {
+    char *abbrev= sp->chars + sp->ttis[i].tt_abbrind;
     printf("%s(@time_zone_id, %u, %ld, %d, '%s')\n", (i == 0 ? " " : ","), i,
            sp->ttis[i].tt_gmtoff, sp->ttis[i].tt_isdst,
-           sp->chars + sp->ttis[i].tt_abbrind);
+           strlen(abbrev) <= 8 ? abbrev : "UNKNOWN");
+  }
   printf(";\n");
 }
 
@@ -2463,8 +2466,6 @@ print_tz_leaps_as_sql(const TIME_ZONE_INFO *sp)
              sp->lsis[i].ls_trans, sp->lsis[i].ls_corr);
     printf(";\n");
   }
-
-  printf("ALTER TABLE time_zone_leap_second ORDER BY Transition_time;\n");
 }
 
 
@@ -2729,11 +2730,6 @@ main(int argc, char **argv)
               "of zoneinfo directory '%s'\n", fullname);
       return 1;
     }
-
-    printf("ALTER TABLE time_zone_transition "
-           "ORDER BY Time_zone_id, Transition_time;\n");
-    printf("ALTER TABLE time_zone_transition_type "
-           "ORDER BY Time_zone_id, Transition_type_id;\n");
   }
   else
   {
