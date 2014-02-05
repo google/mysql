@@ -293,6 +293,7 @@ struct slave_connection_state
 extern bool rpl_slave_state_tostring_helper(String *dest, const rpl_gtid *gtid,
                                             bool *first);
 extern int gtid_check_rpl_slave_state_table(TABLE *table);
+extern int gtid_parser_helper(char **ptr, char *end, rpl_gtid *out_gtid);
 extern rpl_gtid *gtid_parse_string_to_list(const char *p, size_t len,
                                            uint32 *out_len);
 

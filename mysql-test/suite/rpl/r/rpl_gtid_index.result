@@ -1,0 +1,121 @@
+include/rpl_init.inc [topology=1->2]
+#
+# Prepare the table for testing
+#
+CREATE TABLE t (n int primary key) ENGINE InnoDB;
+include/stop_slave.inc
+RESET MASTER;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+# Suppress all errors that we expect
+call mtr.add_suppression('Replication event checksum verification failed');
+call mtr.add_suppression('Error in Log_event::read_log_event()');
+call mtr.add_suppression('GTID index and binlog are unsynchronized');
+call mtr.add_suppression('Cannot find end of GTID list');
+call mtr.add_suppression('Regenerating the index.');
+# Reset binlogs for easier calculation of the GTID position on master
+RESET MASTER;
+#
+# Fill the test data on the master
+#
+SELECT COUNT(*) as should_be_100 FROM t;
+should_be_100
+100
+#
+# Start replication on slave from some position in the middle of the
+# binlog on master and check that it starts correctly.
+#
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-33';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+include/start_slave.inc
+SELECT COUNT(*) as should_be_67 FROM t;
+should_be_67
+67
+#
+# Regenerate binlog on master and replace the index with the file that
+# is unsynchronized with the binlog.
+#
+include/stop_slave.inc
+RESET MASTER;
+# Shift GTIDs by 5
+TRUNCATE TABLE t;
+CREATE TABLE t2 (n int primary key) ENGINE InnoDB;
+INSERT INTO t2 VALUES (1);
+INSERT INTO t2 VALUES (2);
+INSERT INTO t2 VALUES (3);
+# Fill test data again
+SELECT COUNT(*) as should_be_100 FROM t;
+should_be_100
+100
+# Switch to another binlog file
+FLUSH LOGS;
+# Replace GTID index file
+#
+# Start replication on slave and check that it starts correctly.
+#
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-45';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+include/start_slave.inc
+SELECT COUNT(*) as should_be_60 FROM t;
+should_be_60
+60
+#
+# Write gibberish into the GTID index and check that MySQL recovers
+#
+#
+# Start replication on slave and check that it starts correctly.
+#
+include/stop_slave.inc
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-65';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+include/start_slave.inc
+SELECT COUNT(*) as should_be_40 FROM t;
+should_be_40
+40
+#
+# Delete GTID index completely and check that MySQL recovers
+#
+include/stop_slave.inc
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-23';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+include/start_slave.inc
+SELECT COUNT(*) as should_be_82 FROM t;
+should_be_82
+82
+#
+# Check that all tests above had correct errors in master's error log.
+#
+create temporary table error_log (
+row int auto_increment primary key,
+line varchar(1024) default null
+);
+load data infile './mysql_slave.err' into table error_log
+fields terminated by 'xykls37' escaped by ''
+  ignore 1 lines
+(line);
+# substr() will exclude date and time
+select substr(line, 17) as error_msg from error_log
+where line like '%Cannot find binlog position in GTID index file%'
+ order by row;
+error_msg
+[ERROR] Cannot find binlog position in GTID index file: GTID index and binlog are unsynchronized, cannot read GTID event from binlog file. Regenerating the index.
+[ERROR] Cannot find binlog position in GTID index file: Cannot find end of GTID list in the record from GTID index file. Regenerating the index.
+[ERROR] Cannot find binlog position in GTID index file: Cannot open the GTID index file. Regenerating the index.
+drop table error_log;
+#
+# Clean up.
+#
+DROP TABLE t;
+DROP TABLE IF EXISTS t2;
+include/rpl_end.inc

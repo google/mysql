@@ -1,0 +1,174 @@
+--source include/have_innodb.inc
+
+--let $rpl_topology=1->2
+--source include/rpl_init.inc
+
+--echo #
+--echo # Prepare the table for testing
+--echo #
+connection server_1;
+CREATE TABLE t (n int primary key) ENGINE InnoDB;
+save_master_pos;
+connection server_2;
+sync_with_master;
+--source include/stop_slave.inc
+RESET MASTER;
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+
+connection server_1;
+--echo # Suppress all errors that we expect
+call mtr.add_suppression('Replication event checksum verification failed');
+call mtr.add_suppression('Error in Log_event::read_log_event()');
+call mtr.add_suppression('GTID index and binlog are unsynchronized');
+call mtr.add_suppression('Cannot find end of GTID list');
+call mtr.add_suppression('Regenerating the index.');
+--echo # Reset binlogs for easier calculation of the GTID position on master
+RESET MASTER;
+
+--echo #
+--echo # Fill the test data on the master
+--echo #
+--disable_query_log
+--disable_result_log
+connection server_1;
+let $i= 1;
+while ($i <= 100) {
+  eval INSERT INTO t VALUES ($i);
+  inc $i;
+}
+--enable_query_log
+--enable_result_log
+SELECT COUNT(*) as should_be_100 FROM t;
+save_master_pos;
+
+--echo #
+--echo # Start replication on slave from some position in the middle of the
+--echo # binlog on master and check that it starts correctly.
+--echo #
+connection server_2;
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-33';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+--source include/start_slave.inc
+sync_with_master;
+SELECT COUNT(*) as should_be_67 FROM t;
+
+
+--echo #
+--echo # Regenerate binlog on master and replace the index with the file that
+--echo # is unsynchronized with the binlog.
+--echo #
+connection server_2;
+--source include/stop_slave.inc
+connection server_1;
+--let $datadir = `SELECT @@datadir`
+--copy_file $datadir/master-bin.000001.gtids $datadir/master-bin.000001.gtids.bak
+RESET MASTER;
+--echo # Shift GTIDs by 5
+TRUNCATE TABLE t;
+CREATE TABLE t2 (n int primary key) ENGINE InnoDB;
+INSERT INTO t2 VALUES (1);
+INSERT INTO t2 VALUES (2);
+INSERT INTO t2 VALUES (3);
+--echo # Fill test data again
+--disable_query_log
+--disable_result_log
+connection server_1;
+let $i= 1;
+while ($i <= 100) {
+  eval INSERT INTO t VALUES ($i);
+  inc $i;
+}
+--enable_query_log
+--enable_result_log
+SELECT COUNT(*) as should_be_100 FROM t;
+--echo # Switch to another binlog file
+FLUSH LOGS;
+save_master_pos;
+--echo # Replace GTID index file
+--remove_file $datadir/master-bin.000001.gtids
+--move_file $datadir/master-bin.000001.gtids.bak $datadir/master-bin.000001.gtids
+
+--echo #
+--echo # Start replication on slave and check that it starts correctly.
+--echo #
+connection server_2;
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-45';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+--source include/start_slave.inc
+sync_with_master;
+SELECT COUNT(*) as should_be_60 FROM t;
+
+
+--echo #
+--echo # Write gibberish into the GTID index and check that MySQL recovers
+--echo #
+--remove_file $datadir/master-bin.000001.gtids
+--write_file $datadir/master-bin.000001.gtids
+MariaDB GTID Index
+12345;asdfghjhjk
+EOF
+
+--echo #
+--echo # Start replication on slave and check that it starts correctly.
+--echo #
+connection server_2;
+--source include/stop_slave.inc
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-65';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+--source include/start_slave.inc
+sync_with_master;
+SELECT COUNT(*) as should_be_40 FROM t;
+
+
+--echo #
+--echo # Delete GTID index completely and check that MySQL recovers
+--echo #
+--remove_file $datadir/master-bin.000001.gtids
+connection server_2;
+--source include/stop_slave.inc
+TRUNCATE TABLE t;
+RESET MASTER;
+RESET SLAVE;
+SET GLOBAL gtid_slave_pos = '0-1-23';
+CHANGE MASTER TO MASTER_USE_GTID = slave_pos;
+--source include/start_slave.inc
+sync_with_master;
+SELECT COUNT(*) as should_be_82 FROM t;
+
+
+--echo #
+--echo # Check that all tests above had correct errors in master's error log.
+--echo #
+--connection server_1
+create temporary table error_log (
+  row int auto_increment primary key,
+  line varchar(1024) default null
+);
+eval load data infile './mysql_slave.err' into table error_log
+  fields terminated by 'xykls37' escaped by ''
+  ignore 1 lines
+  (line);
+--echo # substr() will exclude date and time
+select substr(line, 17) as error_msg from error_log
+ where line like '%Cannot find binlog position in GTID index file%'
+ order by row;
+drop table error_log;
+
+--echo #
+--echo # Clean up.
+--echo #
+connection server_1;
+DROP TABLE t;
+# Table t2 doesn't exist on slave, thus adding IF EXISTS
+DROP TABLE IF EXISTS t2;
+
+--source include/rpl_end.inc

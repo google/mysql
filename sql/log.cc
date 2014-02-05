@@ -2496,6 +2496,44 @@ int check_binlog_magic(IO_CACHE* log, const char** errmsg)
 }
 
 
+// A text that will be always present as the first line in GTID index file.
+// Necessary for a quick distinguishing of GTID index file from anything else.
+static const char gtid_index_header[] = "MariaDB GTID Index\n";
+
+// Write the first header line into GTID index file.
+// The current writing position in gtid_index should be 0.
+static int write_gtid_index_header(IO_CACHE* gtid_index)
+{
+  return my_b_write(gtid_index, gtid_index_header,
+                    sizeof(gtid_index_header) - 1);
+}
+
+// Check the first header line in the GTID index file.
+//
+// Checks that the first line is equal to gtid_index_header. Returns 0 in case
+// of success. In case of error returns 1 and sets and error message into
+// *errmsg.
+int check_gtid_index_header(IO_CACHE* gtid_index, const char** errmsg)
+{
+  uchar header_buff[sizeof(gtid_index_header)];
+  if (my_b_read(gtid_index, header_buff, sizeof(header_buff) - 1))
+  {
+    *errmsg = "I/O error reading the header from the GTID index file";
+    sql_print_error("%s, errno=%d, io cache code=%d", *errmsg, my_errno,
+                    gtid_index->error);
+    return 1;
+  }
+  header_buff[sizeof(gtid_index_header) - 1]= 0;
+  if (memcmp(gtid_index_header, header_buff, sizeof(header_buff)))
+  {
+    *errmsg = "GTID index file has incorrect header line";
+    sql_print_error("%s: '%s'", *errmsg, header_buff);
+    return 1;
+  }
+  return 0;
+}
+
+
 File open_binlog(IO_CACHE *log, const char *log_file_name, const char **errmsg)
 {
   File file;
@@ -2665,6 +2703,20 @@ Please consider archiving some logs.", next, (MAX_LOG_UNIQUE_FN_EXT - next));
 
 end:
   DBUG_RETURN(error);
+}
+
+
+// Create a file name that GTID index should have given the name of the binlog.
+int gen_gtid_index_file_name(const char* log_file_name, char* gtid_index_name)
+{
+  if (!fn_format(gtid_index_name, log_file_name, mysql_data_home, ".gtids",
+                 MY_APPEND_EXT | MY_SAFE_PATH))
+  {
+    sql_print_error("Cannot generate gtid index file name (probably log "
+                    "file name is too long).");
+    return 1;
+  }
+  return 0;
 }
 
 
@@ -3281,8 +3333,10 @@ MYSQL_BIN_LOG::MYSQL_BIN_LOG(uint *sync_period)
     before main().
   */
   index_file_name[0] = 0;
+  gtid_index_file_name[0]= 0;
   bzero((char*) &index_file, sizeof(index_file));
   bzero((char*) &purge_index_file, sizeof(purge_index_file));
+  bzero((char*) &gtid_index_file, sizeof(gtid_index_file));
 }
 
 /* this is called only once */
@@ -3463,7 +3517,6 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
                          bool null_created_arg,
                          bool need_mutex)
 {
-  File file= -1;
   xid_count_per_binlog *new_xid_list_entry= NULL, *b;
 
   DBUG_ENTER("MYSQL_BIN_LOG::open");
@@ -3489,6 +3542,9 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
     sql_print_error("MSYQL_BIN_LOG::open failed to generate new file name.");
     DBUG_RETURN(1);
   }
+
+  if (gen_gtid_index_file_name(log_file_name, gtid_index_file_name))
+    DBUG_RETURN(1);
 
 #ifdef HAVE_REPLICATION
   if (open_purge_index_file(TRUE) ||
@@ -3534,6 +3590,26 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
     DBUG_RETURN(1);                            /* all warnings issued */
   }
 
+  if (!is_relay_log)
+  {
+    File gtid_index_fd= my_open(gtid_index_file_name,
+                                O_RDWR | O_CREAT | O_BINARY | O_TRUNC,
+                                MYF(MY_WME));
+    if (gtid_index_fd < 0 ||
+        init_io_cache(&gtid_index_file, gtid_index_fd,
+                      IO_SIZE, WRITE_CACHE, 0, 0,
+                      MYF(MY_WME | MY_NABP | MY_WAIT_IF_FULL)))
+    {
+      if (gtid_index_fd >= 0)
+        my_close(gtid_index_fd, MYF(0));
+#ifdef HAVE_REPLICATION
+      close_purge_index_file();
+#endif
+      DBUG_RETURN(1);                            /* all warnings issued */
+    }
+    gtid_index_last_log_pos= 0;
+  }
+
   init(max_size_arg);
 
   open_count++;
@@ -3542,6 +3618,7 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
 
   {
     bool write_file_name_to_index_file=0;
+    bool need_write_index_header= true;
 
     if (!my_b_filelength(&log_file))
     {
@@ -3557,6 +3634,23 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
       bytes_written+= BIN_LOG_HEADER_SIZE;
       write_file_name_to_index_file= 1;
     }
+    else if (!is_relay_log)
+    {
+      const char* unused_errmsg= NULL;
+      if (!check_gtid_index_header(&gtid_index_file, &unused_errmsg))
+      {
+        need_write_index_header= false;
+        my_b_seek(&gtid_index_file, my_b_filelength(&gtid_index_file));
+      }
+      else
+      {
+        my_b_seek(&gtid_index_file, 0);
+      }
+    }
+
+    if (!is_relay_log && need_write_index_header &&
+        write_gtid_index_header(&gtid_index_file))
+      goto err;
 
     {
       /*
@@ -3716,7 +3810,8 @@ bool MYSQL_BIN_LOG::open(const char *log_name,
       bytes_written+= description_event_for_queue->data_written;
     }
     if (flush_io_cache(&log_file) ||
-        mysql_file_sync(log_file.file, MYF(MY_WME|MY_SYNC_FILESIZE)))
+        mysql_file_sync(log_file.file, MYF(MY_WME|MY_SYNC_FILESIZE)) ||
+        flush_io_cache(&gtid_index_file))
       goto err;
     mysql_mutex_lock(&LOCK_commit_ordered);
     strmake_buf(last_commit_pos_file, log_file_name);
@@ -3809,8 +3904,6 @@ To turn it on again: fix the cause, \
 shutdown the MySQL server and restart it.", name, errno);
   if (new_xid_list_entry)
     my_free(new_xid_list_entry);
-  if (file >= 0)
-    mysql_file_close(file, MYF(0));
   close(LOG_CLOSE_INDEX);
   DBUG_RETURN(1);
 }
@@ -4214,6 +4307,18 @@ bool MYSQL_BIN_LOG::reset_logs(THD* thd, bool create_new_log,
                             linfo.log_file_name);
         error= 1;
         goto err;
+      }
+    }
+    else if (!is_relay_log)
+    {
+      char ind_file_name[FN_REFLEN];
+      if (!gen_gtid_index_file_name(linfo.log_file_name, ind_file_name))
+      {
+        if (my_delete(ind_file_name, MYF(0)))
+        {
+          sql_print_information("Unable to delete GTID index file '%s', "
+                                "errno=%d", ind_file_name, my_errno);
+        }
       }
     }
     if (find_next_log(&linfo, 0))
@@ -4756,6 +4861,18 @@ int MYSQL_BIN_LOG::purge_index_entry(THD *thd, ulonglong *decrease_log_space,
         {
           if (decrease_log_space)
             *decrease_log_space-= s.st_size;
+          if (!is_relay_log)
+          {
+            char ind_file_name[FN_REFLEN];
+            if (!gen_gtid_index_file_name(log_info.log_file_name, ind_file_name))
+            {
+              if (my_delete(ind_file_name, MYF(0)))
+              {
+                sql_print_information("Unable to delete GTID index file '%s', "
+                                      "errno=%d", ind_file_name, my_errno);
+              }
+            }
+          }
         }
         else
         {
@@ -5255,7 +5372,7 @@ bool MYSQL_BIN_LOG::flush_and_sync(bool *synced)
   if (synced)
     *synced= 0;
   mysql_mutex_assert_owner(&LOCK_log);
-  if (flush_io_cache(&log_file))
+  if (flush_io_cache(&log_file) || flush_io_cache(&gtid_index_file))
     return 1;
   uint sync_period= get_sync_period();
   if (sync_period && ++sync_counter >= sync_period)
@@ -5752,6 +5869,142 @@ MYSQL_BIN_LOG::flush_and_set_pending_rows_event(THD *thd,
 }
 
 
+// Create GTID index from scratch for a given binlog file.
+//
+// Arguments:
+//   file_name - name of a file where GTID index should be written to
+//   binlog_cache - open IO cache for the binlog file
+//   fdle - format description event that was already read from the binlog file
+//   errormsg - pointer to the variable where an error message should be
+//              written to
+//
+// Returns:
+//   0 on success, 1 on error (error message is written into *errormsg).
+int
+create_full_gtid_index(const char *file_name,
+                       IO_CACHE *binlog_cache,
+                       Format_description_log_event *fdle,
+                       const char **errormsg)
+{
+  int ret= 1;
+  File fd= -1;
+  IO_CACHE index_cache;
+  ulonglong min_gap_size= opt_gtid_index_min_gap_size;
+  ulonglong last_gtid_pos= 0;
+  my_off_t event_pos= 4;
+  my_off_t binlog_size= my_b_filelength(binlog_cache);
+  Log_event *ev= NULL;
+  rpl_binlog_state binlog_state;
+  bool saw_gtid_list= false;
+
+  fd= my_open(file_name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, MYF(MY_WME));
+  if (fd < 0)
+  {
+    *errormsg= "Cannot open temporary GTID index file";
+    goto end;
+  }
+  bzero(&index_cache, sizeof(index_cache));
+  if (init_io_cache(&index_cache, fd, IO_SIZE, WRITE_CACHE, 0, 0,
+                    MYF(MY_WME | MY_NABP | MY_WAIT_IF_FULL)))
+  {
+    *errormsg= "Cannot open temporary GTID index cache";
+    goto end;
+  }
+
+  if (write_gtid_index_header(&index_cache))
+    goto end;
+
+  while (event_pos < binlog_size)
+  {
+    uchar buf[LOG_EVENT_MINIMAL_HEADER_LEN];
+    Log_event_type event_type;
+    uint event_size;
+
+    my_b_seek(binlog_cache, event_pos);
+    if (my_b_read(binlog_cache, buf, sizeof(buf)))
+    {
+      *errormsg= "Cannot read binlog file to create GTID index";
+      goto end;
+    }
+    event_type= (Log_event_type) buf[EVENT_TYPE_OFFSET];
+    event_size= uint4korr(buf + EVENT_LEN_OFFSET);
+    if (event_type == GTID_LIST_EVENT || event_type == GTID_EVENT)
+    {
+      my_b_seek(binlog_cache, event_pos);
+      ev= Log_event::read_log_event(binlog_cache, 0, fdle, false);
+      if (!ev)
+      {
+        *errormsg= "Cannot read binlog event to create GTID index";
+        goto end;
+      }
+    }
+    if (event_type == GTID_LIST_EVENT)
+    {
+      Gtid_list_log_event *glev= (Gtid_list_log_event *) ev;
+      if (binlog_state.load(glev->list, glev->count))
+      {
+        *errormsg= "Error loading binlog state from Gtid_list";
+        goto end;
+      }
+      saw_gtid_list= true;
+    }
+    else if (event_type == GTID_EVENT)
+    {
+      if (!saw_gtid_list)
+      {
+        *errormsg= "Binlog file doesn't have Gtid_list event";
+        goto end;
+      }
+      Gtid_log_event *gev= (Gtid_log_event *) ev;
+      // Position of the very first GTID in the binlog file should always be
+      // in the index file to include the initial Gtid_list from the binlog.
+      // Thus we are checking for last_gtid_pos == 0 too.
+      if (last_gtid_pos == 0 || event_pos - last_gtid_pos >= min_gap_size)
+      {
+        String index_str;
+        if (index_str.append_ulonglong(event_pos) ||
+            index_str.append(";", 1) ||
+            binlog_state.append_state(&index_str) ||
+            index_str.append(";", 1) ||
+            index_str.append_ulonglong(gev->domain_id) ||
+            index_str.append("-", 1) ||
+            index_str.append_ulonglong(gev->server_id) ||
+            index_str.append("-", 1) ||
+            index_str.append_ulonglong(gev->seq_no) ||
+            index_str.append("\n", 1) ||
+            my_b_write(&index_cache, index_str.ptr(), index_str.length()))
+          goto end;
+        last_gtid_pos= event_pos;
+      }
+      rpl_gtid gtid;
+      gtid.domain_id= gev->domain_id;
+      gtid.server_id= gev->server_id;
+      gtid.seq_no= gev->seq_no;
+      if (binlog_state.update_nolock(&gtid, false))
+      {
+        *errormsg= "Error updating binlog state with Gtid event";
+        goto end;
+      }
+    }
+    delete ev;
+    ev= NULL;
+    event_pos+= event_size;
+  }
+  ret= 0;
+
+end:
+  delete ev;
+  if (fd >= 0)
+  {
+    end_io_cache(&index_cache);
+    my_close(fd, MYF(MY_WME));
+  }
+  if (ret && !*errormsg)
+    *errormsg= "Error writing to temporary GTID index file";
+  return ret;
+}
+
+
 /* Generate a new global transaction ID, and write it to the binlog */
 
 bool
@@ -5763,6 +6016,10 @@ MYSQL_BIN_LOG::write_gtid_event(THD *thd, bool standalone,
   uint32 server_id= thd->variables.server_id;
   uint64 seq_no= thd->variables.gtid_seq_no;
   int err;
+  String index_str;
+  ulonglong cur_log_pos= 0;
+  bool need_write_index= false;
+
   DBUG_ENTER("write_gtid_event");
   DBUG_PRINT("enter", ("standalone: %d", standalone));
   
@@ -5772,6 +6029,35 @@ MYSQL_BIN_LOG::write_gtid_event(THD *thd, bool standalone,
                          "Master and slave will have different GTID values"));
     /* Reset the flag, as we will write out a GTID anyway */
     thd->variables.option_bits&= ~OPTION_GTID_BEGIN;
+  }
+
+  if (!is_relay_log)
+  {
+    cur_log_pos= my_b_write_tell(&mysql_bin_log.log_file);
+    // Position of the very first GTID in the binlog file should always be
+    // in the index file to include the initial Gtid_list from the binlog.
+    // Thus we are checking for gtid_index_last_log_pos == 0 too.
+    need_write_index= gtid_index_last_log_pos == 0 ||
+        cur_log_pos - gtid_index_last_log_pos >= opt_gtid_index_min_gap_size;
+
+    if (opt_gtid_index_debug_logging)
+    {
+      sql_print_information("write_gtid_event: cur_log_pos = %llu, "
+           "gtid_index_last_log_pos = %d, need_write_index = %d",
+           cur_log_pos, gtid_index_last_log_pos, (int) need_write_index);
+    }
+
+    if (need_write_index)
+    {
+      // Gtid_list written into index should contain the state _before_ the new
+      // GTID is added to it to mimic behavior of Gtid_list at the beginning of
+      // the binlog.
+      if (index_str.append_ulonglong(cur_log_pos) ||
+          index_str.append(";", 1) ||
+          rpl_global_gtid_binlog_state.append_state(&index_str) ||
+          index_str.append(";", 1))
+        return true;
+    }
   }
 
   /*
@@ -5808,6 +6094,27 @@ MYSQL_BIN_LOG::write_gtid_event(THD *thd, bool standalone,
   if (gtid_event.write(&mysql_bin_log.log_file))
     DBUG_RETURN(true);
   status_var_add(thd->status_var.binlog_bytes_written, gtid_event.data_written);
+
+  if (need_write_index)
+  {
+    if (index_str.append_ulonglong(domain_id) ||
+        index_str.append("-", 1) ||
+        index_str.append_ulonglong(server_id) ||
+        index_str.append("-", 1) ||
+        index_str.append_ulonglong(seq_no) ||
+        index_str.append("\n", 1) ||
+        my_b_write(&gtid_index_file, index_str.ptr(), index_str.length()))
+    {
+      DBUG_RETURN(true);
+    }
+    gtid_index_last_log_pos= cur_log_pos;
+
+    if (opt_gtid_index_debug_logging)
+    {
+      sql_print_information("write_gtid_event: wrote into fd = %d",
+                            gtid_index_file.file);
+    }
+  }
 
   DBUG_RETURN(false);
 }
@@ -7933,6 +8240,16 @@ void MYSQL_BIN_LOG::close(uint exiting)
       mysql_file_seek(log_file.file, org_position, MY_SEEK_SET, MYF(0));
     }
 
+    if (!is_relay_log)
+    {
+      end_io_cache(&gtid_index_file);
+      if (gtid_index_file.file >= 0 &&
+          my_close(gtid_index_file.file, MYF(MY_WME)) && !write_error)
+      {
+        write_error= 1;
+        sql_print_error(ER(ER_ERROR_ON_WRITE), gtid_index_file_name, errno);
+      }
+    }
     /* this will cleanup IO_CACHE, sync and close the file */
     MYSQL_LOG::close(exiting);
   }

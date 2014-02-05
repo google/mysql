@@ -6719,6 +6719,20 @@ Gtid_list_log_event::Gtid_list_log_event(rpl_binlog_state *gtid_set,
 }
 
 
+Gtid_list_log_event::Gtid_list_log_event(rpl_gtid *list_,
+                                         uint32 count_,
+                                         uint32 gl_flags_)
+  : count(count_), gl_flags(gl_flags_), list(0), sub_id_list(0)
+{
+  cache_type= EVENT_NO_CACHE;
+  /* Failure to allocate memory will be caught by is_valid() returning false. */
+  if (count < (1<<28) &&
+      (list = (rpl_gtid *)my_malloc(count * sizeof(*list) + (count == 0),
+                                    MYF(MY_WME))))
+    memcpy(list, list_, count * sizeof(*list));
+}
+
+
 Gtid_list_log_event::Gtid_list_log_event(slave_connection_state *gtid_set,
                                          uint32 gl_flags_)
   : count(gtid_set->count()), gl_flags(gl_flags_), list(0), sub_id_list(0)

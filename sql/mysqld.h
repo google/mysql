@@ -798,6 +798,8 @@ extern handlerton *maria_hton;
 extern uint extra_connection_count;
 extern uint64 global_gtid_counter;
 extern my_bool opt_gtid_strict_mode;
+extern ulonglong opt_gtid_index_min_gap_size;
+extern my_bool opt_gtid_index_debug_logging;
 extern my_bool opt_userstat_running, debug_assert_if_crashed_table;
 extern uint mysqld_extra_port;
 extern ulong opt_progress_report_time;

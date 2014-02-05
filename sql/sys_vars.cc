@@ -1751,6 +1751,23 @@ Sys_var_last_gtid::session_value_ptr(THD *thd, LEX_STRING *base)
 }
 
 
+static Sys_var_ulonglong Sys_gtid_index_min_gap_size(
+       "gtid_index_min_gap_size",
+       "Minimum size of the binlog that should be accumulated between two "
+       "GTID events to allow for these events to go into GTID index. "
+       "The smaller this value the larger GTID index files and the faster "
+       "the search of particular GTID position in the binlogs will be.",
+       GLOBAL_VAR(opt_gtid_index_min_gap_size),
+       CMD_LINE(REQUIRED_ARG), VALID_RANGE(1, ULONGLONG_MAX),
+       DEFAULT(1 * 1024 * 1024), BLOCK_SIZE(1));
+
+static Sys_var_mybool Sys_gtid_index_debug_logging(
+       "gtid_index_debug_logging",
+       "Turn on/off debug logging in the code writing GTID index.",
+       GLOBAL_VAR(opt_gtid_index_debug_logging),
+       CMD_LINE(OPT_ARG), DEFAULT(FALSE));
+
+
 static bool
 check_slave_parallel_threads(sys_var *self, THD *thd, set_var *var)
 {

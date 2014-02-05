@@ -1,0 +1,38 @@
+#
+# Test the variable itself.
+#
+SET @save_min_gap_size= @@global.gtid_index_min_gap_size;
+# Make sure it can remember its value.
+SET GLOBAL gtid_index_min_gap_size= 1000;
+SHOW GLOBAL VARIABLES LIKE 'gtid_index_min_gap_size';
+Variable_name	Value
+gtid_index_min_gap_size	1000
+SELECT @@global.gtid_index_min_gap_size;
+@@global.gtid_index_min_gap_size
+1000
+# Make sure it does not allow session scope.
+SET SESSION gtid_index_min_gap_size= 100;
+ERROR HY000: Variable 'gtid_index_min_gap_size' is a GLOBAL variable and should be set with SET GLOBAL
+SET @@session.gtid_index_min_gap_size= 100;
+ERROR HY000: Variable 'gtid_index_min_gap_size' is a GLOBAL variable and should be set with SET GLOBAL
+# Nothing should have changed (should still be 1000 from above).
+SELECT @@global.gtid_index_min_gap_size;
+@@global.gtid_index_min_gap_size
+1000
+# Try some funky values.
+# Invalid types should return an error and not change the value.
+SET GLOBAL gtid_index_min_gap_size= "";
+ERROR 42000: Incorrect argument type to variable 'gtid_index_min_gap_size'
+SELECT @@global.gtid_index_min_gap_size;
+@@global.gtid_index_min_gap_size
+1000
+# Setting NULL return an error and not change the value.
+SET GLOBAL gtid_index_min_gap_size= NULL;
+ERROR 42000: Incorrect argument type to variable 'gtid_index_min_gap_size'
+SELECT @@global.gtid_index_min_gap_size;
+@@global.gtid_index_min_gap_size
+1000
+#
+# Cleanup
+#
+SET GLOBAL gtid_index_min_gap_size= @save_min_gap_size;

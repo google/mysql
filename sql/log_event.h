@@ -3275,6 +3275,7 @@ public:
 
 #ifdef MYSQL_SERVER
   Gtid_list_log_event(rpl_binlog_state *gtid_set, uint32 gl_flags);
+  Gtid_list_log_event(rpl_gtid *list, uint32 count, uint32 gl_flags);
   Gtid_list_log_event(slave_connection_state *gtid_set, uint32 gl_flags);
 #ifdef HAVE_REPLICATION
   void pack_info(THD *thd, Protocol *protocol);

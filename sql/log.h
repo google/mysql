@@ -502,6 +502,15 @@ class MYSQL_BIN_LOG: public TC_LOG, private MYSQL_LOG
   IO_CACHE purge_index_file;
   char purge_index_file_name[FN_REFLEN];
   /*
+    gtid_index_file is a file containing Gtid_lists pointing to corresponding
+    positions in the binlog file. This index is necessary to be able to quickly
+    find position in the binlog file by GTID when slave tries to start
+    replicating from this server.
+  */
+  IO_CACHE gtid_index_file;
+  char gtid_index_file_name[FN_REFLEN];
+  int gtid_index_last_log_pos;
+  /*
      The max size before rotation (usable only if log_type == LOG_BIN: binary
      logs and relay logs).
      For a binlog, max_size should be max_binlog_size.
@@ -1064,6 +1073,12 @@ File open_binlog(IO_CACHE *log, const char *log_file_name,
 
 void make_default_log_name(char **out, const char* log_ext, bool once);
 void binlog_reset_cache(THD *thd);
+int check_gtid_index_header(IO_CACHE *gtid_index, const char **errmsg);
+int gen_gtid_index_file_name(const char *log_file_name, char *gtid_index_name);
+int create_full_gtid_index(const char *file_name,
+                           IO_CACHE *binlog_cache,
+                           Format_description_log_event *fdle,
+                           const char **errormsg);
 
 extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 extern LOGGER logger;

@@ -1,0 +1,45 @@
+#
+# Test for the gtid_index_min_gap_size variable.
+#
+
+# Variable doesn't exist in embedded server.
+--source include/not_embedded.inc
+
+--echo #
+--echo # Test the variable itself.
+--echo #
+connection default;
+SET @save_min_gap_size= @@global.gtid_index_min_gap_size;
+
+--echo # Make sure it can remember its value.
+SET GLOBAL gtid_index_min_gap_size= 1000;
+SHOW GLOBAL VARIABLES LIKE 'gtid_index_min_gap_size';
+SELECT @@global.gtid_index_min_gap_size;
+
+--echo # Make sure it does not allow session scope.
+
+--error ER_GLOBAL_VARIABLE
+SET SESSION gtid_index_min_gap_size= 100;
+
+--error ER_GLOBAL_VARIABLE
+SET @@session.gtid_index_min_gap_size= 100;
+
+--echo # Nothing should have changed (should still be 1000 from above).
+SELECT @@global.gtid_index_min_gap_size;
+
+--echo # Try some funky values.
+--echo # Invalid types should return an error and not change the value.
+--error ER_WRONG_TYPE_FOR_VAR
+SET GLOBAL gtid_index_min_gap_size= "";
+SELECT @@global.gtid_index_min_gap_size;
+
+--echo # Setting NULL return an error and not change the value.
+--error ER_WRONG_TYPE_FOR_VAR
+SET GLOBAL gtid_index_min_gap_size= NULL;
+SELECT @@global.gtid_index_min_gap_size;
+
+--echo #
+--echo # Cleanup
+--echo #
+
+SET GLOBAL gtid_index_min_gap_size= @save_min_gap_size;

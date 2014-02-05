@@ -1,0 +1,40 @@
+--source include/not_embedded.inc
+
+--echo #
+--echo # The variable is only global, OFF by default.
+--echo #
+select @@global.gtid_index_debug_logging;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.gtid_index_debug_logging;
+
+--echo #
+--echo # Check different methods of reading.
+--echo #
+show global variables like 'gtid_index_debug_logging';
+show session variables like 'gtid_index_debug_logging';
+select * from information_schema.global_variables
+ where variable_name='gtid_index_debug_logging';
+select * from information_schema.session_variables
+ where variable_name='gtid_index_debug_logging';
+
+--echo #
+--echo # Set to valid values.
+--echo #
+set global gtid_index_debug_logging= 1;
+select @@global.gtid_index_debug_logging;
+set global gtid_index_debug_logging= 0;
+select @@global.gtid_index_debug_logging;
+set global gtid_index_debug_logging= default;
+
+--echo #
+--echo # Cannot change on session level.
+--echo #
+--error ER_GLOBAL_VARIABLE
+set session gtid_index_debug_logging= 1;
+show session variables like 'gtid_index_debug_logging';
+
+--echo #
+--echo # Cleanup
+--echo #
+set global gtid_index_debug_logging= default;
+

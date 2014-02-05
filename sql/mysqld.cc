@@ -1521,6 +1521,8 @@ struct st_VioSSLFd *ssl_acceptor_fd;
 uint connection_count= 0, extra_connection_count= 0;
 
 my_bool opt_gtid_strict_mode= FALSE;
+ulonglong opt_gtid_index_min_gap_size= 0;
+my_bool opt_gtid_index_debug_logging= false;
 
 
 /* Function declarations */

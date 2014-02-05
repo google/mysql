@@ -117,3 +117,7 @@ local-infile
 # is read after [mysqld] and [embedded]
 loose-aria
 
+# Set small value of min_gap_size to do a sufficient testing of the related
+# functionality. The flag is marked "loose" because it doesn't exist in
+# embedded server.
+loose_gtid_index_min_gap_size = 200

@@ -1,0 +1,49 @@
+#
+# The variable is only global, OFF by default.
+#
+select @@global.gtid_index_debug_logging;
+@@global.gtid_index_debug_logging
+0
+select @@session.gtid_index_debug_logging;
+ERROR HY000: Variable 'gtid_index_debug_logging' is a GLOBAL variable
+#
+# Check different methods of reading.
+#
+show global variables like 'gtid_index_debug_logging';
+Variable_name	Value
+gtid_index_debug_logging	OFF
+show session variables like 'gtid_index_debug_logging';
+Variable_name	Value
+gtid_index_debug_logging	OFF
+select * from information_schema.global_variables
+where variable_name='gtid_index_debug_logging';
+VARIABLE_NAME	VARIABLE_VALUE
+GTID_INDEX_DEBUG_LOGGING	OFF
+select * from information_schema.session_variables
+where variable_name='gtid_index_debug_logging';
+VARIABLE_NAME	VARIABLE_VALUE
+GTID_INDEX_DEBUG_LOGGING	OFF
+#
+# Set to valid values.
+#
+set global gtid_index_debug_logging= 1;
+select @@global.gtid_index_debug_logging;
+@@global.gtid_index_debug_logging
+1
+set global gtid_index_debug_logging= 0;
+select @@global.gtid_index_debug_logging;
+@@global.gtid_index_debug_logging
+0
+set global gtid_index_debug_logging= default;
+#
+# Cannot change on session level.
+#
+set session gtid_index_debug_logging= 1;
+ERROR HY000: Variable 'gtid_index_debug_logging' is a GLOBAL variable and should be set with SET GLOBAL
+show session variables like 'gtid_index_debug_logging';
+Variable_name	Value
+gtid_index_debug_logging	OFF
+#
+# Cleanup
+#
+set global gtid_index_debug_logging= default;
