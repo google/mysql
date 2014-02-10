@@ -2282,6 +2282,11 @@ files_checked:
 		dict_stats_thread_init();
 	}
 
+	if (!srv_read_only_mode && srv_scrub_log) {
+		/* TODO(minliz): have/use log_scrub_thread_init() instead? */
+		log_scrub_event = os_event_create();
+	}
+
 	trx_sys_file_format_init();
 
 	trx_sys_create();
@@ -2860,6 +2865,10 @@ files_checked:
 
 		/* Create thread(s) that handles key rotation */
 		fil_crypt_threads_init();
+
+		/* Create the log scrub thread */
+		if (srv_scrub_log)
+			os_thread_create(log_scrub_thread, NULL, NULL);
 	}
 
 	srv_was_started = TRUE;
@@ -3026,6 +3035,11 @@ innobase_shutdown_for_mysql(void)
 
 	if (!srv_read_only_mode) {
 		dict_stats_thread_deinit();
+		if (srv_scrub_log) {
+			/* TODO(minliz): have/use log_scrub_thread_deinit() instead? */
+			os_event_free(log_scrub_event);
+			log_scrub_event = NULL;
+		}
 	}
 
 	if (!srv_read_only_mode) {

@@ -385,6 +385,11 @@ extern ibool	srv_buf_dump_thread_active;
 /* TRUE during the lifetime of the stats thread */
 extern ibool	srv_dict_stats_thread_active;
 
+/* TRUE if enable log scrubbing */
+extern my_bool	srv_scrub_log;
+/* TRUE during the lifetime of the log scrub thread */
+extern ibool	srv_log_scrub_thread_active;
+
 extern ulong	srv_n_spin_wait_rounds;
 extern ulong	srv_n_free_tickets_to_enter;
 extern ulong	srv_thread_sleep_delay;

@@ -86,6 +86,9 @@ UNIV_INTERN ibool	srv_buf_dump_thread_active = FALSE;
 
 UNIV_INTERN ibool	srv_dict_stats_thread_active = FALSE;
 
+UNIV_INTERN ibool	srv_log_scrub_active = FALSE;
+UNIV_INTERN my_bool	srv_scrub_log = FALSE;
+
 UNIV_INTERN const char*	srv_main_thread_op_info = "";
 
 /** Prefix used by MySQL to indicate pre-5.1 table name encoding */
@@ -1876,6 +1879,8 @@ srv_any_background_threads_are_active(void)
 		thread_active = "buf_dump_thread";
 	} else if (srv_dict_stats_thread_active) {
 		thread_active = "dict_stats_thread";
+	} else if (srv_scrub_log && srv_log_scrub_thread_active) {
+		thread_active = "log_scrub_thread";
 	}
 
 	os_event_set(srv_error_event);
@@ -1883,6 +1888,8 @@ srv_any_background_threads_are_active(void)
 	os_event_set(srv_buf_dump_event);
 	os_event_set(lock_sys->timeout_event);
 	os_event_set(dict_stats_event);
+	if (srv_scrub_log)
+		os_event_set(log_scrub_event);
 
 	return(thread_active);
 }
