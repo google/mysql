@@ -660,8 +660,6 @@ struct TABLE_SHARE
   LEX_STRING normalized_path;		/* unpack_filename(path) */
   LEX_STRING connect_string;
 
-  bool is_gtid_slave_pos;
-
   /* 
      Set of keys in use, implemented as a Bitmap.
      Excludes keys disabled by ALTER TABLE ... DISABLE KEYS.
@@ -1067,7 +1065,6 @@ public:
   ORDER		*group;
   String	alias;            	  /* alias or table name */
   uchar		*null_flags;
-  my_bitmap_map	*bitmap_init_value;
   MY_BITMAP     def_read_set, def_write_set, def_vcol_set, tmp_set; 
   MY_BITMAP     eq_join_set;         /* used to mark equi-joined fields */
   MY_BITMAP     cond_set;   /* used to mark fields from sargable conditions*/
@@ -1952,7 +1949,7 @@ struct TABLE_LIST
      Indicates that if TABLE_LIST object corresponds to the table/view
      which requires special handling.
   */
-  enum
+  enum enum_open_strategy
   {
     /* Normal open. */
     OPEN_NORMAL= 0,
