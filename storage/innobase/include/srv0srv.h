@@ -449,6 +449,9 @@ extern my_bool srv_print_all_deadlocks;
 
 extern my_bool	srv_cmp_per_index_enabled;
 
+/* is encryption enabled */
+extern my_bool	srv_encrypt_tables;
+
 /** Status variables to be passed to MySQL */
 extern struct export_var_t export_vars;
 
@@ -856,6 +859,11 @@ struct export_var_t{
 	ulint innodb_purge_view_trx_id_age;	/*!< rw_max_trx_id
 						- purged view's min trx_id */
 #endif /* UNIV_DEBUG */
+	ulint innodb_encryption_rotation_pages_read_from_cache;
+	ulint innodb_encryption_rotation_pages_read_from_disk;
+	ulint innodb_encryption_rotation_pages_modified;
+	ulint innodb_encryption_rotation_pages_flushed;
+	ulint innodb_encryption_rotation_estimated_iops;
 };
 
 /** Thread slot in the thread table.  */

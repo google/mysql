@@ -251,6 +251,9 @@ struct fil_space_t {
 				unflushed_spaces */
 	UT_LIST_NODE_T(fil_space_t) space_list;
 				/*!< list of all spaces */
+
+	fil_space_crypt_t* crypt_data;
+
 	ulint		magic_n;/*!< FIL_SPACE_MAGIC_N */
 };
 
@@ -1235,7 +1238,8 @@ fil_space_create(
 	const char*	name,	/*!< in: space name */
 	ulint		id,	/*!< in: space id */
 	ulint		flags,	/*!< in: tablespace flags */
-	ulint		purpose)/*!< in: FIL_TABLESPACE, or FIL_LOG if log */
+	ulint		purpose,/*!< in: FIL_TABLESPACE, or FIL_LOG if log */
+	fil_space_crypt_t* crypt_data) /*!< in: crypt data */
 {
 	fil_space_t*	space;
 
@@ -1329,6 +1333,8 @@ fil_space_create(
 	space->is_in_unflushed_spaces = false;
 
 	UT_LIST_ADD_LAST(space_list, fil_system->space_list, space);
+
+	space->crypt_data = crypt_data;
 
 	mutex_exit(&fil_system->mutex);
 
@@ -1463,6 +1469,8 @@ fil_space_free(
 	}
 
 	rw_lock_free(&(space->latch));
+
+	fil_space_destroy_crypt_data(&(space->crypt_data));
 
 	mem_free(space->name);
 	mem_free(space);
@@ -1697,6 +1705,8 @@ fil_init(
 	UT_LIST_INIT(fil_system->LRU);
 
 	fil_system->max_n_open = max_n_open;
+
+	fil_space_crypt_init();
 }
 
 /*******************************************************************//**
@@ -1898,7 +1908,8 @@ fil_write_lsn_and_arch_no_to_file(
 	err = fil_read(TRUE, space, 0, sum_of_sizes, 0,
 		       UNIV_PAGE_SIZE, buf, NULL);
 	if (err == DB_SUCCESS) {
-		mach_write_to_8(buf + FIL_PAGE_FILE_FLUSH_LSN, lsn);
+		mach_write_to_8(buf + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION,
+				lsn);
 
 		err = fil_write(TRUE, space, 0, sum_of_sizes, 0,
 				UNIV_PAGE_SIZE, buf, NULL);
@@ -2041,8 +2052,9 @@ fil_read_first_page(
 #endif /* UNIV_LOG_ARCHIVE */
 	lsn_t*		min_flushed_lsn,	/*!< out: min of flushed
 						lsn values in data files */
-	lsn_t*		max_flushed_lsn)	/*!< out: max of flushed
+	lsn_t*		max_flushed_lsn,	/*!< out: max of flushed
 						lsn values in data files */
+	fil_space_crypt_t**   crypt_data)       /*<  out: crypt data */
 {
 	byte*		buf;
 	byte*		page;
@@ -2061,7 +2073,16 @@ fil_read_first_page(
 
 	*space_id = fsp_header_get_space_id(page);
 
-	flushed_lsn = mach_read_from_8(page + FIL_PAGE_FILE_FLUSH_LSN);
+	flushed_lsn = mach_read_from_8(page +
+				       FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
+
+	if (crypt_data) {
+		ulint space = fsp_header_get_space_id(page);
+		ulint offset =
+			fsp_header_get_crypt_offset(
+				fsp_flags_get_zip_size(*flags), NULL);
+		*crypt_data = fil_space_read_crypt_data(space, page, offset);
+	}
 
 	if (!one_read_already) {
 		check_msg = fil_check_first_page(page);
@@ -2546,6 +2567,9 @@ fil_check_pending_operations(
 	ut_ad(space);
 
 	*space = 0;
+
+	/* Wait for crypt threads to stop accessing space */
+	fil_space_crypt_close_tablespace(id);
 
 	mutex_enter(&fil_system->mutex);
 	fil_space_t* sp = fil_space_get_by_id(id);
@@ -3517,7 +3541,8 @@ fil_create_new_single_table_tablespace(
 		}
 	}
 
-	success = fil_space_create(tablename, space_id, flags, FIL_TABLESPACE);
+	success = fil_space_create(tablename, space_id, flags, FIL_TABLESPACE,
+				   fil_space_create_crypt_data());
 	if (!success || !fil_node_create(path, size, space_id, FALSE)) {
 		err = DB_ERROR;
 		goto error_exit_1;
@@ -3644,6 +3669,7 @@ fil_open_single_table_tablespace(
 	fsp_open_info	remote;
 	ulint		tablespaces_found = 0;
 	ulint		valid_tablespaces_found = 0;
+	fil_space_crypt_t* crypt_data = NULL;
 
 #ifdef UNIV_SYNC_DEBUG
 	ut_ad(!fix_dict || rw_lock_own(&dict_operation_lock, RW_LOCK_EX));
@@ -3737,7 +3763,8 @@ fil_open_single_table_tablespace(
 #ifdef UNIV_LOG_ARCHIVE
 			&space_arch_log_no, &space_arch_log_no,
 #endif /* UNIV_LOG_ARCHIVE */
-			&def.lsn, &def.lsn);
+			&def.lsn, &def.lsn,
+			&def.crypt_data);
 		def.valid = !def.check_msg;
 
 		/* Validate this single-table-tablespace with SYS_TABLES,
@@ -3762,7 +3789,8 @@ fil_open_single_table_tablespace(
 #ifdef UNIV_LOG_ARCHIVE
 			&remote.arch_log_no, &remote.arch_log_no,
 #endif /* UNIV_LOG_ARCHIVE */
-			&remote.lsn, &remote.lsn);
+			&remote.lsn, &remote.lsn,
+			&remote.crypt_data);
 		remote.valid = !remote.check_msg;
 
 		/* Validate this single-table-tablespace with SYS_TABLES,
@@ -3788,7 +3816,8 @@ fil_open_single_table_tablespace(
 #ifdef UNIV_LOG_ARCHIVE
 			&dict.arch_log_no, &dict.arch_log_no,
 #endif /* UNIV_LOG_ARCHIVE */
-			&dict.lsn, &dict.lsn);
+			&dict.lsn, &dict.lsn,
+			&dict.crypt_data);
 		dict.valid = !dict.check_msg;
 
 		/* Validate this single-table-tablespace with SYS_TABLES,
@@ -3941,9 +3970,17 @@ fil_open_single_table_tablespace(
 	}
 
 skip_validate:
+	if (remote.success)
+		crypt_data = remote.crypt_data;
+	else if (dict.success)
+		crypt_data = dict.crypt_data;
+	else if (def.success)
+		crypt_data = def.crypt_data;
+
 	if (err != DB_SUCCESS) {
 		; // Don't load the tablespace into the cache
-	} else if (!fil_space_create(tablename, id, flags, FIL_TABLESPACE)) {
+	} else if (!fil_space_create(tablename, id, flags, FIL_TABLESPACE,
+				     crypt_data)) {
 		err = DB_ERROR;
 	} else {
 		/* We do not measure the size of the file, that is why
@@ -3963,15 +4000,25 @@ cleanup_and_exit:
 	if (remote.filepath) {
 		mem_free(remote.filepath);
 	}
+	if (remote.crypt_data && remote.crypt_data != crypt_data) {
+		fil_space_destroy_crypt_data(&remote.crypt_data);
+	}
 	if (dict.success) {
 		os_file_close(dict.file);
 	}
 	if (dict.filepath) {
 		mem_free(dict.filepath);
 	}
+	if (dict.crypt_data && dict.crypt_data != crypt_data) {
+		fil_space_destroy_crypt_data(&dict.crypt_data);
+	}
 	if (def.success) {
 		os_file_close(def.file);
 	}
+	if (def.crypt_data && def.crypt_data != crypt_data) {
+		fil_space_destroy_crypt_data(&def.crypt_data);
+	}
+
 	mem_free(def.filepath);
 
 	return(err);
@@ -4192,7 +4239,8 @@ check_first_page:
 #ifdef UNIV_LOG_ARCHIVE
 		    &fsp->arch_log_no, &fsp->arch_log_no,
 #endif /* UNIV_LOG_ARCHIVE */
-		    &fsp->lsn, &fsp->lsn)) {
+		    &fsp->lsn, &fsp->lsn,
+		    &fsp->crypt_data)) {
 		ib_logf(IB_LOG_LEVEL_ERROR,
 			"%s in tablespace %s (table %s)",
 			check_msg, fsp->filepath, tablename);
@@ -4523,7 +4571,8 @@ will_not_choose:
 	mutex_exit(&fil_system->mutex);
 #endif /* UNIV_HOTBACKUP */
 	ibool file_space_create_success = fil_space_create(
-		tablename, fsp->id, fsp->flags, FIL_TABLESPACE);
+		tablename, fsp->id, fsp->flags, FIL_TABLESPACE,
+		fsp->crypt_data);
 
 	if (!file_space_create_success) {
 		if (srv_force_recovery > 0) {
@@ -6150,6 +6199,8 @@ void
 fil_close(void)
 /*===========*/
 {
+	fil_space_crypt_cleanup();
+
 #ifndef UNIV_HOTBACKUP
 	/* The mutex should already have been freed. */
 	ut_ad(fil_system->mutex.magic_n == 0);
@@ -6199,6 +6250,8 @@ struct fil_iterator_t {
 	ulint		n_io_buffers;		/*!< Number of pages to use
 						for IO */
 	byte*		io_buffer;		/*!< Buffer to use for IO */
+	fil_space_crypt_t *crypt_data;		/*!< Crypt data (if encrypted) */
+	byte*           crypt_io_buffer;        /*!< IO buffer when encrypted */
 };
 
 /********************************************************************//**
@@ -6261,7 +6314,12 @@ fil_iterate(
 		ut_ad(n_bytes > 0);
 		ut_ad(!(n_bytes % iter.page_size));
 
-		if (!os_file_read(iter.file, io_buffer, offset,
+		byte* readptr = io_buffer;
+		if (iter.crypt_data != NULL) {
+			readptr = iter.crypt_io_buffer;
+		}
+
+		if (!os_file_read(iter.file, readptr, offset,
 				  (ulint) n_bytes)) {
 
 			ib_logf(IB_LOG_LEVEL_ERROR, "os_file_read() failed");
@@ -6274,6 +6332,18 @@ fil_iterate(
 		ulint		n_pages_read = (ulint) n_bytes / iter.page_size;
 
 		for (ulint i = 0; i < n_pages_read; ++i) {
+
+			if (iter.crypt_data != NULL) {
+				bool decrypted = fil_space_decrypt(
+					iter.crypt_data,
+					readptr + i * iter.page_size,    // src
+					iter.page_size,
+					io_buffer + i * iter.page_size); // dst
+				if (decrypted) {
+					/* write back unencrypted page */
+					updated = true;
+				}
+			}
 
 			buf_block_set_file_page(block, space_id, page_no++);
 
@@ -6416,12 +6486,27 @@ fil_tablespace_iterate(
 		iter.n_io_buffers = n_io_buffers;
 		iter.page_size = callback.get_page_size();
 
+		ulint crypt_data_offset = fsp_header_get_crypt_offset(
+			callback.get_zip_size(), 0);
+
+		/* read (optional) crypt data */
+		iter.crypt_data = fil_space_read_crypt_data(
+			0, page, crypt_data_offset);
+
 		/* Compressed pages can't be optimised for block IO for now.
 		We do the IMPORT page by page. */
 
 		if (callback.get_zip_size() > 0) {
 			iter.n_io_buffers = 1;
 			ut_a(iter.page_size == callback.get_zip_size());
+		}
+
+		/** If tablespace is encrypted, it needs extra buffers */
+		if (iter.crypt_data != NULL) {
+			/* decrease io buffers so that memory
+			* consumption doesnt double
+			* note: the +1 is to avoid n_io_buffers getting down to 0 */
+			iter.n_io_buffers = (iter.n_io_buffers + 1) / 2;
 		}
 
 		/** Add an extra page for compressed page scratch area. */
@@ -6432,9 +6517,45 @@ fil_tablespace_iterate(
 		iter.io_buffer = static_cast<byte*>(
 			ut_align(io_buffer, UNIV_PAGE_SIZE));
 
+		void* crypt_io_buffer = NULL;
+		if (iter.crypt_data != NULL) {
+			crypt_io_buffer = mem_alloc(
+				iter.n_io_buffers * UNIV_PAGE_SIZE);
+			iter.crypt_io_buffer = static_cast<byte*>(
+				crypt_io_buffer);
+		}
+
 		err = fil_iterate(iter, &block, callback);
 
 		mem_free(io_buffer);
+
+		if (iter.crypt_data != NULL) {
+			/* clear crypt data from page 0 and write it back */
+			os_file_read(file, page, 0, UNIV_PAGE_SIZE);
+			fil_space_clear_crypt_data(page, crypt_data_offset);
+			lsn_t lsn = mach_read_from_8(page + FIL_PAGE_LSN);
+			if (callback.get_zip_size() == 0) {
+				buf_flush_init_for_writing(
+					page, 0, lsn);
+			} else {
+				buf_flush_update_zip_checksum(
+					page, callback.get_zip_size(), lsn);
+			}
+
+			if (!os_file_write(
+				    iter.filepath, iter.file, page,
+				    0, iter.page_size)) {
+
+				ib_logf(IB_LOG_LEVEL_ERROR,
+					"os_file_write() failed");
+
+				return(DB_IO_ERROR);
+			}
+
+			mem_free(crypt_io_buffer);
+			iter.crypt_io_buffer = NULL;
+			fil_space_destroy_crypt_data(&iter.crypt_data);
+		}
 	}
 
 	if (err == DB_SUCCESS) {
@@ -6565,5 +6686,139 @@ fil_mtr_rename_log(
 	if (new_space_id != TRX_SYS_SPACE) {
 		fil_op_write_log(MLOG_FILE_RENAME, new_space_id,
 				 0, 0, new_name, old_name, mtr);
+	}
+}
+
+/******************************************************************
+Get id of first tablespace or ULINT_UNDEFINED if none */
+UNIV_INTERN
+ulint
+fil_get_first_space()
+{
+	ulint out_id = ULINT_UNDEFINED;
+	fil_space_t* space;
+
+	mutex_enter(&fil_system->mutex);
+
+	space = UT_LIST_GET_FIRST(fil_system->space_list);
+	if (space != NULL) {
+		do
+		{
+			if (!space->stop_new_ops) {
+				out_id = space->id;
+				break;
+			}
+			space = UT_LIST_GET_NEXT(space_list, space);
+		} while (space != NULL);
+	}
+
+	mutex_exit(&fil_system->mutex);
+
+	return out_id;
+}
+
+/******************************************************************
+Get id of next tablespace or ULINT_UNDEFINED if none */
+UNIV_INTERN
+ulint
+fil_get_next_space(ulint id)
+{
+	bool found;
+	fil_space_t* space;
+	ulint out_id = ULINT_UNDEFINED;
+
+	mutex_enter(&fil_system->mutex);
+
+	space = fil_space_get_by_id(id);
+	if (space == NULL) {
+		/* we didn't find it...search for space with space->id > id */
+		found = false;
+		space = UT_LIST_GET_FIRST(fil_system->space_list);
+	} else {
+		/* we found it, take next available space */
+		found = true;
+	}
+
+	while ((space = UT_LIST_GET_NEXT(space_list, space)) != NULL) {
+
+		if (!found && space->id <= id)
+			continue;
+
+		if (!space->stop_new_ops) {
+			/* inc reference to prevent drop */
+			out_id = space->id;
+			break;
+		}
+	}
+
+	mutex_exit(&fil_system->mutex);
+
+	return out_id;
+}
+
+/******************************************************************
+Get crypt data for a tablespace */
+UNIV_INTERN
+fil_space_crypt_t*
+fil_space_get_crypt_data(
+/*==================*/
+	ulint id)	/*!< in: space id */
+{
+	fil_space_t*	space;
+	fil_space_crypt_t* crypt_data = NULL;
+
+	ut_ad(fil_system);
+
+	mutex_enter(&fil_system->mutex);
+
+	space = fil_space_get_by_id(id);
+	if (space != NULL) {
+		crypt_data = space->crypt_data;
+	}
+
+	mutex_exit(&fil_system->mutex);
+
+	return(crypt_data);
+}
+
+/******************************************************************
+Get crypt data for a tablespace */
+UNIV_INTERN
+void
+fil_space_set_crypt_data(
+/*==================*/
+	ulint id, 	               /*!< in: space id */
+	fil_space_crypt_t* crypt_data) /*!< in: crypt data */
+{
+	fil_space_t*	space;
+	fil_space_crypt_t* old_crypt_data = NULL;
+
+	ut_ad(fil_system);
+
+	mutex_enter(&fil_system->mutex);
+
+	space = fil_space_get_by_id(id);
+	if (space != NULL) {
+
+		if (space->crypt_data != NULL) {
+			ut_a(!fil_space_crypt_compare(crypt_data,
+						      space->crypt_data));
+			old_crypt_data = space->crypt_data;
+		}
+
+		space->crypt_data = crypt_data;
+	} else {
+		/* there is a small risk that tablespace has been deleted */
+		old_crypt_data = crypt_data;
+	}
+
+	mutex_exit(&fil_system->mutex);
+
+	if (old_crypt_data != NULL) {
+		/* first assign space->crypt_data
+		* then destroy old_crypt_data when no new references to
+		* it can be created.
+		*/
+		fil_space_destroy_crypt_data(&old_crypt_data);
 	}
 }

@@ -117,6 +117,13 @@ local-infile
 # is read after [mysqld] and [embedded]
 loose-aria
 
+# enable encryption by default in mtr
+enable-example_key_management_plugin
+loose-innodb-encryption-threads=4
+# with example_key_management_plugin key-age is measured in seconds...
+loose-innodb-encryption-rotate-key-age=15
+loose-innodb-encrypt-tables=ON
+
 # Set small value of min_gap_size to do a sufficient testing of the related
 # functionality. The flag is marked "loose" because it doesn't exist in
 # embedded server.

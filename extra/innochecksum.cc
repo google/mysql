@@ -383,8 +383,21 @@ int main(int argc, char **argv)
       return 1;
     }
 
+    uint key_version= mach_read_from_4(
+        buf + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
+
+    /* encrypted pages store checksum right after the key version */
+    uint encrypted_checksum= mach_read_from_4(
+        buf + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION + 4);
+
     if (compressed) {
       /* compressed pages */
+      if (key_version != 0) {
+        /* store the encrypted checksum in the checksum field... */
+        memcpy(buf + FIL_PAGE_SPACE_OR_CHKSUM,
+               buf + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION + 4,
+               4);
+      }
       if (!page_zip_verify_checksum(buf, physical_page_size)) {
         fprintf(stderr, "Fail; page %lu invalid (fails compressed page checksum).\n", ct);
         if (!skip_corrupt)
@@ -410,18 +423,21 @@ int main(int argc, char **argv)
         }
       }
 
-      /* check old method of checksumming */
-      oldcsum= buf_calc_page_old_checksum(buf);
-      oldcsumfield= mach_read_from_4(buf + logical_page_size - FIL_PAGE_END_LSN_OLD_CHKSUM);
-      if (debug)
-        printf("page %lu: old style: calculated = %lu; recorded = %lu\n", ct, oldcsum, oldcsumfield);
-      if (oldcsumfield != mach_read_from_4(buf + FIL_PAGE_LSN) && oldcsumfield != oldcsum)
+      /* check old method of checksumming (for unencrypted pages) */
+      if (key_version == 0)
       {
-        fprintf(stderr, "Fail;  page %lu invalid (fails old style checksum)\n", ct);
-        if (!skip_corrupt)
+        oldcsum= buf_calc_page_old_checksum(buf);
+        oldcsumfield= mach_read_from_4(buf + logical_page_size - FIL_PAGE_END_LSN_OLD_CHKSUM);
+        if (debug)
+          printf("page %lu: old style: calculated = %lu; recorded = %lu\n", ct, oldcsum, oldcsumfield);
+        if (oldcsumfield != mach_read_from_4(buf + FIL_PAGE_LSN) && oldcsumfield != oldcsum)
         {
-          free(big_buf);
-          return 1;
+          fprintf(stderr, "Fail;  page %lu invalid (fails old style checksum)\n", ct);
+          if (!skip_corrupt)
+          {
+            free(big_buf);
+            return 1;
+          }
         }
       }
 
@@ -429,6 +445,9 @@ int main(int argc, char **argv)
       csum= buf_calc_page_new_checksum(buf);
       crc32= buf_calc_page_crc32(buf);
       csumfield= mach_read_from_4(buf + FIL_PAGE_SPACE_OR_CHKSUM);
+      if (key_version != 0) {
+        csumfield= encrypted_checksum;
+      }
       if (debug)
         printf("page %lu: new style: calculated = %lu; crc32 = %lu; recorded = %lu\n",
                ct, csum, crc32, csumfield);

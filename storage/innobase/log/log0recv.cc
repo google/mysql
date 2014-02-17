@@ -1295,6 +1295,9 @@ recv_parse_or_apply_log_rec_body(
 				ptr, end_ptr, page, page_zip, index);
 		}
 		break;
+	case MLOG_FILE_WRITE_CRYPT_DATA:
+		ptr = fil_parse_write_crypt_data(ptr, end_ptr, block);
+		break;
 	default:
 		ptr = NULL;
 		recv_sys->found_corrupt_log = TRUE;
