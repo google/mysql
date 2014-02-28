@@ -49,6 +49,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 #include "mysys_priv.h"
 #include <share.h>
 #include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static void validate_fd(File fd) {
+  if (fd < MY_FILE_MIN || fd >= (int) my_file_limit) {
+    fprintf(stderr, "Internal error: invalid fd %d\n", (int) fd);
+    abort();
+  }
+}
 
 /* Associates a file descriptor with an existing operating-system file handle.*/
 File my_open_osfhandle(HANDLE handle, int oflag)
@@ -80,7 +89,7 @@ File my_open_osfhandle(HANDLE handle, int oflag)
 static void invalidate_fd(File fd)
 {
   DBUG_ENTER("invalidate_fd");
-  DBUG_ASSERT(fd >= MY_FILE_MIN && fd < (int)my_file_limit);
+  validate_fd(fd);
   my_file_info[fd].fhandle= 0;
   DBUG_VOID_RETURN;
 }
@@ -90,7 +99,7 @@ static void invalidate_fd(File fd)
 HANDLE my_get_osfhandle(File fd)
 {
   DBUG_ENTER("my_get_osfhandle");
-  DBUG_ASSERT(fd >= MY_FILE_MIN && fd < (int)my_file_limit);
+  validate_fd(fd);
   DBUG_RETURN(my_file_info[fd].fhandle);
 }
 
@@ -98,7 +107,7 @@ HANDLE my_get_osfhandle(File fd)
 static int my_get_open_flags(File fd)
 {
   DBUG_ENTER("my_get_open_flags");
-  DBUG_ASSERT(fd >= MY_FILE_MIN && fd < (int)my_file_limit);
+  validate_fd(fd);
   DBUG_RETURN(my_file_info[fd].oflag);
 }
 
