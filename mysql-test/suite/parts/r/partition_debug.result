@@ -395,8 +395,8 @@ a	b
 ALTER TABLE t1 EXCHANGE PARTITION p0 WITH TABLE t2;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sqlx-nnnn_nnnn.MYD
-#sqlx-nnnn_nnnn.MYI
+#sql-temporary.MYD
+#sql-temporary.MYI
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p1.MYD
@@ -507,8 +507,8 @@ a	b
 ALTER TABLE t1 EXCHANGE PARTITION p0 WITH TABLE t2;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sqlx-nnnn_nnnn.MYD
-#sqlx-nnnn_nnnn.MYI
+#sql-temporary.MYD
+#sql-temporary.MYI
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p1.MYD
@@ -619,8 +619,8 @@ a	b
 ALTER TABLE t1 EXCHANGE PARTITION p0 WITH TABLE t2;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sqlx-nnnn_nnnn.MYD
-#sqlx-nnnn_nnnn.MYI
+#sql-temporary.MYD
+#sql-temporary.MYI
 t1#P#p1.MYD
 t1#P#p1.MYI
 t1.frm
@@ -731,8 +731,8 @@ a	b
 ALTER TABLE t1 EXCHANGE PARTITION p0 WITH TABLE t2;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sqlx-nnnn_nnnn.MYD
-#sqlx-nnnn_nnnn.MYI
+#sql-temporary.MYD
+#sql-temporary.MYI
 t1#P#p1.MYD
 t1#P#p1.MYI
 t1.frm
@@ -1269,7 +1269,7 @@ a	b
 3	Original from partition p0
 4	Original from partition p0
 ALTER TABLE t1 EXCHANGE PARTITION p0 WITH TABLE t2;
-ERROR HY000: Error on rename of './test/t2' to './test/#sqlx-nnnn_nnnn' (errno: 0 "Internal error/check (Not system error)")
+ERROR HY000: Error on rename of './test/t2' to './test/#sql-temporary' (errno: 0 "Internal error/check (Not system error)")
 # State after failure
 t1#P#p0.MYD
 t1#P#p0.MYI
@@ -1677,7 +1677,7 @@ a	b
 3	Original from partition p0
 4	Original from partition p0
 ALTER TABLE t1 EXCHANGE PARTITION p0 WITH TABLE t2;
-ERROR HY000: Error on rename of './test/#sqlx-nnnn_nnnn' to './test/t1#P#p0' (errno: 0 "Internal error/check (Not system error)")
+ERROR HY000: Error on rename of './test/#sql-temporary' to './test/t1#P#p0' (errno: 0 "Internal error/check (Not system error)")
 # State after failure
 t1#P#p0.MYD
 t1#P#p0.MYI

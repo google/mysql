@@ -5071,7 +5071,7 @@ bool Discovered_table_list::add_table(const char *tname, size_t tlen)
 
 bool Discovered_table_list::add_file(const char *fname)
 {
-  bool is_temp= strncmp(fname, STRING_WITH_LEN(tmp_file_prefix)) == 0;
+  bool is_temp= strncmp(fname, tmp_file_prefix, tmp_file_prefix_length) == 0;
 
   if (is_temp && !with_temps)
     return 0;
