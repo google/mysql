@@ -1668,6 +1668,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         NCHAR_STRING opt_component key_cache_name
         sp_opt_label BIN_NUM label_ident TEXT_STRING_filesystem ident_or_empty
         opt_constraint constraint opt_ident opt_if_not_exists_ident
+        opt_duplicate_key_name
 
 %type <lex_str_ptr>
         opt_table_alias
@@ -12094,7 +12095,20 @@ expr_or_default:
 opt_insert_update:
           /* empty */
         | ON DUPLICATE_SYM { Lex->duplicates= DUP_UPDATE; }
-          KEY_SYM UPDATE_SYM insert_update_list
+          KEY_SYM opt_duplicate_key_name UPDATE_SYM insert_update_list
+          {
+            Lex->duplicate_key_name= $5;
+          }
+        ;
+
+opt_duplicate_key_name:
+          /* empty */           { $$= null_lex_str; }
+        | '(' ident ')'         { $$= $2; }
+        | '(' PRIMARY_SYM ')'
+          {
+            LEX_STRING str= { C_STRING_WITH_LEN("PRIMARY") };
+            $$= str;
+          }
         ;
 
 /* Update rows in a table */

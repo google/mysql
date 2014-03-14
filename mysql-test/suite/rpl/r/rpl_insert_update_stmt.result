@@ -1,0 +1,54 @@
+#
+# Preparation
+#
+# We expect to get "Unsafe statement" warnings.
+call mtr.add_suppression("Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT.");
+CREATE TABLE t1 (
+a INT NOT NULL,
+b INT NOT NULL,
+PRIMARY KEY (a),
+UNIQUE KEY unique_b (b)
+);
+CREATE TABLE t2 (
+a INT NOT NULL,
+b INT NOT NULL,
+PRIMARY KEY (a)
+);
+INSERT INTO t1 (a, b) VALUES (1, 1);
+INSERT INTO t2 (a, b) VALUES (1, 1);
+# We expect this to generate an "Unsafe statement" warning, but will
+# update the row anyway. Since we know that only a=1 is in conflict
+# this is nonetheless deterministic.
+INSERT INTO t1 (a, b) VALUES (2, 1)
+ON DUPLICATE KEY UPDATE a=3;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. INSERT... ON DUPLICATE KEY UPDATE  on a table with more than one UNIQUE KEY is unsafe
+SELECT a AS should_be_3 FROM t1 WHERE b = 1;
+should_be_3
+3
+# Specifying the key name should update the row as well, but should not
+# generate a warning.
+INSERT INTO t1 (a, b) VALUES (4, 1)
+ON DUPLICATE KEY (unique_b) UPDATE a=5;
+SELECT a AS should_be_5 FROM t1 WHERE b = 1;
+should_be_5
+5
+# Not using key name after it was used in a previous statement shouldn't
+# error out (variables should be properly initialized).
+INSERT INTO t2 (a, b) VALUES (1, 2)
+ON DUPLICATE KEY UPDATE b=3;
+SELECT b AS should_be_3 FROM t2 WHERE a = 1;
+should_be_3
+3
+# Specifying a key other than the one which conflicts should cause
+# the duplicate key error to be returned and the row to not be updated.
+INSERT INTO t1 (a, b) VALUES (6, 1)
+ON DUPLICATE KEY (PRIMARY) UPDATE a=7;
+ERROR 23000: Duplicate entry '1' for key 'unique_b'
+SELECT a AS should_be_5 FROM t1 WHERE b = 1;
+should_be_5
+5
+#
+# Cleanup
+#
+DROP TABLE t1, t2;

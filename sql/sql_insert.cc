@@ -1463,6 +1463,39 @@ bool mysql_prepare_insert(THD *thd, TABLE_LIST *table_list,
   if (!table)
     table= table_list->table;
 
+  if (duplic == DUP_UPDATE && thd->lex->duplicate_key_name.str)
+  {
+    /*
+      For INSERT ... ON DUPLICATE KEY (key_name) UPDATE, we need to find
+      the key_name specified and cache its key number.
+    */
+    uint found_key_nr= MAX_KEY;
+    for (uint key_nr= 0; key_nr < table->s->keys; key_nr++)
+    {
+      if (my_strcasecmp(system_charset_info,
+                        thd->lex->duplicate_key_name.str,
+                        table->key_info[key_nr].name) == 0)
+      {
+        found_key_nr= key_nr;
+        break;
+      }
+    }
+
+    /*
+      The key was not found in the key list, but the user specified a key
+      name, this is an error.
+    */
+    if (found_key_nr == MAX_KEY)
+    {
+      my_error(ER_KEY_DOES_NOT_EXITS, MYF(0),
+               thd->lex->duplicate_key_name.str,
+               table->s->table_name.str);
+      DBUG_RETURN(TRUE);
+    }
+
+    thd->lex->duplicate_key_nr= found_key_nr;
+  }
+
   if (!fields.elements && table->vfield)
   {
     for (Field **vfield_ptr= table->vfield; *vfield_ptr; vfield_ptr++)
@@ -1606,6 +1639,19 @@ int write_record(THD *thd, TABLE *table,COPY_INFO *info)
 	error= HA_ERR_FOUND_DUPP_KEY;         /* Database can't find key */
 	goto err;
       }
+
+      if (thd->lex->duplicate_key_nr != MAX_KEY &&
+          thd->lex->duplicate_key_nr != key_nr)
+      {
+        /*
+          For INSERT ... ON DUPLICATE KEY (key_name) UPDATE ..., a key_name
+          was specified, but a duplicate key occurred on a key other than
+          the key_name specified. This should be returned as an error.
+        */
+        error= HA_ERR_FOUND_DUPP_KEY;
+        goto err;
+      }
+
       DEBUG_SYNC(thd, "write_row_replace");
 
       /* Read all columns for the row we are going to replace */

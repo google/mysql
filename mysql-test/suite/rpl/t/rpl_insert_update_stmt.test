@@ -1,0 +1,77 @@
+#
+# Test the INSERT ... ON DUPLICATE KEY (key_name) UPDATE ... syntax.
+#
+# Normally INSERT ... ON DUPLICATE KEY UPDATE is marked as unsafe for
+# statement-based replication when multiple unique keys exist on the table
+# because which of the unique indexes conflicts for a given row insert is not
+# guaranteed (that is, the internal order of evaluating the indexes is not
+# deterministic).
+#
+# When a key name is specified in the statement, the statement will be
+# deterministic and will result in one of the following three outcomes:
+#
+#   1. No conflict exists. The row will be inserted.
+#   2. The row conflicts on the index named. The row will be updated as per
+#      the UPDATE portion of the statement.
+#   3. The row conflicts on a different index than the one named. A duplicate
+#      key error will be returned.
+#
+# In all cases, the statement is safe for statement-based replication.
+#
+
+--source include/have_log_bin.inc
+--source include/have_binlog_format_statement.inc
+
+--echo #
+--echo # Preparation
+--echo #
+
+--echo # We expect to get "Unsafe statement" warnings.
+call mtr.add_suppression("Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT.");
+
+CREATE TABLE t1 (
+  a INT NOT NULL,
+  b INT NOT NULL,
+  PRIMARY KEY (a),
+  UNIQUE KEY unique_b (b)
+);
+CREATE TABLE t2 (
+  a INT NOT NULL,
+  b INT NOT NULL,
+  PRIMARY KEY (a)
+);
+
+INSERT INTO t1 (a, b) VALUES (1, 1);
+INSERT INTO t2 (a, b) VALUES (1, 1);
+
+--echo # We expect this to generate an "Unsafe statement" warning, but will
+--echo # update the row anyway. Since we know that only a=1 is in conflict
+--echo # this is nonetheless deterministic.
+INSERT INTO t1 (a, b) VALUES (2, 1)
+  ON DUPLICATE KEY UPDATE a=3;
+SELECT a AS should_be_3 FROM t1 WHERE b = 1;
+
+--echo # Specifying the key name should update the row as well, but should not
+--echo # generate a warning.
+INSERT INTO t1 (a, b) VALUES (4, 1)
+  ON DUPLICATE KEY (unique_b) UPDATE a=5;
+SELECT a AS should_be_5 FROM t1 WHERE b = 1;
+
+--echo # Not using key name after it was used in a previous statement shouldn't
+--echo # error out (variables should be properly initialized).
+INSERT INTO t2 (a, b) VALUES (1, 2)
+  ON DUPLICATE KEY UPDATE b=3;
+SELECT b AS should_be_3 FROM t2 WHERE a = 1;
+
+--echo # Specifying a key other than the one which conflicts should cause
+--echo # the duplicate key error to be returned and the row to not be updated.
+--error ER_DUP_ENTRY
+INSERT INTO t1 (a, b) VALUES (6, 1)
+  ON DUPLICATE KEY (PRIMARY) UPDATE a=7;
+SELECT a AS should_be_5 FROM t1 WHERE b = 1;
+
+--echo #
+--echo # Cleanup
+--echo #
+
+DROP TABLE t1, t2;

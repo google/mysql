@@ -514,6 +514,9 @@ void lex_start(THD *thd)
   lex->check_exists= FALSE;
   lex->verbose= 0;
 
+  lex->duplicate_key_name.str= NULL;
+  lex->duplicate_key_name.length= 0;
+  lex->duplicate_key_nr= MAX_KEY;
   lex->name.str= 0;
   lex->name.length= 0;
   lex->event_parse_data= NULL;
@@ -2544,8 +2547,11 @@ void Query_tables_list::destroy_query_tables_list()
 
 LEX::LEX()
   : explain(NULL),
-    result(0), option_type(OPT_DEFAULT), is_lex_started(0),
-   limit_rows_examined_cnt(ULONGLONG_MAX)
+    result(0),
+    duplicate_key_nr(MAX_KEY),
+    option_type(OPT_DEFAULT),
+    is_lex_started(0),
+    limit_rows_examined_cnt(ULONGLONG_MAX)
 {
 
   my_init_dynamic_array2(&plugins, sizeof(plugin_ref),

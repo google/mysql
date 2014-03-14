@@ -2451,6 +2451,18 @@ struct LEX: public Query_tables_list
 
   enum SSL_type ssl_type;			/* defined in violite.h */
   enum enum_duplicates duplicates;
+  /*
+    The name of the key allowed to use the 'duplicates' policy above,
+    as currently implemented for DUP_UPDATE only. Set to null_lex_str
+    when no key name is specified.
+  */
+  LEX_STRING duplicate_key_name;
+  /*
+    The cached key number (an index to TABLE::key_info) for the above
+    duplicate_key_name after resolution, or MAX_KEY when no key name
+    is specified or the key number has not yet been resolved.
+  */
+  uint duplicate_key_nr;
   enum enum_tx_isolation tx_isolation;
   enum enum_ha_read_modes ha_read_mode;
   union {
