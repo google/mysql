@@ -1,0 +1,227 @@
+#
+# Test for the permit_safety_suppression variable and SUPPRESS_SAFETY_WARNING
+# clause in SQL statements.
+#
+
+--source include/have_log_bin.inc
+--source include/have_binlog_format_statement.inc
+
+
+--echo #
+--echo # Preparation
+--echo #
+
+call mtr.add_suppression("Unsafe statement written to the binary log");
+
+CREATE TABLE t1 (id int, data varchar(256), primary key (id));
+CREATE TABLE t2 (id int, data varchar(256));
+CREATE TABLE t3 (id int auto_increment, data varchar(256), primary key (id));
+INSERT INTO t1 VALUES (1, "value 1"), (2, "value 2");
+
+--echo #
+--echo # Test the variable itself.
+--echo #
+
+--echo # Make sure it can remember its value.
+SET GLOBAL permit_safety_suppression = OFF;
+SHOW GLOBAL VARIABLES LIKE 'permit_safety_suppression';
+SELECT @@global.permit_safety_suppression;
+
+--echo # Make sure it does not allow session scope.
+--error ER_GLOBAL_VARIABLE
+SET SESSION permit_safety_suppression = ON;
+--error ER_GLOBAL_VARIABLE
+SET @@session.restricted_schemas = ON;
+
+--echo # Nothing should have changed (should still be OFF from above).
+SELECT @@global.permit_safety_suppression;
+
+--echo # Set back to default.
+SET GLOBAL permit_safety_suppression = DEFAULT;
+SELECT @@global.permit_safety_suppression;
+
+--echo # Try some funky values.
+--echo # Invalid types should return an error and not change the value.
+--error ER_WRONG_VALUE_FOR_VAR
+SET GLOBAL permit_safety_suppression = NULL;
+SELECT @@global.permit_safety_suppression;
+
+--error ER_WRONG_VALUE_FOR_VAR
+SET GLOBAL permit_safety_suppression = "";
+SELECT @@global.permit_safety_suppression;
+
+--error ER_WRONG_VALUE_FOR_VAR
+SET GLOBAL permit_safety_suppression = 100;
+SELECT @@global.permit_safety_suppression;
+
+--echo # 0 and 1 are accepted
+SET GLOBAL permit_safety_suppression = 0;
+SELECT @@global.permit_safety_suppression;
+SET GLOBAL permit_safety_suppression = 1;
+SELECT @@global.permit_safety_suppression;
+
+--echo #
+--echo # Now test that SUPPRESS_SAFETY_WARNING works with the flag on and
+--echo # doesn't work with the flag off.
+--echo #
+
+--echo # Test that all statements where SUPPRESS_SAFETY_WARNING is supported
+--echo # give replication unsafety warning.
+
+--echo # INSERT SELECT LIMIT depends on row order
+INSERT INTO t2 SELECT * FROM t1 ORDER BY id LIMIT 1;
+
+--echo # INSERT IGNORE SELECT depends on row order
+INSERT IGNORE INTO t2 SELECT * FROM t1 ORDER BY id;
+
+--echo # INSERT SELECT into table with auto-increment depends on row order
+INSERT INTO t3 (data) SELECT data from t1 ORDER BY id;
+
+--echo # REPLACE SELECT depends on row order
+REPLACE INTO t3 SELECT * from t1 ORDER BY id;
+
+--echo # DELETE LIMIT depends on row order
+DELETE FROM t3 ORDER BY id LIMIT 1;
+
+--echo # CREATE TABLE IGNORE SELECT depends on row order
+CREATE TABLE t4
+  (id int, data varchar(256), primary key (id))
+  IGNORE
+  SELECT * FROM t1 ORDER BY id;
+
+--echo # CREATE TABLE REPLACE SELECT depends on row order
+CREATE TABLE t5
+  (id int, data varchar(256), primary key (id))
+  REPLACE
+  SELECT * FROM t1 ORDER BY id;
+
+--echo # CREATE TABLE SELECT with auto-increment depends on row order
+CREATE TABLE t6
+  (autoinc int auto_increment, id int, data varchar(256),
+   primary key (autoinc), unique key (id))
+  SELECT * FROM t1 ORDER BY id;
+
+--echo # UPDATE IGNORE depends on row order
+UPDATE IGNORE t6 SET id = id + 1 ORDER BY autoinc;
+
+--echo # Check the resulting data
+SELECT * FROM t2;
+SELECT * FROM t3;
+SELECT * FROM t4;
+SELECT * FROM t5;
+SELECT * FROM t6;
+
+--echo # Cleanup for next test to produce the same data.
+DELETE FROM t2;
+DELETE FROM t3;
+DROP TABLE t4;
+DROP TABLE t5;
+DROP TABLE t6;
+
+
+--echo #
+--echo # Now all the same queries but with SUPPRESS_SAFETY_WARNING.
+--echo #
+
+--echo # INSERT SELECT LIMIT depends on row order
+INSERT SUPPRESS_SAFETY_WARNING INTO t2 SELECT * FROM t1 ORDER BY id LIMIT 1;
+
+--echo # INSERT IGNORE SELECT depends on row order
+INSERT SUPPRESS_SAFETY_WARNING IGNORE INTO t2 SELECT * FROM t1 ORDER BY id;
+
+--echo # INSERT SELECT into table with auto-increment depends on row order
+INSERT SUPPRESS_SAFETY_WARNING INTO t3 (data) SELECT data from t1 ORDER BY id;
+
+--echo # REPLACE SELECT depends on row order
+REPLACE SUPPRESS_SAFETY_WARNING INTO t3 SELECT * from t1 ORDER BY id;
+
+--echo # DELETE LIMIT depends on row order
+DELETE SUPPRESS_SAFETY_WARNING FROM t3 ORDER BY id LIMIT 1;
+
+--echo # CREATE TABLE IGNORE SELECT depends on row order
+CREATE SUPPRESS_SAFETY_WARNING TABLE t4
+  (id int, data varchar(256), primary key (id))
+  IGNORE
+  SELECT * FROM t1 ORDER BY id;
+
+--echo # CREATE TABLE REPLACE SELECT depends on row order
+CREATE SUPPRESS_SAFETY_WARNING TABLE t5
+  (id int, data varchar(256), primary key (id))
+  REPLACE
+  SELECT * FROM t1 ORDER BY id;
+
+--echo # CREATE TABLE SELECT with auto-increment depends on row order
+CREATE SUPPRESS_SAFETY_WARNING TABLE t6
+  (autoinc int auto_increment, id int, data varchar(256),
+   primary key (autoinc), unique key (id))
+  SELECT * FROM t1 ORDER BY id;
+
+--echo # UPDATE IGNORE depends on row order
+UPDATE SUPPRESS_SAFETY_WARNING IGNORE t6 SET id = id + 1 ORDER BY autoinc;
+
+--echo # Check the resulting data
+SELECT * FROM t2;
+--echo # Result for t3 is not exactly the same as above because of
+--echo # auto-incremented column, but we still can figure out that it's
+--echo # expected.
+SELECT * FROM t3;
+SELECT * FROM t4;
+SELECT * FROM t5;
+SELECT * FROM t6;
+
+--echo # Cleanup for the next test to work properly.
+DROP TABLE t4;
+DROP TABLE t5;
+DROP TABLE t6;
+
+
+--echo #
+--echo # Now disable SUPPRESS_SAFETY_WARNING option. All the same statements
+--echo # will fail.
+--echo #
+
+SET GLOBAL permit_safety_suppression = OFF;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+INSERT SUPPRESS_SAFETY_WARNING INTO t2 SELECT * FROM t1 ORDER BY id LIMIT 1;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+INSERT SUPPRESS_SAFETY_WARNING IGNORE INTO t2 SELECT * FROM t1 ORDER BY id;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+INSERT SUPPRESS_SAFETY_WARNING INTO t3 (data) SELECT data from t1 ORDER BY id;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+REPLACE SUPPRESS_SAFETY_WARNING INTO t3 SELECT * from t1 ORDER BY id;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+DELETE SUPPRESS_SAFETY_WARNING FROM t3 ORDER BY id LIMIT 1;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+CREATE SUPPRESS_SAFETY_WARNING TABLE t4
+  (id int, data varchar(256), primary key (id))
+  IGNORE
+  SELECT * FROM t1 ORDER BY id;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+CREATE SUPPRESS_SAFETY_WARNING TABLE t5
+  (id int, data varchar(256), primary key (id))
+  REPLACE
+  SELECT * FROM t1 ORDER BY id;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+CREATE SUPPRESS_SAFETY_WARNING TABLE t6
+  (autoinc int auto_increment, id int, data varchar(256),
+   primary key (autoinc), unique key (id))
+  SELECT * FROM t1 ORDER BY id;
+
+--error ER_OPTION_PREVENTS_STATEMENT
+UPDATE SUPPRESS_SAFETY_WARNING IGNORE t1 SET id = id + 1 ORDER BY id;
+
+
+--echo #
+--echo # Cleanup
+--echo #
+
+SET GLOBAL permit_safety_suppression = DEFAULT;
+DROP TABLE t1, t2, t3;

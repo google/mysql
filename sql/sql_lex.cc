@@ -511,6 +511,7 @@ void lex_start(THD *thd)
   lex->expr_allows_subselect= TRUE;
   lex->use_only_table_context= FALSE;
   lex->parse_vcol_expr= FALSE;
+  lex->suppress_stmt_unsafe= FALSE;
   lex->check_exists= FALSE;
   lex->verbose= 0;
 
@@ -2548,6 +2549,7 @@ void Query_tables_list::destroy_query_tables_list()
 LEX::LEX()
   : explain(NULL),
     result(0),
+    suppress_stmt_unsafe(false),
     duplicate_key_nr(MAX_KEY),
     option_type(OPT_DEFAULT),
     is_lex_started(0),

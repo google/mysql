@@ -1,0 +1,235 @@
+#
+# Preparation
+#
+call mtr.add_suppression("Unsafe statement written to the binary log");
+CREATE TABLE t1 (id int, data varchar(256), primary key (id));
+CREATE TABLE t2 (id int, data varchar(256));
+CREATE TABLE t3 (id int auto_increment, data varchar(256), primary key (id));
+INSERT INTO t1 VALUES (1, "value 1"), (2, "value 2");
+#
+# Test the variable itself.
+#
+# Make sure it can remember its value.
+SET GLOBAL permit_safety_suppression = OFF;
+SHOW GLOBAL VARIABLES LIKE 'permit_safety_suppression';
+Variable_name	Value
+permit_safety_suppression	OFF
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+0
+# Make sure it does not allow session scope.
+SET SESSION permit_safety_suppression = ON;
+ERROR HY000: Variable 'permit_safety_suppression' is a GLOBAL variable and should be set with SET GLOBAL
+SET @@session.restricted_schemas = ON;
+ERROR HY000: Variable 'restricted_schemas' is a GLOBAL variable and should be set with SET GLOBAL
+# Nothing should have changed (should still be OFF from above).
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+0
+# Set back to default.
+SET GLOBAL permit_safety_suppression = DEFAULT;
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+1
+# Try some funky values.
+# Invalid types should return an error and not change the value.
+SET GLOBAL permit_safety_suppression = NULL;
+ERROR 42000: Variable 'permit_safety_suppression' can't be set to the value of 'NULL'
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+1
+SET GLOBAL permit_safety_suppression = "";
+ERROR 42000: Variable 'permit_safety_suppression' can't be set to the value of ''
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+1
+SET GLOBAL permit_safety_suppression = 100;
+ERROR 42000: Variable 'permit_safety_suppression' can't be set to the value of '100'
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+1
+# 0 and 1 are accepted
+SET GLOBAL permit_safety_suppression = 0;
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+0
+SET GLOBAL permit_safety_suppression = 1;
+SELECT @@global.permit_safety_suppression;
+@@global.permit_safety_suppression
+1
+#
+# Now test that SUPPRESS_SAFETY_WARNING works with the flag on and
+# doesn't work with the flag off.
+#
+# Test that all statements where SUPPRESS_SAFETY_WARNING is supported
+# give replication unsafety warning.
+# INSERT SELECT LIMIT depends on row order
+INSERT INTO t2 SELECT * FROM t1 ORDER BY id LIMIT 1;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. The statement is unsafe because it uses a LIMIT clause. This is unsafe because the set of rows included cannot be predicted.
+# INSERT IGNORE SELECT depends on row order
+INSERT IGNORE INTO t2 SELECT * FROM t1 ORDER BY id;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. INSERT IGNORE... SELECT is unsafe because the order in which rows are retrieved by the SELECT determines which (if any) rows are ignored. This order cannot be predicted and may differ on master and the slave.
+# INSERT SELECT into table with auto-increment depends on row order
+INSERT INTO t3 (data) SELECT data from t1 ORDER BY id;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. Statements writing to a table with an auto-increment column after selecting from another table are unsafe because the order in which rows are retrieved determines what (if any) rows will be written. This order cannot be predicted and may differ on master and the slave.
+# REPLACE SELECT depends on row order
+REPLACE INTO t3 SELECT * from t1 ORDER BY id;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. Statements writing to a table with an auto-increment column after selecting from another table are unsafe because the order in which rows are retrieved determines what (if any) rows will be written. This order cannot be predicted and may differ on master and the slave.
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. REPLACE... SELECT is unsafe because the order in which rows are retrieved by the SELECT determines which (if any) rows are replaced. This order cannot be predicted and may differ on master and the slave.
+# DELETE LIMIT depends on row order
+DELETE FROM t3 ORDER BY id LIMIT 1;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. The statement is unsafe because it uses a LIMIT clause. This is unsafe because the set of rows included cannot be predicted.
+# CREATE TABLE IGNORE SELECT depends on row order
+CREATE TABLE t4
+(id int, data varchar(256), primary key (id))
+IGNORE
+SELECT * FROM t1 ORDER BY id;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. CREATE... IGNORE SELECT is unsafe because the order in which rows are retrieved by the SELECT determines which (if any) rows are ignored. This order cannot be predicted and may differ on master and the slave.
+# CREATE TABLE REPLACE SELECT depends on row order
+CREATE TABLE t5
+(id int, data varchar(256), primary key (id))
+REPLACE
+SELECT * FROM t1 ORDER BY id;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. CREATE... REPLACE SELECT is unsafe because the order in which rows are retrieved by the SELECT determines which (if any) rows are replaced. This order cannot be predicted and may differ on master and the slave.
+# CREATE TABLE SELECT with auto-increment depends on row order
+CREATE TABLE t6
+(autoinc int auto_increment, id int, data varchar(256),
+primary key (autoinc), unique key (id))
+SELECT * FROM t1 ORDER BY id;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. CREATE TABLE... SELECT...  on a table with an auto-increment column is unsafe because the order in which rows are retrieved by the SELECT determines which (if any) rows are inserted. This order cannot be predicted and may differ on master and the slave.
+# UPDATE IGNORE depends on row order
+UPDATE IGNORE t6 SET id = id + 1 ORDER BY autoinc;
+Warnings:
+Note	1592	Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. UPDATE IGNORE is unsafe because the order in which rows are updated determines which (if any) rows are ignored. This order cannot be predicted and may differ on master and the slave.
+# Check the resulting data
+SELECT * FROM t2;
+id	data
+1	value 1
+1	value 1
+2	value 2
+SELECT * FROM t3;
+id	data
+2	value 2
+SELECT * FROM t4;
+id	data
+1	value 1
+2	value 2
+SELECT * FROM t5;
+id	data
+1	value 1
+2	value 2
+SELECT * FROM t6;
+autoinc	id	data
+1	1	value 1
+2	3	value 2
+# Cleanup for next test to produce the same data.
+DELETE FROM t2;
+DELETE FROM t3;
+DROP TABLE t4;
+DROP TABLE t5;
+DROP TABLE t6;
+#
+# Now all the same queries but with SUPPRESS_SAFETY_WARNING.
+#
+# INSERT SELECT LIMIT depends on row order
+INSERT SUPPRESS_SAFETY_WARNING INTO t2 SELECT * FROM t1 ORDER BY id LIMIT 1;
+# INSERT IGNORE SELECT depends on row order
+INSERT SUPPRESS_SAFETY_WARNING IGNORE INTO t2 SELECT * FROM t1 ORDER BY id;
+# INSERT SELECT into table with auto-increment depends on row order
+INSERT SUPPRESS_SAFETY_WARNING INTO t3 (data) SELECT data from t1 ORDER BY id;
+# REPLACE SELECT depends on row order
+REPLACE SUPPRESS_SAFETY_WARNING INTO t3 SELECT * from t1 ORDER BY id;
+# DELETE LIMIT depends on row order
+DELETE SUPPRESS_SAFETY_WARNING FROM t3 ORDER BY id LIMIT 1;
+# CREATE TABLE IGNORE SELECT depends on row order
+CREATE SUPPRESS_SAFETY_WARNING TABLE t4
+(id int, data varchar(256), primary key (id))
+IGNORE
+SELECT * FROM t1 ORDER BY id;
+# CREATE TABLE REPLACE SELECT depends on row order
+CREATE SUPPRESS_SAFETY_WARNING TABLE t5
+(id int, data varchar(256), primary key (id))
+REPLACE
+SELECT * FROM t1 ORDER BY id;
+# CREATE TABLE SELECT with auto-increment depends on row order
+CREATE SUPPRESS_SAFETY_WARNING TABLE t6
+(autoinc int auto_increment, id int, data varchar(256),
+primary key (autoinc), unique key (id))
+SELECT * FROM t1 ORDER BY id;
+# UPDATE IGNORE depends on row order
+UPDATE SUPPRESS_SAFETY_WARNING IGNORE t6 SET id = id + 1 ORDER BY autoinc;
+# Check the resulting data
+SELECT * FROM t2;
+id	data
+1	value 1
+1	value 1
+2	value 2
+# Result for t3 is not exactly the same as above because of
+# auto-incremented column, but we still can figure out that it's
+# expected.
+SELECT * FROM t3;
+id	data
+3	value 1
+4	value 2
+2	value 2
+SELECT * FROM t4;
+id	data
+1	value 1
+2	value 2
+SELECT * FROM t5;
+id	data
+1	value 1
+2	value 2
+SELECT * FROM t6;
+autoinc	id	data
+1	1	value 1
+2	3	value 2
+# Cleanup for the next test to work properly.
+DROP TABLE t4;
+DROP TABLE t5;
+DROP TABLE t6;
+#
+# Now disable SUPPRESS_SAFETY_WARNING option. All the same statements
+# will fail.
+#
+SET GLOBAL permit_safety_suppression = OFF;
+INSERT SUPPRESS_SAFETY_WARNING INTO t2 SELECT * FROM t1 ORDER BY id LIMIT 1;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+INSERT SUPPRESS_SAFETY_WARNING IGNORE INTO t2 SELECT * FROM t1 ORDER BY id;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+INSERT SUPPRESS_SAFETY_WARNING INTO t3 (data) SELECT data from t1 ORDER BY id;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+REPLACE SUPPRESS_SAFETY_WARNING INTO t3 SELECT * from t1 ORDER BY id;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+DELETE SUPPRESS_SAFETY_WARNING FROM t3 ORDER BY id LIMIT 1;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+CREATE SUPPRESS_SAFETY_WARNING TABLE t4
+(id int, data varchar(256), primary key (id))
+IGNORE
+SELECT * FROM t1 ORDER BY id;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+CREATE SUPPRESS_SAFETY_WARNING TABLE t5
+(id int, data varchar(256), primary key (id))
+REPLACE
+SELECT * FROM t1 ORDER BY id;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+CREATE SUPPRESS_SAFETY_WARNING TABLE t6
+(autoinc int auto_increment, id int, data varchar(256),
+primary key (autoinc), unique key (id))
+SELECT * FROM t1 ORDER BY id;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+UPDATE SUPPRESS_SAFETY_WARNING IGNORE t1 SET id = id + 1 ORDER BY id;
+ERROR HY000: The MariaDB server is running with the --permit_safety_suppression=0 option so it cannot execute this statement
+#
+# Cleanup
+#
+SET GLOBAL permit_safety_suppression = DEFAULT;
+DROP TABLE t1, t2, t3;

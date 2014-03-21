@@ -2448,6 +2448,11 @@ struct LEX: public Query_tables_list
     this command.
   */
   bool parse_vcol_expr;
+  /*
+    Suppress the replication safety warning in some cases when user may
+    know better what he's doing.
+  */
+  bool suppress_stmt_unsafe;
 
   enum SSL_type ssl_type;			/* defined in violite.h */
   enum enum_duplicates duplicates;

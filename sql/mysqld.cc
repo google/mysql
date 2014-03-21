@@ -722,6 +722,7 @@ my_bool opt_allow_delayed_write;
 my_bool opt_allow_xa;
 my_bool opt_super_to_set_timestamp;
 my_bool rpl_allow_implicit_commit;
+my_bool opt_permit_safety_suppression;
 
 my_bool opt_update_connection_privs;
 my_bool opt_system_user_table;

@@ -973,10 +973,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %parse-param { THD *thd }
 %lex-param { THD *thd }
 /*
-  Currently there are 164 shift/reduce conflicts.
+  Currently there are 169 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 165
+%expect 169
 
 /*
    Comments for TOKENS.
@@ -1006,6 +1006,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %token  AGGREGATE_SYM
 %token  ALGORITHM_SYM
 %token  ALL                           /* SQL-2003-R */
+%token  SUPPRESS_SAFETY_WARNING
 %token  ALTER                         /* SQL-2003-R */
 %token  ALWAYS_SYM
 %token  ANALYZE_SYM
@@ -1883,6 +1884,8 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         explainable_command
 END_OF_INPUT
 
+%type <NONE> opt_suppress_safety_warning
+
 %type <NONE> call sp_proc_stmts sp_proc_stmts1 sp_proc_stmt
 %type <NONE> sp_proc_stmt_statement sp_proc_stmt_return
 %type <NONE> sp_proc_stmt_if
@@ -2366,16 +2369,18 @@ connection_name:
 /* create a table */
 
 create:
-          create_or_replace opt_table_options TABLE_SYM opt_if_not_exists table_ident
+          create_or_replace
+          opt_suppress_safety_warning
+          opt_table_options TABLE_SYM opt_if_not_exists table_ident
           {
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_CREATE_TABLE;
-            if ($1 && $4)
+            if ($1 && $5)
             {
                my_error(ER_WRONG_USAGE, MYF(0), "OR REPLACE", "IF NOT EXISTS");
                MYSQL_YYABORT;
             }
-            if (!lex->select_lex.add_table_to_list(thd, $5, NULL,
+            if (!lex->select_lex.add_table_to_list(thd, $6, NULL,
                                                    TL_OPTION_UPDATING,
                                                    TL_WRITE, MDL_EXCLUSIVE))
               MYSQL_YYABORT;
@@ -2388,7 +2393,7 @@ create:
               If the table exists, we should either not create it or replace it
             */
             lex->query_tables->open_strategy= TABLE_LIST::OPEN_STUB;
-            lex->create_info.options= ($1 | $2 | $4);
+            lex->create_info.options= ($1 | $3 | $5);
             lex->create_info.default_table_charset= NULL;
             lex->name.str= 0;
             lex->name.length= 0;
@@ -2406,7 +2411,7 @@ create:
                                   ER_WARN_USING_OTHER_HANDLER,
                                   ER(ER_WARN_USING_OTHER_HANDLER),
                                   hton_name(lex->create_info.db_type)->str,
-                                  $5->table.str);
+                                  $6->table.str);
             }
             create_table_set_open_action_and_adjust_tables(lex);
           }
@@ -11351,17 +11356,22 @@ limit_clause:
           LIMIT limit_options
           {
             SELECT_LEX *sel= Select;
-            if (!sel->select_limit->basic_const_item() ||
-                sel->select_limit->val_int() > 0)
+            if (!Lex->suppress_stmt_unsafe &&
+              (!sel->select_limit->basic_const_item() ||
+              sel->select_limit->val_int() > 0))
+            {
               Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
+            }
           }
         | LIMIT limit_options ROWS_SYM EXAMINED_SYM limit_rows_option
           {
-            Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
+            if (!Lex->suppress_stmt_unsafe)
+              Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
           }
         | LIMIT ROWS_SYM EXAMINED_SYM limit_rows_option
           {
-            Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
+            if (!Lex->suppress_stmt_unsafe)
+              Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
           }
         ;
 
@@ -11464,7 +11474,8 @@ delete_limit_clause:
           {
             SELECT_LEX *sel= Select;
             sel->select_limit= $2;
-            Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
+            if (!Lex->suppress_stmt_unsafe)
+              Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
             sel->explicit_limit= 1;
           }
        | LIMIT ROWS_SYM EXAMINED_SYM { my_parse_error(ER(ER_SYNTAX_ERROR)); MYSQL_YYABORT; }
@@ -11913,10 +11924,11 @@ insert:
             lex->duplicates= DUP_ERROR; 
             mysql_init_select(lex);
           }
+          opt_suppress_safety_warning
           insert_lock_option
           opt_ignore insert2
           {
-            Select->set_lock_for_tables($3);
+            Select->set_lock_for_tables($4);
             Lex->current_select= &Lex->select_lex;
           }
           insert_field_spec opt_insert_update
@@ -11931,9 +11943,10 @@ replace:
             lex->duplicates= DUP_REPLACE;
             mysql_init_select(lex);
           }
+          opt_suppress_safety_warning
           replace_lock_option insert2
           {
-            Select->set_lock_for_tables($3);
+            Select->set_lock_for_tables($4);
             Lex->current_select= &Lex->select_lex;
           }
           insert_field_spec
@@ -11979,6 +11992,21 @@ replace_lock_option:
 insert2:
           INTO insert_table {}
         | insert_table {}
+        ;
+
+opt_suppress_safety_warning:
+          /* empty */
+          { }
+        | SUPPRESS_SAFETY_WARNING
+          {
+            if (!opt_permit_safety_suppression)
+            {
+              my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0),
+                       "--permit_safety_suppression=0");
+              MYSQL_YYABORT;
+            }
+            Lex->suppress_stmt_unsafe= 1;
+          }
         ;
 
 insert_table:
@@ -12121,6 +12149,7 @@ update:
             lex->sql_command= SQLCOM_UPDATE;
             lex->duplicates= DUP_ERROR; 
           }
+          opt_suppress_safety_warning
           opt_low_priority opt_ignore join_table_list
           SET update_list
           {
@@ -12139,7 +12168,7 @@ update:
               be too pessimistic. We will decrease lock level if possible in
               mysql_multi_update().
             */
-            Select->set_lock_for_tables($3);
+            Select->set_lock_for_tables($4);
           }
           where_clause opt_order_clause delete_limit_clause {}
         ;
@@ -12191,6 +12220,7 @@ delete:
             lex->ignore= 0;
             lex->select_lex.init_order();
           }
+          opt_suppress_safety_warning
           opt_delete_options single_multi
         ;
 
@@ -14166,6 +14196,7 @@ keyword_sp:
         | AGAINST                  {}
         | AGGREGATE_SYM            {}
         | ALGORITHM_SYM            {}
+        | SUPPRESS_SAFETY_WARNING  {}
         | ALWAYS_SYM               {}
         | ANY_SYM                  {}
         | AT_SYM                   {}

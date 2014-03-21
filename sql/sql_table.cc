@@ -3582,8 +3582,9 @@ mysql_prepare_create_table(THD *thd, HA_CREATE_INFO *create_info,
    from the select tables. This order may differ on master and slave. We
    therefore mark it as unsafe.
   */
-  if (select_field_count > 0 && auto_increment)
-  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_CREATE_SELECT_AUTOINC);
+  if (select_field_count > 0 && auto_increment &&
+      !thd->lex->suppress_stmt_unsafe)
+    thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_CREATE_SELECT_AUTOINC);
 
   /* Create keys */
 

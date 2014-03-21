@@ -5252,6 +5252,7 @@ bool lock_tables(THD *thd, TABLE_LIST *tables, uint count,
     master and slave.
     */
     if (thd->variables.binlog_format != BINLOG_FORMAT_ROW && tables &&
+        !thd->lex->suppress_stmt_unsafe &&
         has_write_table_with_auto_increment_and_select(tables))
       thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_WRITE_AUTOINC_SELECT);
     /* Todo: merge all has_write_table_auto_inc with decide_logging_format */

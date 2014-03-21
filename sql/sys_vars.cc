@@ -2555,6 +2555,14 @@ static Sys_var_mybool Sys_rpl_disallow_temp_tables(
        DEFAULT(TRUE), NO_MUTEX_GUARD, NOT_IN_BINLOG,
        ON_CHECK(check_has_super));
 
+static Sys_var_mybool Sys_permit_safety_suppression(
+       "permit_safety_suppression",
+       "Allow usage of SUPPRESS_SAFETY_WARNING clause in different "
+       "statements. This should be disabled if users of the database are "
+       "not trusted.",
+       GLOBAL_VAR(opt_permit_safety_suppression), CMD_LINE(OPT_ARG),
+       DEFAULT(TRUE));
+
 static Sys_var_ulong Sys_rpl_recovery_rank(
        "rpl_recovery_rank", "Unused, will be removed",
        GLOBAL_VAR(rpl_recovery_rank), CMD_LINE(REQUIRED_ARG),

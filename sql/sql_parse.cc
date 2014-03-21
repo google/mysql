@@ -2927,10 +2927,10 @@ case SQLCOM_PREPARE:
         TODO: Check if the order of the output of the select statement is
         deterministic. Waiting for BUG#42415
       */
-      if(lex->ignore)
+      if(lex->ignore && !lex->suppress_stmt_unsafe)
         lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_CREATE_IGNORE_SELECT);
       
-      if(lex->duplicates == DUP_REPLACE)
+      if(lex->duplicates == DUP_REPLACE && !lex->suppress_stmt_unsafe)
         lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_CREATE_REPLACE_SELECT);
 
       /*
@@ -3322,7 +3322,7 @@ end_with_restore_list:
       TODO: Check if the order of the output of the select statement is
       deterministic. Waiting for BUG#42415
     */
-    if (lex->ignore)
+    if (lex->ignore && !lex->suppress_stmt_unsafe)
       lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_UPDATE_IGNORE);
 
     DBUG_ASSERT(select_lex->offset_limit == 0);
@@ -3524,10 +3524,11 @@ end_with_restore_list:
         lex->duplicates == DUP_UPDATE)
       lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_INSERT_SELECT_UPDATE);
 
-    if (lex->sql_command == SQLCOM_INSERT_SELECT && lex->ignore)
+    if (lex->sql_command == SQLCOM_INSERT_SELECT && lex->ignore &&
+        !lex->suppress_stmt_unsafe)
       lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_INSERT_IGNORE_SELECT);
 
-    if (lex->sql_command == SQLCOM_REPLACE_SELECT)
+    if (lex->sql_command == SQLCOM_REPLACE_SELECT && !lex->suppress_stmt_unsafe)
       lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_REPLACE_SELECT);
 
     /* Fix lock for first table */
