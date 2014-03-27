@@ -226,6 +226,8 @@ INSERT INTO global_suppressions VALUES
  ("Slave I/O: Notifying master by SET @master_binlog_checksum= @@global.binlog_checksum failed with error.*"),
  ("Slave I/O: Setting master-side filtering of @@skip_replication failed with error:.*"),
  ("Slave I/O: Setting @mariadb_slave_capability failed with error:.*"),
+/* Suppress message about torn pages correctly handled by double write buffer */
+ ("InnoDB: Warning: database page corruption or a failed"),
  ("THE_LAST_SUPPRESSION")||
 
 
