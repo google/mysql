@@ -17,6 +17,7 @@
 
 
 #include "sql_priv.h"
+#include "mysqld_error.h"
 
 #ifndef MYSQL_CLIENT
 #include "my_global.h" // REQUIRED by log_event.h > m_string.h > my_bitmap.h
@@ -749,7 +750,7 @@ static void print_set_option(IO_CACHE* file, uint32 bits_changed,
   {
     if (*need_comma)
       my_b_write(file, ", ", 2);
-    my_b_printf(file,"%s=%d", name, test(flags & option));
+    my_b_printf(file, "%s=%d", name, MY_TEST(flags & option));
     *need_comma= 1;
   }
 }
@@ -1089,7 +1090,7 @@ my_bool Log_event::need_checksum()
         (checksum_alg != BINLOG_CHECKSUM_ALG_OFF) :
         ((binlog_checksum_options != BINLOG_CHECKSUM_ALG_OFF) &&
          (cache_type == Log_event::EVENT_NO_CACHE)) ?
-        test(binlog_checksum_options) : FALSE);
+        MY_TEST(binlog_checksum_options) : FALSE);
 
   /*
     FD calls the methods before data_written has been calculated.
@@ -2465,6 +2466,14 @@ Rows_log_event::print_verbose_one_row(IO_CACHE *file, table_def *td,
     else
     {
       my_b_printf(file, "###   @%lu=", (ulong)i + 1);
+      size_t fsize= td->calc_field_size((uint)i, (uchar*) value);
+      if (value + fsize > m_rows_end)
+      {
+        my_b_printf(file, "***Corrupted replication event was detected."
+                    " Not printing the value***\n");
+        value+= fsize;
+        return 0;
+      }
       size_t size= log_event_print_value(file, value,
                                          td->type(i), td->field_metadata(i),
                                          typestr, sizeof(typestr));
@@ -3727,9 +3736,14 @@ Query_log_event::begin_event(String *packet, ulong ev_offset,
     DBUG_ASSERT(checksum_alg == BINLOG_CHECKSUM_ALG_UNDEF ||
                 checksum_alg == BINLOG_CHECKSUM_ALG_OFF);
 
-  /* Currently we only need to replace GTID event. */
-  DBUG_ASSERT(data_len == LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN);
-  if (data_len != LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN)
+  /*
+    Currently we only need to replace GTID event.
+    The length of GTID differs depending on whether it contains commit id.
+  */
+  DBUG_ASSERT(data_len == LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN ||
+              data_len == LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN + 2);
+  if (data_len != LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN &&
+      data_len != LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN + 2)
     return 1;
 
   flags= uint2korr(p + FLAGS_OFFSET);
@@ -3742,9 +3756,22 @@ Query_log_event::begin_event(String *packet, ulong ev_offset,
   int4store(q + Q_EXEC_TIME_OFFSET, 0);
   q[Q_DB_LEN_OFFSET]= 0;
   int2store(q + Q_ERR_CODE_OFFSET, 0);
-  int2store(q + Q_STATUS_VARS_LEN_OFFSET, 0);
-  q[Q_DATA_OFFSET]= 0;                    /* Zero terminator for empty db */
-  q+= Q_DATA_OFFSET + 1;
+  if (data_len == LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN)
+  {
+    int2store(q + Q_STATUS_VARS_LEN_OFFSET, 0);
+    q[Q_DATA_OFFSET]= 0;                    /* Zero terminator for empty db */
+    q+= Q_DATA_OFFSET + 1;
+  }
+  else
+  {
+    DBUG_ASSERT(data_len == LOG_EVENT_HEADER_LEN + GTID_HEADER_LEN + 2);
+    /* Put in an empty time_zone_str to take up the extra 2 bytes. */
+    int2store(q + Q_STATUS_VARS_LEN_OFFSET, 2);
+    q[Q_DATA_OFFSET]= Q_TIME_ZONE_CODE;
+    q[Q_DATA_OFFSET+1]= 0;           /* Zero length for empty time_zone_str */
+    q[Q_DATA_OFFSET+2]= 0;                  /* Zero terminator for empty db */
+    q+= Q_DATA_OFFSET + 3;
+  }
   memcpy(q, "BEGIN", 5);
 
   if (checksum_alg == BINLOG_CHECKSUM_ALG_CRC32)
@@ -5543,11 +5570,22 @@ int Load_log_event::copy_log_event(const char *buf, ulong event_len,
   fields = (char*)field_lens + num_fields;
   table_name  = fields + field_block_len;
   db = table_name + table_name_len + 1;
+  DBUG_EXECUTE_IF ("simulate_invalid_address",
+                   db_len = data_len;);
   fname = db + db_len + 1;
+  if ((db_len > data_len) || (fname > buf_end))
+    goto err;
   fname_len = (uint) strlen(fname);
+  if ((fname_len > data_len) || (fname + fname_len > buf_end))
+    goto err;
   // null termination is accomplished by the caller doing buf[event_len]=0
 
   DBUG_RETURN(0);
+
+err:
+  // Invalid event.
+  table_name = 0;
+  DBUG_RETURN(1);
 }
 
 
@@ -6217,6 +6255,16 @@ void Binlog_checkpoint_log_event::pack_info(THD *thd, Protocol *protocol)
 {
   protocol->store(binlog_file_name, binlog_file_len, &my_charset_bin);
 }
+
+
+Log_event::enum_skip_reason
+Binlog_checkpoint_log_event::do_shall_skip(rpl_group_info *rgi)
+{
+  enum_skip_reason reason= Log_event::do_shall_skip(rgi);
+  if (reason == EVENT_SKIP_COUNT)
+    reason= EVENT_SKIP_NOT;
+  return reason;
+}
 #endif
 
 
@@ -6470,24 +6518,22 @@ Gtid_log_event::do_apply_event(rpl_group_info *rgi)
     return 0;
 
   /* Execute this like a BEGIN query event. */
-  thd->variables.option_bits|= OPTION_BEGIN | OPTION_GTID_BEGIN;
+  thd->variables.option_bits|= OPTION_GTID_BEGIN;
   DBUG_PRINT("info", ("Set OPTION_GTID_BEGIN"));
-  trans_begin(thd, 0);
-
   thd->set_query_and_id(gtid_begin_string, sizeof(gtid_begin_string)-1,
                         &my_charset_bin, next_query_id());
-  Parser_state parser_state;
-  if (!parser_state.init(thd, thd->query(), thd->query_length()))
+  thd->lex->sql_command= SQLCOM_BEGIN;
+  thd->is_slave_error= 0;
+  status_var_increment(thd->status_var.com_stat[thd->lex->sql_command]);
+  if (trans_begin(thd, 0))
   {
-    mysql_parse(thd, thd->query(), thd->query_length(), &parser_state);
-    /* Finalize server status flags after executing a statement. */
-    thd->update_server_status();
-    log_slow_statement(thd);
-    if (unlikely(thd->is_fatal_error))
-      thd->is_slave_error= 1;
-    else if (likely(!thd->is_slave_error))
-      general_log_write(thd, COM_QUERY, thd->query(), thd->query_length());
+    DBUG_PRINT("error", ("trans_begin() failed"));
+    thd->is_slave_error= 1;
   }
+  thd->update_stats();
+
+  if (likely(!thd->is_slave_error))
+    general_log_write(thd, COM_QUERY, thd->query(), thd->query_length());
 
   thd->reset_query();
   free_root(thd->mem_root,MYF(MY_KEEP_PREALLOC));
@@ -6749,7 +6795,7 @@ Gtid_list_log_event::write(IO_CACHE *file)
 int
 Gtid_list_log_event::do_apply_event(rpl_group_info *rgi)
 {
-  Relay_log_info const *rli= rgi->rli;
+  Relay_log_info *rli= const_cast<Relay_log_info*>(rgi->rli);
   int ret;
   if (gl_flags & FLAG_IGN_GTIDS)
   {
@@ -6769,12 +6815,23 @@ Gtid_list_log_event::do_apply_event(rpl_group_info *rgi)
   {
     char str_buf[128];
     String str(str_buf, sizeof(str_buf), system_charset_info);
-    const_cast<Relay_log_info*>(rli)->until_gtid_pos.to_string(&str);
+    rli->until_gtid_pos.to_string(&str);
     sql_print_information("Slave SQL thread stops because it reached its"
                           " UNTIL master_gtid_pos %s", str.c_ptr_safe());
-    const_cast<Relay_log_info*>(rli)->abort_slave= true;
+    rli->abort_slave= true;
+    rli->stop_for_until= true;
   }
   return ret;
+}
+
+
+Log_event::enum_skip_reason
+Gtid_list_log_event::do_shall_skip(rpl_group_info *rgi)
+{
+  enum_skip_reason reason= Log_event::do_shall_skip(rgi);
+  if (reason == EVENT_SKIP_COUNT)
+    reason= EVENT_SKIP_NOT;
+  return reason;
 }
 
 

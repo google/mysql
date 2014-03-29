@@ -2389,7 +2389,7 @@ int mysql_rm_table_no_locks(THD *thd, TABLE_LIST *tables, bool if_exists,
         This handles the case where a "DROP" was executed and a regular
         table "may be" dropped as drop_temporary is FALSE and error is
         TRUE. If the error was FALSE a temporary table was dropped and
-        regardless of the status of drop_tempoary a "DROP TEMPORARY"
+        regardless of the status of drop_temporary a "DROP TEMPORARY"
         must be used.
       */
       if (!dont_log_query)
@@ -2417,15 +2417,15 @@ int mysql_rm_table_no_locks(THD *thd, TABLE_LIST *tables, bool if_exists,
     }
     DEBUG_SYNC(thd, "rm_table_no_locks_before_delete_table");
     error= 0;
-    if ((drop_temporary || !ha_table_exists(thd, db, alias, &table_type) ||
-         (!drop_view && (was_view= (table_type == view_pseudo_hton)))))
+    if (drop_temporary ||
+        (ha_table_exists(thd, db, alias, &table_type) == 0 && table_type == 0) ||
+        (!drop_view && (was_view= (table_type == view_pseudo_hton))))
     {
       /*
         One of the following cases happened:
           . "DROP TEMPORARY" but a temporary table was not found.
-          . "DROP" but table was not found on disk and table can't be
-            created from engine.
-          . ./sql/datadict.cc +32 /Alfranio - TODO: We need to test this.
+          . "DROP" but table was not found
+          . "DROP TABLE" statement, but it's a view. 
       */
       if (if_exists)
       {
@@ -3802,7 +3802,7 @@ mysql_prepare_create_table(THD *thd, HA_CREATE_INFO *create_info,
 	  with length (unlike blobs, where ft code takes data length from a
 	  data prefix, ignoring column->length).
 	*/
-	column->length=test(f_is_blob(sql_field->pack_flag));
+        column->length= MY_TEST(f_is_blob(sql_field->pack_flag));
       }
       else
       {
@@ -5096,6 +5096,7 @@ bool mysql_create_like_table(THD* thd, TABLE_LIST* table,
   bool is_trans= FALSE;
   bool do_logging= FALSE;
   uint not_used;
+  int create_res;
   DBUG_ENTER("mysql_create_like_table");
 
   /*
@@ -5171,9 +5172,10 @@ bool mysql_create_like_table(THD* thd, TABLE_LIST* table,
   if ((local_create_info.table= thd->lex->query_tables->table))
     pos_in_locked_tables= local_create_info.table->pos_in_locked_tables;    
 
-  res= (mysql_create_table_no_lock(thd, table->db, table->table_name,
-                                   &local_create_info, &local_alter_info,
-                                   &is_trans, C_ORDINARY_CREATE) > 0);
+  res= ((create_res=
+         mysql_create_table_no_lock(thd, table->db, table->table_name,
+                                    &local_create_info, &local_alter_info,
+                                    &is_trans, C_ORDINARY_CREATE)) > 0);
   /* Remember to log if we deleted something */
   do_logging= thd->log_current_statement;
   if (res)
@@ -5232,7 +5234,8 @@ bool mysql_create_like_table(THD* thd, TABLE_LIST* table,
            Case    Target    Source Write to binary log
            ==== ========= ========= ==============================
            1       normal    normal Original statement
-           2       normal temporary Generated statement
+           2       normal temporary Generated statement if the table
+                                    was created.
            3    temporary    normal Nothing
            4    temporary temporary Nothing
            ==== ========= ========= ==============================
@@ -5247,39 +5250,39 @@ bool mysql_create_like_table(THD* thd, TABLE_LIST* table,
         Open_table_context ot_ctx(thd, MYSQL_OPEN_REOPEN);
         bool new_table= FALSE; // Whether newly created table is open.
 
-        /*
-          The condition avoids a crash as described in BUG#48506. Other
-          binlogging problems related to CREATE TABLE IF NOT EXISTS LIKE
-          when the existing object is a view will be solved by BUG 47442.
-        */
-        if (!table->view)
+        if (create_res != 0)
         {
-          if (!table->table)
-          {
-            TABLE_LIST::enum_open_strategy save_open_strategy;
-            int open_res;
-            /* Force the newly created table to be opened */
-            save_open_strategy= table->open_strategy;
-            table->open_strategy= TABLE_LIST::OPEN_NORMAL;
+          /*
+            Table or view with same name already existed and we where using
+            IF EXISTS. Continue without logging anything.
+          */
+          goto err;
+        }
+        if (!table->table)
+        {
+          TABLE_LIST::enum_open_strategy save_open_strategy;
+          int open_res;
+          /* Force the newly created table to be opened */
+          save_open_strategy= table->open_strategy;
+          table->open_strategy= TABLE_LIST::OPEN_NORMAL;
 
-            /*
-              In order for store_create_info() to work we need to open
-              destination table if it is not already open (i.e. if it
-              has not existed before). We don't need acquire metadata
-              lock in order to do this as we already hold exclusive
-              lock on this table. The table will be closed by
-              close_thread_table() at the end of this branch.
-            */
-            open_res= open_table(thd, table, thd->mem_root, &ot_ctx);
-            /* Restore */
-            table->open_strategy= save_open_strategy;
-            if (open_res)
-            {
-              res= 1;
-              goto err;
-            }
-            new_table= TRUE;
+          /*
+            In order for store_create_info() to work we need to open
+            destination table if it is not already open (i.e. if it
+            has not existed before). We don't need acquire metadata
+            lock in order to do this as we already hold exclusive
+            lock on this table. The table will be closed by
+            close_thread_table() at the end of this branch.
+          */
+          open_res= open_table(thd, table, thd->mem_root, &ot_ctx);
+          /* Restore */
+          table->open_strategy= save_open_strategy;
+          if (open_res)
+          {
+            res= 1;
+            goto err;
           }
+          new_table= TRUE;
         }
         /*
           We have to re-test if the table was a view as the view may not
@@ -5290,8 +5293,8 @@ bool mysql_create_like_table(THD* thd, TABLE_LIST* table,
           int result __attribute__((unused))=
             store_create_info(thd, table, &query,
                               create_info, FALSE /* show_database */,
-                              test(create_info->options &
-                                   HA_LEX_CREATE_REPLACE));
+                              MY_TEST(create_info->options &
+                                      HA_LEX_CREATE_REPLACE));
 
           DBUG_ASSERT(result == 0); // store_create_info() always return 0
           do_logging= FALSE;
@@ -5891,9 +5894,6 @@ static bool fill_alter_inplace_info(THD *thd,
 
     if (new_field)
     {
-      ha_alter_info->create_info->fields_option_struct[f_ptr - table->field]=
-        new_field->option_struct;
-
       /* Field is not dropped. Evaluate changes bitmap for it. */
 
       /*
@@ -6005,6 +6005,15 @@ static bool fill_alter_inplace_info(THD *thd,
       if (new_field->column_format() != field->column_format())
         ha_alter_info->handler_flags|=
           Alter_inplace_info::ALTER_COLUMN_COLUMN_FORMAT;
+
+      if (engine_options_differ(field->option_struct, new_field->option_struct,
+                                table->file->ht->field_options))
+      {
+        ha_alter_info->handler_flags|= Alter_inplace_info::ALTER_COLUMN_OPTION;
+        ha_alter_info->create_info->fields_option_struct[f_ptr - table->field]=
+          new_field->option_struct;
+      }
+
     }
     else
     {
@@ -7385,7 +7394,7 @@ mysql_prepare_alter_table(THD *thd, TABLE *table,
 
       key= new Key(key_type, key_name, strlen(key_name),
                    &key_create_info,
-                   test(key_info->flags & HA_GENERATED_KEY),
+                   MY_TEST(key_info->flags & HA_GENERATED_KEY),
                    key_parts, key_info->option_list, FALSE);
       new_key_list.push_back(key);
     }
@@ -8987,7 +8996,7 @@ copy_data_between_tables(THD *thd, TABLE *from, TABLE *to,
   DBUG_ENTER("copy_data_between_tables");
 
   /* Two or 3 stages; Sorting, copying data and update indexes */
-  thd_progress_init(thd, 2 + test(order));
+  thd_progress_init(thd, 2 + MY_TEST(order));
 
   if (mysql_trans_prepare_alter_copy_data(thd))
     DBUG_RETURN(-1);
@@ -9488,7 +9497,7 @@ static bool check_engine(THD *thd, const char *db_name,
   handlerton **new_engine= &create_info->db_type;
   handlerton *req_engine= *new_engine;
   bool no_substitution=
-        test(thd->variables.sql_mode & MODE_NO_ENGINE_SUBSTITUTION);
+        MY_TEST(thd->variables.sql_mode & MODE_NO_ENGINE_SUBSTITUTION);
   if (!(*new_engine= ha_checktype(thd, ha_legacy_type(req_engine),
                                   no_substitution, 1)))
     DBUG_RETURN(true);

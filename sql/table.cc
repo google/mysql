@@ -1,6 +1,5 @@
-/*
-   Copyright (c) 2000, 2011, Oracle and/or its affiliates.
-   Copyright (c) 2008, 2013, Monty Program Ab.
+/* Copyright (c) 2000, 2012, Oracle and/or its affiliates.
+   Copyright (c) 2008, 2014, SkySQL Ab.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -819,8 +818,8 @@ static bool create_key_infos(const uchar *strpos, const uchar *frm_image_end,
                                          keyinfo->comment.length);
       strpos+= keyinfo->comment.length;
     } 
-    DBUG_ASSERT(test(keyinfo->flags & HA_USES_COMMENT) == 
-               (keyinfo->comment.length > 0));
+    DBUG_ASSERT(MY_TEST(keyinfo->flags & HA_USES_COMMENT) ==
+                (keyinfo->comment.length > 0));
   }
 
   share->keys= keys; // do it *after* all key_info's are initialized
@@ -2889,9 +2888,9 @@ partititon_err:
   else if (outparam->file)
   {
     handler::Table_flags flags= outparam->file->ha_table_flags();
-    outparam->no_replicate= ! test(flags & (HA_BINLOG_STMT_CAPABLE
-                                            | HA_BINLOG_ROW_CAPABLE))
-                            || test(flags & HA_HAS_OWN_BINLOGGING);
+    outparam->no_replicate= ! MY_TEST(flags & (HA_BINLOG_STMT_CAPABLE
+                                               | HA_BINLOG_ROW_CAPABLE))
+                            || MY_TEST(flags & HA_HAS_OWN_BINLOGGING);
   }
   else
   {
@@ -3253,7 +3252,7 @@ void prepare_frm_header(THD *thd, uint reclength, uchar *fileinfo,
   /* header */
   fileinfo[0]=(uchar) 254;
   fileinfo[1]= 1;
-  fileinfo[2]= FRM_VER+3+ test(create_info->varchar);
+  fileinfo[2]= FRM_VER + 3 + MY_TEST(create_info->varchar);
 
   fileinfo[3]= (uchar) ha_legacy_type(
         ha_checktype(thd,ha_legacy_type(create_info->db_type),0,0));
@@ -3272,8 +3271,8 @@ void prepare_frm_header(THD *thd, uint reclength, uchar *fileinfo,
   */
   for (i= 0; i < keys; i++)
   {
-    DBUG_ASSERT(test(key_info[i].flags & HA_USES_COMMENT) == 
-               (key_info[i].comment.length > 0));
+    DBUG_ASSERT(MY_TEST(key_info[i].flags & HA_USES_COMMENT) ==
+                (key_info[i].comment.length > 0));
     if (key_info[i].flags & HA_USES_COMMENT)
       key_comment_total_bytes += 2 + key_info[i].comment.length;
   }
@@ -3805,7 +3804,7 @@ bool TABLE_SHARE::visit_subgraph(Wait_for_flush *wait_for_flush,
   bool result= TRUE;
 
   /*
-    To protect used_tables list from being concurrently modified
+    To protect all_tables list from being concurrently modified
     while we are iterating through it we acquire LOCK_open.
     This does not introduce deadlocks in the deadlock detector
     because we won't try to acquire LOCK_open while
@@ -3832,7 +3831,8 @@ bool TABLE_SHARE::visit_subgraph(Wait_for_flush *wait_for_flush,
 
   while ((table= tables_it++))
   {
-    if (table->in_use && gvisitor->inspect_edge(&table->in_use->mdl_context))
+    DBUG_ASSERT(table->in_use && tdc.flushed);
+    if (gvisitor->inspect_edge(&table->in_use->mdl_context))
     {
       goto end_leave_node;
     }
@@ -3841,7 +3841,8 @@ bool TABLE_SHARE::visit_subgraph(Wait_for_flush *wait_for_flush,
   tables_it.rewind();
   while ((table= tables_it++))
   {
-    if (table->in_use && table->in_use->mdl_context.visit_subgraph(gvisitor))
+    DBUG_ASSERT(table->in_use && tdc.flushed);
+    if (table->in_use->mdl_context.visit_subgraph(gvisitor))
     {
       goto end_leave_node;
     }
@@ -3890,7 +3891,7 @@ bool TABLE_SHARE::wait_for_old_version(THD *thd, struct timespec *abstime,
   MDL_wait::enum_wait_status wait_status;
 
   mysql_mutex_assert_owner(&tdc.LOCK_table_share);
-  DBUG_ASSERT(has_old_version());
+  DBUG_ASSERT(tdc.flushed);
 
   tdc.m_flush_tickets.push_front(&ticket);
 
@@ -6181,9 +6182,9 @@ bool TABLE::is_filled_at_execution()
     do not have a corresponding table reference. Such tables are filled
     during execution.
   */
-  return test(!pos_in_table_list ||
-              pos_in_table_list->jtbm_subselect || 
-              pos_in_table_list->is_active_sjm());
+  return MY_TEST(!pos_in_table_list ||
+                 pos_in_table_list->jtbm_subselect ||
+                 pos_in_table_list->is_active_sjm());
 }
 
 

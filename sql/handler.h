@@ -1740,8 +1740,11 @@ public:
   // Table is renamed
   static const HA_ALTER_FLAGS ALTER_RENAME               = 1L << 18;
 
-  // Change the storage type of column 
-  static const HA_ALTER_FLAGS ALTER_COLUMN_STORAGE_TYPE = 1L << 19;
+  // column's engine options changed, something in field->option_struct
+  static const HA_ALTER_FLAGS ALTER_COLUMN_OPTION        = 1L << 19;
+
+  // MySQL alias for the same thing:
+  static const HA_ALTER_FLAGS ALTER_COLUMN_STORAGE_TYPE  = 1L << 19;
 
   // Change the column format of column
   static const HA_ALTER_FLAGS ALTER_COLUMN_COLUMN_FORMAT = 1L << 20;
@@ -1770,7 +1773,7 @@ public:
   // Partition operation with ALL keyword
   static const HA_ALTER_FLAGS ALTER_ALL_PARTITION        = 1L << 28;
 
-  // Partition operation with ALL keyword
+  // Virtual columns changed
   static const HA_ALTER_FLAGS ALTER_COLUMN_VCOL          = 1L << 29;
 
   /**
@@ -3940,7 +3943,7 @@ static inline const char *ha_resolve_storage_engine_name(const handlerton *db_ty
 
 static inline bool ha_check_storage_engine_flag(const handlerton *db_type, uint32 flag)
 {
-  return db_type == NULL ? FALSE : test(db_type->flags & flag);
+  return db_type == NULL ? FALSE : MY_TEST(db_type->flags & flag);
 }
 
 static inline bool ha_storage_engine_is_enabled(const handlerton *db_type)

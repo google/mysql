@@ -385,7 +385,8 @@ void kill_delayed_threads_for_table(TABLE_SHARE *share)
   {
     THD *in_use= tab->in_use;
 
-    if (in_use && (in_use->system_thread & SYSTEM_THREAD_DELAYED_INSERT) &&
+    DBUG_ASSERT(in_use && tab->s->tdc.flushed);
+    if ((in_use->system_thread & SYSTEM_THREAD_DELAYED_INSERT) &&
         ! in_use->killed)
     {
       in_use->killed= KILL_SYSTEM_THREAD;
@@ -426,8 +427,11 @@ bool close_cached_tables(THD *thd, TABLE_LIST *tables,
 {
   bool result= FALSE;
   struct timespec abstime;
+  ulong refresh_version;
   DBUG_ENTER("close_cached_tables");
   DBUG_ASSERT(thd || (!wait_for_refresh && !tables));
+
+  refresh_version= tdc_increment_refresh_version();
 
   if (!tables)
   {
@@ -438,13 +442,12 @@ bool close_cached_tables(THD *thd, TABLE_LIST *tables,
       incrementing of refresh_version is followed by purge of unused table
       shares.
     */
-    tdc_increment_refresh_version();
     kill_delayed_threads();
     /*
       Get rid of all unused TABLE and TABLE_SHARE instances. By doing
       this we automatically close all tables which were marked as "old".
     */
-    tc_purge();
+    tc_purge(true);
     /* Free table shares which were not freed implicitly by loop above. */
     tdc_purge(true);
   }
@@ -526,7 +529,7 @@ bool close_cached_tables(THD *thd, TABLE_LIST *tables,
       while ((share= tdc_it.next()))
       {
         mysql_mutex_lock(&share->tdc.LOCK_table_share);
-        if (share->has_old_version())
+        if (share->tdc.flushed && share->tdc.version < refresh_version)
         {
           /* wait_for_old_version() will unlock mutex and free share */
           found= true;
@@ -554,7 +557,8 @@ bool close_cached_tables(THD *thd, TABLE_LIST *tables,
       if (thd->killed)
         break;
       if (tdc_wait_for_old_version(thd, table->db, table->table_name, timeout,
-                                   MDL_wait_for_subgraph::DEADLOCK_WEIGHT_DDL))
+                                   MDL_wait_for_subgraph::DEADLOCK_WEIGHT_DDL,
+                                   refresh_version))
       {
         result= TRUE;
         break;
@@ -1138,7 +1142,8 @@ bool close_temporary_tables(THD *thd)
 
   /* We always quote db,table names though it is slight overkill */
   if (found_user_tables &&
-      !(was_quote_show= test(thd->variables.option_bits & OPTION_QUOTE_SHOW_CREATE)))
+      !(was_quote_show= MY_TEST(thd->variables.option_bits &
+                                OPTION_QUOTE_SHOW_CREATE)))
   {
     thd->variables.option_bits |= OPTION_QUOTE_SHOW_CREATE;
   }
@@ -1754,7 +1759,7 @@ bool wait_while_table_is_used(THD *thd, TABLE *table,
   DBUG_ENTER("wait_while_table_is_used");
   DBUG_PRINT("enter", ("table: '%s'  share: 0x%lx  db_stat: %u  version: %lu",
                        table->s->table_name.str, (ulong) table->s,
-                       table->db_stat, table->s->version));
+                       table->db_stat, table->s->tdc.version));
 
   if (thd->mdl_context.upgrade_shared_lock(
              table->mdl_ticket, MDL_EXCLUSIVE,
@@ -2291,7 +2296,9 @@ bool open_table(THD *thd, TABLE_LIST *table_list, MEM_ROOT *mem_root,
 retry_share:
 
   share= tdc_acquire_share(thd, table_list->db, table_list->table_name,
-                           key, key_length, gts_flags, &table);
+                           key, key_length,
+                           table_list->mdl_request.key.tc_hash_value(),
+                           gts_flags, &table);
 
   if (!share)
   {
@@ -2321,7 +2328,7 @@ retry_share:
 
   /*
     Check if this TABLE_SHARE-object corresponds to a view. Note, that there is
-    no need to call TABLE_SHARE::has_old_version() as we do for regular tables,
+    no need to check TABLE_SHARE::tdc.flushed as we do for regular tables,
     because view shares are always up to date.
   */
   if (share->is_view)
@@ -2362,8 +2369,10 @@ retry_share:
 
   if (!(flags & MYSQL_OPEN_IGNORE_FLUSH))
   {
-    if (share->has_old_version())
+    if (share->tdc.flushed)
     {
+      DBUG_PRINT("info", ("Found old share version: %lu  current: %lu",
+                          share->tdc.version, tdc_refresh_version()));
       /*
         We already have an MDL lock. But we have encountered an old
         version of table in the table definition cache which is possible
@@ -2394,7 +2403,7 @@ retry_share:
       goto retry_share;
     }
 
-    if (thd->open_tables && thd->open_tables->s->version != share->version)
+    if (thd->open_tables && thd->open_tables->s->tdc.flushed)
     {
       /*
         If the version changes while we're opening the tables,
@@ -7743,7 +7752,7 @@ bool setup_fields(THD *thd, Item **ref_pointer_array,
   thd->lex->allow_sum_func= save_allow_sum_func;
   thd->mark_used_columns= save_mark_used_columns;
   DBUG_PRINT("info", ("thd->mark_used_columns: %d", thd->mark_used_columns));
-  DBUG_RETURN(test(thd->is_error()));
+  DBUG_RETURN(MY_TEST(thd->is_error()));
 }
 
 
@@ -8444,7 +8453,7 @@ int setup_conds(THD *thd, TABLE_LIST *tables, List<TABLE_LIST> &leaves,
     select_lex->where= *conds;
   }
   thd->lex->current_select->is_item_list_lookup= save_is_item_list_lookup;
-  DBUG_RETURN(test(thd->is_error()));
+  DBUG_RETURN(MY_TEST(thd->is_error()));
 
 err_no_arena:
   select_lex->is_item_list_lookup= save_is_item_list_lookup;
