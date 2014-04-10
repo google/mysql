@@ -126,6 +126,14 @@ loose-innodb-encryption-threads=4
 loose-innodb-encryption-rotate-key-age=15
 loose-innodb-encrypt-tables=ON
 
+# scrubbing
+loose-innodb-immediate-scrub-data-uncompressed=ON
+loose-innodb-background-scrub-data-uncompressed=ON
+loose-innodb-background-scrub-data-compressed=ON
+
+#only for testing (in debug compiled)
+loose-innodb-scrub-force-testing=ON
+
 # Set small value of min_gap_size to do a sufficient testing of the related
 # functionality. The flag is marked "loose" because it doesn't exist in
 # embedded server.

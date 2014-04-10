@@ -94,6 +94,7 @@ Created 2/16/1996 Heikki Tuuri
 # include "os0sync.h"
 # include "zlib.h"
 # include "ut0crc32.h"
+# include "btr0scrub.h"
 
 /** Log sequence number immediately after startup */
 UNIV_INTERN lsn_t	srv_start_lsn;
@@ -2863,6 +2864,9 @@ files_checked:
 		/* Create the thread that will optimize the FTS sub-system. */
 		fts_optimize_init();
 
+		/* Init data for datafile scrub threads */
+		btr_scrub_init();
+
 		/* Create thread(s) that handles key rotation */
 		fil_crypt_threads_init();
 
@@ -3044,6 +3048,9 @@ innobase_shutdown_for_mysql(void)
 
 	if (!srv_read_only_mode) {
 		fil_crypt_threads_cleanup();
+
+		/* Cleanup data for datafile scrubbing */
+		btr_scrub_cleanup();
 	}
 
 	/* This must be disabled before closing the buffer pool

@@ -68,6 +68,7 @@ Created 10/8/1995 Heikki Tuuri
 #include "srv0mon.h"
 #include "ut0crc32.h"
 #include "fil0fil.h"
+#include "btr0scrub.h"
 
 #include "mysql/plugin.h"
 #include "mysql/service_thd_wait.h"
@@ -1332,11 +1333,13 @@ srv_export_innodb_status(void)
 	ulint			free_len;
 	ulint			flush_list_len;
 	fil_crypt_stat_t	crypt_stat;
+	btr_scrub_stat_t	scrub_stat;
 
 	buf_get_total_stat(&stat);
 	buf_get_total_list_len(&LRU_len, &free_len, &flush_list_len);
 	buf_get_total_list_size_in_bytes(&buf_pools_list_size);
 	fil_crypt_total_stat(&crypt_stat);
+	btr_scrub_total_stat(&scrub_stat);
 
 	mutex_enter(&srv_innodb_monitor_mutex);
 
@@ -1510,6 +1513,19 @@ srv_export_innodb_status(void)
 		crypt_stat.pages_flushed;
 	export_vars.innodb_encryption_rotation_estimated_iops =
 		crypt_stat.estimated_iops;
+
+	export_vars.innodb_scrub_page_reorganizations =
+		scrub_stat.page_reorganizations;
+	export_vars.innodb_scrub_page_splits =
+		scrub_stat.page_splits;
+	export_vars.innodb_scrub_page_split_failures_underflow =
+		scrub_stat.page_split_failures_underflow;
+	export_vars.innodb_scrub_page_split_failures_out_of_filespace =
+		scrub_stat.page_split_failures_out_of_filespace;
+	export_vars.innodb_scrub_page_split_failures_missing_index =
+		scrub_stat.page_split_failures_missing_index;
+	export_vars.innodb_scrub_page_split_failures_unknown =
+		scrub_stat.page_split_failures_unknown;
 
 	mutex_exit(&srv_innodb_monitor_mutex);
 }

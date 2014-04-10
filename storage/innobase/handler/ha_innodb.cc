@@ -207,6 +207,15 @@ extern uint srv_n_fil_crypt_threads;
 extern uint srv_fil_crypt_rotate_key_age;
 extern uint srv_n_fil_crypt_iops;
 
+extern my_bool srv_immediate_scrub_data_uncompressed;
+extern my_bool srv_background_scrub_data_uncompressed;
+extern my_bool srv_background_scrub_data_compressed;
+extern uint srv_background_scrub_data_interval;
+extern uint srv_background_scrub_data_check_interval;
+#ifdef UNIV_DEBUG
+extern my_bool srv_scrub_force_testing;
+#endif
+
 /** Possible values for system variable "innodb_stats_method". The values
 are defined the same as its corresponding MyISAM system variable
 "myisam_stats_method"(see "myisam_stats_method_names"), for better usability */
@@ -730,6 +739,24 @@ static SHOW_VAR innodb_status_variables[]= {
    SHOW_LONG},
   {"encryption_rotation_estimated_iops",
   (char*) &export_vars.innodb_encryption_rotation_estimated_iops,
+   SHOW_LONG},
+  {"scrub_background_page_reorganizations",
+   (char*) &export_vars.innodb_scrub_page_reorganizations,
+   SHOW_LONG},
+  {"scrub_background_page_splits",
+   (char*) &export_vars.innodb_scrub_page_splits,
+   SHOW_LONG},
+  {"scrub_background_page_split_failures_underflow",
+   (char*) &export_vars.innodb_scrub_page_split_failures_underflow,
+   SHOW_LONG},
+  {"scrub_background_page_split_failures_out_of_filespace",
+   (char*) &export_vars.innodb_scrub_page_split_failures_out_of_filespace,
+   SHOW_LONG},
+  {"scrub_background_page_split_failures_missing_index",
+   (char*) &export_vars.innodb_scrub_page_split_failures_missing_index,
+   SHOW_LONG},
+  {"scrub_background_page_split_failures_unknown",
+   (char*) &export_vars.innodb_scrub_page_split_failures_unknown,
    SHOW_LONG},
   {NullS, NullS, SHOW_LONG}
 };
@@ -16990,7 +17017,8 @@ static MYSQL_SYSVAR_BOOL(encrypt_tables, srv_encrypt_tables, 0,
 
 static MYSQL_SYSVAR_UINT(encryption_threads, srv_n_fil_crypt_threads,
 			 PLUGIN_VAR_RQCMDARG,
-			 "No of threads performing background key rotation",
+			 "No of threads performing background key rotation and "
+			 "scrubbing",
 			 NULL,
 			 innodb_encryption_threads_update,
 			 srv_n_fil_crypt_threads, 0, UINT_MAX32, 0);
@@ -17035,6 +17063,55 @@ static MYSQL_SYSVAR_BOOL(encrypt_log, srv_encrypt_log,
   PLUGIN_VAR_OPCMDARG | PLUGIN_VAR_READONLY,
   "Enable redo log encryption/decryption.",
   NULL, NULL, FALSE);
+
+static MYSQL_SYSVAR_BOOL(immediate_scrub_data_uncompressed,
+			 srv_immediate_scrub_data_uncompressed,
+			 0,
+			 "Enable scrubbing of data",
+			 NULL, NULL, FALSE);
+
+static MYSQL_SYSVAR_BOOL(background_scrub_data_uncompressed,
+			 srv_background_scrub_data_uncompressed,
+			 0,
+			 "Enable scrubbing of uncompressed data by "
+			 "background threads (same as encryption_threads)",
+			 NULL, NULL, FALSE);
+
+static MYSQL_SYSVAR_BOOL(background_scrub_data_compressed,
+			 srv_background_scrub_data_compressed,
+			 0,
+			 "Enable scrubbing of compressed data by "
+			 "background threads (same as encryption_threads)",
+			 NULL, NULL, FALSE);
+
+static MYSQL_SYSVAR_UINT(background_scrub_data_check_interval,
+			 srv_background_scrub_data_check_interval,
+			 0,
+			 "check if spaces needs scrubbing every "
+			 "innodb_background_scrub_data_check_interval "
+			 "seconds",
+			 NULL, NULL,
+			 srv_background_scrub_data_check_interval,
+			 1,
+			 UINT_MAX32, 0);
+
+static MYSQL_SYSVAR_UINT(background_scrub_data_interval,
+			 srv_background_scrub_data_interval,
+			 0,
+			 "scrub spaces that were last scrubbed longer than "
+			 " innodb_background_scrub_data_interval seconds ago",
+			 NULL, NULL,
+			 srv_background_scrub_data_interval,
+			 1,
+			 UINT_MAX32, 0);
+
+#ifdef UNIV_DEBUG
+static MYSQL_SYSVAR_BOOL(scrub_force_testing,
+			 srv_scrub_force_testing,
+			 0,
+			 "Perform extra scrubbing to increase test exposure",
+			 NULL, NULL, FALSE);
+#endif /* UNIV_DEBUG */
 
 static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(additional_mem_pool_size),
@@ -17207,6 +17284,14 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(scrub_log),
   MYSQL_SYSVAR(scrub_log_interval),
   MYSQL_SYSVAR(encrypt_log),
+  MYSQL_SYSVAR(immediate_scrub_data_uncompressed),
+  MYSQL_SYSVAR(background_scrub_data_uncompressed),
+  MYSQL_SYSVAR(background_scrub_data_compressed),
+  MYSQL_SYSVAR(background_scrub_data_interval),
+  MYSQL_SYSVAR(background_scrub_data_check_interval),
+#ifdef UNIV_DEBUG
+  MYSQL_SYSVAR(scrub_force_testing),
+#endif
   NULL
 };
 
@@ -17254,7 +17339,8 @@ i_s_innodb_sys_foreign,
 i_s_innodb_sys_foreign_cols,
 i_s_innodb_sys_tablespaces,
 i_s_innodb_sys_datafiles,
-i_s_innodb_tablespaces_encryption
+i_s_innodb_tablespaces_encryption,
+i_s_innodb_tablespaces_scrubbing
 
 maria_declare_plugin_end;
 
@@ -17706,4 +17792,3 @@ innobase_convert_to_system_charset(
         return(strconvert(cs1, from, strlen(from), cs2, to,
                           static_cast<uint>(len), errors));
 }
-
