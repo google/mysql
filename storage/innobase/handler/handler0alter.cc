@@ -4817,12 +4817,28 @@ innobase_update_foreign_cache(
 		}
 	}
 
+	/**
+	* always allow FK error here regardless of setting FOREIGN_KEY_CHECKS
+	* motivation is following:
+	* 1) if doing FK related alter with FOREIGN_KEY_CHECKS = 1
+	*    the correctness is checked long before getting here
+	* 2) if doing non-FK related alter with FOREIGN_KEY_CHECKS = 1
+	*    no correctness checks is done (before entering this function)
+	*    hence there can be inconsistent FKs.
+	*    But those could only have been added using FOREIGN_KEY_CHECKS = 0
+	*    and since this alter does not touch any FK, allow it here too
+	*
+	* IMO the world would be a better place if FOREIGN_KEY_CHECKS = 0
+	*   was removed all together
+	*/
+	dict_err_ignore_t ignore_err = DICT_ERR_IGNORE_FK_NOKEY;
+
 	/* Load the old or added foreign keys from the data dictionary
 	and prevent the table from being evicted from the data
 	dictionary cache (work around the lack of WL#6049). */
 	DBUG_RETURN(dict_load_foreigns(user_table->name,
 				       ctx->col_names, false, true,
-				       DICT_ERR_IGNORE_NONE));
+				       ignore_err));
 }
 
 /** Commit the changes made during prepare_inplace_alter_table()

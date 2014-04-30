@@ -1,0 +1,93 @@
+--source include/have_innodb.inc
+
+set storage_engine=innodb;
+
+--echo #
+--echo # testcase I
+--echo #
+create table t1 (a int primary key, b int not null);
+create index ind_b on t1 (b);
+create table t2 (a int primary key, b int not null);
+alter table t2 add constraint fkname foreign key (a) references t1 (b);
+
+insert into t1(a,b) values (1,1);
+
+SET FOREIGN_KEY_CHECKS = 0;
+--echo # "ok" if FOREIGN_KEY_CHECKS=0 but leaves tables in inconsistent state
+alter table t1 drop index ind_b;
+
+--echo # check what happens with inconsisten FK's
+SET FOREIGN_KEY_CHECKS = 1;
+--error 1452
+insert into t2(a,b) values (1,1);
+
+--echo #
+--echo # recreate index so that it's theoretically correct
+--echo #
+SET FOREIGN_KEY_CHECKS = 0;
+create index ind_b on t1 (b);
+
+--echo #
+--echo # recheck what happens after adding back index
+--echo # unfortunatly, it still fails. what is intended behaviour of this??
+--echo #
+SET FOREIGN_KEY_CHECKS = 1;
+--error 1452
+insert into t2(a,b) values (1,1);
+
+--echo #
+--echo # do empty alter
+--echo #
+alter table t2;
+
+--echo #
+--echo # insert still fails, WTF?
+--echo #
+--error 1452
+insert into t2(a,b) values (1,1);
+
+--echo #
+--echo # lets try add column alter
+--echo #
+alter table t2 add column c int null;
+
+--echo #
+--echo # and now insert works, WTF?
+--echo #
+insert into t2(a,b) values (1,1);
+
+drop table t2, t1;
+
+--echo #
+--echo # testcase II
+--echo #
+create table t1 (a int primary key, b int not null);
+create index ind_b on t1 (b);
+create table t2 (a int primary key, b int not null);
+alter table t2 add constraint fkname foreign key (a) references t1 (b);
+
+insert into t1(a,b) values (1,1);
+
+SET FOREIGN_KEY_CHECKS = 0;
+--echo # "ok" if FOREIGN_KEY_CHECKS=0 but leaves tables in inconsistent state
+alter table t1 drop index ind_b;
+
+--echo #
+--echo # this used to cause assertion
+--echo #
+alter table t2 add column c int null;
+
+--echo #
+--echo # if having FOREIGN_KEY_CHECKS=1
+--echo # still allow this alter to pass. it does not affect the FKs
+--echo #
+SET FOREIGN_KEY_CHECKS = 1;
+alter table t2 add column d int null;
+
+--echo #
+--echo # but this should fail, a FK is directly related
+--echo #
+--error 1829
+alter table t1 drop column b;
+
+drop table t2, t1;

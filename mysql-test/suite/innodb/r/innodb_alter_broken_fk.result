@@ -1,0 +1,73 @@
+set storage_engine=innodb;
+#
+# testcase I
+#
+create table t1 (a int primary key, b int not null);
+create index ind_b on t1 (b);
+create table t2 (a int primary key, b int not null);
+alter table t2 add constraint fkname foreign key (a) references t1 (b);
+insert into t1(a,b) values (1,1);
+SET FOREIGN_KEY_CHECKS = 0;
+# "ok" if FOREIGN_KEY_CHECKS=0 but leaves tables in inconsistent state
+alter table t1 drop index ind_b;
+# check what happens with inconsisten FK's
+SET FOREIGN_KEY_CHECKS = 1;
+insert into t2(a,b) values (1,1);
+ERROR 23000: Cannot add or update a child row: a foreign key constraint fails (`test`.`t2`, CONSTRAINT `fkname` FOREIGN KEY (`a`) REFERENCES `t1` (`b`))
+#
+# recreate index so that it's theoretically correct
+#
+SET FOREIGN_KEY_CHECKS = 0;
+create index ind_b on t1 (b);
+#
+# recheck what happens after adding back index
+# unfortunatly, it still fails. what is intended behaviour of this??
+#
+SET FOREIGN_KEY_CHECKS = 1;
+insert into t2(a,b) values (1,1);
+ERROR 23000: Cannot add or update a child row: a foreign key constraint fails (`test`.`t2`, CONSTRAINT `fkname` FOREIGN KEY (`a`) REFERENCES `t1` (`b`))
+#
+# do empty alter
+#
+alter table t2;
+#
+# insert still fails, WTF?
+#
+insert into t2(a,b) values (1,1);
+ERROR 23000: Cannot add or update a child row: a foreign key constraint fails (`test`.`t2`, CONSTRAINT `fkname` FOREIGN KEY (`a`) REFERENCES `t1` (`b`))
+#
+# lets try add column alter
+#
+alter table t2 add column c int null;
+#
+# and now insert works, WTF?
+#
+insert into t2(a,b) values (1,1);
+drop table t2, t1;
+#
+# testcase II
+#
+create table t1 (a int primary key, b int not null);
+create index ind_b on t1 (b);
+create table t2 (a int primary key, b int not null);
+alter table t2 add constraint fkname foreign key (a) references t1 (b);
+insert into t1(a,b) values (1,1);
+SET FOREIGN_KEY_CHECKS = 0;
+# "ok" if FOREIGN_KEY_CHECKS=0 but leaves tables in inconsistent state
+alter table t1 drop index ind_b;
+#
+# this used to cause assertion
+#
+alter table t2 add column c int null;
+#
+# if having FOREIGN_KEY_CHECKS=1
+# still allow this alter to pass. it does not affect the FKs
+#
+SET FOREIGN_KEY_CHECKS = 1;
+alter table t2 add column d int null;
+#
+# but this should fail, a FK is directly related
+#
+alter table t1 drop column b;
+ERROR HY000: Cannot drop column 'b': needed in a foreign key constraint 'test/fkname' of table '"test"."t2"'
+drop table t2, t1;
