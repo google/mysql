@@ -1,0 +1,53 @@
+--source include/have_innodb.inc
+--source include/have_debug.inc
+
+CREATE TABLE t1 (
+  pk INTEGER AUTO_INCREMENT PRIMARY KEY,
+  fdate DATE
+) ENGINE=MyISAM;
+
+SET GLOBAL use_stat_tables = PREFERABLY;
+SET GLOBAL innodb_lock_wait_timeout = 10;
+
+--connect (con1,localhost,root,,)
+--connect (con2,localhost,root,,)
+
+analyze table t1;
+
+--echo # connection con1
+connection con1;
+begin;
+update mysql.column_stats set nulls_ratio = 0
+where db_name = 'test' and table_name = 't1';
+
+--echo # connection con2
+connection con2;
+
+--echo #
+--echo # first try with ordinary lock wait timeout
+--echo # this used to become silently inconsistent when
+--echo # column_stats was skipped over
+--echo #
+analyze table t1;
+
+--echo #
+--echo # then try with innodb reporting deadlock
+--echo # this used to cause assertion
+--echo #
+SET DEBUG_DBUG='+d,innodb_report_deadlock';
+analyze table t1;
+SET DEBUG_DBUG='-d,innodb_report_deadlock';
+
+--echo # connection con1
+connection con1;
+rollback;
+
+--echo # connection con2
+connection con2;
+analyze table t1;
+
+--echo # Cleanup
+--connection default
+DROP TABLE t1;
+SET GLOBAL use_stat_tables = DEFAULT;
+SET GLOBAL innodb_lock_wait_timeout = DEFAULT;

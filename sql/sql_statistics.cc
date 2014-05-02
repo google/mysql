@@ -450,17 +450,32 @@ public:
     buffer of stat_table.
 
     @retval
-    FALSE    the record is not found
+    0     the record is not found
     @retval
-    TRUE     the record is found
+    >0    the record is found
+    @retval
+    <0    an error, -error is returned (i.e the error code negated)
   */
 
-  bool find_stat()
+  int find_stat()
   {
     uchar key[MAX_KEY_LENGTH];
     key_copy(key, record[0], stat_key_info, stat_key_length);
-    return !stat_file->ha_index_read_idx_map(record[0], stat_key_idx, key,
-                                             HA_WHOLE_KEY, HA_READ_KEY_EXACT);
+    int res= stat_file->ha_index_read_idx_map(record[0], stat_key_idx, key,
+                                              HA_WHOLE_KEY, HA_READ_KEY_EXACT);
+    if (res == 0)
+    {
+      return 1; // record found
+    }
+    else if (res == HA_ERR_END_OF_FILE || res == HA_ERR_KEY_NOT_FOUND)
+    {
+      return 0; // record not found
+    }
+    sql_print_error("Got error %d when reading table '%s'", res,
+                    stat_table == NULL ?
+                    "<unknown>" : stat_table->s->path.str);
+
+    return -res;
   }
 
  
@@ -475,12 +490,14 @@ public:
     buffer of stat_table.
 
     @retval
-    FALSE    the record is not found
+    0     the record is not found
     @retval
-    TRUE     the record is found
+    >0    the record is found
+    @retval
+    <0    an error, -error is returned (i.e the error code negated)
   */
 
-  bool find_next_stat_for_prefix(uint prefix_parts)
+  int find_next_stat_for_prefix(uint prefix_parts)
   {
     uchar key[MAX_KEY_LENGTH];
     uint prefix_key_length= 0;
@@ -488,10 +505,22 @@ public:
       prefix_key_length+= stat_key_info->key_part[i].store_length;
     key_copy(key, record[0], stat_key_info, prefix_key_length);
     key_part_map prefix_map= (key_part_map) ((1 << prefix_parts) - 1);
-    return !stat_file->ha_index_read_idx_map(record[0], stat_key_idx, key,
-                                             prefix_map, HA_READ_KEY_EXACT);
+    int res= stat_file->ha_index_read_idx_map(record[0], stat_key_idx, key,
+                                              prefix_map, HA_READ_KEY_EXACT);
+    if (res == 0)
+    {
+      return 1; // record found
+    }
+    else if (res == HA_ERR_END_OF_FILE || res == HA_ERR_KEY_NOT_FOUND)
+    {
+      return 0; // record not found
+    }
+    sql_print_error("Got error %d when reading table '%s'", res,
+                    stat_table == NULL ?
+                    "<unknown>" : stat_table->s->path.str);
+
+    return -res;
   }
-   
 
   /**
     @brief
@@ -519,13 +548,14 @@ public:
 
   bool update_stat()
   {
-    if (find_stat())
-    {    
+    int res;
+    if ((res= find_stat()) > 0)
+    {
       store_record_for_update();
       store_stat_fields();
       return update_record();
     }
-    else
+    else if (res == 0)
     {
       int err;
       store_stat_fields();
@@ -534,6 +564,10 @@ public:
       /* Make change permanent and avoid 'table is marked as crashed' errors */
       stat_file->extra(HA_EXTRA_FLUSH);
     } 
+    else
+    {
+      return TRUE;
+    }
     return FALSE;
   }
 
@@ -720,7 +754,7 @@ public:
     Table_statistics *read_stats= table_share->stats_cb.table_stats;
     read_stats->cardinality_is_null= TRUE;
     read_stats->cardinality= 0;
-    if (find_stat())
+    if (find_stat() > 0)
     {
       Field *stat_field= stat_table->field[TABLE_STAT_CARDINALITY];
       if (!stat_field->is_null())
@@ -979,7 +1013,7 @@ public:
     if (table_field->read_stats->max_value)
       table_field->read_stats->max_value->set_null();
 
-    if (find_stat())
+    if (find_stat() > 0)
     {
       char buff[MAX_FIELD_WIDTH];
       String val(buff, sizeof(buff), &my_charset_utf8_bin);
@@ -1049,7 +1083,7 @@ public:
 
   void get_histogram_value()
   {
-    if (find_stat())
+    if (find_stat() > 0)
     {
       char buff[MAX_FIELD_WIDTH];
       String val(buff, sizeof(buff), &my_charset_utf8_bin);
@@ -1252,7 +1286,7 @@ public:
   void get_stat_values()
   {
     double avg_frequency= 0;
-    if(find_stat())
+    if (find_stat() > 0)
     {
       Field *stat_field= stat_table->field[INDEX_STAT_AVG_FREQUENCY];
       if (!stat_field->is_null())
@@ -2541,6 +2575,30 @@ bitmap_clear_all(table->write_set);
   DBUG_RETURN(rc);          
 }
 
+/**
+  @brief rollback transaction after an error
+
+  @param      thd         The thread handle
+  @param      save_binlog_format Binlog format to restore
+  @param      open_tables_backup Tables to close
+*/
+static
+void rollback_trans_on_error(THD *thd,
+                             enum_binlog_format save_binlog_format,
+                             Open_tables_backup *open_tables_backup)
+{
+  DBUG_ENTER("rollback_trans_on_error");
+
+  /* i'm not sure which, so rollback first statement and then transaction */
+  ha_rollback_trans(thd, false);
+  ha_rollback_trans(thd, true);
+
+  thd->restore_stmt_binlog_format(save_binlog_format);
+
+  close_system_tables(thd, open_tables_backup);
+
+  DBUG_VOID_RETURN;
+}
 
 /**
   @brief
@@ -2584,7 +2642,7 @@ int update_statistics_for_table(THD *thd, TABLE *table)
   TABLE_LIST tables[STATISTICS_TABLES];
   Open_tables_backup open_tables_backup;
   uint i;
-  int err;
+  int err= 0;
   enum_binlog_format save_binlog_format;
   int rc= 0;
   TABLE *stat_table;
@@ -2610,6 +2668,13 @@ int update_statistics_for_table(THD *thd, TABLE *table)
   if (err)
     rc= 1;
 
+  if (err && stat_table->file->has_transactions())
+  {
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
+  }
+
   /* Update the statistical table colum_stats */
   stat_table= tables[COLUMN_STAT].table;
   Column_stat column_stat(stat_table, table);
@@ -2623,6 +2688,13 @@ int update_statistics_for_table(THD *thd, TABLE *table)
     err= column_stat.update_stat();
     if (err && !rc)
       rc= 1;
+
+    if (err && stat_table->file->has_transactions())
+    {
+      rollback_trans_on_error(thd, save_binlog_format,
+                              &open_tables_backup);
+      DBUG_RETURN(rc);
+    }
   }
 
   /* Update the statistical table index_stats */
@@ -2642,8 +2714,19 @@ int update_statistics_for_table(THD *thd, TABLE *table)
       err= index_stat.update_stat();
       if (err && !rc)
         rc= 1;
+
+      if (err && stat_table->file->has_transactions())
+      {
+        rollback_trans_on_error(thd, save_binlog_format,
+                                &open_tables_backup);
+        DBUG_RETURN(rc);
+      }
     }
   }
+
+  /* transactional table must have all OK here (rc == 0) */
+  DBUG_ASSERT(rc == 0 || stat_table == NULL ||
+              !stat_table->file->has_transactions());
 
   thd->restore_stmt_binlog_format(save_binlog_format);
 
@@ -3015,7 +3098,8 @@ int read_statistics_for_tables_if_needed(THD *thd, TABLE_LIST *tables)
 
 int delete_statistics_for_table(THD *thd, LEX_STRING *db, LEX_STRING *tab)
 {
-  int err;
+  int err= 0;
+  int res;
   enum_binlog_format save_binlog_format;
   TABLE *stat_table;
   TABLE_LIST tables[STATISTICS_TABLES];
@@ -3036,33 +3120,77 @@ int delete_statistics_for_table(THD *thd, LEX_STRING *db, LEX_STRING *tab)
   stat_table= tables[INDEX_STAT].table;
   Index_stat index_stat(stat_table, db, tab);
   index_stat.set_full_table_name();
-  while (index_stat.find_next_stat_for_prefix(2))
+  while ((res= index_stat.find_next_stat_for_prefix(2)) > 0)
   {
     err= index_stat.delete_stat();
     if (err & !rc)
       rc= 1;
+
+    if (err && stat_table->file->has_transactions())
+    {
+      rollback_trans_on_error(thd, save_binlog_format,
+                              &open_tables_backup);
+      DBUG_RETURN(rc);
+    }
+  }
+
+  if (res < 0 && stat_table->file->has_transactions())
+  {
+    // failure during find_next_stat_for_prefix
+    rc= 1;
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
   }
 
   /* Delete statistics on table from the statistical table column_stats */
   stat_table= tables[COLUMN_STAT].table;
   Column_stat column_stat(stat_table, db, tab);
   column_stat.set_full_table_name();
-  while (column_stat.find_next_stat_for_prefix(2))
+  while ((res= column_stat.find_next_stat_for_prefix(2)) > 0)
   {
     err= column_stat.delete_stat();
     if (err & !rc)
       rc= 1;
+
+    if (err && stat_table->file->has_transactions())
+    {
+      rollback_trans_on_error(thd, save_binlog_format,
+                              &open_tables_backup);
+      DBUG_RETURN(rc);
+    }
   }
-   
+
+  if (res < 0 && stat_table->file->has_transactions())
+  {
+    // failure during find_next_stat_for_prefix
+    rc= 1;
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
+  }
+
   /* Delete statistics on table from the statistical table table_stats */
   stat_table= tables[TABLE_STAT].table;
   Table_stat table_stat(stat_table, db, tab);
   table_stat.set_key_fields();
-  if (table_stat.find_stat())
+  if ((res= table_stat.find_stat()) > 0)
   {
     err= table_stat.delete_stat();
     if (err & !rc)
       rc= 1;
+  }
+  else if (res < 0)
+  {
+    err= -res;
+    rc= 1;
+  }
+
+  if (err && stat_table->file->has_transactions())
+  {
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
   }
 
   thd->restore_stmt_binlog_format(save_binlog_format);
@@ -3100,7 +3228,7 @@ int delete_statistics_for_table(THD *thd, LEX_STRING *db, LEX_STRING *tab)
 
 int delete_statistics_for_column(THD *thd, TABLE *tab, Field *col)
 {
-  int err;
+  int err= 0, res;
   enum_binlog_format save_binlog_format;
   TABLE *stat_table;
   TABLE_LIST tables;
@@ -3121,11 +3249,23 @@ int delete_statistics_for_column(THD *thd, TABLE *tab, Field *col)
   stat_table= tables.table;
   Column_stat column_stat(stat_table, tab);
   column_stat.set_key_fields(col);
-  if (column_stat.find_stat())
+  if ((res= column_stat.find_stat()) > 0)
   {
     err= column_stat.delete_stat();
     if (err)
       rc= 1;
+  }
+  else if (res < 0)
+  {
+    err= -res;
+    rc= 1;
+  }
+
+  if (err && stat_table->file->has_transactions())
+  {
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
   }
 
   thd->restore_stmt_binlog_format(save_binlog_format);
@@ -3167,7 +3307,7 @@ int delete_statistics_for_column(THD *thd, TABLE *tab, Field *col)
 int delete_statistics_for_index(THD *thd, TABLE *tab, KEY *key_info,
                                 bool ext_prefixes_only)
 {
-  int err;
+  int err= 0, res;
   enum_binlog_format save_binlog_format;
   TABLE *stat_table;
   TABLE_LIST tables;
@@ -3190,11 +3330,27 @@ int delete_statistics_for_index(THD *thd, TABLE *tab, KEY *key_info,
   if (!ext_prefixes_only)
   {
     index_stat.set_index_prefix_key_fields(key_info);
-    while (index_stat.find_next_stat_for_prefix(3))
+    while ((res= index_stat.find_next_stat_for_prefix(3)) > 0)
     {
       err= index_stat.delete_stat();
       if (err && !rc)
         rc= 1;
+
+      if (err && stat_table->file->has_transactions())
+      {
+        rollback_trans_on_error(thd, save_binlog_format,
+                                &open_tables_backup);
+        DBUG_RETURN(rc);
+      }
+    }
+
+    if (res < 0 && stat_table->file->has_transactions())
+    {
+      // failure during find_next_stat_for_prefix
+      rc= 1;
+      rollback_trans_on_error(thd, save_binlog_format,
+                              &open_tables_backup);
+      DBUG_RETURN(rc);
     }
   }
   else
@@ -3202,11 +3358,23 @@ int delete_statistics_for_index(THD *thd, TABLE *tab, KEY *key_info,
     for (uint i= key_info->user_defined_key_parts; i < key_info->ext_key_parts; i++)
     {
       index_stat.set_key_fields(key_info, i+1);
-      if (index_stat.find_next_stat_for_prefix(4))
+      if ((res= index_stat.find_next_stat_for_prefix(4)) > 0)
       {
         err= index_stat.delete_stat();
         if (err && !rc)
           rc= 1;
+      }
+      else if (res < 0)
+      {
+        err= -res;
+        rc= 1;
+      }
+
+      if (err && stat_table->file->has_transactions())
+      {
+        rollback_trans_on_error(thd, save_binlog_format,
+                                &open_tables_backup);
+        DBUG_RETURN(rc);
       }
     }
   }
@@ -3249,7 +3417,7 @@ int delete_statistics_for_index(THD *thd, TABLE *tab, KEY *key_info,
 int rename_table_in_stat_tables(THD *thd, LEX_STRING *db, LEX_STRING *tab,
                                 LEX_STRING *new_db, LEX_STRING *new_tab)
 {
-  int err;
+  int err= 0, res;
   enum_binlog_format save_binlog_format;
   TABLE *stat_table;
   TABLE_LIST tables[STATISTICS_TABLES];
@@ -3270,35 +3438,81 @@ int rename_table_in_stat_tables(THD *thd, LEX_STRING *db, LEX_STRING *tab,
   stat_table= tables[INDEX_STAT].table;
   Index_stat index_stat(stat_table, db, tab);
   index_stat.set_full_table_name();
-  while (index_stat.find_next_stat_for_prefix(2))
+  while ((res= index_stat.find_next_stat_for_prefix(2)) > 0)
   {
     err= index_stat.update_table_name_key_parts(new_db, new_tab);
     if (err & !rc)
       rc= 1;
+
+    if (err && stat_table->file->has_transactions())
+    {
+      rollback_trans_on_error(thd, save_binlog_format,
+                              &open_tables_backup);
+      DBUG_RETURN(rc);
+    }
+
     index_stat.set_full_table_name();
+  }
+
+  if (res < 0 && stat_table->file->has_transactions())
+  {
+    // failure during find_next_stat_for_prefix
+    rc= 1;
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
   }
 
   /* Rename table in the statistical table column_stats */
   stat_table= tables[COLUMN_STAT].table;
   Column_stat column_stat(stat_table, db, tab);
   column_stat.set_full_table_name();
-  while (column_stat.find_next_stat_for_prefix(2))
+  while ((res= column_stat.find_next_stat_for_prefix(2)) > 0)
   {
     err= column_stat.update_table_name_key_parts(new_db, new_tab);
     if (err & !rc)
       rc= 1;
+
+    if (err && stat_table->file->has_transactions())
+    {
+      rollback_trans_on_error(thd, save_binlog_format,
+                              &open_tables_backup);
+      DBUG_RETURN(rc);
+    }
+
     column_stat.set_full_table_name();
   }
-   
+
+  if (res < 0 && stat_table->file->has_transactions())
+  {
+    // failure during find_next_stat_for_prefix
+    rc= 1;
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
+  }
+
   /* Rename table in the statistical table table_stats */
   stat_table= tables[TABLE_STAT].table;
   Table_stat table_stat(stat_table, db, tab);
   table_stat.set_key_fields();
-  if (table_stat.find_stat())
+  if ((res= table_stat.find_stat()) > 0)
   {
     err= table_stat.update_table_name_key_parts(new_db, new_tab);
     if (err & !rc)
       rc= 1;
+  }
+  else if (res < 0)
+  {
+    err= -res;
+    rc= 1;
+  }
+
+  if (err && stat_table->file->has_transactions())
+  {
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
   }
 
   thd->restore_stmt_binlog_format(save_binlog_format);
@@ -3339,7 +3553,7 @@ int rename_table_in_stat_tables(THD *thd, LEX_STRING *db, LEX_STRING *tab,
 int rename_column_in_stat_tables(THD *thd, TABLE *tab, Field *col,
                                  const char *new_name)
 {
-  int err;
+  int err= 0, res;
   enum_binlog_format save_binlog_format;
   TABLE *stat_table;
   TABLE_LIST tables;
@@ -3364,11 +3578,23 @@ int rename_column_in_stat_tables(THD *thd, TABLE *tab, Field *col,
   stat_table= tables.table;
   Column_stat column_stat(stat_table, tab);
   column_stat.set_key_fields(col);
-  if (column_stat.find_stat())
-  { 
+  if ((res= column_stat.find_stat()) > 0)
+  {
     err= column_stat.update_column_key_part(new_name);
     if (err & !rc)
       rc= 1;
+  }
+  else if (res < 0)
+  {
+    err= -res;
+    rc= 1;
+  }
+
+  if (err && stat_table->file->has_transactions())
+  {
+    rollback_trans_on_error(thd, save_binlog_format,
+                            &open_tables_backup);
+    DBUG_RETURN(rc);
   }
 
   thd->restore_stmt_binlog_format(save_binlog_format);
