@@ -26,6 +26,7 @@
 #include <mysqld.h>
 #include <debug_sync.h>
 #include <time.h>
+#include <sql_acl.h>
 #include <sql_plist.h>
 #include <threadpool.h>
 #include <time.h>
@@ -104,7 +105,8 @@ struct worker_thread_t
 
 typedef I_P_List<worker_thread_t, I_P_List_adapter<worker_thread_t,
                  &worker_thread_t::next_in_list,
-                 &worker_thread_t::prev_in_list> 
+                 &worker_thread_t::prev_in_list>,
+                 I_P_List_counter
                  >
 worker_list_t;
 
@@ -147,11 +149,12 @@ struct thread_group_t
   int  shutdown_pipe[2];
   bool shutdown;
   bool stalled;
-  
+  thread_group_type type;
 } MY_ALIGNED(512);
 
 static thread_group_t *all_groups;
-static uint group_count;
+static thread_group_t *super_groups;
+static uint group_count[2];
 static int32 shutdown_group_count;
 
 /**
@@ -523,8 +526,15 @@ static void* timer_thread(void *param)
       /* Check stalls in thread groups */
       for (i= 0; i < threadpool_max_size; i++)
       {
-        if(all_groups[i].connection_count)
-           check_stall(&all_groups[i]);
+        if (all_groups[i].connection_count)
+          check_stall(&all_groups[i]);
+      }
+
+      /* Check stalls in super user thread groups */
+      for (i= 0; i < super_threadpool_max_size; i++)
+      {
+        if (super_groups[i].connection_count)
+          check_stall(&super_groups[i]);
       }
       
       /* Check if any client exceeded wait_timeout */
@@ -775,7 +785,12 @@ static void add_thread_count(thread_group_t *thread_group, int32 count)
   thread_group->thread_count += count;
   /* worker starts out and end in "active" state */
   thread_group->active_thread_count += count;
-  my_atomic_add32(&tp_stats.num_worker_threads, count);
+  if (thread_group->type == SUPER_GROUP)
+  {
+    my_atomic_add32(&super_tp_stats.num_worker_threads, count);
+  } else {
+    my_atomic_add32(&tp_stats.num_worker_threads, count);
+  }
 }
 
 
@@ -795,11 +810,13 @@ static int create_worker(thread_group_t *thread_group)
   int err;
   
   DBUG_ENTER("create_worker");
-  if (tp_stats.num_worker_threads >= (int)threadpool_max_threads
+  if (thread_group->type == NORMAL_GROUP &&
+      (tp_stats.num_worker_threads >= (int)threadpool_max_threads)
      && thread_group->thread_count >= 2)
   {
     err= 1;
     max_threads_reached= true;
+    tp_stats.spare_thread_capacity= 0;
     goto end;
   }
 
@@ -902,8 +919,9 @@ static int wake_or_create_thread(thread_group_t *thread_group)
 }
 
 
-
-int thread_group_init(thread_group_t *thread_group, pthread_attr_t* thread_attr)
+static int thread_group_init(thread_group_t *thread_group,
+                             pthread_attr_t* thread_attr,
+                             thread_group_type type)
 {
   DBUG_ENTER("thread_group_init");
   thread_group->pthread_attr = thread_attr;
@@ -912,6 +930,7 @@ int thread_group_init(thread_group_t *thread_group, pthread_attr_t* thread_attr)
   thread_group->shutdown_pipe[0]= -1;
   thread_group->shutdown_pipe[1]= -1;
   thread_group->queue.empty();
+  thread_group->type= type;
   DBUG_RETURN(0);
 }
 
@@ -933,7 +952,10 @@ void thread_group_destroy(thread_group_t *thread_group)
     }
   }
   if (my_atomic_add32(&shutdown_group_count, -1) == 1)
+  {
     my_free(all_groups);
+    my_free(super_groups);
+  }
 }
 
 /**
@@ -1035,7 +1057,7 @@ static void queue_put(thread_group_t *thread_group, connection_t *connection)
 
 static bool too_many_threads(thread_group_t *thread_group)
 {
-  return (thread_group->active_thread_count >= 1+(int)threadpool_oversubscribe 
+  return (thread_group->active_thread_count >= 1+(int)threadpool_oversubscribe
    && !thread_group->stalled);
 }
 
@@ -1170,7 +1192,7 @@ void wait_begin(thread_group_t *thread_group)
   
   DBUG_ASSERT(thread_group->active_thread_count >=0);
   DBUG_ASSERT(thread_group->connection_count > 0);
- 
+
   if ((thread_group->active_thread_count == 0) && 
      (thread_group->queue.is_empty() || !thread_group->listener))
   {
@@ -1237,8 +1259,10 @@ void tp_add_connection(THD *thd)
     thd->event_scheduler.data= connection;
       
     /* Assign connection to a group. */
-    thread_group_t *group= 
-      &all_groups[thd->thread_id%group_count];
+    thread_group_t *group=
+        (tp_stats.num_worker_threads >= (int)threadpool_max_threads) ?
+        (&super_groups[thd->thread_id % group_count[SUPER_GROUP]]) :
+        (&all_groups[thd->thread_id % group_count[NORMAL_GROUP]]);
     
     connection->thread_group=group;
       
@@ -1362,6 +1386,9 @@ static void set_wait_timeout(connection_t *c)
   Handle a (rare) special case,where connection needs to 
   migrate to a different group because group_count has changed
   after thread_pool_size setting. 
+
+  The second case is to migrate super user connection to a super group,
+  and a non super user connection to a non super group.
 */
 
 static int change_group(connection_t *c, 
@@ -1385,6 +1412,7 @@ static int change_group(connection_t *c,
   
   /* Add connection to the new group. */
   mysql_mutex_lock(&new_group->mutex);
+
   c->thread_group= new_group;
   new_group->connection_count++;
   /* Ensure that there is a listener in the new group. */
@@ -1392,6 +1420,19 @@ static int change_group(connection_t *c,
     ret= create_worker(new_group);
   mysql_mutex_unlock(&new_group->mutex);
   return ret;
+}
+
+/**
+  Return the thread group a thread should be put into.
+*/
+static thread_group_t *destination_group_for_thd(THD *thd)
+{
+  if (thd && thd->security_ctx &&
+      ((thd->security_ctx->master_access & SUPER_ACL) ||
+       thd->security_ctx->is_system_user))
+    return (&super_groups[thd->thread_id % group_count[SUPER_GROUP]]);
+  else
+    return (&all_groups[thd->thread_id % group_count[NORMAL_GROUP]]);
 }
 
 
@@ -1402,22 +1443,24 @@ static int start_io(connection_t *connection)
   /*
     Usually, connection will stay in the same group for the entire
     connection's life. However, we do allow group_count to
-    change at runtime, which means in rare cases when it changes is 
-    connection should need to migrate  to another group, this ensures
-    to ensure equal load between groups.
+    change at runtime, which means in rare cases when it changes its 
+    connection should need to migrate to another group, this ensures
+    equal load between groups.
 
     So we recalculate in which group the connection should be, based
     on thread_id and current group count, and migrate if necessary.
-  */ 
-  thread_group_t *group = 
-    &all_groups[connection->thd->thread_id%group_count];
+
+    The second case is to migrate super user connection to a super group,
+    and a non super user connection to a non super group.
+  */
+  thread_group_t *group= destination_group_for_thd(connection->thd);
 
   if (group != connection->thread_group)
   {
     if (change_group(connection, connection->thread_group, group))
       return -1;
   }
-    
+
   /* 
     Bind to poll descriptor if not yet done. 
   */ 
@@ -1442,6 +1485,12 @@ static void handle_event(connection_t *connection)
   {
     err= threadpool_add_connection(connection->thd);
     connection->logged_in= true;
+
+    thread_group_t *group= destination_group_for_thd(connection->thd);
+    if (connection->thread_group != group)
+    {
+      change_group(connection, connection->thread_group, group);
+    }
   }
   else 
   {
@@ -1518,27 +1567,56 @@ bool tp_init()
 {
   DBUG_ENTER("tp_init");
   threadpool_max_size= MY_MAX(threadpool_size, 128);
+  super_threadpool_max_size= MY_MAX(super_threadpool_size, 128);
+  super_threadpool_max_threads= max_connections + 1;
   all_groups= (thread_group_t *)
     my_malloc(sizeof(thread_group_t) * threadpool_max_size, MYF(MY_WME|MY_ZEROFILL));
+  super_groups= (thread_group_t *)
+    my_malloc(sizeof(thread_group_t) * super_threadpool_max_size, MYF(MY_WME|MY_ZEROFILL));
+
   if (!all_groups)
   {
     threadpool_max_size= 0;
     DBUG_RETURN(1);
   }
+
+  if (!super_groups)
+  {
+    super_threadpool_max_size= 0;
+    DBUG_RETURN(1);
+  }
+
   threadpool_started= true;
   scheduler_init();
 
   for (uint i= 0; i < threadpool_max_size; i++)
   {
-    thread_group_init(&all_groups[i], get_connection_attrib());  
+    thread_group_init(&all_groups[i], get_connection_attrib(), NORMAL_GROUP);  
   }
-  tp_set_threadpool_size(threadpool_size);
-  if(group_count == 0)
+  
+  tp_set_threadpool_size(threadpool_size, NORMAL_GROUP);
+
+  if (group_count[NORMAL_GROUP] == 0)
   {
     /* Something went wrong */
     sql_print_error("Can't set threadpool size to %d",threadpool_size);
     DBUG_RETURN(1);
   }
+
+  for (uint i= 0; i < super_threadpool_max_size; i++)
+  {
+    thread_group_init(&super_groups[i], get_connection_attrib(), SUPER_GROUP); 
+  }
+
+  tp_set_threadpool_size(super_threadpool_size, SUPER_GROUP);
+
+  if (group_count[SUPER_GROUP] == 0)
+  {
+    /* Something went wrong */
+    sql_print_error("Can't set super threadpool size to %d", super_threadpool_size);
+    DBUG_RETURN(1);
+  }
+
   PSI_register(mutex);
   PSI_register(cond);
   PSI_register(thread);
@@ -1557,27 +1635,32 @@ void tp_end()
     DBUG_VOID_RETURN;
 
   stop_timer(&pool_timer);
-  shutdown_group_count= threadpool_max_size;
+  shutdown_group_count= threadpool_max_size + super_threadpool_max_size;
   for (uint i= 0; i < threadpool_max_size; i++)
   {
     thread_group_close(&all_groups[i]);
+  }
+  for (uint i= 0; i < super_threadpool_max_size; i++)
+  {
+    thread_group_close(&super_groups[i]);
   }
   threadpool_started= false;
   DBUG_VOID_RETURN;
 }
 
-
 /** Ensure that poll descriptors are created when threadpool_size changes */
 
-void tp_set_threadpool_size(uint size)
+void tp_set_threadpool_size(uint size, const thread_group_type type)
 {
   bool success= true;
+
   if (!threadpool_started)
     return;
 
   for(uint i=0; i< size; i++)
   {
-    thread_group_t *group= &all_groups[i];
+    thread_group_t *group= (type == SUPER_GROUP) ?
+                           (&super_groups[i]) : (&all_groups[i]);
     mysql_mutex_lock(&group->mutex);
     if (group->pollfd == -1)
     {
@@ -1588,15 +1671,16 @@ void tp_set_threadpool_size(uint size)
         sql_print_error("io_poll_create() failed, errno=%d\n", errno);
         break;
       }
-    }  
-    mysql_mutex_unlock(&all_groups[i].mutex);
+    } 
+    mysql_mutex_unlock(&group->mutex);
     if (!success)
     {
-      group_count= i;
+      group_count[type]= i;
       return;
     }
   }
-  group_count= size;
+
+  group_count[type]= size;
 }
 
 void tp_set_threadpool_stall_limit(uint limit)
@@ -1627,6 +1711,35 @@ int tp_get_idle_thread_count()
   return sum;
 }
 
+bool tp_get_max_threads_reached()
+{
+  return (tp_stats.num_worker_threads >= (int32) threadpool_max_threads);
+}
+
+int tp_get_spare_thread_capacity()
+{
+  int sum= 0;
+  int current_threads= 0;
+  for (uint i= 0; i < threadpool_max_size && all_groups[i].pollfd >= 0; i++)
+  {
+    sum+= (all_groups[i].waiting_threads).elements();
+    if (all_groups[i].listener)
+      sum++;
+    current_threads= all_groups[i].thread_count;
+  }
+  sum+= (threadpool_max_threads - current_threads);
+  return sum;
+}
+
+int tp_get_idle_super_thread_count()
+{
+  int sum= 0;
+  for (uint i= 0; i < super_threadpool_max_size && super_groups[i].pollfd >= 0; i++)
+  {
+    sum+= (super_groups[i].thread_count - super_groups[i].active_thread_count);
+  }
+  return sum;
+}
 
 /* Report threadpool problems */
 

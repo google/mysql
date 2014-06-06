@@ -25,3 +25,4 @@ mysql_binary_mode        : Test depends on result file having Windows-style line
 empty_user_table         : Addition of permission version tracking renders test impossible to run.
 sp-destruct              : InnoDB doesn't survive such destructive tests which isn't so bad
 bad_frm_crash_5029       : Test relies on InnoDB not being loaded.
+pool_of_threads          : Replaced by super_pool_of_threads

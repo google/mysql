@@ -1,0 +1,142 @@
+-- source include/have_pool_of_threads.inc
+-- source include/have_innodb.inc
+
+# Save the initial number of concurrent sessions.
+--source include/count_sessions.inc
+
+--echo #
+--echo # Verify more than thread_pool_max_threads active non super and
+--echo # non system user connections
+--echo # can be established, but threadpool_threads should not exceed
+--echo # thread_pool_max_threads.
+--echo #
+
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+--enable_warnings
+GRANT CREATE, SELECT, INSERT, UPDATE, DELETE ON *.* to test@localhost;
+insert into mysql.system_user
+(User, Host, Password, Select_priv, Insert_priv, Update_priv, Delete_priv,
+ssl_cipher, x509_issuer, x509_subject, authentication_string)
+values ('system_user1', 'localhost', '', 'Y', 'Y', 'Y', 'Y', '', '', '', '');
+FLUSH PRIVILEGES;
+
+--echo # Connection default
+change_user test,,test;
+set @@autocommit=0;
+CREATE TABLE t1(i INT UNIQUE, content INT) ENGINE=innodb;
+START TRANSACTION;
+INSERT INTO t1 VALUES (1, 1);
+--send select sleep(10)
+
+--echo # Connection 2
+connect (con2,localhost,test,,test);
+set @@autocommit=0;
+START TRANSACTION;
+--send DELETE FROM t1 WHERE i = 1
+
+--echo # Connection 3
+connect(con3,localhost,test,,test);
+
+--echo # Connection 4
+connect(con4,localhost,test,,test);
+
+--echo #
+--echo # Verify besides non super connections,
+--echo # a system user connection can be established.
+--echo #
+connect(system_con,localhost,system_user1,,test);
+show processlist;
+show status like '%threadpool%';
+
+--echo #
+--echo # Verify besides non super connections,
+--echo # reserved_super_connections + 1 active super connections (include system
+--echo # connections) can be established.
+--echo #
+connect(super_con,localhost,root,,test);
+show processlist;
+# Exclude Threadpool_super_idle_threads as its value depends on the stage of
+# changing thread groups, i.e., in this case, could be 1 or 2.
+show status where `variable_name` like '%threadpool%' and
+`variable_name` not like 'Threadpool_super_idle_threads';
+
+--disable_abort_on_error
+--disable_result_log
+--disable_query_log
+connect(super_con3,localhost,root,,);
+--enable_query_log
+--enable_result_log
+--enable_abort_on_error
+let $error = $mysql_errno;
+if (!$error)
+{
+  --echo # -- Error: managed to establish more than --max_connections connections
+}
+if ($error)
+{
+  --echo # -- Success: more than --max_connections normal connections not possible
+}
+
+# Now try again, but this time use the extra port to successfully connect.
+connect(extra_con,127.0.0.1,root,,test,$MASTER_EXTRA_PORT,);
+connection extra_con;
+SELECT 'Connection on extra port ok';
+
+connect(extra_con2,127.0.0.1,root,,test,$MASTER_EXTRA_PORT,);
+connection extra_con2;
+SELECT 'Connection on extra port 2 ok';
+
+--disable_abort_on_error
+--disable_result_log
+--disable_query_log
+connect(extra_con3,127.0.0.1,root,,test,$MASTER_EXTRA_PORT,);
+--enable_query_log
+--enable_result_log
+--enable_abort_on_error
+
+let $error = $mysql_errno;
+if (!$error)
+{
+  --echo # -- Error: managed to establish more than --extra-max-connections + 1 connections
+}
+if ($error)
+{
+  --echo # -- Success: more than --extra-max-connections + 1 normal connections not possible
+}
+
+disconnect extra_con;
+disconnect extra_con2;
+--source include/wait_until_disconnected.inc
+
+connection super_con;
+
+--echo # Verify con3 can be killed
+kill 5;
+
+--echo # Verify con4 can only be disconnected after it is scheduled
+disconnect con4;
+
+connection super_con;
+show status like '%threadpool%';
+
+--echo # Cleanup
+connection default;
+--reap
+commit;
+set @@autocommit=1;
+change_user root,,test;
+
+connection con2;
+--reap
+commit;
+set @@autocommit=1;
+
+connection default;
+disconnect con2;
+disconnect system_con;
+disconnect super_con;
+drop table t1;
+drop user test@localhost;
+
+-- source include/wait_until_count_sessions.inc

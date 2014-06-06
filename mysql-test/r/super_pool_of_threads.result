@@ -1,0 +1,92 @@
+#
+# Verify more than thread_pool_max_threads active non super and
+# non system user connections
+# can be established, but threadpool_threads should not exceed
+# thread_pool_max_threads.
+#
+DROP TABLE IF EXISTS t1;
+GRANT CREATE, SELECT, INSERT, UPDATE, DELETE ON *.* to test@localhost;
+insert into mysql.system_user
+(User, Host, Password, Select_priv, Insert_priv, Update_priv, Delete_priv,
+ssl_cipher, x509_issuer, x509_subject, authentication_string)
+values ('system_user1', 'localhost', '', 'Y', 'Y', 'Y', 'Y', '', '', '', '');
+FLUSH PRIVILEGES;
+# Connection default
+set @@autocommit=0;
+CREATE TABLE t1(i INT UNIQUE, content INT) ENGINE=innodb;
+START TRANSACTION;
+INSERT INTO t1 VALUES (1, 1);
+select sleep(10);
+# Connection 2
+set @@autocommit=0;
+START TRANSACTION;
+DELETE FROM t1 WHERE i = 1;
+# Connection 3
+# Connection 4
+#
+# Verify besides non super connections,
+# a system user connection can be established.
+#
+show processlist;
+Id	User	Host	db	Command	Time	State	Info	Progress
+7	system_user1	localhost	test	Query	0	init	show processlist	0.000
+show status like '%threadpool%';
+Variable_name	Value
+Threadpool_idle_threads	2
+Threadpool_max_threads_reached	ON
+Threadpool_spare_thread_capacity	0
+Threadpool_super_idle_threads	1
+Threadpool_super_max_threads	6
+Threadpool_super_threads	2
+Threadpool_threads	2
+#
+# Verify besides non super connections,
+# reserved_super_connections + 1 active super connections (include system
+# connections) can be established.
+#
+show processlist;
+Id	User	Host	db	Command	Time	State	Info	Progress
+3	test	localhost	test	Query	0	User sleep	select sleep(10)	0.000
+4	test	localhost	test	Query	0	updating	DELETE FROM t1 WHERE i = 1	0.000
+5	test	localhost	test	Sleep	0		NULL	0.000
+6	test	localhost	test	Sleep	0		NULL	0.000
+7	system_user1	localhost	test	Sleep	0		NULL	0.000
+8	root	localhost	test	Query	0	init	show processlist	0.000
+show status where `variable_name` like '%threadpool%' and
+`variable_name` not like 'Threadpool_super_idle_threads';
+Variable_name	Value
+Threadpool_idle_threads	2
+Threadpool_max_threads_reached	ON
+Threadpool_spare_thread_capacity	0
+Threadpool_super_max_threads	6
+Threadpool_super_threads	3
+Threadpool_threads	2
+# -- Success: more than --max_connections normal connections not possible
+SELECT 'Connection on extra port ok';
+Connection on extra port ok
+Connection on extra port ok
+SELECT 'Connection on extra port 2 ok';
+Connection on extra port 2 ok
+Connection on extra port 2 ok
+# -- Success: more than --extra-max-connections + 1 normal connections not possible
+# Verify con3 can be killed
+kill 5;
+# Verify con4 can only be disconnected after it is scheduled
+show status like '%threadpool%';
+Variable_name	Value
+Threadpool_idle_threads	2
+Threadpool_max_threads_reached	ON
+Threadpool_spare_thread_capacity	0
+Threadpool_super_idle_threads	2
+Threadpool_super_max_threads	6
+Threadpool_super_threads	3
+Threadpool_threads	2
+# Cleanup
+sleep(10)
+0
+commit;
+set @@autocommit=1;
+commit;
+set @@autocommit=1;
+drop table t1;
+drop user test@localhost;

@@ -3187,13 +3187,28 @@ static bool check_threadpool_size(sys_var *self, THD *thd, set_var *var)
   return false;
 }
 
-
-static bool fix_threadpool_size(sys_var*, THD*, enum_var_type)
+static bool check_super_threadpool_size(sys_var *self, THD *thd, set_var *var)
 {
-  tp_set_threadpool_size(threadpool_size);
+  ulonglong v= var->save_result.ulonglong_value;
+  if (v > super_threadpool_max_size)
+  {
+    var->save_result.ulonglong_value= super_threadpool_max_size;
+    return throw_bounds_warning(thd, self->name.str, true, true, v);
+  }
   return false;
 }
 
+static bool fix_threadpool_size(sys_var*, THD*, enum_var_type)
+{
+  tp_set_threadpool_size(threadpool_size, NORMAL_GROUP);
+  return false;
+}
+
+static bool fix_super_threadpool_size(sys_var*, THD*, enum_var_type)
+{
+  tp_set_threadpool_size(super_threadpool_size, SUPER_GROUP);
+  return false;
+}
 
 static bool fix_threadpool_stall_limit(sys_var*, THD*, enum_var_type)
 {
@@ -3234,6 +3249,17 @@ static Sys_var_uint Sys_threadpool_size(
   VALID_RANGE(1, MAX_THREAD_GROUPS), DEFAULT(my_getncpus()), BLOCK_SIZE(1),
   NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(check_threadpool_size),
   ON_UPDATE(fix_threadpool_size)
+);
+static Sys_var_uint Sys_super_threadpool_size(
+ "super_thread_pool_size",
+ "Number of super user thread groups in the pool. "
+ "This parameter is roughly equivalent to maximum number of concurrently "
+ "executing super user threads (threads in a waiting state do not count as "
+ "executing).",
+  GLOBAL_VAR(super_threadpool_size), CMD_LINE(REQUIRED_ARG),
+  VALID_RANGE(1, MAX_THREAD_GROUPS), DEFAULT(my_getncpus()), BLOCK_SIZE(1),
+  NO_MUTEX_GUARD, NOT_IN_BINLOG, ON_CHECK(check_super_threadpool_size),
+  ON_UPDATE(fix_super_threadpool_size)
 );
 static Sys_var_uint Sys_threadpool_stall_limit(
  "thread_pool_stall_limit",

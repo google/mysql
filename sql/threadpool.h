@@ -19,9 +19,12 @@
 extern uint threadpool_min_threads;  /* Minimum threads in pool */
 extern uint threadpool_idle_timeout; /* Shutdown idle worker threads  after this timeout */
 extern uint threadpool_size; /* Number of parallel executing threads */
+extern uint super_threadpool_size; /* Number of parallel executing super user threads */
 extern uint threadpool_max_size;
+extern uint super_threadpool_max_size; /* Maximum super user thread pool size */
 extern uint threadpool_stall_limit;  /* time interval in 10 ms units for stall checks*/
 extern uint threadpool_max_threads;  /* Maximum threads in pool */
+extern uint super_threadpool_max_threads; /* Maximum super user threads in pool */
 extern uint threadpool_oversubscribe;  /* Maximum active threads in group */
 
 
@@ -45,6 +48,12 @@ extern void tp_end(void);
 
 /* Used in SHOW for threadpool_idle_thread_count */
 extern int  tp_get_idle_thread_count();
+/* Used in SHOW for threadpool_max_threads_reached */
+extern bool tp_get_max_threads_reached();
+/* Used in SHOW for threadpool_spare_thread_capacity */
+extern int  tp_get_spare_thread_capacity();
+/* Used in SHOW for super_threadpool_idle_thread_count */
+extern int  tp_get_idle_super_thread_count();
 
 /*
   Threadpool statistics
@@ -53,18 +62,30 @@ struct TP_STATISTICS
 {
   /* Current number of worker thread. */
   volatile int32 num_worker_threads;
+  int32 spare_thread_capacity;
 };
 
 extern TP_STATISTICS tp_stats;
+extern TP_STATISTICS super_tp_stats;
 
+/*
+  Threadpool group type
+*/
+enum thread_group_type {
+  NORMAL_GROUP= 0,
+  SUPER_GROUP= 1,
+};
 
 /* Functions to set threadpool parameters */
 extern void tp_set_min_threads(uint val);
 extern void tp_set_max_threads(uint val);
-extern void tp_set_threadpool_size(uint val);
+extern void tp_set_threadpool_size(uint val, thread_group_type type);
 extern void tp_set_threadpool_stall_limit(uint val);
 
 /* Activate threadpool scheduler */
 extern void tp_scheduler(void);
 
 extern int show_threadpool_idle_threads(THD *thd, SHOW_VAR *var, char *buff);
+extern bool show_threadpool_max_threads_reached(THD *thd, SHOW_VAR *var, char *buff);
+extern int show_threadpool_spare_thread_capacity(THD *thd, SHOW_VAR *var, char *buff);
+extern int show_super_threadpool_idle_threads(THD *thd, SHOW_VAR *var, char *buff);

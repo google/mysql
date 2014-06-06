@@ -7811,6 +7811,30 @@ int show_threadpool_idle_threads(THD *thd, SHOW_VAR *var, char *buff)
   *(int *)buff= tp_get_idle_thread_count(); 
   return 0;
 }
+
+bool show_threadpool_max_threads_reached(THD *thd, SHOW_VAR *var, char *buff)
+{
+  var->type= SHOW_BOOL;
+  var->value= buff;
+  *(int *)buff= tp_get_max_threads_reached();
+  return 0;
+}
+
+int show_threadpool_spare_thread_capacity(THD *thd, SHOW_VAR *var, char *buff)
+{
+  var->type= SHOW_INT;
+  var->value= buff;
+  *(int *)buff= tp_get_spare_thread_capacity();
+  return 0;
+}
+
+int show_super_threadpool_idle_threads(THD *thd, SHOW_VAR *var, char *buff)
+{
+  var->type= SHOW_INT;
+  var->value= buff;
+  *(int *)buff= tp_get_idle_super_thread_count();
+  return 0;
+}
 #endif
 
 /*
@@ -7982,6 +8006,11 @@ SHOW_VAR status_vars[]= {
 #ifdef HAVE_POOL_OF_THREADS
   {"Threadpool_idle_threads",  (char *) &show_threadpool_idle_threads, SHOW_SIMPLE_FUNC},
   {"Threadpool_threads",       (char *) &tp_stats.num_worker_threads, SHOW_INT},
+  {"Threadpool_max_threads_reached", (char *) &show_threadpool_max_threads_reached, SHOW_SIMPLE_FUNC},
+  {"Threadpool_spare_thread_capacity", (char *) &show_threadpool_spare_thread_capacity, SHOW_SIMPLE_FUNC},
+  {"Threadpool_super_idle_threads", (char *) &show_super_threadpool_idle_threads, SHOW_SIMPLE_FUNC},
+  {"Threadpool_super_threads", (char *) &super_tp_stats.num_worker_threads, SHOW_INT},
+  {"Threadpool_super_max_threads", (char *) &super_threadpool_max_threads, SHOW_INT},
 #endif
   {"Threads_cached",           (char*) &cached_thread_count,    SHOW_LONG_NOFLUSH},
   {"Threads_connected",        (char*) &connection_count,       SHOW_INT},

@@ -30,13 +30,17 @@
 uint threadpool_min_threads;
 uint threadpool_idle_timeout;
 uint threadpool_size;
+uint super_threadpool_size;
 uint threadpool_max_size;
+uint super_threadpool_max_size;
 uint threadpool_stall_limit;
 uint threadpool_max_threads;
+uint super_threadpool_max_threads;
 uint threadpool_oversubscribe;
 
 /* Stats */
 TP_STATISTICS tp_stats;
+TP_STATISTICS super_tp_stats;
 
 
 extern "C" pthread_key(struct st_my_thread_var*, THR_KEY_mysys);

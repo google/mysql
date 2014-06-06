@@ -1,0 +1,18 @@
+!include include/default_my.cnf
+
+[mysqld.1]
+loose-system_user_table= on
+loose-thread-handling=   pool-of-threads
+loose-thread_pool_size= 1
+loose-thread_pool_max_threads= 2
+loose-super_thread_pool_size= 1
+loose-max_connections= 5
+loose-reserved_super_connections= 1
+extra-port=        @ENV.MASTER_EXTRA_PORT
+extra-max-connections=1
+
+[client]
+connect-timeout=  2
+
+[ENV]
+MASTER_EXTRA_PORT= @OPT.port
