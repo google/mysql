@@ -86,9 +86,11 @@ LEX_STRING default_master_connection_name= { (char*) "", 0 };
 */
 
 int disconnect_slave_event_count = 0, abort_slave_event_count = 0;
-
+extern my_bool opt_rpl_witness;
 static pthread_key(Master_info*, RPL_MASTER_INFO);
 
+//used to write command to bin log.
+extern MYSQL_PLUGIN_IMPORT MYSQL_BIN_LOG mysql_bin_log;
 enum enum_slave_reconnect_actions
 {
   SLAVE_RECON_ACT_REG= 0,
@@ -3247,8 +3249,45 @@ int apply_event_and_update_pos(Log_event* ev, THD* thd,
                   (thd, STRING_WITH_LEN("now WAIT_FOR continue")));
       DBUG_SET_INITIAL("-d,inject_slave_sql_before_apply_event");
     };);
+
+  // We will check if it is a replication witness instead of a real replication.
+  // If the server is just a witness, we would write directly to the binlog.
   if (reason == Log_event::EVENT_SKIP_NOT)
-    exec_res= ev->apply_event(rgi);
+  {
+    // We allow some events to be applied (executed).
+    if(!opt_rpl_witness || ev->should_execute_on_witness())
+    {
+      exec_res= ev->apply_event(rgi);
+    }
+    else if (opt_rpl_witness && thd->slave_thread)
+    {
+      // If replication witness is used, and this is a slave thread, then
+      // we will write directly to the binlog, set return value to 0,
+      // and immediately advance the relay log position.
+      // We don't need cache for the slave's binlog.
+      my_off_t master_pos = ev->log_pos;
+      ev->log_pos = 0;
+      ev->cache_type = Log_event::EVENT_NO_CACHE;
+      // attempt to write to the binlog. This will also flush the log.
+      if (mysql_bin_log.write(ev))
+      {
+        sql_print_error("Error writing to the binlog by replication witness.");
+
+        // If we can't write into the binlog, the error code is the same as
+        // failure to apply_event, because apply_event will also write
+        // to the binlog.
+        exec_res = 1;
+      }
+      else
+      {
+        DBUG_PRINT("info", ("Event successfully written to the binlog."));
+        DBUG_PRINT("info", ("binlog pos %lld", master_pos));
+        thd->reset_query();
+        ev->log_pos = master_pos;
+        exec_res = 0;
+      }
+    }
+  }
 
 #ifndef DBUG_OFF
   /*
@@ -3799,11 +3838,15 @@ pthread_handler_t handle_slave_io(void *arg)
   // needs to call my_thread_init(), otherwise we get a coredump in DBUG_ stuff
   my_thread_init();
   DBUG_ENTER("handle_slave_io");
-
+  
   DBUG_ASSERT(mi->inited);
   mysql= NULL ;
   retry_count= 0;
 
+  if(opt_rpl_witness)
+  {
+    sql_print_information("Replication witness is enabled");
+  }
   thd= new THD; // note that contructor of THD uses DBUG_ !
 
   mysql_mutex_lock(&mi->run_lock);

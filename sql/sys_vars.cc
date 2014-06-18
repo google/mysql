@@ -4172,6 +4172,13 @@ static Sys_var_mybool Sys_hide_sensitive_information(
        GLOBAL_VAR(hide_sensitive_information), CMD_LINE(OPT_ARG),
        DEFAULT(FALSE));
 
+static Sys_var_mybool Sys_rpl_witness(
+       "rpl-witness",
+       "Run in replication witness mode."
+       "Replication stream will bypass local tables.",
+       READ_ONLY GLOBAL_VAR(opt_rpl_witness), CMD_LINE(OPT_ARG),
+       DEFAULT(FALSE));
+
 static char *glob_hostname_ptr;
 static Sys_var_charptr Sys_hostname(
        "hostname", "Server host name",

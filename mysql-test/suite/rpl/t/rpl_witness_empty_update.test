@@ -1,0 +1,35 @@
+##################################################################
+# Author: Duc Hieu Pham                                          #
+# Date: June 20, 2014                                            #
+# Purpose: To test basic replication witness feature             #
+# We are using .opt file since we need --rpl-witness             #
+##################################################################
+# Include Section
+# Make sure that we have statement bin log
+-- source include/have_binlog_format_statement.inc
+# Embedded server doesn't support binlogging
+-- source include/not_embedded.inc
+-- source include/have_semisync.inc
+# Replication witness only works with innodb.
+-- source include/have_innodb.inc
+-- source include/master-slave.inc
+
+--disable_warnings
+DROP TABLE IF EXISTS t1;
+--enable_warnings
+
+connection master;
+CREATE TABLE t1(word VARCHAR(20)) ENGINE=INNODB;
+INSERT INTO t1 VALUES ('haha');
+UPDATE t1 SET word='haha' WHERE word='haha';
+source include/show_binlog_events.inc;
+sync_slave_with_master;
+
+connection slave;
+source include/show_binlog_events.inc;
+
+#clean up
+connection master;
+DROP TABLE t1;
+# End of 4.1 tests
+--source include/rpl_end.inc

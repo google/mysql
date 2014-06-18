@@ -2772,6 +2772,16 @@ void Query_log_event::pack_info(THD *thd, Protocol *protocol)
     buf.append(query, q_len);
   protocol->store(&buf);
 }
+
+bool Query_log_event::should_execute_on_witness()
+{
+  if(!strncmp(query, "COMMIT", strlen(query)) ||
+     !strncmp(query, "ROLLBACK", strlen(query)))
+    return 1;
+  else
+    return 0;
+}
+
 #endif
 
 #ifndef MYSQL_CLIENT

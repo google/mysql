@@ -727,7 +727,8 @@ my_bool opt_permit_safety_suppression;
 my_bool opt_update_connection_privs;
 my_bool opt_system_user_table;
 ulong opt_block_user_access;
-
+/* For replication witness. run the server with --opt-rpl-witness*/
+my_bool opt_rpl_witness= 0;
 /* Thread specific variables */
 
 pthread_key(MEM_ROOT**,THR_MALLOC);

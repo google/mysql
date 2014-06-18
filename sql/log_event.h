@@ -1186,8 +1186,9 @@ public:
   */
 
   virtual void pack_info(THD *thd, Protocol *protocol);
-
-#endif /* HAVE_REPLICATION */
+  /* By default, events are not executed on witness*/
+  virtual bool should_execute_on_witness() { return 0; }
+  #endif /* HAVE_REPLICATION */
   virtual const char* get_db()
   {
     return thd ? thd->db : 0;
@@ -1979,6 +1980,7 @@ public:
   const char* get_db() { return db; }
 #ifdef HAVE_REPLICATION
   void pack_info(THD *thd, Protocol* protocol);
+  bool should_execute_on_witness();
 #endif /* HAVE_REPLICATION */
 #else
   void print_query_header(IO_CACHE* file, PRINT_EVENT_INFO* print_event_info);
@@ -2626,6 +2628,9 @@ public:
 
   void calc_server_version_split();
   static bool is_version_before_checksum(const master_version_split *version_split);
+#if defined(MYSQL_SERVER) && defined(HAVE_REPLICATION)
+  bool should_execute_on_witness() { return 1; }
+#endif
 protected:
 #if defined(MYSQL_SERVER) && defined(HAVE_REPLICATION)
   virtual int do_apply_event(rpl_group_info *rgi);
@@ -2820,6 +2825,7 @@ class Xid_log_event: public Log_event
    }
 #ifdef HAVE_REPLICATION
   void pack_info(THD *thd, Protocol* protocol);
+  bool should_execute_on_witness() { return 1; }
 #endif /* HAVE_REPLICATION */
 #else
   void print(FILE* file, PRINT_EVENT_INFO* print_event_info);
@@ -3025,6 +3031,7 @@ public:
 		   uint ident_len_arg,
 		   ulonglong pos_arg, uint flags);
 #ifdef HAVE_REPLICATION
+  bool should_execute_on_witness() { return 1; }
   void pack_info(THD *thd, Protocol* protocol);
 #endif /* HAVE_REPLICATION */
 #else
@@ -3066,6 +3073,7 @@ public:
                               uint binlog_file_len_arg);
 #ifdef HAVE_REPLICATION
   void pack_info(THD *thd, Protocol *protocol);
+  bool should_execute_on_witness() { return 1; }
 #endif
 #else
   void print(FILE *file, PRINT_EVENT_INFO *print_event_info);
@@ -3168,6 +3176,7 @@ public:
   virtual int do_apply_event(rpl_group_info *rgi);
   virtual int do_update_pos(rpl_group_info *rgi);
   virtual enum_skip_reason do_shall_skip(rpl_group_info *rgi);
+  bool should_execute_on_witness() { return 1; }
 #endif
 #else
   void print(FILE *file, PRINT_EVENT_INFO *print_event_info);
@@ -3279,6 +3288,7 @@ public:
   Gtid_list_log_event(slave_connection_state *gtid_set, uint32 gl_flags);
 #ifdef HAVE_REPLICATION
   void pack_info(THD *thd, Protocol *protocol);
+  bool should_execute_on_witness() { return 1; }
 #endif
 #else
   void print(FILE *file, PRINT_EVENT_INFO *print_event_info);
@@ -4791,7 +4801,6 @@ bool rpl_get_position_info(const char **log_file_name, ulonglong *log_pos,
 bool event_checksum_test(uchar *buf, ulong event_len, uint8 alg);
 uint8 get_checksum_alg(const char* buf, ulong len);
 extern TYPELIB binlog_checksum_typelib;
-
 /**
   @} (end of group Replication)
 */
