@@ -1,0 +1,70 @@
+
+
+# 2011-11-16 - Added
+#
+
+--source include/have_innodb.inc
+
+SET @start_global_value = @@global.enable_fulltext_index_creation;
+SELECT @start_global_value;
+
+#
+# exists as global only
+#
+--echo Valid values are 'ON' and 'OFF'
+select @@global.enable_fulltext_index_creation in (0, 1);
+select @@global.enable_fulltext_index_creation;
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.enable_fulltext_index_creation;
+show global variables like 'enable_fulltext_index_creation';
+show session variables like 'enable_fulltext_index_creation';
+select * from information_schema.global_variables where variable_name='enable_fulltext_index_creation';
+select * from information_schema.session_variables where variable_name='enable_fulltext_index_creation';
+
+#
+# show that it's writable
+#
+set global enable_fulltext_index_creation='ON';
+select @@global.enable_fulltext_index_creation;
+select * from information_schema.global_variables where variable_name='enable_fulltext_index_creation';
+select * from information_schema.session_variables where variable_name='enable_fulltext_index_creation';
+set @@global.enable_fulltext_index_creation=0;
+select @@global.enable_fulltext_index_creation;
+select * from information_schema.global_variables where variable_name='enable_fulltext_index_creation';
+select * from information_schema.session_variables where variable_name='enable_fulltext_index_creation';
+set global enable_fulltext_index_creation=1;
+select @@global.enable_fulltext_index_creation;
+select * from information_schema.global_variables where variable_name='enable_fulltext_index_creation';
+select * from information_schema.session_variables where variable_name='enable_fulltext_index_creation';
+set @@global.enable_fulltext_index_creation='OFF';
+select @@global.enable_fulltext_index_creation;
+select * from information_schema.global_variables where variable_name='enable_fulltext_index_creation';
+select * from information_schema.session_variables where variable_name='enable_fulltext_index_creation';
+--error ER_GLOBAL_VARIABLE
+set session enable_fulltext_index_creation='OFF';
+--error ER_GLOBAL_VARIABLE
+set @@session.enable_fulltext_index_creation='ON';
+
+#
+# incorrect types
+#
+--error ER_WRONG_TYPE_FOR_VAR
+set global enable_fulltext_index_creation=1.1;
+--error ER_WRONG_TYPE_FOR_VAR
+set global enable_fulltext_index_creation=1e1;
+--error ER_WRONG_VALUE_FOR_VAR
+set global enable_fulltext_index_creation=2;
+--error ER_WRONG_VALUE_FOR_VAR
+set global enable_fulltext_index_creation=-3;
+select @@global.enable_fulltext_index_creation;
+select * from information_schema.global_variables where variable_name='enable_fulltext_index_creation';
+select * from information_schema.session_variables where variable_name='enable_fulltext_index_creation';
+--error ER_WRONG_VALUE_FOR_VAR
+set global enable_fulltext_index_creation='AUTO';
+
+#
+# Cleanup
+#
+
+SET @@global.enable_fulltext_index_creation = @start_global_value;
+SELECT @@global.enable_fulltext_index_creation;

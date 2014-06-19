@@ -3708,6 +3708,12 @@ mysql_prepare_create_table(THD *thd, HA_CREATE_INFO *create_info,
 	key_info->flags= 0;
 	break;
     case Key::FULLTEXT:
+        if (!opt_enable_fulltext_index_creation)
+        {
+          my_error(ER_FEATURE_DISABLED, MYF(0), "fulltext index creation",
+                   "set global enable_fulltext_index_creation=on");
+          DBUG_RETURN(TRUE);
+        }
 	key_info->flags= HA_FULLTEXT;
 	if ((key_info->parser_name= &key->key_create_info.parser_name)->str)
           key_info->flags|= HA_USES_PARSER;
@@ -7621,7 +7627,15 @@ mysql_prepare_alter_table(THD *thd, TABLE *table,
           key_type= Key::UNIQUE;
       }
       else if (key_info->flags & HA_FULLTEXT)
+      {
+        if (!opt_enable_fulltext_index_creation)
+        {
+          my_error(ER_FEATURE_DISABLED, MYF(0), "fulltext index creation",
+                   "set global enable_fulltext_index_creation=on");
+          goto err;
+        }
         key_type= Key::FULLTEXT;
+      }
       else
         key_type= Key::MULTIPLE;
 

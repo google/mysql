@@ -904,6 +904,13 @@ static bool query_cache_flush(sys_var *self, THD *thd, enum_var_type type)
 #endif /* HAVE_QUERY_CACHE */
   return false;
 }
+
+static Sys_var_mybool Sys_enable_fulltext_index_creation(
+       "enable_fulltext_index_creation",
+       "Enable creation of fulltext index",
+       GLOBAL_VAR(opt_enable_fulltext_index_creation),
+       CMD_LINE(OPT_ARG), DEFAULT(TRUE));
+
 /// @todo make SESSION_VAR (usability enhancement and a fix for a race condition)
 static Sys_var_charptr Sys_ft_boolean_syntax(
        "ft_boolean_syntax", "List of operators for "

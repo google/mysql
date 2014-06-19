@@ -372,6 +372,7 @@ static DYNAMIC_ARRAY all_options;
 
 /* Global variables */
 
+bool opt_enable_fulltext_index_creation= true;
 bool opt_bin_log, opt_bin_log_used=0, opt_ignore_builtin_innodb= 0;
 my_bool opt_log, opt_slow_log, debug_assert_if_crashed_table= 0, opt_help= 0;
 static my_bool opt_abort;
@@ -8405,6 +8406,7 @@ static int mysql_init_variables(void)
   opt_log= opt_slow_log= 0;
   opt_bin_log= opt_bin_log_used= 0;
   opt_disable_networking= opt_skip_show_db=0;
+  opt_enable_fulltext_index_creation= true;
   opt_skip_name_resolve= 0;
   opt_ignore_builtin_innodb= 0;
   opt_logname= opt_binlog_index_name= opt_slow_logname= 0;

@@ -1,0 +1,19 @@
+drop table if exists t1;
+set global enable_fulltext_index_creation=off;
+create table t1 (b text not null, fulltext(b)) engine = innodb;
+ERROR HY000: The 'fulltext index creation' feature is disabled; you need MariaDB built with 'set global enable_fulltext_index_creation=on' to have it working
+create table t1 (b text not null) engine = innodb;
+alter table t1 add fulltext ft_index (b);
+ERROR HY000: The 'fulltext index creation' feature is disabled; you need MariaDB built with 'set global enable_fulltext_index_creation=on' to have it working
+create fulltext index ft_index on t1 (b);
+ERROR HY000: The 'fulltext index creation' feature is disabled; you need MariaDB built with 'set global enable_fulltext_index_creation=on' to have it working
+drop table if exists t1;
+set global enable_fulltext_index_creation=on;
+create table t1 (b text not null, fulltext(b)) engine = innodb;
+drop table if exists t1;
+create table t1 (b text not null) engine = innodb;
+alter table t1 add fulltext ft_index (b);
+drop table if exists t1;
+create table t1 (b text not null) engine = innodb;
+create fulltext index ft_index on t1 (b);
+drop table if exists t1;

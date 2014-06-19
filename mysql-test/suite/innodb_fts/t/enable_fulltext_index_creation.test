@@ -1,0 +1,41 @@
+#
+# Test enable/disable full text index creation
+# controlled by bool var "enable_fulltext_index_creation"
+#
+--source include/have_innodb.inc
+
+--disable_warnings
+drop table if exists t1;
+--enable_warnings
+
+# Save enable_fulltext_index_creation variable
+let $saved_enable_fulltext_index_creation=`select @@global.enable_fulltext_index_creation`;
+
+set global enable_fulltext_index_creation=off;
+-- error 1289
+create table t1 (b text not null, fulltext(b)) engine = innodb;
+create table t1 (b text not null) engine = innodb;
+-- error 1289
+alter table t1 add fulltext ft_index (b);
+-- error 1289
+create fulltext index ft_index on t1 (b);
+drop table if exists t1;
+
+set global enable_fulltext_index_creation=on;
+create table t1 (b text not null, fulltext(b)) engine = innodb;
+drop table if exists t1;
+create table t1 (b text not null) engine = innodb;
+--disable_warnings
+alter table t1 add fulltext ft_index (b);
+--enable_warnings
+drop table if exists t1;
+create table t1 (b text not null) engine = innodb;
+--disable_warnings
+create fulltext index ft_index on t1 (b);
+--enable_warnings
+drop table if exists t1;
+
+# Restore bool var "enable_fulltext_index_creation"
+--disable_query_log
+eval set global enable_fulltext_index_creation=$saved_enable_fulltext_index_creation;
+--enable_query_log
