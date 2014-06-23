@@ -76,7 +76,7 @@
 /* Copy the first part of user declarations.  */
 
 /* Line 189 of yacc.c  */
-#line 25 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 25 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
 
 #define YYLIP  (& thd->m_parser_state->m_lip)
 #define YYPS   (& thd->m_parser_state->m_yacc)
@@ -950,7 +950,7 @@ static bool sp_create_assignment_instr(THD *thd, bool no_lookahead)
 
 
 /* Line 189 of yacc.c  */
-#line 954 "/home/buildbot/buildbot/build/mkdist/sql/sql_yacc.cc"
+#line 954 "/home/buildbot/bzr/build/mkdist/sql/sql_yacc.cc"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -2271,7 +2271,7 @@ typedef union YYSTYPE
 {
 
 /* Line 214 of yacc.c  */
-#line 896 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 896 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
 
   int  num;
   ulong ulong_num;
@@ -2334,7 +2334,7 @@ typedef union YYSTYPE
 
 
 /* Line 214 of yacc.c  */
-#line 2338 "/home/buildbot/buildbot/build/mkdist/sql/sql_yacc.cc"
+#line 2338 "/home/buildbot/bzr/build/mkdist/sql/sql_yacc.cc"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -2345,13 +2345,13 @@ typedef union YYSTYPE
 /* Copy the second part of user declarations.  */
 
 /* Line 264 of yacc.c  */
-#line 956 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 956 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
 
 bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 
 
 /* Line 264 of yacc.c  */
-#line 2355 "/home/buildbot/buildbot/build/mkdist/sql/sql_yacc.cc"
+#line 2355 "/home/buildbot/bzr/build/mkdist/sql/sql_yacc.cc"
 
 #ifdef short
 # undef short
@@ -20783,7 +20783,7 @@ yyreduce:
         case 2:
 
 /* Line 1455 of yacc.c  */
-#line 1937 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 1937 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!thd->bootstrap &&
               (!(thd->lex->select_lex.options & OPTION_FOUND_COMMENT)))
@@ -20799,7 +20799,7 @@ yyreduce:
   case 3:
 
 /* Line 1455 of yacc.c  */
-#line 1948 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 1948 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex_input_stream *lip = YYLIP;
 
@@ -20827,7 +20827,7 @@ yyreduce:
   case 5:
 
 /* Line 1455 of yacc.c  */
-#line 1973 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 1973 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* Single query, not terminated. */
             YYLIP->found_semicolon= NULL;
@@ -20837,7 +20837,7 @@ yyreduce:
   case 65:
 
 /* Line 1455 of yacc.c  */
-#line 2050 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2050 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_DEALLOCATE_PREPARE;
@@ -20848,7 +20848,7 @@ yyreduce:
   case 68:
 
 /* Line 1455 of yacc.c  */
-#line 2064 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2064 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_PREPARE;
@@ -20859,7 +20859,7 @@ yyreduce:
   case 69:
 
 /* Line 1455 of yacc.c  */
-#line 2073 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2073 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->prepared_stmt_code= (yyvsp[(1) - (1)].lex_str);
@@ -20870,7 +20870,7 @@ yyreduce:
   case 70:
 
 /* Line 1455 of yacc.c  */
-#line 2079 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2079 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->prepared_stmt_code= (yyvsp[(2) - (2)].lex_str);
@@ -20881,7 +20881,7 @@ yyreduce:
   case 71:
 
 /* Line 1455 of yacc.c  */
-#line 2088 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2088 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_EXECUTE;
@@ -20892,14 +20892,14 @@ yyreduce:
   case 72:
 
 /* Line 1455 of yacc.c  */
-#line 2094 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2094 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 77:
 
 /* Line 1455 of yacc.c  */
-#line 2109 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2109 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             LEX_STRING *lexstr= (LEX_STRING*)sql_memdup(&(yyvsp[(2) - (2)].lex_str), sizeof(LEX_STRING));
@@ -20911,7 +20911,7 @@ yyreduce:
   case 78:
 
 /* Line 1455 of yacc.c  */
-#line 2121 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2121 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->sphead)
             {
@@ -20924,7 +20924,7 @@ yyreduce:
   case 79:
 
 /* Line 1455 of yacc.c  */
-#line 2129 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2129 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_HELP;
@@ -20935,7 +20935,7 @@ yyreduce:
   case 80:
 
 /* Line 1455 of yacc.c  */
-#line 2140 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2140 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_CHANGE_MASTER;
           }
@@ -20944,14 +20944,14 @@ yyreduce:
   case 81:
 
 /* Line 1455 of yacc.c  */
-#line 2144 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2144 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 84:
 
 /* Line 1455 of yacc.c  */
-#line 2154 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2154 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.host = (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -20960,7 +20960,7 @@ yyreduce:
   case 85:
 
 /* Line 1455 of yacc.c  */
-#line 2158 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2158 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.user = (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -20969,7 +20969,7 @@ yyreduce:
   case 86:
 
 /* Line 1455 of yacc.c  */
-#line 2162 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2162 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.password = (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -20978,7 +20978,7 @@ yyreduce:
   case 87:
 
 /* Line 1455 of yacc.c  */
-#line 2166 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2166 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.port = (yyvsp[(3) - (3)].ulong_num);
           }
@@ -20987,7 +20987,7 @@ yyreduce:
   case 88:
 
 /* Line 1455 of yacc.c  */
-#line 2170 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2170 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.connect_retry = (yyvsp[(3) - (3)].ulong_num);
           }
@@ -20996,7 +20996,7 @@ yyreduce:
   case 89:
 
 /* Line 1455 of yacc.c  */
-#line 2174 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2174 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl= (yyvsp[(3) - (3)].ulong_num) ? 
               LEX_MASTER_INFO::LEX_MI_ENABLE : LEX_MASTER_INFO::LEX_MI_DISABLE;
@@ -21006,7 +21006,7 @@ yyreduce:
   case 90:
 
 /* Line 1455 of yacc.c  */
-#line 2179 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2179 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_ca= (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21015,7 +21015,7 @@ yyreduce:
   case 91:
 
 /* Line 1455 of yacc.c  */
-#line 2183 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2183 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_capath= (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21024,7 +21024,7 @@ yyreduce:
   case 92:
 
 /* Line 1455 of yacc.c  */
-#line 2187 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2187 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_cert= (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21033,7 +21033,7 @@ yyreduce:
   case 93:
 
 /* Line 1455 of yacc.c  */
-#line 2191 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2191 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_cipher= (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21042,7 +21042,7 @@ yyreduce:
   case 94:
 
 /* Line 1455 of yacc.c  */
-#line 2195 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2195 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_key= (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21051,7 +21051,7 @@ yyreduce:
   case 95:
 
 /* Line 1455 of yacc.c  */
-#line 2199 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2199 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_verify_server_cert= (yyvsp[(3) - (3)].ulong_num) ?
               LEX_MASTER_INFO::LEX_MI_ENABLE : LEX_MASTER_INFO::LEX_MI_DISABLE;
@@ -21061,7 +21061,7 @@ yyreduce:
   case 96:
 
 /* Line 1455 of yacc.c  */
-#line 2204 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2204 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_crl= (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21070,7 +21070,7 @@ yyreduce:
   case 97:
 
 /* Line 1455 of yacc.c  */
-#line 2208 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2208 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.ssl_crlpath= (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21079,7 +21079,7 @@ yyreduce:
   case 98:
 
 /* Line 1455 of yacc.c  */
-#line 2213 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2213 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.heartbeat_period= (float) (yyvsp[(3) - (3)].item_num)->val_real();
             if (Lex->mi.heartbeat_period > SLAVE_MAX_HEARTBEAT_PERIOD ||
@@ -21115,7 +21115,7 @@ yyreduce:
   case 99:
 
 /* Line 1455 of yacc.c  */
-#line 2244 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2244 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.repl_ignore_server_ids_opt= LEX_MASTER_INFO::LEX_MI_ENABLE;
            }
@@ -21124,7 +21124,7 @@ yyreduce:
   case 104:
 
 /* Line 1455 of yacc.c  */
-#line 2259 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2259 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             insert_dynamic(&Lex->mi.repl_ignore_server_ids, (uchar*) &((yyvsp[(1) - (1)].ulong_num)));
           }
@@ -21133,7 +21133,7 @@ yyreduce:
   case 105:
 
 /* Line 1455 of yacc.c  */
-#line 2265 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2265 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.log_file_name = (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21142,7 +21142,7 @@ yyreduce:
   case 106:
 
 /* Line 1455 of yacc.c  */
-#line 2269 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2269 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.pos = (yyvsp[(3) - (3)].ulonglong_number);
             /* 
@@ -21163,7 +21163,7 @@ yyreduce:
   case 107:
 
 /* Line 1455 of yacc.c  */
-#line 2285 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2285 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.relay_log_name = (yyvsp[(3) - (3)].lex_str).str;
           }
@@ -21172,7 +21172,7 @@ yyreduce:
   case 108:
 
 /* Line 1455 of yacc.c  */
-#line 2289 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2289 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.relay_log_pos = (yyvsp[(3) - (3)].ulong_num);
             /* Adjust if < BIN_LOG_HEADER_SIZE (same comment as Lex->mi.pos) */
@@ -21183,7 +21183,7 @@ yyreduce:
   case 109:
 
 /* Line 1455 of yacc.c  */
-#line 2295 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2295 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->mi.use_gtid_opt != LEX_MASTER_INFO::LEX_GTID_UNCHANGED)
             {
@@ -21197,7 +21197,7 @@ yyreduce:
   case 110:
 
 /* Line 1455 of yacc.c  */
-#line 2305 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2305 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->mi.use_gtid_opt != LEX_MASTER_INFO::LEX_GTID_UNCHANGED)
             {
@@ -21211,7 +21211,7 @@ yyreduce:
   case 111:
 
 /* Line 1455 of yacc.c  */
-#line 2315 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2315 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->mi.use_gtid_opt != LEX_MASTER_INFO::LEX_GTID_UNCHANGED)
             {
@@ -21225,7 +21225,7 @@ yyreduce:
   case 112:
 
 /* Line 1455 of yacc.c  */
-#line 2327 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2327 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->mi.connection_name= thd->variables.default_master_connection;
@@ -21235,7 +21235,7 @@ yyreduce:
   case 114:
 
 /* Line 1455 of yacc.c  */
-#line 2336 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2336 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
            Lex->mi.connection_name= (yyvsp[(1) - (1)].lex_str);
 #ifdef HAVE_REPLICATION
@@ -21251,7 +21251,7 @@ yyreduce:
   case 115:
 
 /* Line 1455 of yacc.c  */
-#line 2351 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2351 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_CREATE_TABLE;
@@ -21284,7 +21284,7 @@ yyreduce:
   case 116:
 
 /* Line 1455 of yacc.c  */
-#line 2379 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2379 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->current_select= &lex->select_lex; 
@@ -21305,7 +21305,7 @@ yyreduce:
   case 117:
 
 /* Line 1455 of yacc.c  */
-#line 2395 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2395 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index_prepare(Lex, (yyvsp[(8) - (8)].table)))
               MYSQL_YYABORT;
@@ -21315,7 +21315,7 @@ yyreduce:
   case 118:
 
 /* Line 1455 of yacc.c  */
-#line 2400 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2400 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index(Lex, (yyvsp[(2) - (13)].key_type), (yyvsp[(5) - (13)].lex_str)))
               MYSQL_YYABORT;
@@ -21325,14 +21325,14 @@ yyreduce:
   case 119:
 
 /* Line 1455 of yacc.c  */
-#line 2404 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2404 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 120:
 
 /* Line 1455 of yacc.c  */
-#line 2407 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2407 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index_prepare(Lex, (yyvsp[(8) - (8)].table)))
               MYSQL_YYABORT;
@@ -21342,7 +21342,7 @@ yyreduce:
   case 121:
 
 /* Line 1455 of yacc.c  */
-#line 2412 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2412 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index(Lex, (yyvsp[(2) - (13)].key_type), (yyvsp[(5) - (13)].lex_str)))
               MYSQL_YYABORT;
@@ -21352,14 +21352,14 @@ yyreduce:
   case 122:
 
 /* Line 1455 of yacc.c  */
-#line 2416 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2416 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 123:
 
 /* Line 1455 of yacc.c  */
-#line 2419 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2419 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index_prepare(Lex, (yyvsp[(8) - (8)].table)))
               MYSQL_YYABORT;
@@ -21369,7 +21369,7 @@ yyreduce:
   case 124:
 
 /* Line 1455 of yacc.c  */
-#line 2424 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2424 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index(Lex, (yyvsp[(2) - (13)].key_type), (yyvsp[(5) - (13)].lex_str)))
               MYSQL_YYABORT;
@@ -21379,14 +21379,14 @@ yyreduce:
   case 125:
 
 /* Line 1455 of yacc.c  */
-#line 2428 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2428 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 126:
 
 /* Line 1455 of yacc.c  */
-#line 2430 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2430 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.default_table_charset= NULL;
             Lex->create_info.used_fields= 0;
@@ -21396,7 +21396,7 @@ yyreduce:
   case 127:
 
 /* Line 1455 of yacc.c  */
-#line 2435 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2435 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command=SQLCOM_CREATE_DB;
@@ -21408,7 +21408,7 @@ yyreduce:
   case 128:
 
 /* Line 1455 of yacc.c  */
-#line 2442 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2442 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_view_mode= ((yyvsp[(1) - (1)].num) == 0 ? VIEW_CREATE_NEW :
                                     VIEW_CREATE_OR_REPLACE);
@@ -21420,7 +21420,7 @@ yyreduce:
   case 129:
 
 /* Line 1455 of yacc.c  */
-#line 2449 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2449 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(1) - (3)].num) && Lex->sql_command != SQLCOM_CREATE_VIEW)
             {
@@ -21434,7 +21434,7 @@ yyreduce:
   case 130:
 
 /* Line 1455 of yacc.c  */
-#line 2458 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2458 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_CREATE_USER;
           }
@@ -21443,7 +21443,7 @@ yyreduce:
   case 131:
 
 /* Line 1455 of yacc.c  */
-#line 2462 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2462 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_CREATE_ROLE;
           }
@@ -21452,7 +21452,7 @@ yyreduce:
   case 132:
 
 /* Line 1455 of yacc.c  */
-#line 2466 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2466 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_tablespace_info->ts_cmd_type= CREATE_LOGFILE_GROUP;
           }
@@ -21461,7 +21461,7 @@ yyreduce:
   case 133:
 
 /* Line 1455 of yacc.c  */
-#line 2470 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2470 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_tablespace_info->ts_cmd_type= CREATE_TABLESPACE;
           }
@@ -21470,7 +21470,7 @@ yyreduce:
   case 134:
 
 /* Line 1455 of yacc.c  */
-#line 2474 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2474 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_CREATE_SERVER;
           }
@@ -21479,7 +21479,7 @@ yyreduce:
   case 135:
 
 /* Line 1455 of yacc.c  */
-#line 2485 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2485 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.server_name= (yyvsp[(2) - (10)].lex_str).str;
             Lex->server_options.server_name_length= (yyvsp[(2) - (10)].lex_str).length;
@@ -21490,7 +21490,7 @@ yyreduce:
   case 138:
 
 /* Line 1455 of yacc.c  */
-#line 2499 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2499 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.username= (yyvsp[(2) - (2)].lex_str).str;
           }
@@ -21499,7 +21499,7 @@ yyreduce:
   case 139:
 
 /* Line 1455 of yacc.c  */
-#line 2503 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2503 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.host= (yyvsp[(2) - (2)].lex_str).str;
           }
@@ -21508,7 +21508,7 @@ yyreduce:
   case 140:
 
 /* Line 1455 of yacc.c  */
-#line 2507 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2507 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.db= (yyvsp[(2) - (2)].lex_str).str;
           }
@@ -21517,7 +21517,7 @@ yyreduce:
   case 141:
 
 /* Line 1455 of yacc.c  */
-#line 2511 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2511 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.owner= (yyvsp[(2) - (2)].lex_str).str;
           }
@@ -21526,7 +21526,7 @@ yyreduce:
   case 142:
 
 /* Line 1455 of yacc.c  */
-#line 2515 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2515 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.password= (yyvsp[(2) - (2)].lex_str).str;
           }
@@ -21535,7 +21535,7 @@ yyreduce:
   case 143:
 
 /* Line 1455 of yacc.c  */
-#line 2519 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2519 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.socket= (yyvsp[(2) - (2)].lex_str).str;
           }
@@ -21544,7 +21544,7 @@ yyreduce:
   case 144:
 
 /* Line 1455 of yacc.c  */
-#line 2523 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2523 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->server_options.port= (yyvsp[(2) - (2)].ulong_num);
           }
@@ -21553,7 +21553,7 @@ yyreduce:
   case 145:
 
 /* Line 1455 of yacc.c  */
-#line 2530 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2530 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
 
@@ -21573,7 +21573,7 @@ yyreduce:
   case 146:
 
 /* Line 1455 of yacc.c  */
-#line 2549 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2549 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               sql_command is set here because some rules in ev_sql_stmt
@@ -21586,7 +21586,7 @@ yyreduce:
   case 147:
 
 /* Line 1455 of yacc.c  */
-#line 2560 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2560 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->item_expression= (yyvsp[(2) - (3)].item);
             Lex->event_parse_data->interval= (yyvsp[(3) - (3)].interval);
@@ -21596,7 +21596,7 @@ yyreduce:
   case 149:
 
 /* Line 1455 of yacc.c  */
-#line 2567 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2567 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->item_execute_at= (yyvsp[(2) - (2)].item);
           }
@@ -21605,14 +21605,14 @@ yyreduce:
   case 150:
 
 /* Line 1455 of yacc.c  */
-#line 2573 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2573 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 151:
 
 /* Line 1455 of yacc.c  */
-#line 2575 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2575 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->status= Event_parse_data::ENABLED;
             Lex->event_parse_data->status_changed= true;
@@ -21623,7 +21623,7 @@ yyreduce:
   case 152:
 
 /* Line 1455 of yacc.c  */
-#line 2581 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2581 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->status= Event_parse_data::SLAVESIDE_DISABLED;
             Lex->event_parse_data->status_changed= true; 
@@ -21634,7 +21634,7 @@ yyreduce:
   case 153:
 
 /* Line 1455 of yacc.c  */
-#line 2587 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2587 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->status= Event_parse_data::DISABLED;
             Lex->event_parse_data->status_changed= true;
@@ -21645,7 +21645,7 @@ yyreduce:
   case 154:
 
 /* Line 1455 of yacc.c  */
-#line 2596 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2596 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root) Item_func_now_local(0);
             if (item == NULL)
@@ -21657,7 +21657,7 @@ yyreduce:
   case 155:
 
 /* Line 1455 of yacc.c  */
-#line 2603 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2603 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->item_starts= (yyvsp[(2) - (2)].item);
           }
@@ -21666,7 +21666,7 @@ yyreduce:
   case 157:
 
 /* Line 1455 of yacc.c  */
-#line 2611 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2611 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->item_ends= (yyvsp[(2) - (2)].item);
           }
@@ -21675,14 +21675,14 @@ yyreduce:
   case 158:
 
 /* Line 1455 of yacc.c  */
-#line 2617 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2617 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 160:
 
 /* Line 1455 of yacc.c  */
-#line 2623 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2623 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->on_completion=
                                   Event_parse_data::ON_COMPLETION_PRESERVE;
@@ -21693,7 +21693,7 @@ yyreduce:
   case 161:
 
 /* Line 1455 of yacc.c  */
-#line 2629 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2629 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->event_parse_data->on_completion=
                                   Event_parse_data::ON_COMPLETION_DROP;
@@ -21704,14 +21704,14 @@ yyreduce:
   case 162:
 
 /* Line 1455 of yacc.c  */
-#line 2637 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2637 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 163:
 
 /* Line 1455 of yacc.c  */
-#line 2639 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2639 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->comment= Lex->event_parse_data->comment= (yyvsp[(2) - (2)].lex_str);
             (yyval.num)= 1;
@@ -21721,7 +21721,7 @@ yyreduce:
   case 164:
 
 /* Line 1455 of yacc.c  */
-#line 2646 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2646 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -21768,7 +21768,7 @@ yyreduce:
   case 165:
 
 /* Line 1455 of yacc.c  */
-#line 2688 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2688 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
 
@@ -21785,7 +21785,7 @@ yyreduce:
   case 179:
 
 /* Line 1455 of yacc.c  */
-#line 2719 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2719 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
            LEX *lex=Lex;
            lex->users_list.empty();
@@ -21802,7 +21802,7 @@ yyreduce:
   case 180:
 
 /* Line 1455 of yacc.c  */
-#line 2734 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2734 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!(yyvsp[(1) - (3)].lex_str).str || check_db_name(&(yyvsp[(1) - (3)].lex_str)))
             {
@@ -21823,7 +21823,7 @@ yyreduce:
   case 181:
 
 /* Line 1455 of yacc.c  */
-#line 2750 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2750 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             LEX_STRING db;
@@ -21843,105 +21843,105 @@ yyreduce:
   case 182:
 
 /* Line 1455 of yacc.c  */
-#line 2767 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2767 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 183:
 
 /* Line 1455 of yacc.c  */
-#line 2768 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2768 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 184:
 
 /* Line 1455 of yacc.c  */
-#line 2772 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2772 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 185:
 
 /* Line 1455 of yacc.c  */
-#line 2773 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2773 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 186:
 
 /* Line 1455 of yacc.c  */
-#line 2779 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2779 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sp_chistics.comment= (yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 187:
 
 /* Line 1455 of yacc.c  */
-#line 2781 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2781 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* Just parse it, we only have one language for now. */ }
     break;
 
   case 188:
 
 /* Line 1455 of yacc.c  */
-#line 2783 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2783 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sp_chistics.daccess= SP_NO_SQL; }
     break;
 
   case 189:
 
 /* Line 1455 of yacc.c  */
-#line 2785 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2785 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sp_chistics.daccess= SP_CONTAINS_SQL; }
     break;
 
   case 190:
 
 /* Line 1455 of yacc.c  */
-#line 2787 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2787 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sp_chistics.daccess= SP_READS_SQL_DATA; }
     break;
 
   case 191:
 
 /* Line 1455 of yacc.c  */
-#line 2789 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2789 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sp_chistics.daccess= SP_MODIFIES_SQL_DATA; }
     break;
 
   case 192:
 
 /* Line 1455 of yacc.c  */
-#line 2791 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2791 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 193:
 
 /* Line 1455 of yacc.c  */
-#line 2796 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2796 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 194:
 
 /* Line 1455 of yacc.c  */
-#line 2797 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2797 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sp_chistics.detistic= TRUE; }
     break;
 
   case 195:
 
 /* Line 1455 of yacc.c  */
-#line 2798 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2798 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sp_chistics.detistic= FALSE; }
     break;
 
   case 196:
 
 /* Line 1455 of yacc.c  */
-#line 2803 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2803 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sp_chistics.suid= SP_IS_SUID;
           }
@@ -21950,7 +21950,7 @@ yyreduce:
   case 197:
 
 /* Line 1455 of yacc.c  */
-#line 2807 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2807 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sp_chistics.suid= SP_IS_NOT_SUID;
           }
@@ -21959,7 +21959,7 @@ yyreduce:
   case 198:
 
 /* Line 1455 of yacc.c  */
-#line 2814 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2814 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex = Lex;
 
@@ -21973,14 +21973,14 @@ yyreduce:
   case 199:
 
 /* Line 1455 of yacc.c  */
-#line 2822 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2822 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 204:
 
 /* Line 1455 of yacc.c  */
-#line 2838 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2838 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
            Lex->value_list.push_back((yyvsp[(3) - (3)].item));
           }
@@ -21989,7 +21989,7 @@ yyreduce:
   case 205:
 
 /* Line 1455 of yacc.c  */
-#line 2842 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2842 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->value_list.push_back((yyvsp[(1) - (1)].item));
           }
@@ -21998,7 +21998,7 @@ yyreduce:
   case 210:
 
 /* Line 1455 of yacc.c  */
-#line 2860 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2860 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -22021,7 +22021,7 @@ yyreduce:
   case 211:
 
 /* Line 1455 of yacc.c  */
-#line 2881 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2881 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_pcontext *spc= lex->spcont;
@@ -22051,7 +22051,7 @@ yyreduce:
   case 216:
 
 /* Line 1455 of yacc.c  */
-#line 2920 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2920 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_pcontext *spc= lex->spcont;
@@ -22080,49 +22080,49 @@ yyreduce:
   case 217:
 
 /* Line 1455 of yacc.c  */
-#line 2946 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2946 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= sp_variable::MODE_IN; }
     break;
 
   case 218:
 
 /* Line 1455 of yacc.c  */
-#line 2947 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2947 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= sp_variable::MODE_IN; }
     break;
 
   case 219:
 
 /* Line 1455 of yacc.c  */
-#line 2948 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2948 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= sp_variable::MODE_OUT; }
     break;
 
   case 220:
 
 /* Line 1455 of yacc.c  */
-#line 2949 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2949 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= sp_variable::MODE_INOUT; }
     break;
 
   case 221:
 
 /* Line 1455 of yacc.c  */
-#line 2953 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2953 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 223:
 
 /* Line 1455 of yacc.c  */
-#line 2958 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2958 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 225:
 
 /* Line 1455 of yacc.c  */
-#line 2964 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2964 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.spblock).vars= (yyval.spblock).conds= (yyval.spblock).hndlrs= (yyval.spblock).curs= 0;
           }
@@ -22131,7 +22131,7 @@ yyreduce:
   case 226:
 
 /* Line 1455 of yacc.c  */
-#line 2968 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2968 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* We check for declarations out of (standard) order this way
               because letting the grammar rules reflect it caused tricky
@@ -22159,7 +22159,7 @@ yyreduce:
   case 227:
 
 /* Line 1455 of yacc.c  */
-#line 2994 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 2994 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -22171,7 +22171,7 @@ yyreduce:
   case 228:
 
 /* Line 1455 of yacc.c  */
-#line 3002 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3002 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_pcontext *pctx= lex->spcont;
@@ -22232,7 +22232,7 @@ yyreduce:
   case 229:
 
 /* Line 1455 of yacc.c  */
-#line 3058 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3058 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_pcontext *spc= lex->spcont;
@@ -22252,7 +22252,7 @@ yyreduce:
   case 230:
 
 /* Line 1455 of yacc.c  */
-#line 3073 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3073 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -22283,7 +22283,7 @@ yyreduce:
   case 231:
 
 /* Line 1455 of yacc.c  */
-#line 3099 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3099 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -22318,7 +22318,7 @@ yyreduce:
   case 232:
 
 /* Line 1455 of yacc.c  */
-#line 3129 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3129 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -22346,7 +22346,7 @@ yyreduce:
   case 233:
 
 /* Line 1455 of yacc.c  */
-#line 3154 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3154 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sphead->reset_lex(thd);
           }
@@ -22355,7 +22355,7 @@ yyreduce:
   case 234:
 
 /* Line 1455 of yacc.c  */
-#line 3158 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3158 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -22377,35 +22377,35 @@ yyreduce:
   case 235:
 
 /* Line 1455 of yacc.c  */
-#line 3177 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3177 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= sp_handler::EXIT; }
     break;
 
   case 236:
 
 /* Line 1455 of yacc.c  */
-#line 3178 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3178 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= sp_handler::CONTINUE; }
     break;
 
   case 237:
 
 /* Line 1455 of yacc.c  */
-#line 3184 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3184 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 238:
 
 /* Line 1455 of yacc.c  */
-#line 3186 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3186 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)+= 1; }
     break;
 
   case 239:
 
 /* Line 1455 of yacc.c  */
-#line 3191 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3191 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -22429,7 +22429,7 @@ yyreduce:
   case 240:
 
 /* Line 1455 of yacc.c  */
-#line 3213 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3213 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* mysql errno */
             if ((yyvsp[(1) - (1)].ulong_num) == 0)
             {
@@ -22445,7 +22445,7 @@ yyreduce:
   case 242:
 
 /* Line 1455 of yacc.c  */
-#line 3228 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3228 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* SQLSTATE */
 
             /*
@@ -22469,21 +22469,21 @@ yyreduce:
   case 243:
 
 /* Line 1455 of yacc.c  */
-#line 3249 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3249 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 244:
 
 /* Line 1455 of yacc.c  */
-#line 3250 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3250 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 245:
 
 /* Line 1455 of yacc.c  */
-#line 3255 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3255 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.spcondvalue)= (yyvsp[(1) - (1)].spcondvalue);
           }
@@ -22492,7 +22492,7 @@ yyreduce:
   case 246:
 
 /* Line 1455 of yacc.c  */
-#line 3259 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3259 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.spcondvalue)= Lex->spcont->find_condition((yyvsp[(1) - (1)].lex_str), false);
             if ((yyval.spcondvalue) == NULL)
@@ -22506,7 +22506,7 @@ yyreduce:
   case 247:
 
 /* Line 1455 of yacc.c  */
-#line 3268 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3268 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.spcondvalue)= new (thd->mem_root) sp_condition_value(sp_condition_value::WARNING);
             if ((yyval.spcondvalue) == NULL)
@@ -22517,7 +22517,7 @@ yyreduce:
   case 248:
 
 /* Line 1455 of yacc.c  */
-#line 3274 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3274 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.spcondvalue)= new (thd->mem_root) sp_condition_value(sp_condition_value::NOT_FOUND);
             if ((yyval.spcondvalue) == NULL)
@@ -22528,7 +22528,7 @@ yyreduce:
   case 249:
 
 /* Line 1455 of yacc.c  */
-#line 3280 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3280 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.spcondvalue)= new (thd->mem_root) sp_condition_value(sp_condition_value::EXCEPTION);
             if ((yyval.spcondvalue) == NULL)
@@ -22539,7 +22539,7 @@ yyreduce:
   case 250:
 
 /* Line 1455 of yacc.c  */
-#line 3289 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3289 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             Yacc_state *state= & thd->m_parser_state->m_yacc;
@@ -22555,7 +22555,7 @@ yyreduce:
   case 251:
 
 /* Line 1455 of yacc.c  */
-#line 3303 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3303 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_condition_value *cond;
@@ -22583,28 +22583,28 @@ yyreduce:
   case 252:
 
 /* Line 1455 of yacc.c  */
-#line 3326 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3326 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.spcondvalue)= (yyvsp[(1) - (1)].spcondvalue); }
     break;
 
   case 253:
 
 /* Line 1455 of yacc.c  */
-#line 3331 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3331 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.spcondvalue)= NULL; }
     break;
 
   case 254:
 
 /* Line 1455 of yacc.c  */
-#line 3333 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3333 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.spcondvalue)= (yyvsp[(1) - (1)].spcondvalue); }
     break;
 
   case 255:
 
 /* Line 1455 of yacc.c  */
-#line 3338 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3338 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             thd->m_parser_state->m_yacc.m_set_signal_info.clear();
           }
@@ -22613,7 +22613,7 @@ yyreduce:
   case 257:
 
 /* Line 1455 of yacc.c  */
-#line 3346 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3346 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Set_signal_information *info;
             info= &thd->m_parser_state->m_yacc.m_set_signal_info;
@@ -22626,7 +22626,7 @@ yyreduce:
   case 258:
 
 /* Line 1455 of yacc.c  */
-#line 3355 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3355 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Set_signal_information *info;
             info= &thd->m_parser_state->m_yacc.m_set_signal_info;
@@ -22644,14 +22644,14 @@ yyreduce:
   case 259:
 
 /* Line 1455 of yacc.c  */
-#line 3374 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3374 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item); }
     break;
 
   case 260:
 
 /* Line 1455 of yacc.c  */
-#line 3376 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3376 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(1) - (1)].item)->type() == Item::FUNC_ITEM)
             {
@@ -22674,98 +22674,98 @@ yyreduce:
   case 261:
 
 /* Line 1455 of yacc.c  */
-#line 3394 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3394 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item); }
     break;
 
   case 262:
 
 /* Line 1455 of yacc.c  */
-#line 3400 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3400 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_CLASS_ORIGIN; }
     break;
 
   case 263:
 
 /* Line 1455 of yacc.c  */
-#line 3402 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3402 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_SUBCLASS_ORIGIN; }
     break;
 
   case 264:
 
 /* Line 1455 of yacc.c  */
-#line 3404 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3404 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_CONSTRAINT_CATALOG; }
     break;
 
   case 265:
 
 /* Line 1455 of yacc.c  */
-#line 3406 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3406 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_CONSTRAINT_SCHEMA; }
     break;
 
   case 266:
 
 /* Line 1455 of yacc.c  */
-#line 3408 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3408 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_CONSTRAINT_NAME; }
     break;
 
   case 267:
 
 /* Line 1455 of yacc.c  */
-#line 3410 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3410 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_CATALOG_NAME; }
     break;
 
   case 268:
 
 /* Line 1455 of yacc.c  */
-#line 3412 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3412 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_SCHEMA_NAME; }
     break;
 
   case 269:
 
 /* Line 1455 of yacc.c  */
-#line 3414 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3414 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_TABLE_NAME; }
     break;
 
   case 270:
 
 /* Line 1455 of yacc.c  */
-#line 3416 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3416 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_COLUMN_NAME; }
     break;
 
   case 271:
 
 /* Line 1455 of yacc.c  */
-#line 3418 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3418 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_CURSOR_NAME; }
     break;
 
   case 272:
 
 /* Line 1455 of yacc.c  */
-#line 3420 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3420 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_MESSAGE_TEXT; }
     break;
 
   case 273:
 
 /* Line 1455 of yacc.c  */
-#line 3422 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3422 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_condition_item_name)= DIAG_MYSQL_ERRNO; }
     break;
 
   case 274:
 
 /* Line 1455 of yacc.c  */
-#line 3427 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3427 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             Yacc_state *state= & thd->m_parser_state->m_yacc;
@@ -22782,7 +22782,7 @@ yyreduce:
   case 275:
 
 /* Line 1455 of yacc.c  */
-#line 3442 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3442 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Diagnostics_information *info= (yyvsp[(4) - (4)].diag_info);
 
@@ -22799,21 +22799,21 @@ yyreduce:
   case 276:
 
 /* Line 1455 of yacc.c  */
-#line 3457 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3457 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_area)= Diagnostics_information::CURRENT_AREA; }
     break;
 
   case 277:
 
 /* Line 1455 of yacc.c  */
-#line 3459 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3459 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.diag_area)= Diagnostics_information::CURRENT_AREA; }
     break;
 
   case 278:
 
 /* Line 1455 of yacc.c  */
-#line 3464 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3464 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.diag_info)= new (thd->mem_root) Statement_information((yyvsp[(1) - (1)].stmt_info_list));
             if ((yyval.diag_info) == NULL)
@@ -22824,7 +22824,7 @@ yyreduce:
   case 279:
 
 /* Line 1455 of yacc.c  */
-#line 3470 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3470 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.diag_info)= new (thd->mem_root) Condition_information((yyvsp[(2) - (3)].item), (yyvsp[(3) - (3)].cond_info_list));
             if ((yyval.diag_info) == NULL)
@@ -22835,7 +22835,7 @@ yyreduce:
   case 280:
 
 /* Line 1455 of yacc.c  */
-#line 3479 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3479 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.stmt_info_list)= new (thd->mem_root) List<Statement_information_item>;
             if ((yyval.stmt_info_list) == NULL || (yyval.stmt_info_list)->push_back((yyvsp[(1) - (1)].stmt_info_item)))
@@ -22846,7 +22846,7 @@ yyreduce:
   case 281:
 
 /* Line 1455 of yacc.c  */
-#line 3485 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3485 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(1) - (3)].stmt_info_list)->push_back((yyvsp[(3) - (3)].stmt_info_item)))
               MYSQL_YYABORT;
@@ -22857,7 +22857,7 @@ yyreduce:
   case 282:
 
 /* Line 1455 of yacc.c  */
-#line 3494 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3494 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.stmt_info_item)= new (thd->mem_root) Statement_information_item((yyvsp[(3) - (3)].stmt_info_item_name), (yyvsp[(1) - (3)].item));
             if ((yyval.stmt_info_item) == NULL)
@@ -22868,7 +22868,7 @@ yyreduce:
   case 283:
 
 /* Line 1455 of yacc.c  */
-#line 3502 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3502 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex_input_stream *lip= &thd->m_parser_state->m_lip;
             (yyval.item)= create_item_for_sp_var(thd, (yyvsp[(1) - (1)].lex_str), NULL,
@@ -22882,7 +22882,7 @@ yyreduce:
   case 284:
 
 /* Line 1455 of yacc.c  */
-#line 3511 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3511 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_get_user_var((yyvsp[(2) - (2)].lex_str));
             if ((yyval.item) == NULL)
@@ -22893,28 +22893,28 @@ yyreduce:
   case 285:
 
 /* Line 1455 of yacc.c  */
-#line 3520 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3520 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.stmt_info_item_name)= Statement_information_item::NUMBER; }
     break;
 
   case 286:
 
 /* Line 1455 of yacc.c  */
-#line 3522 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3522 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.stmt_info_item_name)= Statement_information_item::ROW_COUNT; }
     break;
 
   case 287:
 
 /* Line 1455 of yacc.c  */
-#line 3531 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3531 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item); }
     break;
 
   case 288:
 
 /* Line 1455 of yacc.c  */
-#line 3536 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3536 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.cond_info_list)= new (thd->mem_root) List<Condition_information_item>;
             if ((yyval.cond_info_list) == NULL || (yyval.cond_info_list)->push_back((yyvsp[(1) - (1)].cond_info_item)))
@@ -22925,7 +22925,7 @@ yyreduce:
   case 289:
 
 /* Line 1455 of yacc.c  */
-#line 3542 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3542 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(1) - (3)].cond_info_list)->push_back((yyvsp[(3) - (3)].cond_info_item)))
               MYSQL_YYABORT;
@@ -22936,7 +22936,7 @@ yyreduce:
   case 290:
 
 /* Line 1455 of yacc.c  */
-#line 3551 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3551 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.cond_info_item)= new (thd->mem_root) Condition_information_item((yyvsp[(3) - (3)].cond_info_item_name), (yyvsp[(1) - (3)].item));
             if ((yyval.cond_info_item) == NULL)
@@ -22947,98 +22947,98 @@ yyreduce:
   case 291:
 
 /* Line 1455 of yacc.c  */
-#line 3559 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3559 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::CLASS_ORIGIN; }
     break;
 
   case 292:
 
 /* Line 1455 of yacc.c  */
-#line 3561 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3561 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::SUBCLASS_ORIGIN; }
     break;
 
   case 293:
 
 /* Line 1455 of yacc.c  */
-#line 3563 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3563 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::CONSTRAINT_CATALOG; }
     break;
 
   case 294:
 
 /* Line 1455 of yacc.c  */
-#line 3565 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3565 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::CONSTRAINT_SCHEMA; }
     break;
 
   case 295:
 
 /* Line 1455 of yacc.c  */
-#line 3567 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3567 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::CONSTRAINT_NAME; }
     break;
 
   case 296:
 
 /* Line 1455 of yacc.c  */
-#line 3569 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3569 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::CATALOG_NAME; }
     break;
 
   case 297:
 
 /* Line 1455 of yacc.c  */
-#line 3571 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3571 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::SCHEMA_NAME; }
     break;
 
   case 298:
 
 /* Line 1455 of yacc.c  */
-#line 3573 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3573 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::TABLE_NAME; }
     break;
 
   case 299:
 
 /* Line 1455 of yacc.c  */
-#line 3575 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3575 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::COLUMN_NAME; }
     break;
 
   case 300:
 
 /* Line 1455 of yacc.c  */
-#line 3577 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3577 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::CURSOR_NAME; }
     break;
 
   case 301:
 
 /* Line 1455 of yacc.c  */
-#line 3579 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3579 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::MESSAGE_TEXT; }
     break;
 
   case 302:
 
 /* Line 1455 of yacc.c  */
-#line 3581 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3581 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::MYSQL_ERRNO; }
     break;
 
   case 303:
 
 /* Line 1455 of yacc.c  */
-#line 3583 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3583 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cond_info_item_name)= Condition_information_item::RETURNED_SQLSTATE; }
     break;
 
   case 304:
 
 /* Line 1455 of yacc.c  */
-#line 3588 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3588 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* NOTE: field definition is filled in sp_decl section. */
 
@@ -23061,7 +23061,7 @@ yyreduce:
   case 305:
 
 /* Line 1455 of yacc.c  */
-#line 3606 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3606 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* NOTE: field definition is filled in sp_decl section. */
 
@@ -23084,35 +23084,35 @@ yyreduce:
   case 306:
 
 /* Line 1455 of yacc.c  */
-#line 3626 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3626 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item) = NULL; }
     break;
 
   case 307:
 
 /* Line 1455 of yacc.c  */
-#line 3627 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3627 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item) = (yyvsp[(2) - (2)].item); }
     break;
 
   case 321:
 
 /* Line 1455 of yacc.c  */
-#line 3648 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3648 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sphead->new_cont_backpatch(NULL); }
     break;
 
   case 322:
 
 /* Line 1455 of yacc.c  */
-#line 3650 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3650 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sphead->do_cont_backpatch(); }
     break;
 
   case 323:
 
 /* Line 1455 of yacc.c  */
-#line 3654 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3654 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -23125,7 +23125,7 @@ yyreduce:
   case 324:
 
 /* Line 1455 of yacc.c  */
-#line 3662 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3662 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -23174,14 +23174,14 @@ yyreduce:
   case 325:
 
 /* Line 1455 of yacc.c  */
-#line 3709 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3709 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sphead->reset_lex(thd); }
     break;
 
   case 326:
 
 /* Line 1455 of yacc.c  */
-#line 3711 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3711 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23210,7 +23210,7 @@ yyreduce:
   case 327:
 
 /* Line 1455 of yacc.c  */
-#line 3737 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3737 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* Unlabeled controls get a secret label. */
             LEX *lex= Lex;
 
@@ -23222,7 +23222,7 @@ yyreduce:
   case 328:
 
 /* Line 1455 of yacc.c  */
-#line 3744 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3744 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -23233,7 +23233,7 @@ yyreduce:
   case 329:
 
 /* Line 1455 of yacc.c  */
-#line 3753 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3753 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp = lex->sphead;
@@ -23288,7 +23288,7 @@ yyreduce:
   case 330:
 
 /* Line 1455 of yacc.c  */
-#line 3806 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3806 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23333,7 +23333,7 @@ yyreduce:
   case 331:
 
 /* Line 1455 of yacc.c  */
-#line 3849 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3849 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23355,7 +23355,7 @@ yyreduce:
   case 332:
 
 /* Line 1455 of yacc.c  */
-#line 3869 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3869 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23377,14 +23377,14 @@ yyreduce:
   case 333:
 
 /* Line 1455 of yacc.c  */
-#line 3886 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3886 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 334:
 
 /* Line 1455 of yacc.c  */
-#line 3891 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3891 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23406,7 +23406,7 @@ yyreduce:
   case 338:
 
 /* Line 1455 of yacc.c  */
-#line 3917 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3917 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23431,7 +23431,7 @@ yyreduce:
   case 339:
 
 /* Line 1455 of yacc.c  */
-#line 3937 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3937 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23456,14 +23456,14 @@ yyreduce:
   case 340:
 
 /* Line 1455 of yacc.c  */
-#line 3959 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3959 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sphead->reset_lex(thd); }
     break;
 
   case 341:
 
 /* Line 1455 of yacc.c  */
-#line 3961 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3961 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23484,7 +23484,7 @@ yyreduce:
   case 342:
 
 /* Line 1455 of yacc.c  */
-#line 3977 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3977 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             sp_head *sp= Lex->sphead;
             sp_pcontext *ctx= Lex->spcont;
@@ -23501,7 +23501,7 @@ yyreduce:
   case 343:
 
 /* Line 1455 of yacc.c  */
-#line 3989 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 3989 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -23512,7 +23512,7 @@ yyreduce:
   case 349:
 
 /* Line 1455 of yacc.c  */
-#line 4009 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4009 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             case_stmt_action_case(lex);
@@ -23523,7 +23523,7 @@ yyreduce:
   case 350:
 
 /* Line 1455 of yacc.c  */
-#line 4015 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4015 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (case_stmt_action_expr(lex, (yyvsp[(3) - (3)].item)))
@@ -23538,7 +23538,7 @@ yyreduce:
   case 351:
 
 /* Line 1455 of yacc.c  */
-#line 4028 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4028 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             case_stmt_action_end_case(lex, true);
@@ -23548,7 +23548,7 @@ yyreduce:
   case 352:
 
 /* Line 1455 of yacc.c  */
-#line 4036 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4036 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             case_stmt_action_case(lex);
@@ -23558,7 +23558,7 @@ yyreduce:
   case 353:
 
 /* Line 1455 of yacc.c  */
-#line 4044 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4044 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             case_stmt_action_end_case(lex, false);
@@ -23568,7 +23568,7 @@ yyreduce:
   case 358:
 
 /* Line 1455 of yacc.c  */
-#line 4062 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4062 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sphead->reset_lex(thd); /* For expr $3 */
           }
@@ -23577,7 +23577,7 @@ yyreduce:
   case 359:
 
 /* Line 1455 of yacc.c  */
-#line 4066 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4066 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* Simple case: <caseval> = <whenval> */
 
@@ -23593,7 +23593,7 @@ yyreduce:
   case 360:
 
 /* Line 1455 of yacc.c  */
-#line 4078 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4078 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (case_stmt_action_then(lex))
@@ -23604,7 +23604,7 @@ yyreduce:
   case 361:
 
 /* Line 1455 of yacc.c  */
-#line 4087 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4087 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sphead->reset_lex(thd); /* For expr $3 */
           }
@@ -23613,7 +23613,7 @@ yyreduce:
   case 362:
 
 /* Line 1455 of yacc.c  */
-#line 4091 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4091 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (case_stmt_action_when(lex, (yyvsp[(3) - (3)].item), false))
@@ -23627,7 +23627,7 @@ yyreduce:
   case 363:
 
 /* Line 1455 of yacc.c  */
-#line 4101 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4101 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (case_stmt_action_then(lex))
@@ -23638,7 +23638,7 @@ yyreduce:
   case 364:
 
 /* Line 1455 of yacc.c  */
-#line 4110 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4110 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23654,7 +23654,7 @@ yyreduce:
   case 366:
 
 /* Line 1455 of yacc.c  */
-#line 4125 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4125 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_pcontext *ctx= lex->spcont;
@@ -23676,7 +23676,7 @@ yyreduce:
   case 367:
 
 /* Line 1455 of yacc.c  */
-#line 4142 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4142 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_label *lab= lex->spcont->pop_label();
@@ -23696,21 +23696,21 @@ yyreduce:
   case 368:
 
 /* Line 1455 of yacc.c  */
-#line 4159 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4159 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= null_lex_str; }
     break;
 
   case 369:
 
 /* Line 1455 of yacc.c  */
-#line 4160 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4160 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 370:
 
 /* Line 1455 of yacc.c  */
-#line 4165 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4165 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_pcontext *ctx= lex->spcont;
@@ -23730,7 +23730,7 @@ yyreduce:
   case 371:
 
 /* Line 1455 of yacc.c  */
-#line 4180 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4180 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_label *lab= lex->spcont->pop_label();
@@ -23749,7 +23749,7 @@ yyreduce:
   case 372:
 
 /* Line 1455 of yacc.c  */
-#line 4196 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4196 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* Unlabeled blocks get a secret label. */
             LEX *lex= Lex;
             uint ip= lex->sphead->instructions();
@@ -23761,7 +23761,7 @@ yyreduce:
   case 373:
 
 /* Line 1455 of yacc.c  */
-#line 4203 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4203 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->spcont->pop_label();
@@ -23771,7 +23771,7 @@ yyreduce:
   case 374:
 
 /* Line 1455 of yacc.c  */
-#line 4211 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4211 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* QQ This is just a dummy for grouping declarations and statements
               together. No [[NOT] ATOMIC] yet, and we need to figure out how
               make it coexist with the existing BEGIN COMMIT/ROLLBACK. */
@@ -23784,7 +23784,7 @@ yyreduce:
   case 375:
 
 /* Line 1455 of yacc.c  */
-#line 4221 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4221 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23813,7 +23813,7 @@ yyreduce:
   case 376:
 
 /* Line 1455 of yacc.c  */
-#line 4249 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4249 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             uint ip= lex->sphead->instructions();
@@ -23828,14 +23828,14 @@ yyreduce:
   case 377:
 
 /* Line 1455 of yacc.c  */
-#line 4259 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4259 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sphead->reset_lex(thd); }
     break;
 
   case 378:
 
 /* Line 1455 of yacc.c  */
-#line 4261 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4261 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -23856,7 +23856,7 @@ yyreduce:
   case 379:
 
 /* Line 1455 of yacc.c  */
-#line 4277 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4277 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             uint ip= lex->sphead->instructions();
@@ -23872,14 +23872,14 @@ yyreduce:
   case 380:
 
 /* Line 1455 of yacc.c  */
-#line 4288 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4288 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sphead->reset_lex(thd); }
     break;
 
   case 381:
 
 /* Line 1455 of yacc.c  */
-#line 4290 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4290 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             uint ip= lex->sphead->instructions();
@@ -23900,49 +23900,49 @@ yyreduce:
   case 382:
 
 /* Line 1455 of yacc.c  */
-#line 4309 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4309 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->trg_chistics.action_time= TRG_ACTION_BEFORE; }
     break;
 
   case 383:
 
 /* Line 1455 of yacc.c  */
-#line 4311 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4311 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->trg_chistics.action_time= TRG_ACTION_AFTER; }
     break;
 
   case 384:
 
 /* Line 1455 of yacc.c  */
-#line 4316 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4316 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->trg_chistics.event= TRG_EVENT_INSERT; }
     break;
 
   case 385:
 
 /* Line 1455 of yacc.c  */
-#line 4318 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4318 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->trg_chistics.event= TRG_EVENT_UPDATE; }
     break;
 
   case 386:
 
 /* Line 1455 of yacc.c  */
-#line 4320 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4320 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->trg_chistics.event= TRG_EVENT_DELETE; }
     break;
 
   case 390:
 
 /* Line 1455 of yacc.c  */
-#line 4354 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4354 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 391:
 
 /* Line 1455 of yacc.c  */
-#line 4356 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4356 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->logfile_group_name= (yyvsp[(4) - (4)].lex_str).str;
@@ -23952,7 +23952,7 @@ yyreduce:
   case 392:
 
 /* Line 1455 of yacc.c  */
-#line 4366 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4366 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             Lex->alter_tablespace_info->ts_alter_tablespace_type= ALTER_TABLESPACE_ADD_FILE; 
           }
@@ -23961,7 +23961,7 @@ yyreduce:
   case 393:
 
 /* Line 1455 of yacc.c  */
-#line 4372 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4372 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             Lex->alter_tablespace_info->ts_alter_tablespace_type= ALTER_TABLESPACE_DROP_FILE; 
           }
@@ -23970,14 +23970,14 @@ yyreduce:
   case 398:
 
 /* Line 1455 of yacc.c  */
-#line 4395 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4395 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 445:
 
 /* Line 1455 of yacc.c  */
-#line 4489 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4489 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->data_file_name= (yyvsp[(2) - (2)].lex_str).str;
@@ -23987,7 +23987,7 @@ yyreduce:
   case 446:
 
 /* Line 1455 of yacc.c  */
-#line 4497 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4497 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->undo_file_name= (yyvsp[(2) - (2)].lex_str).str;
@@ -23997,7 +23997,7 @@ yyreduce:
   case 447:
 
 /* Line 1455 of yacc.c  */
-#line 4505 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4505 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->redo_file_name= (yyvsp[(2) - (2)].lex_str).str;
@@ -24007,7 +24007,7 @@ yyreduce:
   case 448:
 
 /* Line 1455 of yacc.c  */
-#line 4513 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4513 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info= new st_alter_tablespace();
@@ -24021,7 +24021,7 @@ yyreduce:
   case 449:
 
 /* Line 1455 of yacc.c  */
-#line 4525 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4525 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info= new st_alter_tablespace();
@@ -24035,7 +24035,7 @@ yyreduce:
   case 450:
 
 /* Line 1455 of yacc.c  */
-#line 4537 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4537 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_access_mode= TS_READ_ONLY;
@@ -24045,7 +24045,7 @@ yyreduce:
   case 451:
 
 /* Line 1455 of yacc.c  */
-#line 4542 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4542 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_access_mode= TS_READ_WRITE;
@@ -24055,7 +24055,7 @@ yyreduce:
   case 452:
 
 /* Line 1455 of yacc.c  */
-#line 4547 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4547 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_access_mode= TS_NOT_ACCESSIBLE;
@@ -24065,7 +24065,7 @@ yyreduce:
   case 453:
 
 /* Line 1455 of yacc.c  */
-#line 4555 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4555 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->initial_size= (yyvsp[(3) - (3)].ulonglong_number);
@@ -24075,7 +24075,7 @@ yyreduce:
   case 454:
 
 /* Line 1455 of yacc.c  */
-#line 4563 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4563 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->autoextend_size= (yyvsp[(3) - (3)].ulonglong_number);
@@ -24085,7 +24085,7 @@ yyreduce:
   case 455:
 
 /* Line 1455 of yacc.c  */
-#line 4571 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4571 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->max_size= (yyvsp[(3) - (3)].ulonglong_number);
@@ -24095,7 +24095,7 @@ yyreduce:
   case 456:
 
 /* Line 1455 of yacc.c  */
-#line 4579 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4579 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->extent_size= (yyvsp[(3) - (3)].ulonglong_number);
@@ -24105,7 +24105,7 @@ yyreduce:
   case 457:
 
 /* Line 1455 of yacc.c  */
-#line 4587 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4587 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->undo_buffer_size= (yyvsp[(3) - (3)].ulonglong_number);
@@ -24115,7 +24115,7 @@ yyreduce:
   case 458:
 
 /* Line 1455 of yacc.c  */
-#line 4595 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4595 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->redo_buffer_size= (yyvsp[(3) - (3)].ulonglong_number);
@@ -24125,7 +24125,7 @@ yyreduce:
   case 459:
 
 /* Line 1455 of yacc.c  */
-#line 4603 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4603 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->alter_tablespace_info->nodegroup_id != UNDEF_NODEGROUP)
@@ -24140,7 +24140,7 @@ yyreduce:
   case 460:
 
 /* Line 1455 of yacc.c  */
-#line 4616 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4616 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->alter_tablespace_info->ts_comment != NULL)
@@ -24155,7 +24155,7 @@ yyreduce:
   case 461:
 
 /* Line 1455 of yacc.c  */
-#line 4629 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4629 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->alter_tablespace_info->storage_engine != NULL)
@@ -24171,7 +24171,7 @@ yyreduce:
   case 464:
 
 /* Line 1455 of yacc.c  */
-#line 4648 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4648 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->wait_until_completed= TRUE;
@@ -24181,7 +24181,7 @@ yyreduce:
   case 465:
 
 /* Line 1455 of yacc.c  */
-#line 4653 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4653 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (!(lex->alter_tablespace_info->wait_until_completed))
@@ -24196,14 +24196,14 @@ yyreduce:
   case 466:
 
 /* Line 1455 of yacc.c  */
-#line 4665 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4665 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulonglong_number)= (yyvsp[(1) - (1)].ulonglong_number);}
     break;
 
   case 467:
 
 /* Line 1455 of yacc.c  */
-#line 4667 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4667 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             ulonglong number;
             uint text_shift_number= 0;
@@ -24252,42 +24252,42 @@ yyreduce:
   case 468:
 
 /* Line 1455 of yacc.c  */
-#line 4718 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4718 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_info.option_list= NULL; }
     break;
 
   case 469:
 
 /* Line 1455 of yacc.c  */
-#line 4719 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4719 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 470:
 
 /* Line 1455 of yacc.c  */
-#line 4720 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4720 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 471:
 
 /* Line 1455 of yacc.c  */
-#line 4726 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4726 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->set_braces(1);}
     break;
 
   case 472:
 
 /* Line 1455 of yacc.c  */
-#line 4726 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4726 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 473:
 
 /* Line 1455 of yacc.c  */
-#line 4728 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4728 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 
             Lex->create_info.options|= HA_LEX_CREATE_TABLE_LIKE;
@@ -24303,56 +24303,56 @@ yyreduce:
   case 474:
 
 /* Line 1455 of yacc.c  */
-#line 4741 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4741 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.table)= (yyvsp[(2) - (2)].table); }
     break;
 
   case 475:
 
 /* Line 1455 of yacc.c  */
-#line 4742 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4742 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.table)= (yyvsp[(3) - (4)].table); }
     break;
 
   case 476:
 
 /* Line 1455 of yacc.c  */
-#line 4746 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4746 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 477:
 
 /* Line 1455 of yacc.c  */
-#line 4748 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4748 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->set_braces(0);}
     break;
 
   case 478:
 
 /* Line 1455 of yacc.c  */
-#line 4749 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4749 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 479:
 
 /* Line 1455 of yacc.c  */
-#line 4751 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4751 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->set_braces(1);}
     break;
 
   case 480:
 
 /* Line 1455 of yacc.c  */
-#line 4752 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4752 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 481:
 
 /* Line 1455 of yacc.c  */
-#line 4757 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4757 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Remove all tables used in PARTITION clause from the global table
@@ -24367,14 +24367,14 @@ yyreduce:
   case 482:
 
 /* Line 1455 of yacc.c  */
-#line 4793 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4793 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 484:
 
 /* Line 1455 of yacc.c  */
-#line 4799 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4799 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->part_info= new partition_info();
@@ -24393,7 +24393,7 @@ yyreduce:
   case 486:
 
 /* Line 1455 of yacc.c  */
-#line 4817 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4817 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 #ifdef WITH_PARTITION_STORAGE_ENGINE
             LEX_STRING partition_name={C_STRING_WITH_LEN("partition")};
@@ -24414,7 +24414,7 @@ yyreduce:
   case 487:
 
 /* Line 1455 of yacc.c  */
-#line 4836 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4836 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (!lex->part_info)
@@ -24432,14 +24432,14 @@ yyreduce:
   case 488:
 
 /* Line 1455 of yacc.c  */
-#line 4848 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4848 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 490:
 
 /* Line 1455 of yacc.c  */
-#line 4857 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4857 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->list_of_part_fields= TRUE;
@@ -24451,70 +24451,70 @@ yyreduce:
   case 491:
 
 /* Line 1455 of yacc.c  */
-#line 4864 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4864 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->part_type= HASH_PARTITION; }
     break;
 
   case 492:
 
 /* Line 1455 of yacc.c  */
-#line 4865 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4865 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 493:
 
 /* Line 1455 of yacc.c  */
-#line 4867 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4867 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->part_type= RANGE_PARTITION; }
     break;
 
   case 494:
 
 /* Line 1455 of yacc.c  */
-#line 4869 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4869 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->part_type= RANGE_PARTITION; }
     break;
 
   case 495:
 
 /* Line 1455 of yacc.c  */
-#line 4871 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4871 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->part_type= LIST_PARTITION; }
     break;
 
   case 496:
 
 /* Line 1455 of yacc.c  */
-#line 4873 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4873 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->part_type= LIST_PARTITION; }
     break;
 
   case 497:
 
 /* Line 1455 of yacc.c  */
-#line 4877 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4877 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 498:
 
 /* Line 1455 of yacc.c  */
-#line 4879 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4879 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->linear_hash_ind= TRUE;}
     break;
 
   case 499:
 
 /* Line 1455 of yacc.c  */
-#line 4884 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4884 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->key_algorithm= partition_info::KEY_ALGORITHM_NONE;}
     break;
 
   case 500:
 
 /* Line 1455 of yacc.c  */
-#line 4886 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4886 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             switch ((yyvsp[(3) - (3)].ulong_num)) {
             case 1:
@@ -24533,35 +24533,35 @@ yyreduce:
   case 501:
 
 /* Line 1455 of yacc.c  */
-#line 4902 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4902 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 502:
 
 /* Line 1455 of yacc.c  */
-#line 4903 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4903 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 503:
 
 /* Line 1455 of yacc.c  */
-#line 4907 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4907 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 504:
 
 /* Line 1455 of yacc.c  */
-#line 4908 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4908 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 505:
 
 /* Line 1455 of yacc.c  */
-#line 4913 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4913 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->num_columns++;
@@ -24582,7 +24582,7 @@ yyreduce:
   case 506:
 
 /* Line 1455 of yacc.c  */
-#line 4932 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4932 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->column_list= TRUE;
@@ -24593,7 +24593,7 @@ yyreduce:
   case 507:
 
 /* Line 1455 of yacc.c  */
-#line 4942 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4942 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             if (part_info->set_part_expr((yyvsp[(2) - (5)].simple_string)+1, (yyvsp[(3) - (5)].item), (yyvsp[(4) - (5)].simple_string), FALSE))
@@ -24606,7 +24606,7 @@ yyreduce:
   case 508:
 
 /* Line 1455 of yacc.c  */
-#line 4953 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4953 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->part_info->set_part_expr((yyvsp[(2) - (5)].simple_string)+1, (yyvsp[(3) - (5)].item), (yyvsp[(4) - (5)].simple_string), TRUE))
             { MYSQL_YYABORT; }
@@ -24616,14 +24616,14 @@ yyreduce:
   case 509:
 
 /* Line 1455 of yacc.c  */
-#line 4961 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4961 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 510:
 
 /* Line 1455 of yacc.c  */
-#line 4963 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4963 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             uint num_parts= (yyvsp[(2) - (2)].ulong_num);
             partition_info *part_info= Lex->part_info;
@@ -24641,28 +24641,28 @@ yyreduce:
   case 511:
 
 /* Line 1455 of yacc.c  */
-#line 4978 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4978 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 512:
 
 /* Line 1455 of yacc.c  */
-#line 4980 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4980 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->subpart_type= HASH_PARTITION; }
     break;
 
   case 513:
 
 /* Line 1455 of yacc.c  */
-#line 4981 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4981 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 514:
 
 /* Line 1455 of yacc.c  */
-#line 4984 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4984 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->subpart_type= HASH_PARTITION;
@@ -24673,28 +24673,28 @@ yyreduce:
   case 515:
 
 /* Line 1455 of yacc.c  */
-#line 4989 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4989 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 516:
 
 /* Line 1455 of yacc.c  */
-#line 4993 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4993 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 517:
 
 /* Line 1455 of yacc.c  */
-#line 4994 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4994 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 518:
 
 /* Line 1455 of yacc.c  */
-#line 4999 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 4999 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             if (part_info->subpart_field_list.push_back((yyvsp[(1) - (1)].lex_str).str))
@@ -24714,7 +24714,7 @@ yyreduce:
   case 519:
 
 /* Line 1455 of yacc.c  */
-#line 5017 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5017 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             bool not_corr_func;
@@ -24732,14 +24732,14 @@ yyreduce:
   case 520:
 
 /* Line 1455 of yacc.c  */
-#line 5032 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5032 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 521:
 
 /* Line 1455 of yacc.c  */
-#line 5034 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5034 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             uint num_parts= (yyvsp[(2) - (2)].ulong_num);
             LEX *lex= Lex;
@@ -24756,7 +24756,7 @@ yyreduce:
   case 522:
 
 /* Line 1455 of yacc.c  */
-#line 5049 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5049 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             if (part_info->part_type == RANGE_PARTITION)
@@ -24777,7 +24777,7 @@ yyreduce:
   case 523:
 
 /* Line 1455 of yacc.c  */
-#line 5065 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5065 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             uint count_curr_parts= part_info->partitions.elements;
@@ -24801,21 +24801,21 @@ yyreduce:
   case 524:
 
 /* Line 1455 of yacc.c  */
-#line 5086 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5086 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 525:
 
 /* Line 1455 of yacc.c  */
-#line 5087 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5087 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 526:
 
 /* Line 1455 of yacc.c  */
-#line 5092 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5092 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             partition_element *p_elem= new partition_element();
@@ -24836,14 +24836,14 @@ yyreduce:
   case 527:
 
 /* Line 1455 of yacc.c  */
-#line 5111 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5111 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 528:
 
 /* Line 1455 of yacc.c  */
-#line 5116 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5116 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             partition_element *p_elem= part_info->curr_part_elem;
@@ -24854,7 +24854,7 @@ yyreduce:
   case 529:
 
 /* Line 1455 of yacc.c  */
-#line 5125 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5125 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             partition_info *part_info= lex->part_info;
@@ -24881,7 +24881,7 @@ yyreduce:
   case 530:
 
 /* Line 1455 of yacc.c  */
-#line 5147 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5147 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             partition_info *part_info= lex->part_info;
@@ -24902,14 +24902,14 @@ yyreduce:
   case 531:
 
 /* Line 1455 of yacc.c  */
-#line 5162 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5162 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 532:
 
 /* Line 1455 of yacc.c  */
-#line 5164 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5164 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             partition_info *part_info= lex->part_info;
@@ -24930,14 +24930,14 @@ yyreduce:
   case 533:
 
 /* Line 1455 of yacc.c  */
-#line 5179 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5179 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 534:
 
 /* Line 1455 of yacc.c  */
-#line 5184 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5184 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
 
@@ -24964,14 +24964,14 @@ yyreduce:
   case 535:
 
 /* Line 1455 of yacc.c  */
-#line 5205 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5205 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 536:
 
 /* Line 1455 of yacc.c  */
-#line 5210 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5210 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             partition_info *part_info= lex->part_info;
@@ -25005,7 +25005,7 @@ yyreduce:
   case 537:
 
 /* Line 1455 of yacc.c  */
-#line 5239 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5239 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             if (part_info->num_columns < 2U)
@@ -25019,21 +25019,21 @@ yyreduce:
   case 538:
 
 /* Line 1455 of yacc.c  */
-#line 5250 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5250 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 539:
 
 /* Line 1455 of yacc.c  */
-#line 5251 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5251 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 540:
 
 /* Line 1455 of yacc.c  */
-#line 5256 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5256 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->print_debug("( part_value_item", NULL);
@@ -25050,14 +25050,14 @@ yyreduce:
   case 541:
 
 /* Line 1455 of yacc.c  */
-#line 5267 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5267 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 542:
 
 /* Line 1455 of yacc.c  */
-#line 5269 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5269 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->print_debug(") part_value_item", NULL);
@@ -25083,21 +25083,21 @@ yyreduce:
   case 543:
 
 /* Line 1455 of yacc.c  */
-#line 5292 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5292 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 544:
 
 /* Line 1455 of yacc.c  */
-#line 5293 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5293 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 545:
 
 /* Line 1455 of yacc.c  */
-#line 5298 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5298 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             if (part_info->part_type == LIST_PARTITION)
@@ -25115,7 +25115,7 @@ yyreduce:
   case 546:
 
 /* Line 1455 of yacc.c  */
-#line 5311 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5311 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             partition_info *part_info= lex->part_info;
@@ -25136,7 +25136,7 @@ yyreduce:
   case 547:
 
 /* Line 1455 of yacc.c  */
-#line 5331 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5331 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             if (part_info->num_subparts != 0 &&
@@ -25155,7 +25155,7 @@ yyreduce:
   case 548:
 
 /* Line 1455 of yacc.c  */
-#line 5345 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5345 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             if (part_info->num_subparts != 0)
@@ -25183,21 +25183,21 @@ yyreduce:
   case 549:
 
 /* Line 1455 of yacc.c  */
-#line 5370 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5370 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 550:
 
 /* Line 1455 of yacc.c  */
-#line 5371 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5371 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 551:
 
 /* Line 1455 of yacc.c  */
-#line 5376 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5376 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             partition_element *curr_part= part_info->current_partition;
@@ -25235,56 +25235,56 @@ yyreduce:
   case 552:
 
 /* Line 1455 of yacc.c  */
-#line 5408 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5408 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 553:
 
 /* Line 1455 of yacc.c  */
-#line 5413 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5413 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->partition_name= (yyvsp[(1) - (1)].lex_str).str; }
     break;
 
   case 554:
 
 /* Line 1455 of yacc.c  */
-#line 5417 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5417 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 555:
 
 /* Line 1455 of yacc.c  */
-#line 5418 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5418 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 556:
 
 /* Line 1455 of yacc.c  */
-#line 5422 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5422 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 557:
 
 /* Line 1455 of yacc.c  */
-#line 5423 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5423 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 558:
 
 /* Line 1455 of yacc.c  */
-#line 5428 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5428 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->tablespace_name= (yyvsp[(3) - (3)].lex_str).str; }
     break;
 
   case 559:
 
 /* Line 1455 of yacc.c  */
-#line 5430 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5430 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->curr_part_elem->engine_type= (yyvsp[(4) - (4)].db_type);
@@ -25295,7 +25295,7 @@ yyreduce:
   case 560:
 
 /* Line 1455 of yacc.c  */
-#line 5436 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5436 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->part_info->curr_part_elem->connect_string.str= (yyvsp[(3) - (3)].lex_str).str;
@@ -25306,49 +25306,49 @@ yyreduce:
   case 561:
 
 /* Line 1455 of yacc.c  */
-#line 5442 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5442 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->nodegroup_id= (uint16) (yyvsp[(3) - (3)].ulong_num); }
     break;
 
   case 562:
 
 /* Line 1455 of yacc.c  */
-#line 5444 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5444 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->part_max_rows= (ha_rows) (yyvsp[(3) - (3)].ulonglong_number); }
     break;
 
   case 563:
 
 /* Line 1455 of yacc.c  */
-#line 5446 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5446 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->part_min_rows= (ha_rows) (yyvsp[(3) - (3)].ulonglong_number); }
     break;
 
   case 564:
 
 /* Line 1455 of yacc.c  */
-#line 5448 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5448 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->data_file_name= (yyvsp[(4) - (4)].lex_str).str; }
     break;
 
   case 565:
 
 /* Line 1455 of yacc.c  */
-#line 5450 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5450 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->index_file_name= (yyvsp[(4) - (4)].lex_str).str; }
     break;
 
   case 566:
 
 /* Line 1455 of yacc.c  */
-#line 5452 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5452 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->part_info->curr_part_elem->part_comment= (yyvsp[(3) - (3)].lex_str).str; }
     break;
 
   case 567:
 
 /* Line 1455 of yacc.c  */
-#line 5461 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5461 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->sql_command == SQLCOM_INSERT)
@@ -25368,7 +25368,7 @@ yyreduce:
   case 568:
 
 /* Line 1455 of yacc.c  */
-#line 5476 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5476 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= NO_MATTER;
           }
@@ -25377,7 +25377,7 @@ yyreduce:
   case 569:
 
 /* Line 1455 of yacc.c  */
-#line 5480 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5480 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               The following work only with the local list, the global list
@@ -25390,98 +25390,98 @@ yyreduce:
   case 570:
 
 /* Line 1455 of yacc.c  */
-#line 5490 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5490 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 571:
 
 /* Line 1455 of yacc.c  */
-#line 5491 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5491 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 572:
 
 /* Line 1455 of yacc.c  */
-#line 5495 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5495 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 573:
 
 /* Line 1455 of yacc.c  */
-#line 5496 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5496 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 574:
 
 /* Line 1455 of yacc.c  */
-#line 5500 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5500 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 575:
 
 /* Line 1455 of yacc.c  */
-#line 5501 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5501 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 576:
 
 /* Line 1455 of yacc.c  */
-#line 5505 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5505 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 577:
 
 /* Line 1455 of yacc.c  */
-#line 5506 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5506 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 578:
 
 /* Line 1455 of yacc.c  */
-#line 5510 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5510 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 579:
 
 /* Line 1455 of yacc.c  */
-#line 5511 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5511 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (yyvsp[(1) - (1)].num);}
     break;
 
   case 580:
 
 /* Line 1455 of yacc.c  */
-#line 5515 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5515 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=(yyvsp[(1) - (1)].num); }
     break;
 
   case 581:
 
 /* Line 1455 of yacc.c  */
-#line 5516 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5516 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (yyvsp[(1) - (2)].num) | (yyvsp[(2) - (2)].num); }
     break;
 
   case 582:
 
 /* Line 1455 of yacc.c  */
-#line 5520 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5520 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=HA_LEX_CREATE_TMP_TABLE; }
     break;
 
   case 583:
 
 /* Line 1455 of yacc.c  */
-#line 5525 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5525 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->check_exists= FALSE;
             (yyval.num)= 0;
@@ -25491,7 +25491,7 @@ yyreduce:
   case 584:
 
 /* Line 1455 of yacc.c  */
-#line 5530 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5530 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->check_exists= TRUE;
             (yyval.num)=HA_LEX_CREATE_IF_NOT_EXISTS;
@@ -25501,7 +25501,7 @@ yyreduce:
   case 585:
 
 /* Line 1455 of yacc.c  */
-#line 5538 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5538 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= 0;
           }
@@ -25510,7 +25510,7 @@ yyreduce:
   case 586:
 
 /* Line 1455 of yacc.c  */
-#line 5542 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5542 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= HA_LEX_CREATE_REPLACE;
           }
@@ -25519,7 +25519,7 @@ yyreduce:
   case 594:
 
 /* Line 1455 of yacc.c  */
-#line 5565 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5565 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.db_type= (yyvsp[(3) - (3)].db_type);
             Lex->create_info.used_fields|= HA_CREATE_USED_ENGINE;
@@ -25529,7 +25529,7 @@ yyreduce:
   case 595:
 
 /* Line 1455 of yacc.c  */
-#line 5570 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5570 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.max_rows= (yyvsp[(3) - (3)].ulonglong_number);
             Lex->create_info.used_fields|= HA_CREATE_USED_MAX_ROWS;
@@ -25539,7 +25539,7 @@ yyreduce:
   case 596:
 
 /* Line 1455 of yacc.c  */
-#line 5575 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5575 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.min_rows= (yyvsp[(3) - (3)].ulonglong_number);
             Lex->create_info.used_fields|= HA_CREATE_USED_MIN_ROWS;
@@ -25549,7 +25549,7 @@ yyreduce:
   case 597:
 
 /* Line 1455 of yacc.c  */
-#line 5580 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5580 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.avg_row_length=(yyvsp[(3) - (3)].ulong_num);
             Lex->create_info.used_fields|= HA_CREATE_USED_AVG_ROW_LENGTH;
@@ -25559,7 +25559,7 @@ yyreduce:
   case 598:
 
 /* Line 1455 of yacc.c  */
-#line 5585 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5585 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.password=(yyvsp[(3) - (3)].lex_str).str;
             Lex->create_info.used_fields|= HA_CREATE_USED_PASSWORD;
@@ -25569,7 +25569,7 @@ yyreduce:
   case 599:
 
 /* Line 1455 of yacc.c  */
-#line 5590 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5590 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.comment=(yyvsp[(3) - (3)].lex_str);
             Lex->create_info.used_fields|= HA_CREATE_USED_COMMENT;
@@ -25579,7 +25579,7 @@ yyreduce:
   case 600:
 
 /* Line 1455 of yacc.c  */
-#line 5595 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5595 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.auto_increment_value=(yyvsp[(3) - (3)].ulonglong_number);
             Lex->create_info.used_fields|= HA_CREATE_USED_AUTO;
@@ -25589,7 +25589,7 @@ yyreduce:
   case 601:
 
 /* Line 1455 of yacc.c  */
-#line 5600 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5600 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             switch((yyvsp[(3) - (3)].ulong_num)) {
             case 0:
@@ -25609,7 +25609,7 @@ yyreduce:
   case 602:
 
 /* Line 1455 of yacc.c  */
-#line 5615 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5615 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.table_options&=
               ~(HA_OPTION_PACK_KEYS | HA_OPTION_NO_PACK_KEYS);
@@ -25620,7 +25620,7 @@ yyreduce:
   case 603:
 
 /* Line 1455 of yacc.c  */
-#line 5621 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5621 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             switch((yyvsp[(3) - (3)].ulong_num)) {
             case 0:
@@ -25640,7 +25640,7 @@ yyreduce:
   case 604:
 
 /* Line 1455 of yacc.c  */
-#line 5636 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5636 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.stats_auto_recalc= HA_STATS_AUTO_RECALC_DEFAULT;
             Lex->create_info.used_fields|= HA_CREATE_USED_STATS_AUTO_RECALC;
@@ -25650,7 +25650,7 @@ yyreduce:
   case 605:
 
 /* Line 1455 of yacc.c  */
-#line 5641 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5641 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             switch((yyvsp[(3) - (3)].ulong_num)) {
             case 0:
@@ -25670,7 +25670,7 @@ yyreduce:
   case 606:
 
 /* Line 1455 of yacc.c  */
-#line 5656 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5656 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.table_options&=
               ~(HA_OPTION_STATS_PERSISTENT | HA_OPTION_NO_STATS_PERSISTENT);
@@ -25681,7 +25681,7 @@ yyreduce:
   case 607:
 
 /* Line 1455 of yacc.c  */
-#line 5662 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5662 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* From user point of view STATS_SAMPLE_PAGES can be specified as
             STATS_SAMPLE_PAGES=N (where 0<N<=65535, it does not make sense to
@@ -25704,7 +25704,7 @@ yyreduce:
   case 608:
 
 /* Line 1455 of yacc.c  */
-#line 5680 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5680 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.stats_sample_pages=0;
             Lex->create_info.used_fields|= HA_CREATE_USED_STATS_SAMPLE_PAGES;
@@ -25714,7 +25714,7 @@ yyreduce:
   case 609:
 
 /* Line 1455 of yacc.c  */
-#line 5685 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5685 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.table_options|= (yyvsp[(3) - (3)].ulong_num) ? HA_OPTION_CHECKSUM : HA_OPTION_NO_CHECKSUM;
             Lex->create_info.used_fields|= HA_CREATE_USED_CHECKSUM;
@@ -25724,7 +25724,7 @@ yyreduce:
   case 610:
 
 /* Line 1455 of yacc.c  */
-#line 5690 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5690 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              Lex->create_info.table_options|= (yyvsp[(3) - (3)].ulong_num) ? HA_OPTION_CHECKSUM : HA_OPTION_NO_CHECKSUM;
              Lex->create_info.used_fields|= HA_CREATE_USED_CHECKSUM;
@@ -25734,7 +25734,7 @@ yyreduce:
   case 611:
 
 /* Line 1455 of yacc.c  */
-#line 5695 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5695 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.used_fields|= HA_CREATE_USED_PAGE_CHECKSUM;
             Lex->create_info.page_checksum= (yyvsp[(3) - (3)].choice);
@@ -25744,7 +25744,7 @@ yyreduce:
   case 612:
 
 /* Line 1455 of yacc.c  */
-#line 5700 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5700 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.table_options|= (yyvsp[(3) - (3)].ulong_num) ? HA_OPTION_DELAY_KEY_WRITE : HA_OPTION_NO_DELAY_KEY_WRITE;
             Lex->create_info.used_fields|= HA_CREATE_USED_DELAY_KEY_WRITE;
@@ -25754,7 +25754,7 @@ yyreduce:
   case 613:
 
 /* Line 1455 of yacc.c  */
-#line 5705 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5705 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.row_type= (yyvsp[(3) - (3)].row_type);
             Lex->create_info.used_fields|= HA_CREATE_USED_ROW_FORMAT;
@@ -25764,7 +25764,7 @@ yyreduce:
   case 614:
 
 /* Line 1455 of yacc.c  */
-#line 5710 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5710 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->select_lex.table_list.save_and_clear(&Lex->save_list);
           }
@@ -25773,7 +25773,7 @@ yyreduce:
   case 615:
 
 /* Line 1455 of yacc.c  */
-#line 5714 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5714 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Move the union list to the merge_list and exclude its tables
@@ -25800,7 +25800,7 @@ yyreduce:
   case 618:
 
 /* Line 1455 of yacc.c  */
-#line 5738 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5738 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.merge_insert_method= (yyvsp[(3) - (3)].ulong_num);
             Lex->create_info.used_fields|= HA_CREATE_USED_INSERT_METHOD;
@@ -25810,7 +25810,7 @@ yyreduce:
   case 619:
 
 /* Line 1455 of yacc.c  */
-#line 5743 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5743 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.data_file_name= (yyvsp[(4) - (4)].lex_str).str;
             Lex->create_info.used_fields|= HA_CREATE_USED_DATADIR;
@@ -25820,7 +25820,7 @@ yyreduce:
   case 620:
 
 /* Line 1455 of yacc.c  */
-#line 5748 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5748 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.index_file_name= (yyvsp[(4) - (4)].lex_str).str;
             Lex->create_info.used_fields|= HA_CREATE_USED_INDEXDIR;
@@ -25830,28 +25830,28 @@ yyreduce:
   case 621:
 
 /* Line 1455 of yacc.c  */
-#line 5753 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5753 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {Lex->create_info.tablespace= (yyvsp[(2) - (2)].lex_str).str;}
     break;
 
   case 622:
 
 /* Line 1455 of yacc.c  */
-#line 5755 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5755 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {Lex->create_info.storage_media= HA_SM_DISK;}
     break;
 
   case 623:
 
 /* Line 1455 of yacc.c  */
-#line 5757 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5757 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {Lex->create_info.storage_media= HA_SM_MEMORY;}
     break;
 
   case 624:
 
 /* Line 1455 of yacc.c  */
-#line 5759 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5759 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.connect_string.str= (yyvsp[(3) - (3)].lex_str).str;
             Lex->create_info.connect_string.length= (yyvsp[(3) - (3)].lex_str).length;
@@ -25862,7 +25862,7 @@ yyreduce:
   case 625:
 
 /* Line 1455 of yacc.c  */
-#line 5765 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5765 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.used_fields|= HA_CREATE_USED_KEY_BLOCK_SIZE;
             Lex->create_info.key_block_size= (yyvsp[(3) - (3)].ulong_num);
@@ -25872,7 +25872,7 @@ yyreduce:
   case 626:
 
 /* Line 1455 of yacc.c  */
-#line 5770 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5770 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 	    Lex->create_info.used_fields|= HA_CREATE_USED_TRANSACTIONAL;
             Lex->create_info.transactional= (yyvsp[(3) - (3)].choice);
@@ -25882,7 +25882,7 @@ yyreduce:
   case 627:
 
 /* Line 1455 of yacc.c  */
-#line 5775 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5775 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].lex_str), true, &Lex->create_info.option_list,
@@ -25893,7 +25893,7 @@ yyreduce:
   case 628:
 
 /* Line 1455 of yacc.c  */
-#line 5781 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5781 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].lex_str), false, &Lex->create_info.option_list,
@@ -25904,7 +25904,7 @@ yyreduce:
   case 629:
 
 /* Line 1455 of yacc.c  */
-#line 5787 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5787 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].ulonglong_number), &Lex->create_info.option_list,
@@ -25915,7 +25915,7 @@ yyreduce:
   case 630:
 
 /* Line 1455 of yacc.c  */
-#line 5793 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5793 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), &Lex->create_info.option_list,
@@ -25926,7 +25926,7 @@ yyreduce:
   case 631:
 
 /* Line 1455 of yacc.c  */
-#line 5802 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5802 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             HA_CREATE_INFO *cinfo= &Lex->create_info;
             if ((cinfo->used_fields & HA_CREATE_USED_DEFAULT_CHARSET) &&
@@ -25946,7 +25946,7 @@ yyreduce:
   case 632:
 
 /* Line 1455 of yacc.c  */
-#line 5820 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5820 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             HA_CREATE_INFO *cinfo= &Lex->create_info;
             if ((cinfo->used_fields & HA_CREATE_USED_DEFAULT_CHARSET) &&
@@ -25965,7 +25965,7 @@ yyreduce:
   case 633:
 
 /* Line 1455 of yacc.c  */
-#line 5837 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5837 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             plugin_ref plugin= ha_resolve_by_name(thd, &(yyvsp[(1) - (1)].lex_str));
 
@@ -25990,7 +25990,7 @@ yyreduce:
   case 634:
 
 /* Line 1455 of yacc.c  */
-#line 5860 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5860 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             plugin_ref plugin;
             if ((plugin= ha_resolve_by_name(thd, &(yyvsp[(1) - (1)].lex_str))))
@@ -26006,112 +26006,112 @@ yyreduce:
   case 635:
 
 /* Line 1455 of yacc.c  */
-#line 5873 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5873 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.row_type)= ROW_TYPE_DEFAULT; }
     break;
 
   case 636:
 
 /* Line 1455 of yacc.c  */
-#line 5874 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5874 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.row_type)= ROW_TYPE_FIXED; }
     break;
 
   case 637:
 
 /* Line 1455 of yacc.c  */
-#line 5875 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5875 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.row_type)= ROW_TYPE_DYNAMIC; }
     break;
 
   case 638:
 
 /* Line 1455 of yacc.c  */
-#line 5876 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5876 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.row_type)= ROW_TYPE_COMPRESSED; }
     break;
 
   case 639:
 
 /* Line 1455 of yacc.c  */
-#line 5877 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5877 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.row_type)= ROW_TYPE_REDUNDANT; }
     break;
 
   case 640:
 
 /* Line 1455 of yacc.c  */
-#line 5878 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5878 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.row_type)= ROW_TYPE_COMPACT; }
     break;
 
   case 641:
 
 /* Line 1455 of yacc.c  */
-#line 5879 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5879 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.row_type)= ROW_TYPE_PAGE; }
     break;
 
   case 642:
 
 /* Line 1455 of yacc.c  */
-#line 5883 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5883 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= MERGE_INSERT_DISABLED; }
     break;
 
   case 643:
 
 /* Line 1455 of yacc.c  */
-#line 5884 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5884 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= MERGE_INSERT_TO_FIRST; }
     break;
 
   case 644:
 
 /* Line 1455 of yacc.c  */
-#line 5885 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5885 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= MERGE_INSERT_TO_LAST; }
     break;
 
   case 645:
 
 /* Line 1455 of yacc.c  */
-#line 5889 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5889 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 647:
 
 /* Line 1455 of yacc.c  */
-#line 5894 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5894 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.num) = (int) STRING_RESULT; }
     break;
 
   case 648:
 
 /* Line 1455 of yacc.c  */
-#line 5895 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5895 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.num) = (int) REAL_RESULT; }
     break;
 
   case 649:
 
 /* Line 1455 of yacc.c  */
-#line 5896 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5896 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.num) = (int) DECIMAL_RESULT; }
     break;
 
   case 650:
 
 /* Line 1455 of yacc.c  */
-#line 5897 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5897 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.num) = (int) INT_RESULT; }
     break;
 
   case 651:
 
 /* Line 1455 of yacc.c  */
-#line 5903 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5903 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           Lex->create_last_non_select_table= Lex->last_table();
         }
@@ -26120,7 +26120,7 @@ yyreduce:
   case 657:
 
 /* Line 1455 of yacc.c  */
-#line 5921 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5921 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->col_list.empty(); /* Alloced by sql_alloc */
           }
@@ -26129,14 +26129,14 @@ yyreduce:
   case 658:
 
 /* Line 1455 of yacc.c  */
-#line 5928 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5928 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->option_list= NULL; }
     break;
 
   case 659:
 
 /* Line 1455 of yacc.c  */
-#line 5930 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5930 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index (Lex, (yyvsp[(1) - (8)].key_type), (yyvsp[(2) - (8)].lex_str)))
               MYSQL_YYABORT;
@@ -26146,14 +26146,14 @@ yyreduce:
   case 660:
 
 /* Line 1455 of yacc.c  */
-#line 5936 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5936 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->option_list= NULL; }
     break;
 
   case 661:
 
 /* Line 1455 of yacc.c  */
-#line 5938 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5938 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index (Lex, (yyvsp[(1) - (9)].key_type), (yyvsp[(3) - (9)].lex_str)))
               MYSQL_YYABORT;
@@ -26163,14 +26163,14 @@ yyreduce:
   case 662:
 
 /* Line 1455 of yacc.c  */
-#line 5944 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5944 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->option_list= NULL; }
     break;
 
   case 663:
 
 /* Line 1455 of yacc.c  */
-#line 5946 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5946 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index (Lex, (yyvsp[(1) - (9)].key_type), (yyvsp[(3) - (9)].lex_str)))
               MYSQL_YYABORT;
@@ -26180,14 +26180,14 @@ yyreduce:
   case 664:
 
 /* Line 1455 of yacc.c  */
-#line 5952 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5952 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->option_list= NULL; }
     break;
 
   case 665:
 
 /* Line 1455 of yacc.c  */
-#line 5954 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5954 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_create_index (Lex, (yyvsp[(2) - (9)].key_type), (yyvsp[(3) - (9)].lex_str).str ? (yyvsp[(3) - (9)].lex_str) : (yyvsp[(1) - (9)].lex_str)))
               MYSQL_YYABORT;
@@ -26197,7 +26197,7 @@ yyreduce:
   case 666:
 
 /* Line 1455 of yacc.c  */
-#line 5959 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5959 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Key *key= new Foreign_key((yyvsp[(4) - (8)].lex_str).str ? (yyvsp[(4) - (8)].lex_str) : (yyvsp[(1) - (8)].lex_str), lex->col_list,
@@ -26223,7 +26223,7 @@ yyreduce:
   case 667:
 
 /* Line 1455 of yacc.c  */
-#line 5980 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5980 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->col_list.empty(); /* Alloced by sql_alloc */
           }
@@ -26232,28 +26232,28 @@ yyreduce:
   case 671:
 
 /* Line 1455 of yacc.c  */
-#line 5995 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5995 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= null_lex_str; }
     break;
 
   case 672:
 
 /* Line 1455 of yacc.c  */
-#line 5996 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 5996 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 673:
 
 /* Line 1455 of yacc.c  */
-#line 6000 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6000 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 674:
 
 /* Line 1455 of yacc.c  */
-#line 6005 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6005 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->length=lex->dec=0;
@@ -26269,7 +26269,7 @@ yyreduce:
   case 675:
 
 /* Line 1455 of yacc.c  */
-#line 6016 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6016 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (add_field_to_list(lex->thd, &(yyvsp[(1) - (3)].lex_str), (enum enum_field_types) (yyvsp[(3) - (3)].num),
@@ -26286,14 +26286,14 @@ yyreduce:
   case 676:
 
 /* Line 1455 of yacc.c  */
-#line 6030 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6030 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 677:
 
 /* Line 1455 of yacc.c  */
-#line 6034 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6034 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= (enum enum_field_types)MYSQL_TYPE_VIRTUAL;
             Lex->vcol_info->set_field_type((enum enum_field_types) (yyvsp[(1) - (8)].num));
@@ -26303,14 +26303,14 @@ yyreduce:
   case 679:
 
 /* Line 1455 of yacc.c  */
-#line 6042 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6042 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 680:
 
 /* Line 1455 of yacc.c  */
-#line 6047 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6047 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->vcol_info->set_stored_in_db_flag(FALSE);
           }
@@ -26319,7 +26319,7 @@ yyreduce:
   case 681:
 
 /* Line 1455 of yacc.c  */
-#line 6051 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6051 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->vcol_info->set_stored_in_db_flag(FALSE);
           }
@@ -26328,7 +26328,7 @@ yyreduce:
   case 682:
 
 /* Line 1455 of yacc.c  */
-#line 6055 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6055 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->vcol_info->set_stored_in_db_flag(TRUE);
           }
@@ -26337,28 +26337,28 @@ yyreduce:
   case 683:
 
 /* Line 1455 of yacc.c  */
-#line 6061 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6061 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 684:
 
 /* Line 1455 of yacc.c  */
-#line 6062 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6062 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 685:
 
 /* Line 1455 of yacc.c  */
-#line 6066 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6066 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 687:
 
 /* Line 1455 of yacc.c  */
-#line 6072 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6072 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->type|= UNIQUE_FLAG;
@@ -26369,7 +26369,7 @@ yyreduce:
   case 688:
 
 /* Line 1455 of yacc.c  */
-#line 6078 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6078 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->type|= UNIQUE_KEY_FLAG;
@@ -26380,14 +26380,14 @@ yyreduce:
   case 689:
 
 /* Line 1455 of yacc.c  */
-#line 6083 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6083 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->comment= (yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 690:
 
 /* Line 1455 of yacc.c  */
-#line 6088 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6088 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               "PARSE_VCOL_EXPR" can only be used by the SQL server
@@ -26405,7 +26405,7 @@ yyreduce:
   case 691:
 
 /* Line 1455 of yacc.c  */
-#line 6104 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6104 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->vcol_info= new Virtual_column_info();
             if (!Lex->vcol_info)
@@ -26423,28 +26423,28 @@ yyreduce:
   case 692:
 
 /* Line 1455 of yacc.c  */
-#line 6119 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6119 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=(yyvsp[(1) - (3)].num); }
     break;
 
   case 693:
 
 /* Line 1455 of yacc.c  */
-#line 6120 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6120 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=(yyvsp[(1) - (3)].num); }
     break;
 
   case 694:
 
 /* Line 1455 of yacc.c  */
-#line 6121 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6121 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_FLOAT; }
     break;
 
   case 695:
 
 /* Line 1455 of yacc.c  */
-#line 6123 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6123 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->length= (char*) "1";
             (yyval.num)=MYSQL_TYPE_BIT;
@@ -26454,7 +26454,7 @@ yyreduce:
   case 696:
 
 /* Line 1455 of yacc.c  */
-#line 6128 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6128 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)=MYSQL_TYPE_BIT;
           }
@@ -26463,7 +26463,7 @@ yyreduce:
   case 697:
 
 /* Line 1455 of yacc.c  */
-#line 6132 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6132 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->length= (char*) "1";
             (yyval.num)=MYSQL_TYPE_TINY;
@@ -26473,7 +26473,7 @@ yyreduce:
   case 698:
 
 /* Line 1455 of yacc.c  */
-#line 6137 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6137 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->length= (char*) "1";
             (yyval.num)=MYSQL_TYPE_TINY;
@@ -26483,7 +26483,7 @@ yyreduce:
   case 699:
 
 /* Line 1455 of yacc.c  */
-#line 6142 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6142 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)=MYSQL_TYPE_STRING;
           }
@@ -26492,7 +26492,7 @@ yyreduce:
   case 700:
 
 /* Line 1455 of yacc.c  */
-#line 6146 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6146 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->length= (char*) "1";
             (yyval.num)=MYSQL_TYPE_STRING;
@@ -26502,7 +26502,7 @@ yyreduce:
   case 701:
 
 /* Line 1455 of yacc.c  */
-#line 6151 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6151 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)=MYSQL_TYPE_STRING;
             Lex->charset=national_charset_info;
@@ -26512,7 +26512,7 @@ yyreduce:
   case 702:
 
 /* Line 1455 of yacc.c  */
-#line 6156 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6156 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->length= (char*) "1";
             (yyval.num)=MYSQL_TYPE_STRING;
@@ -26523,7 +26523,7 @@ yyreduce:
   case 703:
 
 /* Line 1455 of yacc.c  */
-#line 6162 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6162 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset=&my_charset_bin;
             (yyval.num)=MYSQL_TYPE_STRING;
@@ -26533,7 +26533,7 @@ yyreduce:
   case 704:
 
 /* Line 1455 of yacc.c  */
-#line 6167 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6167 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->length= (char*) "1";
             Lex->charset=&my_charset_bin;
@@ -26544,7 +26544,7 @@ yyreduce:
   case 705:
 
 /* Line 1455 of yacc.c  */
-#line 6173 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6173 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= MYSQL_TYPE_VARCHAR;
           }
@@ -26553,7 +26553,7 @@ yyreduce:
   case 706:
 
 /* Line 1455 of yacc.c  */
-#line 6177 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6177 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= MYSQL_TYPE_VARCHAR;
             Lex->charset=national_charset_info;
@@ -26563,7 +26563,7 @@ yyreduce:
   case 707:
 
 /* Line 1455 of yacc.c  */
-#line 6182 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6182 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset=&my_charset_bin;
             (yyval.num)= MYSQL_TYPE_VARCHAR;
@@ -26573,7 +26573,7 @@ yyreduce:
   case 708:
 
 /* Line 1455 of yacc.c  */
-#line 6187 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6187 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->length)
             {
@@ -26596,21 +26596,21 @@ yyreduce:
   case 709:
 
 /* Line 1455 of yacc.c  */
-#line 6205 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6205 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_DATE; }
     break;
 
   case 710:
 
 /* Line 1455 of yacc.c  */
-#line 6207 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6207 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_TIME; }
     break;
 
   case 711:
 
 /* Line 1455 of yacc.c  */
-#line 6209 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6209 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (thd->variables.sql_mode & MODE_MAXDB)
               (yyval.num)=MYSQL_TYPE_DATETIME;
@@ -26628,14 +26628,14 @@ yyreduce:
   case 712:
 
 /* Line 1455 of yacc.c  */
-#line 6222 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6222 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_DATETIME; }
     break;
 
   case 713:
 
 /* Line 1455 of yacc.c  */
-#line 6224 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6224 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset=&my_charset_bin;
             (yyval.num)=MYSQL_TYPE_TINY_BLOB;
@@ -26645,7 +26645,7 @@ yyreduce:
   case 714:
 
 /* Line 1455 of yacc.c  */
-#line 6229 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6229 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset=&my_charset_bin;
             (yyval.num)=MYSQL_TYPE_BLOB;
@@ -26655,7 +26655,7 @@ yyreduce:
   case 715:
 
 /* Line 1455 of yacc.c  */
-#line 6234 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6234 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 #ifdef HAVE_SPATIAL
             Lex->charset=&my_charset_bin;
@@ -26672,7 +26672,7 @@ yyreduce:
   case 716:
 
 /* Line 1455 of yacc.c  */
-#line 6246 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6246 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset=&my_charset_bin;
             (yyval.num)=MYSQL_TYPE_MEDIUM_BLOB;
@@ -26682,7 +26682,7 @@ yyreduce:
   case 717:
 
 /* Line 1455 of yacc.c  */
-#line 6251 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6251 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset=&my_charset_bin;
             (yyval.num)=MYSQL_TYPE_LONG_BLOB;
@@ -26692,7 +26692,7 @@ yyreduce:
   case 718:
 
 /* Line 1455 of yacc.c  */
-#line 6256 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6256 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset=&my_charset_bin;
             (yyval.num)=MYSQL_TYPE_MEDIUM_BLOB;
@@ -26702,98 +26702,98 @@ yyreduce:
   case 719:
 
 /* Line 1455 of yacc.c  */
-#line 6261 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6261 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_MEDIUM_BLOB; }
     break;
 
   case 720:
 
 /* Line 1455 of yacc.c  */
-#line 6263 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6263 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_TINY_BLOB; }
     break;
 
   case 721:
 
 /* Line 1455 of yacc.c  */
-#line 6265 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6265 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_BLOB; }
     break;
 
   case 722:
 
 /* Line 1455 of yacc.c  */
-#line 6267 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6267 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_MEDIUM_BLOB; }
     break;
 
   case 723:
 
 /* Line 1455 of yacc.c  */
-#line 6269 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6269 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_LONG_BLOB; }
     break;
 
   case 724:
 
 /* Line 1455 of yacc.c  */
-#line 6271 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6271 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_NEWDECIMAL;}
     break;
 
   case 725:
 
 /* Line 1455 of yacc.c  */
-#line 6273 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6273 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_NEWDECIMAL;}
     break;
 
   case 726:
 
 /* Line 1455 of yacc.c  */
-#line 6275 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6275 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_NEWDECIMAL;}
     break;
 
   case 727:
 
 /* Line 1455 of yacc.c  */
-#line 6277 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6277 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {Lex->interval_list.empty();}
     break;
 
   case 728:
 
 /* Line 1455 of yacc.c  */
-#line 6279 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6279 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_ENUM; }
     break;
 
   case 729:
 
 /* Line 1455 of yacc.c  */
-#line 6281 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6281 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->interval_list.empty();}
     break;
 
   case 730:
 
 /* Line 1455 of yacc.c  */
-#line 6283 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6283 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_SET; }
     break;
 
   case 731:
 
 /* Line 1455 of yacc.c  */
-#line 6285 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6285 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_MEDIUM_BLOB; }
     break;
 
   case 732:
 
 /* Line 1455 of yacc.c  */
-#line 6287 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6287 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)=MYSQL_TYPE_LONGLONG;
             Lex->type|= (AUTO_INCREMENT_FLAG | NOT_NULL_FLAG | UNSIGNED_FLAG |
@@ -26804,21 +26804,21 @@ yyreduce:
   case 733:
 
 /* Line 1455 of yacc.c  */
-#line 6295 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6295 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= Field::GEOM_GEOMETRY; }
     break;
 
   case 734:
 
 /* Line 1455 of yacc.c  */
-#line 6296 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6296 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= Field::GEOM_GEOMETRYCOLLECTION; }
     break;
 
   case 735:
 
 /* Line 1455 of yacc.c  */
-#line 6298 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6298 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->length= (char*)"25";
             (yyval.num)= Field::GEOM_POINT;
@@ -26828,147 +26828,147 @@ yyreduce:
   case 736:
 
 /* Line 1455 of yacc.c  */
-#line 6302 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6302 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= Field::GEOM_MULTIPOINT; }
     break;
 
   case 737:
 
 /* Line 1455 of yacc.c  */
-#line 6303 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6303 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= Field::GEOM_LINESTRING; }
     break;
 
   case 738:
 
 /* Line 1455 of yacc.c  */
-#line 6304 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6304 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= Field::GEOM_MULTILINESTRING; }
     break;
 
   case 739:
 
 /* Line 1455 of yacc.c  */
-#line 6305 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6305 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= Field::GEOM_POLYGON; }
     break;
 
   case 740:
 
 /* Line 1455 of yacc.c  */
-#line 6306 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6306 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= Field::GEOM_MULTIPOLYGON; }
     break;
 
   case 741:
 
 /* Line 1455 of yacc.c  */
-#line 6310 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6310 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 742:
 
 /* Line 1455 of yacc.c  */
-#line 6314 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6314 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 743:
 
 /* Line 1455 of yacc.c  */
-#line 6315 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6315 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 744:
 
 /* Line 1455 of yacc.c  */
-#line 6319 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6319 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 745:
 
 /* Line 1455 of yacc.c  */
-#line 6320 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6320 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 746:
 
 /* Line 1455 of yacc.c  */
-#line 6324 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6324 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 747:
 
 /* Line 1455 of yacc.c  */
-#line 6325 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6325 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 748:
 
 /* Line 1455 of yacc.c  */
-#line 6326 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6326 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 749:
 
 /* Line 1455 of yacc.c  */
-#line 6327 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6327 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 750:
 
 /* Line 1455 of yacc.c  */
-#line 6328 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6328 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 751:
 
 /* Line 1455 of yacc.c  */
-#line 6332 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6332 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_LONG; }
     break;
 
   case 752:
 
 /* Line 1455 of yacc.c  */
-#line 6333 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6333 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_TINY; }
     break;
 
   case 753:
 
 /* Line 1455 of yacc.c  */
-#line 6334 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6334 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_SHORT; }
     break;
 
   case 754:
 
 /* Line 1455 of yacc.c  */
-#line 6335 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6335 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_INT24; }
     break;
 
   case 755:
 
 /* Line 1455 of yacc.c  */
-#line 6336 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6336 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_LONGLONG; }
     break;
 
   case 756:
 
 /* Line 1455 of yacc.c  */
-#line 6341 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6341 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= thd->variables.sql_mode & MODE_REAL_AS_FLOAT ?
               MYSQL_TYPE_FLOAT : MYSQL_TYPE_DOUBLE;
@@ -26978,42 +26978,42 @@ yyreduce:
   case 757:
 
 /* Line 1455 of yacc.c  */
-#line 6346 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6346 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_DOUBLE; }
     break;
 
   case 758:
 
 /* Line 1455 of yacc.c  */
-#line 6348 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6348 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=MYSQL_TYPE_DOUBLE; }
     break;
 
   case 759:
 
 /* Line 1455 of yacc.c  */
-#line 6353 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6353 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->dec=Lex->length= (char*)0; }
     break;
 
   case 760:
 
 /* Line 1455 of yacc.c  */
-#line 6355 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6355 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->dec= (char*)0; }
     break;
 
   case 761:
 
 /* Line 1455 of yacc.c  */
-#line 6357 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6357 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 762:
 
 /* Line 1455 of yacc.c  */
-#line 6362 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6362 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->length=(yyvsp[(2) - (5)].lex_str).str;
@@ -27024,154 +27024,154 @@ yyreduce:
   case 763:
 
 /* Line 1455 of yacc.c  */
-#line 6370 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6370 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 764:
 
 /* Line 1455 of yacc.c  */
-#line 6371 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6371 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 765:
 
 /* Line 1455 of yacc.c  */
-#line 6375 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6375 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 766:
 
 /* Line 1455 of yacc.c  */
-#line 6376 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6376 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 767:
 
 /* Line 1455 of yacc.c  */
-#line 6380 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6380 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 768:
 
 /* Line 1455 of yacc.c  */
-#line 6381 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6381 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= UNSIGNED_FLAG;}
     break;
 
   case 769:
 
 /* Line 1455 of yacc.c  */
-#line 6382 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6382 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= UNSIGNED_FLAG | ZEROFILL_FLAG; }
     break;
 
   case 770:
 
 /* Line 1455 of yacc.c  */
-#line 6386 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6386 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->length= (yyvsp[(2) - (3)].lex_str).str; }
     break;
 
   case 771:
 
 /* Line 1455 of yacc.c  */
-#line 6387 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6387 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->length= (yyvsp[(2) - (3)].lex_str).str; }
     break;
 
   case 772:
 
 /* Line 1455 of yacc.c  */
-#line 6388 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6388 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->length= (yyvsp[(2) - (3)].lex_str).str; }
     break;
 
   case 773:
 
 /* Line 1455 of yacc.c  */
-#line 6389 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6389 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->length= (yyvsp[(2) - (3)].lex_str).str; }
     break;
 
   case 774:
 
 /* Line 1455 of yacc.c  */
-#line 6392 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6392 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->length=(char*) 0; /* use default length */ }
     break;
 
   case 775:
 
 /* Line 1455 of yacc.c  */
-#line 6393 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6393 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 776:
 
 /* Line 1455 of yacc.c  */
-#line 6397 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6397 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 777:
 
 /* Line 1455 of yacc.c  */
-#line 6398 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6398 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 778:
 
 /* Line 1455 of yacc.c  */
-#line 6402 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6402 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 779:
 
 /* Line 1455 of yacc.c  */
-#line 6403 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6403 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 780:
 
 /* Line 1455 of yacc.c  */
-#line 6407 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6407 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 782:
 
 /* Line 1455 of yacc.c  */
-#line 6412 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6412 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type&= ~ NOT_NULL_FLAG; }
     break;
 
   case 783:
 
 /* Line 1455 of yacc.c  */
-#line 6413 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6413 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= NOT_NULL_FLAG; }
     break;
 
   case 784:
 
 /* Line 1455 of yacc.c  */
-#line 6414 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6414 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->default_value=(yyvsp[(2) - (2)].item); }
     break;
 
   case 785:
 
 /* Line 1455 of yacc.c  */
-#line 6416 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6416 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root) Item_func_now_local((yyvsp[(4) - (4)].num));
             if (item == NULL)
@@ -27183,14 +27183,14 @@ yyreduce:
   case 786:
 
 /* Line 1455 of yacc.c  */
-#line 6422 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6422 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= AUTO_INCREMENT_FLAG | NOT_NULL_FLAG; }
     break;
 
   case 787:
 
 /* Line 1455 of yacc.c  */
-#line 6424 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6424 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             LEX *lex=Lex;
             lex->type|= AUTO_INCREMENT_FLAG | NOT_NULL_FLAG | UNIQUE_FLAG;
@@ -27201,7 +27201,7 @@ yyreduce:
   case 788:
 
 /* Line 1455 of yacc.c  */
-#line 6430 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6430 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->type|= PRI_KEY_FLAG | NOT_NULL_FLAG;
@@ -27212,7 +27212,7 @@ yyreduce:
   case 789:
 
 /* Line 1455 of yacc.c  */
-#line 6436 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6436 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->type|= UNIQUE_FLAG; 
@@ -27223,7 +27223,7 @@ yyreduce:
   case 790:
 
 /* Line 1455 of yacc.c  */
-#line 6442 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6442 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->type|= UNIQUE_KEY_FLAG; 
@@ -27234,14 +27234,14 @@ yyreduce:
   case 791:
 
 /* Line 1455 of yacc.c  */
-#line 6447 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6447 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->comment= (yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 792:
 
 /* Line 1455 of yacc.c  */
-#line 6449 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6449 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->charset && !my_charset_same(Lex->charset,(yyvsp[(2) - (2)].charset)))
             {
@@ -27259,7 +27259,7 @@ yyreduce:
   case 793:
 
 /* Line 1455 of yacc.c  */
-#line 6462 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6462 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].lex_str), true, &Lex->option_list,
@@ -27270,7 +27270,7 @@ yyreduce:
   case 794:
 
 /* Line 1455 of yacc.c  */
-#line 6468 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6468 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].lex_str), false, &Lex->option_list,
@@ -27281,7 +27281,7 @@ yyreduce:
   case 795:
 
 /* Line 1455 of yacc.c  */
-#line 6474 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6474 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].ulonglong_number), &Lex->option_list,
@@ -27292,7 +27292,7 @@ yyreduce:
   case 796:
 
 /* Line 1455 of yacc.c  */
-#line 6480 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6480 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), &Lex->option_list, &Lex->option_list_last);
@@ -27302,7 +27302,7 @@ yyreduce:
   case 797:
 
 /* Line 1455 of yacc.c  */
-#line 6489 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6489 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           (yyval.num)= (yyvsp[(1) - (2)].num);
 
@@ -27324,7 +27324,7 @@ yyreduce:
   case 798:
 
 /* Line 1455 of yacc.c  */
-#line 6510 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6510 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_now_local((yyvsp[(2) - (2)].num));
             if ((yyval.item) == NULL)
@@ -27335,42 +27335,42 @@ yyreduce:
   case 799:
 
 /* Line 1455 of yacc.c  */
-#line 6516 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6516 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)=(yyvsp[(1) - (1)].item); }
     break;
 
   case 800:
 
 /* Line 1455 of yacc.c  */
-#line 6520 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6520 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 801:
 
 /* Line 1455 of yacc.c  */
-#line 6521 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6521 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 802:
 
 /* Line 1455 of yacc.c  */
-#line 6525 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6525 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 803:
 
 /* Line 1455 of yacc.c  */
-#line 6526 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6526 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 804:
 
 /* Line 1455 of yacc.c  */
-#line 6531 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6531 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.charset)=get_charset_by_csname((yyvsp[(1) - (1)].lex_str).str,MY_CS_PRIMARY,MYF(0))))
             {
@@ -27383,42 +27383,42 @@ yyreduce:
   case 805:
 
 /* Line 1455 of yacc.c  */
-#line 6538 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6538 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)= &my_charset_bin; }
     break;
 
   case 806:
 
 /* Line 1455 of yacc.c  */
-#line 6542 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6542 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=(yyvsp[(1) - (1)].charset);   }
     break;
 
   case 807:
 
 /* Line 1455 of yacc.c  */
-#line 6543 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6543 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=NULL; }
     break;
 
   case 808:
 
 /* Line 1455 of yacc.c  */
-#line 6547 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6547 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)= NULL; }
     break;
 
   case 809:
 
 /* Line 1455 of yacc.c  */
-#line 6548 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6548 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)= (yyvsp[(2) - (2)].charset); }
     break;
 
   case 810:
 
 /* Line 1455 of yacc.c  */
-#line 6553 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6553 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.charset)=get_charset_by_csname((yyvsp[(1) - (1)].lex_str).str,MY_CS_PRIMARY,MYF(0))) &&
                 !((yyval.charset)=get_old_charset_by_name((yyvsp[(1) - (1)].lex_str).str)))
@@ -27432,28 +27432,28 @@ yyreduce:
   case 811:
 
 /* Line 1455 of yacc.c  */
-#line 6561 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6561 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)= &my_charset_bin; }
     break;
 
   case 812:
 
 /* Line 1455 of yacc.c  */
-#line 6565 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6565 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=(yyvsp[(1) - (1)].charset);   }
     break;
 
   case 813:
 
 /* Line 1455 of yacc.c  */
-#line 6566 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6566 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=NULL; }
     break;
 
   case 814:
 
 /* Line 1455 of yacc.c  */
-#line 6571 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6571 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.charset)= mysqld_collation_get_by_name((yyvsp[(1) - (1)].lex_str).str)))
               MYSQL_YYABORT;
@@ -27463,56 +27463,56 @@ yyreduce:
   case 815:
 
 /* Line 1455 of yacc.c  */
-#line 6578 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6578 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=NULL; }
     break;
 
   case 816:
 
 /* Line 1455 of yacc.c  */
-#line 6579 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6579 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=(yyvsp[(2) - (2)].charset); }
     break;
 
   case 817:
 
 /* Line 1455 of yacc.c  */
-#line 6583 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6583 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=(yyvsp[(1) - (1)].charset); }
     break;
 
   case 818:
 
 /* Line 1455 of yacc.c  */
-#line 6584 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6584 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.charset)=NULL; }
     break;
 
   case 819:
 
 /* Line 1455 of yacc.c  */
-#line 6588 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6588 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 820:
 
 /* Line 1455 of yacc.c  */
-#line 6589 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6589 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 821:
 
 /* Line 1455 of yacc.c  */
-#line 6594 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6594 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->charset= &my_charset_latin1; }
     break;
 
   case 822:
 
 /* Line 1455 of yacc.c  */
-#line 6596 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6596 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset= &my_charset_latin1_bin;
           }
@@ -27521,7 +27521,7 @@ yyreduce:
   case 823:
 
 /* Line 1455 of yacc.c  */
-#line 6600 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6600 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset= &my_charset_latin1_bin;
           }
@@ -27530,7 +27530,7 @@ yyreduce:
   case 824:
 
 /* Line 1455 of yacc.c  */
-#line 6607 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6607 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!(Lex->charset=get_charset_by_csname("ucs2",
                                                      MY_CS_PRIMARY,MYF(0))))
@@ -27544,7 +27544,7 @@ yyreduce:
   case 825:
 
 /* Line 1455 of yacc.c  */
-#line 6616 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6616 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!(Lex->charset= mysqld_collation_get_by_name("ucs2_bin")))
               MYSQL_YYABORT;
@@ -27554,7 +27554,7 @@ yyreduce:
   case 826:
 
 /* Line 1455 of yacc.c  */
-#line 6621 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6621 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!(Lex->charset= mysqld_collation_get_by_name("ucs2_bin")))
               MYSQL_YYABORT;
@@ -27564,28 +27564,28 @@ yyreduce:
   case 827:
 
 /* Line 1455 of yacc.c  */
-#line 6628 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6628 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->charset=NULL; }
     break;
 
   case 830:
 
 /* Line 1455 of yacc.c  */
-#line 6631 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6631 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->charset=&my_charset_bin; }
     break;
 
   case 831:
 
 /* Line 1455 of yacc.c  */
-#line 6632 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6632 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->charset=(yyvsp[(2) - (3)].charset); }
     break;
 
   case 832:
 
 /* Line 1455 of yacc.c  */
-#line 6634 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6634 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset= NULL;
             Lex->type|= BINCMP_FLAG;
@@ -27595,7 +27595,7 @@ yyreduce:
   case 833:
 
 /* Line 1455 of yacc.c  */
-#line 6639 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6639 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->charset= (yyvsp[(3) - (3)].charset);
             Lex->type|= BINCMP_FLAG;
@@ -27605,21 +27605,21 @@ yyreduce:
   case 834:
 
 /* Line 1455 of yacc.c  */
-#line 6646 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6646 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 835:
 
 /* Line 1455 of yacc.c  */
-#line 6647 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6647 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= BINCMP_FLAG; }
     break;
 
   case 836:
 
 /* Line 1455 of yacc.c  */
-#line 6652 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6652 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           if ((yyvsp[(2) - (2)].ulong_num) == 0)
           {
@@ -27632,63 +27632,63 @@ yyreduce:
   case 837:
 
 /* Line 1455 of yacc.c  */
-#line 6660 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6660 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(2) - (4)].ulong_num); }
     break;
 
   case 838:
 
 /* Line 1455 of yacc.c  */
-#line 6664 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6664 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= 0; }
     break;
 
   case 839:
 
 /* Line 1455 of yacc.c  */
-#line 6665 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6665 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= 1 << MY_STRXFRM_DESC_SHIFT; }
     break;
 
   case 840:
 
 /* Line 1455 of yacc.c  */
-#line 6669 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6669 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= 1 << MY_STRXFRM_REVERSE_SHIFT; }
     break;
 
   case 841:
 
 /* Line 1455 of yacc.c  */
-#line 6672 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6672 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= 0; }
     break;
 
   case 842:
 
 /* Line 1455 of yacc.c  */
-#line 6673 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6673 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(1) - (1)].ulong_num); }
     break;
 
   case 843:
 
 /* Line 1455 of yacc.c  */
-#line 6674 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6674 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(1) - (2)].ulong_num) | (yyvsp[(2) - (2)].ulong_num); }
     break;
 
   case 844:
 
 /* Line 1455 of yacc.c  */
-#line 6675 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6675 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(1) - (1)].ulong_num) ; }
     break;
 
   case 845:
 
 /* Line 1455 of yacc.c  */
-#line 6680 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6680 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           (yyval.ulong_num)= (yyvsp[(1) - (1)].ulong_num) < 1 ? 1 : ((yyvsp[(1) - (1)].ulong_num) > MY_STRXFRM_NLEVELS ? MY_STRXFRM_NLEVELS : (yyvsp[(1) - (1)].ulong_num));
           (yyval.ulong_num)--;
@@ -27698,7 +27698,7 @@ yyreduce:
   case 846:
 
 /* Line 1455 of yacc.c  */
-#line 6688 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6688 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           (yyval.ulong_num)= (1 | (yyvsp[(2) - (2)].ulong_num)) << (yyvsp[(1) - (2)].ulong_num);
         }
@@ -27707,21 +27707,21 @@ yyreduce:
   case 847:
 
 /* Line 1455 of yacc.c  */
-#line 6694 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6694 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(1) - (1)].ulong_num); }
     break;
 
   case 848:
 
 /* Line 1455 of yacc.c  */
-#line 6695 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6695 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)|= (yyvsp[(3) - (3)].ulong_num); }
     break;
 
   case 849:
 
 /* Line 1455 of yacc.c  */
-#line 6700 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6700 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           uint start= (yyvsp[(1) - (3)].ulong_num);
           uint end= (yyvsp[(3) - (3)].ulong_num);
@@ -27733,35 +27733,35 @@ yyreduce:
   case 850:
 
 /* Line 1455 of yacc.c  */
-#line 6709 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6709 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(1) - (1)].ulong_num); }
     break;
 
   case 851:
 
 /* Line 1455 of yacc.c  */
-#line 6710 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6710 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(1) - (1)].ulong_num); }
     break;
 
   case 852:
 
 /* Line 1455 of yacc.c  */
-#line 6714 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6714 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= 0; }
     break;
 
   case 853:
 
 /* Line 1455 of yacc.c  */
-#line 6715 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6715 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (yyvsp[(2) - (2)].ulong_num); }
     break;
 
   case 856:
 
 /* Line 1455 of yacc.c  */
-#line 6729 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6729 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.table)=(yyvsp[(2) - (5)].table);
           }
@@ -27770,14 +27770,14 @@ yyreduce:
   case 857:
 
 /* Line 1455 of yacc.c  */
-#line 6736 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6736 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ref_list.empty(); }
     break;
 
   case 859:
 
 /* Line 1455 of yacc.c  */
-#line 6742 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6742 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Key_part_spec *key= new Key_part_spec((yyvsp[(3) - (3)].lex_str), 0);
             if (key == NULL)
@@ -27789,7 +27789,7 @@ yyreduce:
   case 860:
 
 /* Line 1455 of yacc.c  */
-#line 6749 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6749 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Key_part_spec *key= new Key_part_spec((yyvsp[(1) - (1)].lex_str), 0);
             if (key == NULL)
@@ -27803,35 +27803,35 @@ yyreduce:
   case 861:
 
 /* Line 1455 of yacc.c  */
-#line 6761 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6761 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->fk_match_option= Foreign_key::FK_MATCH_UNDEF; }
     break;
 
   case 862:
 
 /* Line 1455 of yacc.c  */
-#line 6763 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6763 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->fk_match_option= Foreign_key::FK_MATCH_FULL; }
     break;
 
   case 863:
 
 /* Line 1455 of yacc.c  */
-#line 6765 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6765 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->fk_match_option= Foreign_key::FK_MATCH_PARTIAL; }
     break;
 
   case 864:
 
 /* Line 1455 of yacc.c  */
-#line 6767 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6767 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->fk_match_option= Foreign_key::FK_MATCH_SIMPLE; }
     break;
 
   case 865:
 
 /* Line 1455 of yacc.c  */
-#line 6772 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6772 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->fk_update_opt= Foreign_key::FK_OPTION_UNDEF;
@@ -27842,7 +27842,7 @@ yyreduce:
   case 866:
 
 /* Line 1455 of yacc.c  */
-#line 6778 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6778 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->fk_update_opt= (yyvsp[(3) - (3)].m_fk_option);
@@ -27853,7 +27853,7 @@ yyreduce:
   case 867:
 
 /* Line 1455 of yacc.c  */
-#line 6784 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6784 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->fk_update_opt= Foreign_key::FK_OPTION_UNDEF;
@@ -27864,7 +27864,7 @@ yyreduce:
   case 868:
 
 /* Line 1455 of yacc.c  */
-#line 6791 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6791 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->fk_update_opt= (yyvsp[(3) - (6)].m_fk_option);
@@ -27875,7 +27875,7 @@ yyreduce:
   case 869:
 
 /* Line 1455 of yacc.c  */
-#line 6798 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6798 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->fk_update_opt= (yyvsp[(6) - (6)].m_fk_option);
@@ -27886,126 +27886,126 @@ yyreduce:
   case 870:
 
 /* Line 1455 of yacc.c  */
-#line 6806 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6806 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_fk_option)= Foreign_key::FK_OPTION_RESTRICT; }
     break;
 
   case 871:
 
 /* Line 1455 of yacc.c  */
-#line 6807 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6807 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_fk_option)= Foreign_key::FK_OPTION_CASCADE; }
     break;
 
   case 872:
 
 /* Line 1455 of yacc.c  */
-#line 6808 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6808 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_fk_option)= Foreign_key::FK_OPTION_SET_NULL; }
     break;
 
   case 873:
 
 /* Line 1455 of yacc.c  */
-#line 6809 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6809 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_fk_option)= Foreign_key::FK_OPTION_NO_ACTION; }
     break;
 
   case 874:
 
 /* Line 1455 of yacc.c  */
-#line 6810 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6810 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_fk_option)= Foreign_key::FK_OPTION_DEFAULT;  }
     break;
 
   case 875:
 
 /* Line 1455 of yacc.c  */
-#line 6814 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6814 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_type)= Key::MULTIPLE; }
     break;
 
   case 876:
 
 /* Line 1455 of yacc.c  */
-#line 6818 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6818 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_type)= Key::PRIMARY; }
     break;
 
   case 877:
 
 /* Line 1455 of yacc.c  */
-#line 6819 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6819 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_type)= Key::UNIQUE; }
     break;
 
   case 878:
 
 /* Line 1455 of yacc.c  */
-#line 6823 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6823 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 879:
 
 /* Line 1455 of yacc.c  */
-#line 6824 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6824 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 880:
 
 /* Line 1455 of yacc.c  */
-#line 6828 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6828 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 882:
 
 /* Line 1455 of yacc.c  */
-#line 6833 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6833 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 883:
 
 /* Line 1455 of yacc.c  */
-#line 6834 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6834 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 884:
 
 /* Line 1455 of yacc.c  */
-#line 6835 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6835 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 885:
 
 /* Line 1455 of yacc.c  */
-#line 6839 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6839 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_type)= Key::MULTIPLE; }
     break;
 
   case 886:
 
 /* Line 1455 of yacc.c  */
-#line 6840 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6840 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_type)= Key::UNIQUE; }
     break;
 
   case 887:
 
 /* Line 1455 of yacc.c  */
-#line 6844 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6844 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_type)= Key::FULLTEXT;}
     break;
 
   case 888:
 
 /* Line 1455 of yacc.c  */
-#line 6849 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6849 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 #ifdef HAVE_SPATIAL
             (yyval.key_type)= Key::SPATIAL;
@@ -28020,7 +28020,7 @@ yyreduce:
   case 889:
 
 /* Line 1455 of yacc.c  */
-#line 6861 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6861 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->key_create_info= default_key_create_info;
           }
@@ -28029,56 +28029,56 @@ yyreduce:
   case 892:
 
 /* Line 1455 of yacc.c  */
-#line 6878 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6878 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 894:
 
 /* Line 1455 of yacc.c  */
-#line 6883 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6883 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 896:
 
 /* Line 1455 of yacc.c  */
-#line 6888 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6888 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 904:
 
 /* Line 1455 of yacc.c  */
-#line 6908 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6908 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->key_create_info.algorithm= (yyvsp[(2) - (2)].key_alg); }
     break;
 
   case 905:
 
 /* Line 1455 of yacc.c  */
-#line 6909 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6909 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->key_create_info.algorithm= (yyvsp[(2) - (2)].key_alg); }
     break;
 
   case 906:
 
 /* Line 1455 of yacc.c  */
-#line 6914 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6914 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->key_create_info.block_size= (yyvsp[(3) - (3)].ulong_num); }
     break;
 
   case 907:
 
 /* Line 1455 of yacc.c  */
-#line 6915 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6915 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->key_create_info.comment= (yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 908:
 
 /* Line 1455 of yacc.c  */
-#line 6917 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6917 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].lex_str), true, &Lex->option_list,
@@ -28089,7 +28089,7 @@ yyreduce:
   case 909:
 
 /* Line 1455 of yacc.c  */
-#line 6923 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6923 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].lex_str), false, &Lex->option_list,
@@ -28100,7 +28100,7 @@ yyreduce:
   case 910:
 
 /* Line 1455 of yacc.c  */
-#line 6929 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6929 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].ulonglong_number), &Lex->option_list,
@@ -28111,7 +28111,7 @@ yyreduce:
   case 911:
 
 /* Line 1455 of yacc.c  */
-#line 6935 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6935 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             new (thd->mem_root)
               engine_option_value((yyvsp[(1) - (3)].lex_str), &Lex->option_list, &Lex->option_list_last);
@@ -28121,7 +28121,7 @@ yyreduce:
   case 916:
 
 /* Line 1455 of yacc.c  */
-#line 6953 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6953 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (plugin_is_ready(&(yyvsp[(3) - (3)].lex_str), MYSQL_FTPARSER_PLUGIN))
               Lex->key_create_info.parser_name= (yyvsp[(3) - (3)].lex_str);
@@ -28136,42 +28136,42 @@ yyreduce:
   case 917:
 
 /* Line 1455 of yacc.c  */
-#line 6965 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6965 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_alg)= HA_KEY_ALG_BTREE; }
     break;
 
   case 918:
 
 /* Line 1455 of yacc.c  */
-#line 6966 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6966 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_alg)= HA_KEY_ALG_RTREE; }
     break;
 
   case 919:
 
 /* Line 1455 of yacc.c  */
-#line 6967 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6967 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.key_alg)= HA_KEY_ALG_HASH; }
     break;
 
   case 920:
 
 /* Line 1455 of yacc.c  */
-#line 6971 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6971 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->col_list.push_back((yyvsp[(3) - (4)].key_part)); }
     break;
 
   case 921:
 
 /* Line 1455 of yacc.c  */
-#line 6972 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6972 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->col_list.push_back((yyvsp[(1) - (2)].key_part)); }
     break;
 
   case 922:
 
 /* Line 1455 of yacc.c  */
-#line 6977 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6977 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.key_part)= new Key_part_spec((yyvsp[(1) - (1)].lex_str), 0);
             if ((yyval.key_part) == NULL)
@@ -28182,7 +28182,7 @@ yyreduce:
   case 923:
 
 /* Line 1455 of yacc.c  */
-#line 6983 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6983 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             int key_part_len= atoi((yyvsp[(3) - (4)].lex_str).str);
             if (!key_part_len)
@@ -28198,21 +28198,21 @@ yyreduce:
   case 924:
 
 /* Line 1455 of yacc.c  */
-#line 6996 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6996 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= null_lex_str; }
     break;
 
   case 925:
 
 /* Line 1455 of yacc.c  */
-#line 6997 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 6997 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 926:
 
 /* Line 1455 of yacc.c  */
-#line 7002 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7002 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           LEX *lex= Lex;
           if (lex->check_exists && lex->sql_command != SQLCOM_ALTER_TABLE)
@@ -28227,35 +28227,35 @@ yyreduce:
   case 927:
 
 /* Line 1455 of yacc.c  */
-#line 7013 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7013 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= null_lex_str; }
     break;
 
   case 928:
 
 /* Line 1455 of yacc.c  */
-#line 7014 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7014 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= (yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 929:
 
 /* Line 1455 of yacc.c  */
-#line 7018 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7018 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->interval_list.push_back((yyvsp[(1) - (1)].string)); }
     break;
 
   case 930:
 
 /* Line 1455 of yacc.c  */
-#line 7019 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7019 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->interval_list.push_back((yyvsp[(3) - (3)].string)); }
     break;
 
   case 931:
 
 /* Line 1455 of yacc.c  */
-#line 7027 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7027 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->name.str= 0;
             Lex->name.length= 0;
@@ -28277,7 +28277,7 @@ yyreduce:
   case 932:
 
 /* Line 1455 of yacc.c  */
-#line 7044 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7044 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Lex->select_lex.add_table_to_list(thd, (yyvsp[(5) - (5)].table), NULL,
                                                    TL_OPTION_UPDATING,
@@ -28292,7 +28292,7 @@ yyreduce:
   case 933:
 
 /* Line 1455 of yacc.c  */
-#line 7054 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7054 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Lex->m_sql_cmd)
             {
@@ -28307,7 +28307,7 @@ yyreduce:
   case 934:
 
 /* Line 1455 of yacc.c  */
-#line 7064 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7064 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_info.default_table_charset= NULL;
             Lex->create_info.used_fields= 0;
@@ -28317,7 +28317,7 @@ yyreduce:
   case 935:
 
 /* Line 1455 of yacc.c  */
-#line 7069 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7069 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command=SQLCOM_ALTER_DB;
@@ -28331,7 +28331,7 @@ yyreduce:
   case 936:
 
 /* Line 1455 of yacc.c  */
-#line 7078 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7078 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->sphead)
@@ -28347,7 +28347,7 @@ yyreduce:
   case 937:
 
 /* Line 1455 of yacc.c  */
-#line 7089 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7089 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -28363,7 +28363,7 @@ yyreduce:
   case 938:
 
 /* Line 1455 of yacc.c  */
-#line 7100 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7100 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
 
@@ -28375,7 +28375,7 @@ yyreduce:
   case 939:
 
 /* Line 1455 of yacc.c  */
-#line 7107 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7107 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -28391,7 +28391,7 @@ yyreduce:
   case 940:
 
 /* Line 1455 of yacc.c  */
-#line 7118 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7118 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
 
@@ -28403,7 +28403,7 @@ yyreduce:
   case 941:
 
 /* Line 1455 of yacc.c  */
-#line 7125 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7125 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -28419,14 +28419,14 @@ yyreduce:
   case 942:
 
 /* Line 1455 of yacc.c  */
-#line 7136 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7136 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 943:
 
 /* Line 1455 of yacc.c  */
-#line 7143 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7143 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -28443,14 +28443,14 @@ yyreduce:
   case 944:
 
 /* Line 1455 of yacc.c  */
-#line 7155 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7155 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 945:
 
 /* Line 1455 of yacc.c  */
-#line 7157 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7157 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* 
               It is safe to use Lex->spname because
@@ -28471,7 +28471,7 @@ yyreduce:
   case 946:
 
 /* Line 1455 of yacc.c  */
-#line 7177 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7177 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyvsp[(6) - (10)].num) || (yyvsp[(7) - (10)].num) || (yyvsp[(8) - (10)].num) || (yyvsp[(9) - (10)].num) || (yyvsp[(10) - (10)].num)))
             {
@@ -28489,7 +28489,7 @@ yyreduce:
   case 947:
 
 /* Line 1455 of yacc.c  */
-#line 7190 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7190 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_cmd_type= ALTER_TABLESPACE;
@@ -28499,7 +28499,7 @@ yyreduce:
   case 948:
 
 /* Line 1455 of yacc.c  */
-#line 7195 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7195 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_cmd_type= ALTER_LOGFILE_GROUP;
@@ -28509,7 +28509,7 @@ yyreduce:
   case 949:
 
 /* Line 1455 of yacc.c  */
-#line 7200 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7200 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_cmd_type= CHANGE_FILE_TABLESPACE;
@@ -28519,7 +28519,7 @@ yyreduce:
   case 950:
 
 /* Line 1455 of yacc.c  */
-#line 7205 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7205 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_cmd_type= ALTER_ACCESS_MODE_TABLESPACE;
@@ -28529,7 +28529,7 @@ yyreduce:
   case 951:
 
 /* Line 1455 of yacc.c  */
-#line 7210 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7210 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_ALTER_SERVER;
@@ -28541,42 +28541,42 @@ yyreduce:
   case 952:
 
 /* Line 1455 of yacc.c  */
-#line 7219 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7219 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0;}
     break;
 
   case 953:
 
 /* Line 1455 of yacc.c  */
-#line 7220 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7220 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 954:
 
 /* Line 1455 of yacc.c  */
-#line 7221 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7221 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 955:
 
 /* Line 1455 of yacc.c  */
-#line 7222 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7222 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 956:
 
 /* Line 1455 of yacc.c  */
-#line 7226 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7226 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0;}
     break;
 
   case 957:
 
 /* Line 1455 of yacc.c  */
-#line 7228 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7228 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Use lex's spname to hold the new name.
@@ -28590,35 +28590,35 @@ yyreduce:
   case 958:
 
 /* Line 1455 of yacc.c  */
-#line 7239 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7239 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0;}
     break;
 
   case 959:
 
 /* Line 1455 of yacc.c  */
-#line 7240 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7240 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 960:
 
 /* Line 1455 of yacc.c  */
-#line 7244 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7244 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str).str= 0; (yyval.lex_str).length= 0; }
     break;
 
   case 961:
 
 /* Line 1455 of yacc.c  */
-#line 7245 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7245 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 963:
 
 /* Line 1455 of yacc.c  */
-#line 7251 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7251 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->m_sql_cmd= new (thd->mem_root)
               Sql_cmd_discard_import_tablespace(
@@ -28631,7 +28631,7 @@ yyreduce:
   case 964:
 
 /* Line 1455 of yacc.c  */
-#line 7259 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7259 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->m_sql_cmd= new (thd->mem_root)
               Sql_cmd_discard_import_tablespace(
@@ -28644,7 +28644,7 @@ yyreduce:
   case 970:
 
 /* Line 1455 of yacc.c  */
-#line 7281 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7281 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_DROP_PARTITION;
           }
@@ -28653,7 +28653,7 @@ yyreduce:
   case 971:
 
 /* Line 1455 of yacc.c  */
-#line 7286 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7286 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_info.flags|= Alter_info::ALTER_REBUILD_PARTITION;
@@ -28664,7 +28664,7 @@ yyreduce:
   case 972:
 
 /* Line 1455 of yacc.c  */
-#line 7293 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7293 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->no_write_to_binlog= (yyvsp[(3) - (4)].num);
@@ -28680,7 +28680,7 @@ yyreduce:
   case 974:
 
 /* Line 1455 of yacc.c  */
-#line 7306 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7306 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->no_write_to_binlog= (yyvsp[(3) - (4)].num);
@@ -28696,7 +28696,7 @@ yyreduce:
   case 975:
 
 /* Line 1455 of yacc.c  */
-#line 7317 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7317 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->check_opt.init();
@@ -28711,7 +28711,7 @@ yyreduce:
   case 977:
 
 /* Line 1455 of yacc.c  */
-#line 7329 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7329 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->no_write_to_binlog= (yyvsp[(3) - (4)].num);
@@ -28727,7 +28727,7 @@ yyreduce:
   case 979:
 
 /* Line 1455 of yacc.c  */
-#line 7341 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7341 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_info.flags|= Alter_info::ALTER_COALESCE_PARTITION;
@@ -28739,7 +28739,7 @@ yyreduce:
   case 980:
 
 /* Line 1455 of yacc.c  */
-#line 7348 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7348 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->check_opt.init();
@@ -28754,7 +28754,7 @@ yyreduce:
   case 982:
 
 /* Line 1455 of yacc.c  */
-#line 7360 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7360 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             size_t dummy;
@@ -28782,7 +28782,7 @@ yyreduce:
   case 983:
 
 /* Line 1455 of yacc.c  */
-#line 7386 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7386 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_REMOVE_PARTITIONING;
           }
@@ -28791,7 +28791,7 @@ yyreduce:
   case 984:
 
 /* Line 1455 of yacc.c  */
-#line 7393 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7393 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_ALL_PARTITION;
           }
@@ -28800,7 +28800,7 @@ yyreduce:
   case 986:
 
 /* Line 1455 of yacc.c  */
-#line 7401 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7401 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->part_info= new partition_info();
@@ -28817,14 +28817,14 @@ yyreduce:
   case 987:
 
 /* Line 1455 of yacc.c  */
-#line 7413 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7413 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 989:
 
 /* Line 1455 of yacc.c  */
-#line 7419 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7419 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->part_info->num_parts= lex->part_info->partitions.elements;
@@ -28834,7 +28834,7 @@ yyreduce:
   case 990:
 
 /* Line 1455 of yacc.c  */
-#line 7424 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7424 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->part_info->num_parts= (yyvsp[(2) - (2)].ulong_num);
           }
@@ -28843,7 +28843,7 @@ yyreduce:
   case 991:
 
 /* Line 1455 of yacc.c  */
-#line 7431 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7431 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->part_info= new partition_info();
@@ -28859,7 +28859,7 @@ yyreduce:
   case 993:
 
 /* Line 1455 of yacc.c  */
-#line 7446 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7446 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_TABLE_REORG;
           }
@@ -28868,7 +28868,7 @@ yyreduce:
   case 994:
 
 /* Line 1455 of yacc.c  */
-#line 7450 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7450 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_REORGANIZE_PARTITION;
           }
@@ -28877,7 +28877,7 @@ yyreduce:
   case 995:
 
 /* Line 1455 of yacc.c  */
-#line 7454 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7454 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             partition_info *part_info= Lex->part_info;
             part_info->num_parts= part_info->partitions.elements;
@@ -28887,21 +28887,21 @@ yyreduce:
   case 996:
 
 /* Line 1455 of yacc.c  */
-#line 7461 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7461 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 997:
 
 /* Line 1455 of yacc.c  */
-#line 7462 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7462 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 998:
 
 /* Line 1455 of yacc.c  */
-#line 7467 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7467 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->alter_info.partition_names.push_back((yyvsp[(1) - (1)].lex_str).str))
             {
@@ -28914,7 +28914,7 @@ yyreduce:
   case 1001:
 
 /* Line 1455 of yacc.c  */
-#line 7487 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7487 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->change=0;
@@ -28925,7 +28925,7 @@ yyreduce:
   case 1002:
 
 /* Line 1455 of yacc.c  */
-#line 7496 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7496 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_last_non_select_table= Lex->last_table();
           }
@@ -28934,7 +28934,7 @@ yyreduce:
   case 1003:
 
 /* Line 1455 of yacc.c  */
-#line 7500 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7500 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_last_non_select_table= Lex->last_table();
             Lex->alter_info.flags|= Alter_info::ALTER_ADD_INDEX;
@@ -28944,7 +28944,7 @@ yyreduce:
   case 1004:
 
 /* Line 1455 of yacc.c  */
-#line 7505 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7505 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_ADD_COLUMN |
                                     Alter_info::ALTER_ADD_INDEX;
@@ -28954,7 +28954,7 @@ yyreduce:
   case 1005:
 
 /* Line 1455 of yacc.c  */
-#line 7510 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7510 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->change= (yyvsp[(4) - (4)].lex_str).str;
@@ -28966,7 +28966,7 @@ yyreduce:
   case 1006:
 
 /* Line 1455 of yacc.c  */
-#line 7517 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7517 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_last_non_select_table= Lex->last_table();
           }
@@ -28975,7 +28975,7 @@ yyreduce:
   case 1007:
 
 /* Line 1455 of yacc.c  */
-#line 7521 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7521 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->length=lex->dec=0; lex->type=0;
@@ -28991,7 +28991,7 @@ yyreduce:
   case 1008:
 
 /* Line 1455 of yacc.c  */
-#line 7532 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7532 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (add_field_to_list(lex->thd,&(yyvsp[(4) - (6)].lex_str),
@@ -29009,7 +29009,7 @@ yyreduce:
   case 1009:
 
 /* Line 1455 of yacc.c  */
-#line 7545 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7545 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->create_last_non_select_table= Lex->last_table();
           }
@@ -29018,7 +29018,7 @@ yyreduce:
   case 1010:
 
 /* Line 1455 of yacc.c  */
-#line 7549 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7549 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Alter_drop *ad= new Alter_drop(Alter_drop::COLUMN, (yyvsp[(4) - (5)].lex_str).str, (yyvsp[(3) - (5)].num));
@@ -29032,7 +29032,7 @@ yyreduce:
   case 1011:
 
 /* Line 1455 of yacc.c  */
-#line 7558 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7558 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Alter_drop *ad= new Alter_drop(Alter_drop::FOREIGN_KEY, (yyvsp[(5) - (5)].lex_str).str, (yyvsp[(4) - (5)].num));
@@ -29046,7 +29046,7 @@ yyreduce:
   case 1012:
 
 /* Line 1455 of yacc.c  */
-#line 7567 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7567 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Alter_drop *ad= new Alter_drop(Alter_drop::KEY, primary_key_name,
@@ -29061,7 +29061,7 @@ yyreduce:
   case 1013:
 
 /* Line 1455 of yacc.c  */
-#line 7577 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7577 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Alter_drop *ad= new Alter_drop(Alter_drop::KEY, (yyvsp[(4) - (4)].lex_str).str, (yyvsp[(3) - (4)].num));
@@ -29075,7 +29075,7 @@ yyreduce:
   case 1014:
 
 /* Line 1455 of yacc.c  */
-#line 7586 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7586 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->alter_info.keys_onoff= Alter_info::DISABLE;
@@ -29086,7 +29086,7 @@ yyreduce:
   case 1015:
 
 /* Line 1455 of yacc.c  */
-#line 7592 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7592 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->alter_info.keys_onoff= Alter_info::ENABLE;
@@ -29097,7 +29097,7 @@ yyreduce:
   case 1016:
 
 /* Line 1455 of yacc.c  */
-#line 7598 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7598 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Alter_column *ac= new Alter_column((yyvsp[(3) - (6)].lex_str).str,(yyvsp[(6) - (6)].item));
@@ -29111,7 +29111,7 @@ yyreduce:
   case 1017:
 
 /* Line 1455 of yacc.c  */
-#line 7607 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7607 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Alter_column *ac= new Alter_column((yyvsp[(3) - (5)].lex_str).str, (Item*) 0);
@@ -29125,7 +29125,7 @@ yyreduce:
   case 1018:
 
 /* Line 1455 of yacc.c  */
-#line 7616 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7616 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             size_t dummy;
@@ -29149,7 +29149,7 @@ yyreduce:
   case 1019:
 
 /* Line 1455 of yacc.c  */
-#line 7635 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7635 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!(yyvsp[(4) - (5)].charset))
             {
@@ -29174,7 +29174,7 @@ yyreduce:
   case 1020:
 
 /* Line 1455 of yacc.c  */
-#line 7655 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7655 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->alter_info.flags|= Alter_info::ALTER_OPTIONS;
@@ -29189,7 +29189,7 @@ yyreduce:
   case 1021:
 
 /* Line 1455 of yacc.c  */
-#line 7665 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7665 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_RECREATE;
           }
@@ -29198,7 +29198,7 @@ yyreduce:
   case 1022:
 
 /* Line 1455 of yacc.c  */
-#line 7669 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7669 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->alter_info.flags|= Alter_info::ALTER_ORDER;
@@ -29208,7 +29208,7 @@ yyreduce:
   case 1030:
 
 /* Line 1455 of yacc.c  */
-#line 7686 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7686 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.requested_algorithm=
               Alter_info::ALTER_TABLE_ALGORITHM_DEFAULT;
@@ -29218,7 +29218,7 @@ yyreduce:
   case 1031:
 
 /* Line 1455 of yacc.c  */
-#line 7691 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7691 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->alter_info.set_requested_algorithm(&(yyvsp[(3) - (3)].lex_str)))
             {
@@ -29231,7 +29231,7 @@ yyreduce:
   case 1032:
 
 /* Line 1455 of yacc.c  */
-#line 7702 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7702 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.requested_lock=
               Alter_info::ALTER_TABLE_LOCK_DEFAULT;
@@ -29241,7 +29241,7 @@ yyreduce:
   case 1033:
 
 /* Line 1455 of yacc.c  */
-#line 7707 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7707 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->alter_info.set_requested_lock(&(yyvsp[(3) - (3)].lex_str)))
             {
@@ -29254,49 +29254,49 @@ yyreduce:
   case 1034:
 
 /* Line 1455 of yacc.c  */
-#line 7717 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7717 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1035:
 
 /* Line 1455 of yacc.c  */
-#line 7718 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7718 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1036:
 
 /* Line 1455 of yacc.c  */
-#line 7722 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7722 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ignore= 0;}
     break;
 
   case 1037:
 
 /* Line 1455 of yacc.c  */
-#line 7723 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7723 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ignore= 1;}
     break;
 
   case 1038:
 
 /* Line 1455 of yacc.c  */
-#line 7727 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7727 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ignore= 0;}
     break;
 
   case 1044:
 
 /* Line 1455 of yacc.c  */
-#line 7741 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7741 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ignore= 1;}
     break;
 
   case 1045:
 
 /* Line 1455 of yacc.c  */
-#line 7743 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7743 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.requested_lock=
               Alter_info::ALTER_TABLE_LOCK_NONE;
@@ -29306,35 +29306,35 @@ yyreduce:
   case 1046:
 
 /* Line 1455 of yacc.c  */
-#line 7750 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7750 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->drop_mode= DROP_DEFAULT; }
     break;
 
   case 1047:
 
 /* Line 1455 of yacc.c  */
-#line 7751 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7751 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->drop_mode= DROP_RESTRICT; }
     break;
 
   case 1048:
 
 /* Line 1455 of yacc.c  */
-#line 7752 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7752 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->drop_mode= DROP_CASCADE; }
     break;
 
   case 1049:
 
 /* Line 1455 of yacc.c  */
-#line 7756 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7756 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1050:
 
 /* Line 1455 of yacc.c  */
-#line 7758 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7758 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             store_position_for_column((yyvsp[(2) - (2)].lex_str).str);
             Lex->alter_info.flags |= Alter_info::ALTER_COLUMN_ORDER;
@@ -29344,7 +29344,7 @@ yyreduce:
   case 1051:
 
 /* Line 1455 of yacc.c  */
-#line 7763 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7763 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             store_position_for_column(first_keyword);
             Lex->alter_info.flags |= Alter_info::ALTER_COLUMN_ORDER;
@@ -29354,35 +29354,35 @@ yyreduce:
   case 1052:
 
 /* Line 1455 of yacc.c  */
-#line 7770 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7770 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1053:
 
 /* Line 1455 of yacc.c  */
-#line 7771 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7771 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1054:
 
 /* Line 1455 of yacc.c  */
-#line 7772 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7772 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1055:
 
 /* Line 1455 of yacc.c  */
-#line 7773 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7773 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1056:
 
 /* Line 1455 of yacc.c  */
-#line 7778 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7778 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_SLAVE_START;
@@ -29394,14 +29394,14 @@ yyreduce:
   case 1057:
 
 /* Line 1455 of yacc.c  */
-#line 7785 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7785 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1058:
 
 /* Line 1455 of yacc.c  */
-#line 7787 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7787 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_SLAVE_ALL_START;
@@ -29412,14 +29412,14 @@ yyreduce:
   case 1059:
 
 /* Line 1455 of yacc.c  */
-#line 7792 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7792 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1060:
 
 /* Line 1455 of yacc.c  */
-#line 7794 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7794 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_SLAVE_STOP;
@@ -29431,7 +29431,7 @@ yyreduce:
   case 1061:
 
 /* Line 1455 of yacc.c  */
-#line 7801 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7801 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_SLAVE_ALL_STOP;
@@ -29443,7 +29443,7 @@ yyreduce:
   case 1062:
 
 /* Line 1455 of yacc.c  */
-#line 7811 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7811 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_BEGIN;
@@ -29461,7 +29461,7 @@ yyreduce:
   case 1063:
 
 /* Line 1455 of yacc.c  */
-#line 7827 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7827 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= 0;
           }
@@ -29470,7 +29470,7 @@ yyreduce:
   case 1064:
 
 /* Line 1455 of yacc.c  */
-#line 7831 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7831 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= (yyvsp[(1) - (1)].num);
           }
@@ -29479,7 +29479,7 @@ yyreduce:
   case 1065:
 
 /* Line 1455 of yacc.c  */
-#line 7838 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7838 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= (yyvsp[(1) - (1)].num);
           }
@@ -29488,7 +29488,7 @@ yyreduce:
   case 1066:
 
 /* Line 1455 of yacc.c  */
-#line 7842 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7842 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= (yyvsp[(1) - (3)].num) | (yyvsp[(3) - (3)].num);
           }
@@ -29497,7 +29497,7 @@ yyreduce:
   case 1067:
 
 /* Line 1455 of yacc.c  */
-#line 7849 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7849 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= MYSQL_START_TRANS_OPT_WITH_CONS_SNAPSHOT;
           }
@@ -29506,7 +29506,7 @@ yyreduce:
   case 1068:
 
 /* Line 1455 of yacc.c  */
-#line 7853 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7853 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= MYSQL_START_TRANS_OPT_READ_ONLY;
           }
@@ -29515,7 +29515,7 @@ yyreduce:
   case 1069:
 
 /* Line 1455 of yacc.c  */
-#line 7857 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7857 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= MYSQL_START_TRANS_OPT_READ_WRITE;
           }
@@ -29524,49 +29524,49 @@ yyreduce:
   case 1070:
 
 /* Line 1455 of yacc.c  */
-#line 7863 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7863 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->slave_thd_opt= 0; }
     break;
 
   case 1071:
 
 /* Line 1455 of yacc.c  */
-#line 7865 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7865 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1074:
 
 /* Line 1455 of yacc.c  */
-#line 7874 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7874 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1075:
 
 /* Line 1455 of yacc.c  */
-#line 7875 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7875 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->slave_thd_opt|=SLAVE_SQL; }
     break;
 
   case 1076:
 
 /* Line 1455 of yacc.c  */
-#line 7876 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7876 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->slave_thd_opt|=SLAVE_IO; }
     break;
 
   case 1077:
 
 /* Line 1455 of yacc.c  */
-#line 7880 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7880 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1078:
 
 /* Line 1455 of yacc.c  */
-#line 7882 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7882 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (((lex->mi.log_file_name || lex->mi.pos) &&
@@ -29584,7 +29584,7 @@ yyreduce:
   case 1079:
 
 /* Line 1455 of yacc.c  */
-#line 7895 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7895 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->mi.gtid_pos_str = (yyvsp[(4) - (4)].lex_str);
           }
@@ -29593,7 +29593,7 @@ yyreduce:
   case 1082:
 
 /* Line 1455 of yacc.c  */
-#line 7907 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7907 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_CHECKSUM;
@@ -29605,35 +29605,35 @@ yyreduce:
   case 1083:
 
 /* Line 1455 of yacc.c  */
-#line 7914 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7914 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1084:
 
 /* Line 1455 of yacc.c  */
-#line 7918 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7918 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags= 0; }
     break;
 
   case 1085:
 
 /* Line 1455 of yacc.c  */
-#line 7919 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7919 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags= T_QUICK; }
     break;
 
   case 1086:
 
 /* Line 1455 of yacc.c  */
-#line 7920 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7920 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags= T_EXTEND; }
     break;
 
   case 1087:
 
 /* Line 1455 of yacc.c  */
-#line 7925 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7925 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_REPAIR;
@@ -29648,7 +29648,7 @@ yyreduce:
   case 1088:
 
 /* Line 1455 of yacc.c  */
-#line 7935 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7935 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX* lex= thd->lex;
             DBUG_ASSERT(!lex->m_sql_cmd);
@@ -29661,56 +29661,56 @@ yyreduce:
   case 1089:
 
 /* Line 1455 of yacc.c  */
-#line 7945 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7945 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags = T_MEDIUM; }
     break;
 
   case 1090:
 
 /* Line 1455 of yacc.c  */
-#line 7946 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7946 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1091:
 
 /* Line 1455 of yacc.c  */
-#line 7950 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7950 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1092:
 
 /* Line 1455 of yacc.c  */
-#line 7951 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7951 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1093:
 
 /* Line 1455 of yacc.c  */
-#line 7955 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7955 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags|= T_QUICK; }
     break;
 
   case 1094:
 
 /* Line 1455 of yacc.c  */
-#line 7956 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7956 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags|= T_EXTEND; }
     break;
 
   case 1095:
 
 /* Line 1455 of yacc.c  */
-#line 7957 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7957 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.sql_flags|= TT_USEFRM; }
     break;
 
   case 1096:
 
 /* Line 1455 of yacc.c  */
-#line 7962 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7962 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_ANALYZE;
@@ -29725,7 +29725,7 @@ yyreduce:
   case 1097:
 
 /* Line 1455 of yacc.c  */
-#line 7972 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7972 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX* lex= thd->lex;
             DBUG_ASSERT(!lex->m_sql_cmd);
@@ -29738,14 +29738,14 @@ yyreduce:
   case 1101:
 
 /* Line 1455 of yacc.c  */
-#line 7992 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7992 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1102:
 
 /* Line 1455 of yacc.c  */
-#line 7994 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 7994 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             thd->lex->with_persistent_for_clause= TRUE;
           }
@@ -29754,28 +29754,28 @@ yyreduce:
   case 1103:
 
 /* Line 1455 of yacc.c  */
-#line 8001 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8001 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1104:
 
 /* Line 1455 of yacc.c  */
-#line 8003 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8003 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1105:
 
 /* Line 1455 of yacc.c  */
-#line 8006 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8006 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1106:
 
 /* Line 1455 of yacc.c  */
-#line 8008 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8008 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             LEX* lex= thd->lex;
             lex->column_list= new List<LEX_STRING>;
@@ -29787,14 +29787,14 @@ yyreduce:
   case 1108:
 
 /* Line 1455 of yacc.c  */
-#line 8019 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8019 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1109:
 
 /* Line 1455 of yacc.c  */
-#line 8021 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8021 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             LEX* lex= thd->lex;
             lex->index_list= new List<LEX_STRING>;
@@ -29806,14 +29806,14 @@ yyreduce:
   case 1111:
 
 /* Line 1455 of yacc.c  */
-#line 8033 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8033 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1112:
 
 /* Line 1455 of yacc.c  */
-#line 8035 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8035 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->column_list->push_back((LEX_STRING*)
             sql_memdup(&(yyvsp[(1) - (1)].lex_str), sizeof(LEX_STRING)));
@@ -29823,7 +29823,7 @@ yyreduce:
   case 1113:
 
 /* Line 1455 of yacc.c  */
-#line 8040 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8040 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->column_list->push_back((LEX_STRING*)
             sql_memdup(&(yyvsp[(3) - (3)].lex_str), sizeof(LEX_STRING)));
@@ -29833,14 +29833,14 @@ yyreduce:
   case 1114:
 
 /* Line 1455 of yacc.c  */
-#line 8048 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8048 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1117:
 
 /* Line 1455 of yacc.c  */
-#line 8055 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8055 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->index_list->push_back(
               (LEX_STRING*) sql_memdup(&(yyvsp[(1) - (1)].lex_str), sizeof(LEX_STRING)));
@@ -29850,7 +29850,7 @@ yyreduce:
   case 1118:
 
 /* Line 1455 of yacc.c  */
-#line 8061 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8061 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX_STRING str= {(char*) "PRIMARY", 7};
             Lex->index_list->push_back(
@@ -29861,7 +29861,7 @@ yyreduce:
   case 1119:
 
 /* Line 1455 of yacc.c  */
-#line 8070 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8070 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_BINLOG_BASE64_EVENT;
             Lex->comment= (yyvsp[(2) - (2)].lex_str);
@@ -29871,7 +29871,7 @@ yyreduce:
   case 1120:
 
 /* Line 1455 of yacc.c  */
-#line 8078 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8078 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
 
@@ -29891,7 +29891,7 @@ yyreduce:
   case 1121:
 
 /* Line 1455 of yacc.c  */
-#line 8093 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8093 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX* lex= thd->lex;
             DBUG_ASSERT(!lex->m_sql_cmd);
@@ -29904,77 +29904,77 @@ yyreduce:
   case 1122:
 
 /* Line 1455 of yacc.c  */
-#line 8103 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8103 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags = T_MEDIUM; }
     break;
 
   case 1123:
 
 /* Line 1455 of yacc.c  */
-#line 8104 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8104 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1124:
 
 /* Line 1455 of yacc.c  */
-#line 8108 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8108 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1125:
 
 /* Line 1455 of yacc.c  */
-#line 8109 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8109 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1126:
 
 /* Line 1455 of yacc.c  */
-#line 8113 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8113 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags|= T_QUICK; }
     break;
 
   case 1127:
 
 /* Line 1455 of yacc.c  */
-#line 8114 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8114 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags|= T_FAST; }
     break;
 
   case 1128:
 
 /* Line 1455 of yacc.c  */
-#line 8115 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8115 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags|= T_MEDIUM; }
     break;
 
   case 1129:
 
 /* Line 1455 of yacc.c  */
-#line 8116 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8116 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags|= T_EXTEND; }
     break;
 
   case 1130:
 
 /* Line 1455 of yacc.c  */
-#line 8117 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8117 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.flags|= T_CHECK_ONLY_CHANGED; }
     break;
 
   case 1131:
 
 /* Line 1455 of yacc.c  */
-#line 8118 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8118 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->check_opt.sql_flags|= TT_FOR_UPGRADE; }
     break;
 
   case 1132:
 
 /* Line 1455 of yacc.c  */
-#line 8123 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8123 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_OPTIMIZE;
@@ -29989,7 +29989,7 @@ yyreduce:
   case 1133:
 
 /* Line 1455 of yacc.c  */
-#line 8133 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8133 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX* lex= thd->lex;
             DBUG_ASSERT(!lex->m_sql_cmd);
@@ -30002,28 +30002,28 @@ yyreduce:
   case 1134:
 
 /* Line 1455 of yacc.c  */
-#line 8143 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8143 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 1135:
 
 /* Line 1455 of yacc.c  */
-#line 8144 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8144 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 1136:
 
 /* Line 1455 of yacc.c  */
-#line 8145 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8145 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 1137:
 
 /* Line 1455 of yacc.c  */
-#line 8150 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8150 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_RENAME_TABLE;
           }
@@ -30032,14 +30032,14 @@ yyreduce:
   case 1138:
 
 /* Line 1455 of yacc.c  */
-#line 8154 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8154 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1139:
 
 /* Line 1455 of yacc.c  */
-#line 8156 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8156 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_RENAME_USER;
           }
@@ -30048,7 +30048,7 @@ yyreduce:
   case 1140:
 
 /* Line 1455 of yacc.c  */
-#line 8163 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8163 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(1) - (3)].lex_user)) || Lex->users_list.push_back((yyvsp[(3) - (3)].lex_user)))
               MYSQL_YYABORT;
@@ -30058,7 +30058,7 @@ yyreduce:
   case 1141:
 
 /* Line 1455 of yacc.c  */
-#line 8168 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8168 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(3) - (5)].lex_user)) || Lex->users_list.push_back((yyvsp[(5) - (5)].lex_user)))
               MYSQL_YYABORT;
@@ -30068,7 +30068,7 @@ yyreduce:
   case 1144:
 
 /* Line 1455 of yacc.c  */
-#line 8181 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8181 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             SELECT_LEX *sl= lex->current_select;
@@ -30083,7 +30083,7 @@ yyreduce:
   case 1145:
 
 /* Line 1455 of yacc.c  */
-#line 8194 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8194 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.reset();
           }
@@ -30092,7 +30092,7 @@ yyreduce:
   case 1146:
 
 /* Line 1455 of yacc.c  */
-#line 8198 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8198 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_ASSIGN_TO_KEYCACHE;
@@ -30103,7 +30103,7 @@ yyreduce:
   case 1151:
 
 /* Line 1455 of yacc.c  */
-#line 8217 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8217 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(1) - (2)].table), NULL, 0, TL_READ,
                                            MDL_SHARED_READ,
@@ -30115,7 +30115,7 @@ yyreduce:
   case 1152:
 
 /* Line 1455 of yacc.c  */
-#line 8227 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8227 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(1) - (3)].table), NULL, 0, TL_READ, 
                                            MDL_SHARED_READ,
@@ -30127,21 +30127,21 @@ yyreduce:
   case 1153:
 
 /* Line 1455 of yacc.c  */
-#line 8236 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8236 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 1154:
 
 /* Line 1455 of yacc.c  */
-#line 8237 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8237 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str) = default_key_cache_base; }
     break;
 
   case 1155:
 
 /* Line 1455 of yacc.c  */
-#line 8242 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8242 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command=SQLCOM_PRELOAD_KEYS;
@@ -30152,14 +30152,14 @@ yyreduce:
   case 1156:
 
 /* Line 1455 of yacc.c  */
-#line 8248 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8248 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1161:
 
 /* Line 1455 of yacc.c  */
-#line 8263 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8263 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(1) - (3)].table), NULL, (yyvsp[(3) - (3)].num), TL_READ,
                                            MDL_SHARED_READ,
@@ -30171,7 +30171,7 @@ yyreduce:
   case 1162:
 
 /* Line 1455 of yacc.c  */
-#line 8273 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8273 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(1) - (4)].table), NULL, (yyvsp[(4) - (4)].num), TL_READ,
                                            MDL_SHARED_READ,
@@ -30183,7 +30183,7 @@ yyreduce:
   case 1163:
 
 /* Line 1455 of yacc.c  */
-#line 8283 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8283 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->alter_info.flags|= Alter_info::ALTER_ADMIN_PARTITION;
           }
@@ -30192,7 +30192,7 @@ yyreduce:
   case 1165:
 
 /* Line 1455 of yacc.c  */
-#line 8290 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8290 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->select_lex.alloc_index_hints(thd);
             Select->set_index_hint_type(INDEX_HINT_USE, 
@@ -30203,28 +30203,28 @@ yyreduce:
   case 1167:
 
 /* Line 1455 of yacc.c  */
-#line 8299 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8299 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 1169:
 
 /* Line 1455 of yacc.c  */
-#line 8305 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8305 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 1170:
 
 /* Line 1455 of yacc.c  */
-#line 8306 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8306 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= TL_OPTION_IGNORE_LEAVES; }
     break;
 
   case 1171:
 
 /* Line 1455 of yacc.c  */
-#line 8316 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8316 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SELECT;
@@ -30234,7 +30234,7 @@ yyreduce:
   case 1174:
 
 /* Line 1455 of yacc.c  */
-#line 8330 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8330 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (setup_select_in_parentheses(Lex))
               MYSQL_YYABORT;
@@ -30244,7 +30244,7 @@ yyreduce:
   case 1176:
 
 /* Line 1455 of yacc.c  */
-#line 8340 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8340 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (setup_select_in_parentheses(Lex))
               MYSQL_YYABORT;
@@ -30254,7 +30254,7 @@ yyreduce:
   case 1178:
 
 /* Line 1455 of yacc.c  */
-#line 8349 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8349 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             SELECT_LEX * sel= lex->current_select;
@@ -30275,7 +30275,7 @@ yyreduce:
   case 1180:
 
 /* Line 1455 of yacc.c  */
-#line 8368 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8368 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             SELECT_LEX *sel= lex->current_select;
@@ -30288,7 +30288,7 @@ yyreduce:
   case 1181:
 
 /* Line 1455 of yacc.c  */
-#line 8376 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8376 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= NO_MATTER;
           }
@@ -30297,14 +30297,14 @@ yyreduce:
   case 1183:
 
 /* Line 1455 of yacc.c  */
-#line 8383 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8383 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1188:
 
 /* Line 1455 of yacc.c  */
-#line 8393 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8393 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->context.table_list=
               Select->context.first_name_resolution_table=
@@ -30315,7 +30315,7 @@ yyreduce:
   case 1191:
 
 /* Line 1455 of yacc.c  */
-#line 8408 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8408 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Select->options & SELECT_DISTINCT && Select->options & SELECT_ALL)
             {
@@ -30328,7 +30328,7 @@ yyreduce:
   case 1195:
 
 /* Line 1455 of yacc.c  */
-#line 8425 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8425 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* 
               Allow this flag only on the first top-level SELECT statement, if
@@ -30361,7 +30361,7 @@ yyreduce:
   case 1196:
 
 /* Line 1455 of yacc.c  */
-#line 8453 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8453 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* 
               Allow this flag only on the first top-level SELECT statement, if
@@ -30394,7 +30394,7 @@ yyreduce:
   case 1198:
 
 /* Line 1455 of yacc.c  */
-#line 8485 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8485 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->current_select->set_lock_for_tables(TL_WRITE);
@@ -30405,7 +30405,7 @@ yyreduce:
   case 1199:
 
 /* Line 1455 of yacc.c  */
-#line 8491 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8491 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->current_select->
@@ -30417,7 +30417,7 @@ yyreduce:
   case 1202:
 
 /* Line 1455 of yacc.c  */
-#line 8503 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8503 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root)
                           Item_field(&thd->lex->current_select->context,
@@ -30433,7 +30433,7 @@ yyreduce:
   case 1203:
 
 /* Line 1455 of yacc.c  */
-#line 8517 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8517 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_item_to_list(thd, (yyvsp[(2) - (3)].item)))
               MYSQL_YYABORT;
@@ -30443,7 +30443,7 @@ yyreduce:
   case 1204:
 
 /* Line 1455 of yacc.c  */
-#line 8522 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8522 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             DBUG_ASSERT((yyvsp[(1) - (4)].simple_string) < (yyvsp[(3) - (4)].simple_string));
 
@@ -30470,7 +30470,7 @@ yyreduce:
   case 1205:
 
 /* Line 1455 of yacc.c  */
-#line 8546 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8546 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.simple_string)= (char*) YYLIP->get_cpp_tok_start();
           }
@@ -30479,7 +30479,7 @@ yyreduce:
   case 1206:
 
 /* Line 1455 of yacc.c  */
-#line 8552 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8552 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.simple_string)= (char*) YYLIP->get_cpp_tok_end();
           }
@@ -30488,98 +30488,98 @@ yyreduce:
   case 1207:
 
 /* Line 1455 of yacc.c  */
-#line 8558 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8558 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=null_lex_str;}
     break;
 
   case 1208:
 
 /* Line 1455 of yacc.c  */
-#line 8559 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8559 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 1209:
 
 /* Line 1455 of yacc.c  */
-#line 8560 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8560 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(2) - (2)].lex_str); }
     break;
 
   case 1210:
 
 /* Line 1455 of yacc.c  */
-#line 8561 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8561 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 1211:
 
 /* Line 1455 of yacc.c  */
-#line 8562 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8562 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 1212:
 
 /* Line 1455 of yacc.c  */
-#line 8566 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8566 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= NOT_FIXED_DEC;  }
     break;
 
   case 1213:
 
 /* Line 1455 of yacc.c  */
-#line 8567 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8567 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= NOT_FIXED_DEC;  }
     break;
 
   case 1214:
 
 /* Line 1455 of yacc.c  */
-#line 8568 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8568 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (yyvsp[(2) - (3)].ulong_num); }
     break;
 
   case 1215:
 
 /* Line 1455 of yacc.c  */
-#line 8572 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8572 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0;  }
     break;
 
   case 1216:
 
 /* Line 1455 of yacc.c  */
-#line 8573 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8573 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0;  }
     break;
 
   case 1217:
 
 /* Line 1455 of yacc.c  */
-#line 8574 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8574 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (yyvsp[(2) - (3)].ulong_num); }
     break;
 
   case 1218:
 
 /* Line 1455 of yacc.c  */
-#line 8578 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8578 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1219:
 
 /* Line 1455 of yacc.c  */
-#line 8579 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8579 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1220:
 
 /* Line 1455 of yacc.c  */
-#line 8585 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8585 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Design notes:
@@ -30635,7 +30635,7 @@ yyreduce:
   case 1221:
 
 /* Line 1455 of yacc.c  */
-#line 8636 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8636 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* XOR is a proprietary extension */
             (yyval.item) = new (thd->mem_root) Item_func_xor((yyvsp[(1) - (3)].item), (yyvsp[(3) - (3)].item));
@@ -30647,7 +30647,7 @@ yyreduce:
   case 1222:
 
 /* Line 1455 of yacc.c  */
-#line 8643 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8643 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* See comments in rule expr: expr or expr */
             Item_cond_and *item1;
@@ -30695,7 +30695,7 @@ yyreduce:
   case 1223:
 
 /* Line 1455 of yacc.c  */
-#line 8686 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8686 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= negate_expression(thd, (yyvsp[(2) - (2)].item));
             if ((yyval.item) == NULL)
@@ -30706,7 +30706,7 @@ yyreduce:
   case 1224:
 
 /* Line 1455 of yacc.c  */
-#line 8692 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8692 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_istrue((yyvsp[(1) - (3)].item));
             if ((yyval.item) == NULL)
@@ -30717,7 +30717,7 @@ yyreduce:
   case 1225:
 
 /* Line 1455 of yacc.c  */
-#line 8698 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8698 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_isnottrue((yyvsp[(1) - (4)].item));
             if ((yyval.item) == NULL)
@@ -30728,7 +30728,7 @@ yyreduce:
   case 1226:
 
 /* Line 1455 of yacc.c  */
-#line 8704 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8704 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_isfalse((yyvsp[(1) - (3)].item));
             if ((yyval.item) == NULL)
@@ -30739,7 +30739,7 @@ yyreduce:
   case 1227:
 
 /* Line 1455 of yacc.c  */
-#line 8710 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8710 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_isnotfalse((yyvsp[(1) - (4)].item));
             if ((yyval.item) == NULL)
@@ -30750,7 +30750,7 @@ yyreduce:
   case 1228:
 
 /* Line 1455 of yacc.c  */
-#line 8716 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8716 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_isnull((yyvsp[(1) - (3)].item));
             if ((yyval.item) == NULL)
@@ -30761,7 +30761,7 @@ yyreduce:
   case 1229:
 
 /* Line 1455 of yacc.c  */
-#line 8722 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8722 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_isnotnull((yyvsp[(1) - (4)].item));
             if ((yyval.item) == NULL)
@@ -30772,7 +30772,7 @@ yyreduce:
   case 1231:
 
 /* Line 1455 of yacc.c  */
-#line 8732 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8732 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_isnull((yyvsp[(1) - (3)].item));
             if ((yyval.item) == NULL)
@@ -30783,7 +30783,7 @@ yyreduce:
   case 1232:
 
 /* Line 1455 of yacc.c  */
-#line 8738 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8738 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_isnotnull((yyvsp[(1) - (4)].item));
             if ((yyval.item) == NULL)
@@ -30794,7 +30794,7 @@ yyreduce:
   case 1233:
 
 /* Line 1455 of yacc.c  */
-#line 8744 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8744 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_equal((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -30805,7 +30805,7 @@ yyreduce:
   case 1234:
 
 /* Line 1455 of yacc.c  */
-#line 8750 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8750 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= (*(yyvsp[(2) - (3)].boolfunc2creator))(0)->create((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -30816,7 +30816,7 @@ yyreduce:
   case 1235:
 
 /* Line 1455 of yacc.c  */
-#line 8756 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8756 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= all_any_subquery_creator((yyvsp[(1) - (6)].item), (yyvsp[(2) - (6)].boolfunc2creator), (yyvsp[(3) - (6)].num), (yyvsp[(5) - (6)].select_lex));
             if ((yyval.item) == NULL)
@@ -30827,7 +30827,7 @@ yyreduce:
   case 1237:
 
 /* Line 1455 of yacc.c  */
-#line 8766 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8766 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_in_subselect((yyvsp[(1) - (5)].item), (yyvsp[(4) - (5)].select_lex));
             if ((yyval.item) == NULL)
@@ -30838,7 +30838,7 @@ yyreduce:
   case 1238:
 
 /* Line 1455 of yacc.c  */
-#line 8772 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8772 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root) Item_in_subselect((yyvsp[(1) - (6)].item), (yyvsp[(5) - (6)].select_lex));
             if (item == NULL)
@@ -30852,7 +30852,7 @@ yyreduce:
   case 1239:
 
 /* Line 1455 of yacc.c  */
-#line 8781 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8781 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= handle_sql2003_note184_exception(thd, (yyvsp[(1) - (5)].item), true, (yyvsp[(4) - (5)].item));
             if ((yyval.item) == NULL)
@@ -30863,7 +30863,7 @@ yyreduce:
   case 1240:
 
 /* Line 1455 of yacc.c  */
-#line 8787 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8787 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             (yyvsp[(6) - (7)].item_list)->push_front((yyvsp[(4) - (7)].item));
             (yyvsp[(6) - (7)].item_list)->push_front((yyvsp[(1) - (7)].item));
@@ -30876,7 +30876,7 @@ yyreduce:
   case 1241:
 
 /* Line 1455 of yacc.c  */
-#line 8795 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8795 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= handle_sql2003_note184_exception(thd, (yyvsp[(1) - (6)].item), false, (yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -30887,7 +30887,7 @@ yyreduce:
   case 1242:
 
 /* Line 1455 of yacc.c  */
-#line 8801 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8801 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(7) - (8)].item_list)->push_front((yyvsp[(5) - (8)].item));
             (yyvsp[(7) - (8)].item_list)->push_front((yyvsp[(1) - (8)].item));
@@ -30902,7 +30902,7 @@ yyreduce:
   case 1243:
 
 /* Line 1455 of yacc.c  */
-#line 8811 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8811 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_between((yyvsp[(1) - (5)].item),(yyvsp[(3) - (5)].item),(yyvsp[(5) - (5)].item));
             if ((yyval.item) == NULL)
@@ -30913,7 +30913,7 @@ yyreduce:
   case 1244:
 
 /* Line 1455 of yacc.c  */
-#line 8817 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8817 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item_func_between *item;
             item= new (thd->mem_root) Item_func_between((yyvsp[(1) - (6)].item),(yyvsp[(4) - (6)].item),(yyvsp[(6) - (6)].item));
@@ -30927,7 +30927,7 @@ yyreduce:
   case 1245:
 
 /* Line 1455 of yacc.c  */
-#line 8826 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8826 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item1= new (thd->mem_root) Item_func_soundex((yyvsp[(1) - (4)].item));
             Item *item4= new (thd->mem_root) Item_func_soundex((yyvsp[(4) - (4)].item));
@@ -30942,7 +30942,7 @@ yyreduce:
   case 1246:
 
 /* Line 1455 of yacc.c  */
-#line 8836 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8836 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_like((yyvsp[(1) - (4)].item),(yyvsp[(3) - (4)].item),(yyvsp[(4) - (4)].item),Lex->escape_used);
             if ((yyval.item) == NULL)
@@ -30953,7 +30953,7 @@ yyreduce:
   case 1247:
 
 /* Line 1455 of yacc.c  */
-#line 8842 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8842 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root) Item_func_like((yyvsp[(1) - (5)].item),(yyvsp[(4) - (5)].item),(yyvsp[(5) - (5)].item),
                                                              Lex->escape_used);
@@ -30968,7 +30968,7 @@ yyreduce:
   case 1248:
 
 /* Line 1455 of yacc.c  */
-#line 8852 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8852 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_regex((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -30979,7 +30979,7 @@ yyreduce:
   case 1249:
 
 /* Line 1455 of yacc.c  */
-#line 8858 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8858 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root) Item_func_regex((yyvsp[(1) - (4)].item),(yyvsp[(4) - (4)].item));
             if (item == NULL)
@@ -30993,7 +30993,7 @@ yyreduce:
   case 1251:
 
 /* Line 1455 of yacc.c  */
-#line 8871 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8871 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_bit_or((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31004,7 +31004,7 @@ yyreduce:
   case 1252:
 
 /* Line 1455 of yacc.c  */
-#line 8877 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8877 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_bit_and((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31015,7 +31015,7 @@ yyreduce:
   case 1253:
 
 /* Line 1455 of yacc.c  */
-#line 8883 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8883 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_shift_left((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31026,7 +31026,7 @@ yyreduce:
   case 1254:
 
 /* Line 1455 of yacc.c  */
-#line 8889 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8889 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_shift_right((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31037,7 +31037,7 @@ yyreduce:
   case 1255:
 
 /* Line 1455 of yacc.c  */
-#line 8895 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8895 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_plus((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31048,7 +31048,7 @@ yyreduce:
   case 1256:
 
 /* Line 1455 of yacc.c  */
-#line 8901 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8901 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_minus((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31059,7 +31059,7 @@ yyreduce:
   case 1257:
 
 /* Line 1455 of yacc.c  */
-#line 8907 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8907 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(1) - (5)].item),(yyvsp[(4) - (5)].item),(yyvsp[(5) - (5)].interval),0);
             if ((yyval.item) == NULL)
@@ -31070,7 +31070,7 @@ yyreduce:
   case 1258:
 
 /* Line 1455 of yacc.c  */
-#line 8913 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8913 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(1) - (5)].item),(yyvsp[(4) - (5)].item),(yyvsp[(5) - (5)].interval),1);
             if ((yyval.item) == NULL)
@@ -31081,7 +31081,7 @@ yyreduce:
   case 1259:
 
 /* Line 1455 of yacc.c  */
-#line 8919 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8919 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_mul((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31092,7 +31092,7 @@ yyreduce:
   case 1260:
 
 /* Line 1455 of yacc.c  */
-#line 8925 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8925 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_div((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31103,7 +31103,7 @@ yyreduce:
   case 1261:
 
 /* Line 1455 of yacc.c  */
-#line 8931 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8931 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_mod((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31114,7 +31114,7 @@ yyreduce:
   case 1262:
 
 /* Line 1455 of yacc.c  */
-#line 8937 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8937 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_int_div((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31125,7 +31125,7 @@ yyreduce:
   case 1263:
 
 /* Line 1455 of yacc.c  */
-#line 8943 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8943 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_mod((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31136,7 +31136,7 @@ yyreduce:
   case 1264:
 
 /* Line 1455 of yacc.c  */
-#line 8949 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8949 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_bit_xor((yyvsp[(1) - (3)].item),(yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31147,63 +31147,63 @@ yyreduce:
   case 1274:
 
 /* Line 1455 of yacc.c  */
-#line 8978 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8978 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.boolfunc2creator) = &comp_eq_creator; }
     break;
 
   case 1275:
 
 /* Line 1455 of yacc.c  */
-#line 8979 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8979 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.boolfunc2creator) = &comp_ge_creator; }
     break;
 
   case 1276:
 
 /* Line 1455 of yacc.c  */
-#line 8980 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8980 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.boolfunc2creator) = &comp_gt_creator; }
     break;
 
   case 1277:
 
 /* Line 1455 of yacc.c  */
-#line 8981 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8981 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.boolfunc2creator) = &comp_le_creator; }
     break;
 
   case 1278:
 
 /* Line 1455 of yacc.c  */
-#line 8982 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8982 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.boolfunc2creator) = &comp_lt_creator; }
     break;
 
   case 1279:
 
 /* Line 1455 of yacc.c  */
-#line 8983 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8983 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.boolfunc2creator) = &comp_ne_creator; }
     break;
 
   case 1280:
 
 /* Line 1455 of yacc.c  */
-#line 8987 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8987 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 1; }
     break;
 
   case 1281:
 
 /* Line 1455 of yacc.c  */
-#line 8988 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8988 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 0; }
     break;
 
   case 1282:
 
 /* Line 1455 of yacc.c  */
-#line 8993 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8993 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 	    (yyval.num)= DYN_COL_NULL; /* automatic type */
@@ -31215,14 +31215,14 @@ yyreduce:
   case 1283:
 
 /* Line 1455 of yacc.c  */
-#line 8999 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 8999 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (yyvsp[(2) - (2)].num); }
     break;
 
   case 1284:
 
 /* Line 1455 of yacc.c  */
-#line 9004 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9004 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_INT;
@@ -31234,7 +31234,7 @@ yyreduce:
   case 1285:
 
 /* Line 1455 of yacc.c  */
-#line 9011 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9011 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_UINT;
@@ -31246,7 +31246,7 @@ yyreduce:
   case 1286:
 
 /* Line 1455 of yacc.c  */
-#line 9018 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9018 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_DOUBLE;
@@ -31258,7 +31258,7 @@ yyreduce:
   case 1287:
 
 /* Line 1455 of yacc.c  */
-#line 9025 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9025 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_DOUBLE;
@@ -31270,7 +31270,7 @@ yyreduce:
   case 1288:
 
 /* Line 1455 of yacc.c  */
-#line 9032 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9032 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_DOUBLE;
@@ -31282,7 +31282,7 @@ yyreduce:
   case 1289:
 
 /* Line 1455 of yacc.c  */
-#line 9039 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9039 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= DYN_COL_DECIMAL;
             Lex->charset= NULL;
@@ -31292,7 +31292,7 @@ yyreduce:
   case 1290:
 
 /* Line 1455 of yacc.c  */
-#line 9044 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9044 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_STRING;
@@ -31303,7 +31303,7 @@ yyreduce:
   case 1291:
 
 /* Line 1455 of yacc.c  */
-#line 9050 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9050 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_STRING;
@@ -31315,7 +31315,7 @@ yyreduce:
   case 1292:
 
 /* Line 1455 of yacc.c  */
-#line 9057 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9057 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_DATE;
@@ -31327,7 +31327,7 @@ yyreduce:
   case 1293:
 
 /* Line 1455 of yacc.c  */
-#line 9064 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9064 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_TIME;
@@ -31340,7 +31340,7 @@ yyreduce:
   case 1294:
 
 /* Line 1455 of yacc.c  */
-#line 9072 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9072 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.num)= DYN_COL_DATETIME;
@@ -31353,7 +31353,7 @@ yyreduce:
   case 1295:
 
 /* Line 1455 of yacc.c  */
-#line 9083 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9083 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
      LEX *lex= Lex;
      (yyval.dyncol_def)= (DYNCALL_CREATE_DEF *)
@@ -31378,7 +31378,7 @@ yyreduce:
   case 1296:
 
 /* Line 1455 of yacc.c  */
-#line 9105 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9105 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
          (yyval.dyncol_def_list)= new (thd->mem_root) List<DYNCALL_CREATE_DEF>;
          if ((yyval.dyncol_def_list) == NULL)
@@ -31390,7 +31390,7 @@ yyreduce:
   case 1297:
 
 /* Line 1455 of yacc.c  */
-#line 9112 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9112 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
          (yyvsp[(1) - (3)].dyncol_def_list)->push_back((yyvsp[(3) - (3)].dyncol_def));
          (yyval.dyncol_def_list)= (yyvsp[(1) - (3)].dyncol_def_list);
@@ -31400,7 +31400,7 @@ yyreduce:
   case 1303:
 
 /* Line 1455 of yacc.c  */
-#line 9125 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9125 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *i1= new (thd->mem_root) Item_string((yyvsp[(3) - (3)].lex_str).str,
                                                       (yyvsp[(3) - (3)].lex_str).length,
@@ -31416,7 +31416,7 @@ yyreduce:
   case 1308:
 
 /* Line 1455 of yacc.c  */
-#line 9140 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9140 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_concat((yyvsp[(1) - (3)].item), (yyvsp[(3) - (3)].item));
             if ((yyval.item) == NULL)
@@ -31427,7 +31427,7 @@ yyreduce:
   case 1309:
 
 /* Line 1455 of yacc.c  */
-#line 9146 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9146 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= (yyvsp[(2) - (2)].item);
           }
@@ -31436,7 +31436,7 @@ yyreduce:
   case 1310:
 
 /* Line 1455 of yacc.c  */
-#line 9150 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9150 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_neg((yyvsp[(2) - (2)].item));
             if ((yyval.item) == NULL)
@@ -31447,7 +31447,7 @@ yyreduce:
   case 1311:
 
 /* Line 1455 of yacc.c  */
-#line 9156 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9156 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_bit_neg((yyvsp[(2) - (2)].item));
             if ((yyval.item) == NULL)
@@ -31458,7 +31458,7 @@ yyreduce:
   case 1312:
 
 /* Line 1455 of yacc.c  */
-#line 9162 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9162 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= negate_expression(thd, (yyvsp[(2) - (2)].item));
             if ((yyval.item) == NULL)
@@ -31469,7 +31469,7 @@ yyreduce:
   case 1313:
 
 /* Line 1455 of yacc.c  */
-#line 9168 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9168 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             (yyval.item)= new (thd->mem_root) Item_singlerow_subselect((yyvsp[(2) - (3)].select_lex));
             if ((yyval.item) == NULL)
@@ -31480,14 +31480,14 @@ yyreduce:
   case 1314:
 
 /* Line 1455 of yacc.c  */
-#line 9174 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9174 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(2) - (3)].item); }
     break;
 
   case 1315:
 
 /* Line 1455 of yacc.c  */
-#line 9176 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9176 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(4) - (5)].item_list)->push_front((yyvsp[(2) - (5)].item));
             (yyval.item)= new (thd->mem_root) Item_row(*(yyvsp[(4) - (5)].item_list));
@@ -31499,7 +31499,7 @@ yyreduce:
   case 1316:
 
 /* Line 1455 of yacc.c  */
-#line 9183 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9183 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(5) - (6)].item_list)->push_front((yyvsp[(3) - (6)].item));
             (yyval.item)= new (thd->mem_root) Item_row(*(yyvsp[(5) - (6)].item_list));
@@ -31511,7 +31511,7 @@ yyreduce:
   case 1317:
 
 /* Line 1455 of yacc.c  */
-#line 9190 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9190 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_exists_subselect((yyvsp[(3) - (4)].select_lex));
             if ((yyval.item) == NULL)
@@ -31522,7 +31522,7 @@ yyreduce:
   case 1318:
 
 /* Line 1455 of yacc.c  */
-#line 9196 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9196 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item_string *item;
             (yyval.item)= NULL;
@@ -31570,7 +31570,7 @@ yyreduce:
   case 1319:
 
 /* Line 1455 of yacc.c  */
-#line 9239 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9239 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(2) - (7)].item_list)->push_front((yyvsp[(5) - (7)].item));
             Item_func_match *i1= new (thd->mem_root) Item_func_match(*(yyvsp[(2) - (7)].item_list), (yyvsp[(6) - (7)].num));
@@ -31584,7 +31584,7 @@ yyreduce:
   case 1320:
 
 /* Line 1455 of yacc.c  */
-#line 9248 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9248 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= create_func_cast(thd, (yyvsp[(2) - (2)].item), ITEM_CAST_CHAR, NULL, NULL,
                                  &my_charset_bin);
@@ -31596,7 +31596,7 @@ yyreduce:
   case 1321:
 
 /* Line 1455 of yacc.c  */
-#line 9255 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9255 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.item)= create_func_cast(thd, (yyvsp[(3) - (6)].item), (yyvsp[(5) - (6)].cast_type), lex->length, lex->dec,
@@ -31609,7 +31609,7 @@ yyreduce:
   case 1322:
 
 /* Line 1455 of yacc.c  */
-#line 9263 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9263 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_case(* (yyvsp[(3) - (5)].item_list), (yyvsp[(2) - (5)].item), (yyvsp[(4) - (5)].item) );
             if ((yyval.item) == NULL)
@@ -31620,7 +31620,7 @@ yyreduce:
   case 1323:
 
 /* Line 1455 of yacc.c  */
-#line 9269 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9269 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= create_func_cast(thd, (yyvsp[(3) - (6)].item), (yyvsp[(5) - (6)].cast_type), Lex->length, Lex->dec,
                                  Lex->charset);
@@ -31632,7 +31632,7 @@ yyreduce:
   case 1324:
 
 /* Line 1455 of yacc.c  */
-#line 9276 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9276 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_conv_charset((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].charset));
             if ((yyval.item) == NULL)
@@ -31643,7 +31643,7 @@ yyreduce:
   case 1325:
 
 /* Line 1455 of yacc.c  */
-#line 9282 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9282 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(3) - (4)].item)->is_splocal())
             {
@@ -31662,7 +31662,7 @@ yyreduce:
   case 1326:
 
 /* Line 1455 of yacc.c  */
-#line 9296 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9296 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_insert_value(Lex->current_context(),
                                                         (yyvsp[(3) - (4)].item));
@@ -31674,7 +31674,7 @@ yyreduce:
   case 1327:
 
 /* Line 1455 of yacc.c  */
-#line 9304 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9304 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(5) - (5)].item),(yyvsp[(2) - (5)].item),(yyvsp[(3) - (5)].interval),0);
             if ((yyval.item) == NULL)
@@ -31685,7 +31685,7 @@ yyreduce:
   case 1328:
 
 /* Line 1455 of yacc.c  */
-#line 9319 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9319 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_char(*(yyvsp[(3) - (4)].item_list));
             if ((yyval.item) == NULL)
@@ -31696,7 +31696,7 @@ yyreduce:
   case 1329:
 
 /* Line 1455 of yacc.c  */
-#line 9325 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9325 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_char(*(yyvsp[(3) - (6)].item_list), (yyvsp[(5) - (6)].charset));
             if ((yyval.item) == NULL)
@@ -31707,7 +31707,7 @@ yyreduce:
   case 1330:
 
 /* Line 1455 of yacc.c  */
-#line 9331 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9331 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_current_user(Lex->current_context());
             if ((yyval.item) == NULL)
@@ -31720,7 +31720,7 @@ yyreduce:
   case 1331:
 
 /* Line 1455 of yacc.c  */
-#line 9339 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9339 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_current_role(Lex->current_context());
             if ((yyval.item) == NULL)
@@ -31733,7 +31733,7 @@ yyreduce:
   case 1332:
 
 /* Line 1455 of yacc.c  */
-#line 9347 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9347 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_typecast((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -31744,7 +31744,7 @@ yyreduce:
   case 1333:
 
 /* Line 1455 of yacc.c  */
-#line 9353 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9353 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_dayofmonth((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -31755,7 +31755,7 @@ yyreduce:
   case 1334:
 
 /* Line 1455 of yacc.c  */
-#line 9359 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9359 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_hour((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -31766,7 +31766,7 @@ yyreduce:
   case 1335:
 
 /* Line 1455 of yacc.c  */
-#line 9365 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9365 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_insert((yyvsp[(3) - (10)].item),(yyvsp[(5) - (10)].item),(yyvsp[(7) - (10)].item),(yyvsp[(9) - (10)].item));
             if ((yyval.item) == NULL)
@@ -31777,7 +31777,7 @@ yyreduce:
   case 1336:
 
 /* Line 1455 of yacc.c  */
-#line 9371 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9371 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             List<Item> *list= new (thd->mem_root) List<Item>;
             if (list == NULL)
@@ -31796,7 +31796,7 @@ yyreduce:
   case 1337:
 
 /* Line 1455 of yacc.c  */
-#line 9385 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9385 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(7) - (8)].item_list)->push_front((yyvsp[(5) - (8)].item));
             (yyvsp[(7) - (8)].item_list)->push_front((yyvsp[(3) - (8)].item));
@@ -31812,7 +31812,7 @@ yyreduce:
   case 1338:
 
 /* Line 1455 of yacc.c  */
-#line 9396 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9396 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_left((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -31823,7 +31823,7 @@ yyreduce:
   case 1339:
 
 /* Line 1455 of yacc.c  */
-#line 9402 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9402 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_minute((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -31834,7 +31834,7 @@ yyreduce:
   case 1340:
 
 /* Line 1455 of yacc.c  */
-#line 9408 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9408 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_month((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -31845,7 +31845,7 @@ yyreduce:
   case 1341:
 
 /* Line 1455 of yacc.c  */
-#line 9414 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9414 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_right((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -31856,7 +31856,7 @@ yyreduce:
   case 1342:
 
 /* Line 1455 of yacc.c  */
-#line 9420 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9420 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_second((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -31867,7 +31867,7 @@ yyreduce:
   case 1343:
 
 /* Line 1455 of yacc.c  */
-#line 9426 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9426 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_time_typecast((yyvsp[(3) - (4)].item), AUTO_SEC_PART_DIGITS);
             if ((yyval.item) == NULL)
@@ -31878,7 +31878,7 @@ yyreduce:
   case 1344:
 
 /* Line 1455 of yacc.c  */
-#line 9432 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9432 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_datetime_typecast((yyvsp[(3) - (4)].item), AUTO_SEC_PART_DIGITS);
             if ((yyval.item) == NULL)
@@ -31889,7 +31889,7 @@ yyreduce:
   case 1345:
 
 /* Line 1455 of yacc.c  */
-#line 9438 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9438 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_add_time((yyvsp[(3) - (6)].item), (yyvsp[(5) - (6)].item), 1, 0);
             if ((yyval.item) == NULL)
@@ -31900,7 +31900,7 @@ yyreduce:
   case 1346:
 
 /* Line 1455 of yacc.c  */
-#line 9444 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9444 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_trim((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -31911,7 +31911,7 @@ yyreduce:
   case 1347:
 
 /* Line 1455 of yacc.c  */
-#line 9450 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9450 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_ltrim((yyvsp[(6) - (7)].item),(yyvsp[(4) - (7)].item));
             if ((yyval.item) == NULL)
@@ -31922,7 +31922,7 @@ yyreduce:
   case 1348:
 
 /* Line 1455 of yacc.c  */
-#line 9456 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9456 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_rtrim((yyvsp[(6) - (7)].item),(yyvsp[(4) - (7)].item));
             if ((yyval.item) == NULL)
@@ -31933,7 +31933,7 @@ yyreduce:
   case 1349:
 
 /* Line 1455 of yacc.c  */
-#line 9462 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9462 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_trim((yyvsp[(6) - (7)].item),(yyvsp[(4) - (7)].item));
             if ((yyval.item) == NULL)
@@ -31944,7 +31944,7 @@ yyreduce:
   case 1350:
 
 /* Line 1455 of yacc.c  */
-#line 9468 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9468 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_ltrim((yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -31955,7 +31955,7 @@ yyreduce:
   case 1351:
 
 /* Line 1455 of yacc.c  */
-#line 9474 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9474 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_rtrim((yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -31966,7 +31966,7 @@ yyreduce:
   case 1352:
 
 /* Line 1455 of yacc.c  */
-#line 9480 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9480 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_trim((yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -31977,7 +31977,7 @@ yyreduce:
   case 1353:
 
 /* Line 1455 of yacc.c  */
-#line 9486 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9486 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_trim((yyvsp[(5) - (6)].item),(yyvsp[(3) - (6)].item));
             if ((yyval.item) == NULL)
@@ -31988,7 +31988,7 @@ yyreduce:
   case 1354:
 
 /* Line 1455 of yacc.c  */
-#line 9492 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9492 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_user();
             if ((yyval.item) == NULL)
@@ -32001,7 +32001,7 @@ yyreduce:
   case 1355:
 
 /* Line 1455 of yacc.c  */
-#line 9500 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9500 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_year((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32012,7 +32012,7 @@ yyreduce:
   case 1356:
 
 /* Line 1455 of yacc.c  */
-#line 9521 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9521 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(3) - (6)].item), (yyvsp[(5) - (6)].item),
                                                              INTERVAL_DAY, 0);
@@ -32024,7 +32024,7 @@ yyreduce:
   case 1357:
 
 /* Line 1455 of yacc.c  */
-#line 9528 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9528 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(3) - (8)].item), (yyvsp[(6) - (8)].item), (yyvsp[(7) - (8)].interval), 0);
             if ((yyval.item) == NULL)
@@ -32035,7 +32035,7 @@ yyreduce:
   case 1358:
 
 /* Line 1455 of yacc.c  */
-#line 9534 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9534 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_curdate_local();
             if ((yyval.item) == NULL)
@@ -32047,7 +32047,7 @@ yyreduce:
   case 1359:
 
 /* Line 1455 of yacc.c  */
-#line 9541 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9541 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_curtime_local((yyvsp[(2) - (2)].num));
             if ((yyval.item) == NULL)
@@ -32059,7 +32059,7 @@ yyreduce:
   case 1360:
 
 /* Line 1455 of yacc.c  */
-#line 9549 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9549 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(3) - (8)].item),(yyvsp[(6) - (8)].item),(yyvsp[(7) - (8)].interval),0);
             if ((yyval.item) == NULL)
@@ -32070,7 +32070,7 @@ yyreduce:
   case 1361:
 
 /* Line 1455 of yacc.c  */
-#line 9556 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9556 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(3) - (8)].item),(yyvsp[(6) - (8)].item),(yyvsp[(7) - (8)].interval),1);
             if ((yyval.item) == NULL)
@@ -32081,7 +32081,7 @@ yyreduce:
   case 1362:
 
 /* Line 1455 of yacc.c  */
-#line 9562 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9562 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)=new (thd->mem_root) Item_extract( (yyvsp[(3) - (6)].interval), (yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32092,7 +32092,7 @@ yyreduce:
   case 1363:
 
 /* Line 1455 of yacc.c  */
-#line 9568 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9568 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_get_format((yyvsp[(3) - (6)].date_time_type), (yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32103,7 +32103,7 @@ yyreduce:
   case 1364:
 
 /* Line 1455 of yacc.c  */
-#line 9574 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9574 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_now_local((yyvsp[(2) - (2)].num));
             if ((yyval.item) == NULL)
@@ -32115,7 +32115,7 @@ yyreduce:
   case 1365:
 
 /* Line 1455 of yacc.c  */
-#line 9581 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9581 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item) = new (thd->mem_root) Item_func_locate((yyvsp[(5) - (6)].item),(yyvsp[(3) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32126,7 +32126,7 @@ yyreduce:
   case 1366:
 
 /* Line 1455 of yacc.c  */
-#line 9587 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9587 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(3) - (6)].item), (yyvsp[(5) - (6)].item),
                                                              INTERVAL_DAY, 1);
@@ -32138,7 +32138,7 @@ yyreduce:
   case 1367:
 
 /* Line 1455 of yacc.c  */
-#line 9594 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9594 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(3) - (8)].item), (yyvsp[(6) - (8)].item), (yyvsp[(7) - (8)].interval), 1);
             if ((yyval.item) == NULL)
@@ -32149,7 +32149,7 @@ yyreduce:
   case 1368:
 
 /* Line 1455 of yacc.c  */
-#line 9600 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9600 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_substr((yyvsp[(3) - (8)].item),(yyvsp[(5) - (8)].item),(yyvsp[(7) - (8)].item));
             if ((yyval.item) == NULL)
@@ -32160,7 +32160,7 @@ yyreduce:
   case 1369:
 
 /* Line 1455 of yacc.c  */
-#line 9606 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9606 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_substr((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32171,7 +32171,7 @@ yyreduce:
   case 1370:
 
 /* Line 1455 of yacc.c  */
-#line 9612 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9612 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_substr((yyvsp[(3) - (8)].item),(yyvsp[(5) - (8)].item),(yyvsp[(7) - (8)].item));
             if ((yyval.item) == NULL)
@@ -32182,7 +32182,7 @@ yyreduce:
   case 1371:
 
 /* Line 1455 of yacc.c  */
-#line 9618 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9618 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_substr((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32193,7 +32193,7 @@ yyreduce:
   case 1372:
 
 /* Line 1455 of yacc.c  */
-#line 9624 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9624 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Unlike other time-related functions, SYSDATE() is
@@ -32216,7 +32216,7 @@ yyreduce:
   case 1373:
 
 /* Line 1455 of yacc.c  */
-#line 9642 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9642 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_date_add_interval((yyvsp[(7) - (8)].item),(yyvsp[(5) - (8)].item),(yyvsp[(3) - (8)].interval_time_st),0);
             if ((yyval.item) == NULL)
@@ -32227,7 +32227,7 @@ yyreduce:
   case 1374:
 
 /* Line 1455 of yacc.c  */
-#line 9648 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9648 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_timestamp_diff((yyvsp[(5) - (8)].item),(yyvsp[(7) - (8)].item),(yyvsp[(3) - (8)].interval_time_st));
             if ((yyval.item) == NULL)
@@ -32238,7 +32238,7 @@ yyreduce:
   case 1375:
 
 /* Line 1455 of yacc.c  */
-#line 9654 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9654 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_curdate_utc();
             if ((yyval.item) == NULL)
@@ -32250,7 +32250,7 @@ yyreduce:
   case 1376:
 
 /* Line 1455 of yacc.c  */
-#line 9661 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9661 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_curtime_utc((yyvsp[(2) - (2)].num));
             if ((yyval.item) == NULL)
@@ -32262,7 +32262,7 @@ yyreduce:
   case 1377:
 
 /* Line 1455 of yacc.c  */
-#line 9668 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9668 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_now_utc((yyvsp[(2) - (2)].num));
             if ((yyval.item) == NULL)
@@ -32274,7 +32274,7 @@ yyreduce:
   case 1378:
 
 /* Line 1455 of yacc.c  */
-#line 9676 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9676 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= create_func_dyncol_add(thd, (yyvsp[(3) - (6)].item), *(yyvsp[(5) - (6)].dyncol_def_list));
             if ((yyval.item) == NULL)
@@ -32285,7 +32285,7 @@ yyreduce:
   case 1379:
 
 /* Line 1455 of yacc.c  */
-#line 9683 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9683 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= create_func_dyncol_delete(thd, (yyvsp[(3) - (6)].item), *(yyvsp[(5) - (6)].item_list));
             if ((yyval.item) == NULL)
@@ -32296,7 +32296,7 @@ yyreduce:
   case 1380:
 
 /* Line 1455 of yacc.c  */
-#line 9690 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9690 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_dyncol_check((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32307,7 +32307,7 @@ yyreduce:
   case 1381:
 
 /* Line 1455 of yacc.c  */
-#line 9697 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9697 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= create_func_dyncol_create(thd, *(yyvsp[(3) - (4)].dyncol_def_list));
             if ((yyval.item) == NULL)
@@ -32318,7 +32318,7 @@ yyreduce:
   case 1382:
 
 /* Line 1455 of yacc.c  */
-#line 9704 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9704 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             (yyval.item)= create_func_dyncol_get(thd, (yyvsp[(3) - (8)].item), (yyvsp[(5) - (8)].item), (yyvsp[(7) - (8)].cast_type),
@@ -32332,7 +32332,7 @@ yyreduce:
   case 1383:
 
 /* Line 1455 of yacc.c  */
-#line 9721 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9721 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_ascii((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32343,7 +32343,7 @@ yyreduce:
   case 1384:
 
 /* Line 1455 of yacc.c  */
-#line 9727 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9727 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_charset((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32354,7 +32354,7 @@ yyreduce:
   case 1385:
 
 /* Line 1455 of yacc.c  */
-#line 9733 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9733 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_coalesce(* (yyvsp[(3) - (4)].item_list));
             if ((yyval.item) == NULL)
@@ -32365,7 +32365,7 @@ yyreduce:
   case 1386:
 
 /* Line 1455 of yacc.c  */
-#line 9739 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9739 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_collation((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32376,7 +32376,7 @@ yyreduce:
   case 1387:
 
 /* Line 1455 of yacc.c  */
-#line 9745 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9745 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_database();
             if ((yyval.item) == NULL)
@@ -32388,7 +32388,7 @@ yyreduce:
   case 1388:
 
 /* Line 1455 of yacc.c  */
-#line 9752 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9752 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_if((yyvsp[(3) - (8)].item),(yyvsp[(5) - (8)].item),(yyvsp[(7) - (8)].item));
             if ((yyval.item) == NULL)
@@ -32399,7 +32399,7 @@ yyreduce:
   case 1389:
 
 /* Line 1455 of yacc.c  */
-#line 9758 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9758 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_last_value(* (yyvsp[(3) - (4)].item_list));
             if ((yyval.item) == NULL)
@@ -32410,7 +32410,7 @@ yyreduce:
   case 1390:
 
 /* Line 1455 of yacc.c  */
-#line 9764 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9764 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_microsecond((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32421,7 +32421,7 @@ yyreduce:
   case 1391:
 
 /* Line 1455 of yacc.c  */
-#line 9770 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9770 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item) = new (thd->mem_root) Item_func_mod((yyvsp[(3) - (6)].item), (yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32432,7 +32432,7 @@ yyreduce:
   case 1392:
 
 /* Line 1455 of yacc.c  */
-#line 9776 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9776 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)=  new (thd->mem_root) Item_func_old_password((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32443,7 +32443,7 @@ yyreduce:
   case 1393:
 
 /* Line 1455 of yacc.c  */
-#line 9782 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9782 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item* i1;
             if (thd->variables.old_passwords)
@@ -32459,7 +32459,7 @@ yyreduce:
   case 1394:
 
 /* Line 1455 of yacc.c  */
-#line 9793 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9793 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item) = new (thd->mem_root) Item_func_quarter((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32470,7 +32470,7 @@ yyreduce:
   case 1395:
 
 /* Line 1455 of yacc.c  */
-#line 9799 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9799 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_repeat((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32481,7 +32481,7 @@ yyreduce:
   case 1396:
 
 /* Line 1455 of yacc.c  */
-#line 9805 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9805 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_replace((yyvsp[(3) - (8)].item),(yyvsp[(5) - (8)].item),(yyvsp[(7) - (8)].item));
             if ((yyval.item) == NULL)
@@ -32492,7 +32492,7 @@ yyreduce:
   case 1397:
 
 /* Line 1455 of yacc.c  */
-#line 9811 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9811 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_reverse((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32503,7 +32503,7 @@ yyreduce:
   case 1398:
 
 /* Line 1455 of yacc.c  */
-#line 9817 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9817 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_row_count();
             if ((yyval.item) == NULL)
@@ -32516,7 +32516,7 @@ yyreduce:
   case 1399:
 
 /* Line 1455 of yacc.c  */
-#line 9825 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9825 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_round((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item),1);
             if ((yyval.item) == NULL)
@@ -32527,7 +32527,7 @@ yyreduce:
   case 1400:
 
 /* Line 1455 of yacc.c  */
-#line 9831 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9831 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *i1= new (thd->mem_root) Item_int((char*) "0",
                                            thd->variables.default_week_format,
@@ -32543,7 +32543,7 @@ yyreduce:
   case 1401:
 
 /* Line 1455 of yacc.c  */
-#line 9842 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9842 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_week((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item));
             if ((yyval.item) == NULL)
@@ -32554,7 +32554,7 @@ yyreduce:
   case 1402:
 
 /* Line 1455 of yacc.c  */
-#line 9848 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9848 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_weight_string((yyvsp[(3) - (5)].item), 0, 0, (yyvsp[(4) - (5)].ulong_num));
             if ((yyval.item) == NULL)
@@ -32565,7 +32565,7 @@ yyreduce:
   case 1403:
 
 /* Line 1455 of yacc.c  */
-#line 9854 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9854 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root)
                 Item_func_weight_string((yyvsp[(3) - (8)].item), 0, (yyvsp[(6) - (8)].ulong_num),
@@ -32578,7 +32578,7 @@ yyreduce:
   case 1404:
 
 /* Line 1455 of yacc.c  */
-#line 9862 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9862 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root) Item_char_typecast((yyvsp[(3) - (7)].item), (yyvsp[(6) - (7)].ulong_num), &my_charset_bin);
             if (item == NULL)
@@ -32593,7 +32593,7 @@ yyreduce:
   case 1405:
 
 /* Line 1455 of yacc.c  */
-#line 9872 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9872 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_weight_string((yyvsp[(3) - (10)].item), (yyvsp[(5) - (10)].ulong_num), (yyvsp[(7) - (10)].ulong_num), (yyvsp[(9) - (10)].ulong_num));
             if ((yyval.item) == NULL)
@@ -32604,7 +32604,7 @@ yyreduce:
   case 1406:
 
 /* Line 1455 of yacc.c  */
-#line 9878 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9878 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 #ifdef HAVE_SPATIAL
             (yyval.item)= (yyvsp[(1) - (1)].item);
@@ -32622,7 +32622,7 @@ yyreduce:
   case 1407:
 
 /* Line 1455 of yacc.c  */
-#line 9894 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9894 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd,
                          Item_func_spatial_rel((yyvsp[(3) - (6)].item), (yyvsp[(5) - (6)].item),
@@ -32633,7 +32633,7 @@ yyreduce:
   case 1408:
 
 /* Line 1455 of yacc.c  */
-#line 9900 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9900 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd,
                          Item_func_spatial_collection(* (yyvsp[(3) - (4)].item_list),
@@ -32645,7 +32645,7 @@ yyreduce:
   case 1409:
 
 /* Line 1455 of yacc.c  */
-#line 9907 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9907 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd,
                          Item_func_spatial_collection(* (yyvsp[(3) - (4)].item_list),
@@ -32657,7 +32657,7 @@ yyreduce:
   case 1410:
 
 /* Line 1455 of yacc.c  */
-#line 9914 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9914 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd,
                          Item_func_spatial_collection(* (yyvsp[(3) - (4)].item_list),
@@ -32669,7 +32669,7 @@ yyreduce:
   case 1411:
 
 /* Line 1455 of yacc.c  */
-#line 9921 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9921 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd,
                          Item_func_spatial_collection(* (yyvsp[(3) - (4)].item_list),
@@ -32681,7 +32681,7 @@ yyreduce:
   case 1412:
 
 /* Line 1455 of yacc.c  */
-#line 9928 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9928 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd,
                          Item_func_spatial_collection(* (yyvsp[(3) - (4)].item_list),
@@ -32693,7 +32693,7 @@ yyreduce:
   case 1413:
 
 /* Line 1455 of yacc.c  */
-#line 9935 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9935 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd, Item_func_point((yyvsp[(3) - (6)].item),(yyvsp[(5) - (6)].item)));
           }
@@ -32702,7 +32702,7 @@ yyreduce:
   case 1414:
 
 /* Line 1455 of yacc.c  */
-#line 9939 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9939 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= GEOM_NEW(thd,
                          Item_func_spatial_collection(* (yyvsp[(3) - (4)].item_list),
@@ -32714,7 +32714,7 @@ yyreduce:
   case 1415:
 
 /* Line 1455 of yacc.c  */
-#line 9958 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9958 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 #ifdef HAVE_DLOPEN
             udf_func *udf= 0;
@@ -32738,7 +32738,7 @@ yyreduce:
   case 1416:
 
 /* Line 1455 of yacc.c  */
-#line 9977 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 9977 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Create_func *builder;
             Item *item= NULL;
@@ -32796,7 +32796,7 @@ yyreduce:
   case 1417:
 
 /* Line 1455 of yacc.c  */
-#line 10030 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10030 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Create_qfunc *builder;
             Item *item= NULL;
@@ -32839,63 +32839,63 @@ yyreduce:
   case 1418:
 
 /* Line 1455 of yacc.c  */
-#line 10071 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10071 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (yyvsp[(1) - (2)].num) | (yyvsp[(2) - (2)].num); }
     break;
 
   case 1419:
 
 /* Line 1455 of yacc.c  */
-#line 10073 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10073 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= FT_BOOL; }
     break;
 
   case 1420:
 
 /* Line 1455 of yacc.c  */
-#line 10077 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10077 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= FT_NL; }
     break;
 
   case 1421:
 
 /* Line 1455 of yacc.c  */
-#line 10078 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10078 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= FT_NL; }
     break;
 
   case 1422:
 
 /* Line 1455 of yacc.c  */
-#line 10082 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10082 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0;         }
     break;
 
   case 1423:
 
 /* Line 1455 of yacc.c  */
-#line 10083 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10083 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= FT_EXPAND; }
     break;
 
   case 1424:
 
 /* Line 1455 of yacc.c  */
-#line 10087 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10087 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item_list)= NULL; }
     break;
 
   case 1425:
 
 /* Line 1455 of yacc.c  */
-#line 10088 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10088 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item_list)= (yyvsp[(1) - (1)].item_list); }
     break;
 
   case 1426:
 
 /* Line 1455 of yacc.c  */
-#line 10093 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10093 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item_list)= new (thd->mem_root) List<Item>;
             if ((yyval.item_list) == NULL)
@@ -32907,7 +32907,7 @@ yyreduce:
   case 1427:
 
 /* Line 1455 of yacc.c  */
-#line 10100 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10100 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(1) - (3)].item_list)->push_back((yyvsp[(3) - (3)].item));
             (yyval.item_list)= (yyvsp[(1) - (3)].item_list);
@@ -32917,7 +32917,7 @@ yyreduce:
   case 1428:
 
 /* Line 1455 of yacc.c  */
-#line 10108 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10108 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
              Use Item::name as a storage for the attribute value of user
@@ -32945,7 +32945,7 @@ yyreduce:
   case 1429:
 
 /* Line 1455 of yacc.c  */
-#line 10134 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10134 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_avg((yyvsp[(3) - (4)].item), FALSE);
             if ((yyval.item) == NULL)
@@ -32956,7 +32956,7 @@ yyreduce:
   case 1430:
 
 /* Line 1455 of yacc.c  */
-#line 10140 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10140 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_avg((yyvsp[(4) - (5)].item), TRUE);
             if ((yyval.item) == NULL)
@@ -32967,7 +32967,7 @@ yyreduce:
   case 1431:
 
 /* Line 1455 of yacc.c  */
-#line 10146 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10146 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_and((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32978,7 +32978,7 @@ yyreduce:
   case 1432:
 
 /* Line 1455 of yacc.c  */
-#line 10152 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10152 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_or((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -32989,7 +32989,7 @@ yyreduce:
   case 1433:
 
 /* Line 1455 of yacc.c  */
-#line 10158 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10158 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_xor((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -33000,7 +33000,7 @@ yyreduce:
   case 1434:
 
 /* Line 1455 of yacc.c  */
-#line 10164 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10164 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *item= new (thd->mem_root) Item_int((int32) 0L,1);
             if (item == NULL)
@@ -33014,7 +33014,7 @@ yyreduce:
   case 1435:
 
 /* Line 1455 of yacc.c  */
-#line 10173 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10173 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_count((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -33025,21 +33025,21 @@ yyreduce:
   case 1436:
 
 /* Line 1455 of yacc.c  */
-#line 10179 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10179 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->in_sum_expr++; }
     break;
 
   case 1437:
 
 /* Line 1455 of yacc.c  */
-#line 10181 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10181 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->in_sum_expr--; }
     break;
 
   case 1438:
 
 /* Line 1455 of yacc.c  */
-#line 10183 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10183 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_count(* (yyvsp[(5) - (7)].item_list));
             if ((yyval.item) == NULL)
@@ -33050,7 +33050,7 @@ yyreduce:
   case 1439:
 
 /* Line 1455 of yacc.c  */
-#line 10189 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10189 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_min((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -33061,7 +33061,7 @@ yyreduce:
   case 1440:
 
 /* Line 1455 of yacc.c  */
-#line 10200 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10200 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_min((yyvsp[(4) - (5)].item));
             if ((yyval.item) == NULL)
@@ -33072,7 +33072,7 @@ yyreduce:
   case 1441:
 
 /* Line 1455 of yacc.c  */
-#line 10206 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10206 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_max((yyvsp[(3) - (4)].item));
             if ((yyval.item) == NULL)
@@ -33083,7 +33083,7 @@ yyreduce:
   case 1442:
 
 /* Line 1455 of yacc.c  */
-#line 10212 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10212 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_max((yyvsp[(4) - (5)].item));
             if ((yyval.item) == NULL)
@@ -33094,7 +33094,7 @@ yyreduce:
   case 1443:
 
 /* Line 1455 of yacc.c  */
-#line 10218 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10218 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_std((yyvsp[(3) - (4)].item), 0);
             if ((yyval.item) == NULL)
@@ -33105,7 +33105,7 @@ yyreduce:
   case 1444:
 
 /* Line 1455 of yacc.c  */
-#line 10224 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10224 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_variance((yyvsp[(3) - (4)].item), 0);
             if ((yyval.item) == NULL)
@@ -33116,7 +33116,7 @@ yyreduce:
   case 1445:
 
 /* Line 1455 of yacc.c  */
-#line 10230 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10230 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_std((yyvsp[(3) - (4)].item), 1);
             if ((yyval.item) == NULL)
@@ -33127,7 +33127,7 @@ yyreduce:
   case 1446:
 
 /* Line 1455 of yacc.c  */
-#line 10236 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10236 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_variance((yyvsp[(3) - (4)].item), 1);
             if ((yyval.item) == NULL)
@@ -33138,7 +33138,7 @@ yyreduce:
   case 1447:
 
 /* Line 1455 of yacc.c  */
-#line 10242 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10242 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_sum((yyvsp[(3) - (4)].item), FALSE);
             if ((yyval.item) == NULL)
@@ -33149,7 +33149,7 @@ yyreduce:
   case 1448:
 
 /* Line 1455 of yacc.c  */
-#line 10248 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10248 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_sum_sum((yyvsp[(4) - (5)].item), TRUE);
             if ((yyval.item) == NULL)
@@ -33160,14 +33160,14 @@ yyreduce:
   case 1449:
 
 /* Line 1455 of yacc.c  */
-#line 10254 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10254 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->in_sum_expr++; }
     break;
 
   case 1450:
 
 /* Line 1455 of yacc.c  */
-#line 10258 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10258 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             sel->in_sum_expr--;
@@ -33184,7 +33184,7 @@ yyreduce:
   case 1451:
 
 /* Line 1455 of yacc.c  */
-#line 10273 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10273 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (! Lex->parsing_options.allows_variable)
             {
@@ -33197,7 +33197,7 @@ yyreduce:
   case 1452:
 
 /* Line 1455 of yacc.c  */
-#line 10281 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10281 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= (yyvsp[(3) - (3)].item);
           }
@@ -33206,7 +33206,7 @@ yyreduce:
   case 1453:
 
 /* Line 1455 of yacc.c  */
-#line 10288 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10288 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item_func_set_user_var *item;
             (yyval.item)= item= new (thd->mem_root) Item_func_set_user_var((yyvsp[(1) - (3)].lex_str), (yyvsp[(3) - (3)].item));
@@ -33221,7 +33221,7 @@ yyreduce:
   case 1454:
 
 /* Line 1455 of yacc.c  */
-#line 10298 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10298 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_func_get_user_var((yyvsp[(1) - (1)].lex_str));
             if ((yyval.item) == NULL)
@@ -33234,7 +33234,7 @@ yyreduce:
   case 1455:
 
 /* Line 1455 of yacc.c  */
-#line 10306 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10306 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* disallow "SELECT @@global.global.variable" */
             if ((yyvsp[(3) - (4)].lex_str).str && (yyvsp[(4) - (4)].lex_str).str && check_reserved_words(&(yyvsp[(3) - (4)].lex_str)))
@@ -33252,21 +33252,21 @@ yyreduce:
   case 1456:
 
 /* Line 1455 of yacc.c  */
-#line 10321 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10321 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 0; }
     break;
 
   case 1457:
 
 /* Line 1455 of yacc.c  */
-#line 10322 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10322 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 1; }
     break;
 
   case 1458:
 
 /* Line 1455 of yacc.c  */
-#line 10327 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10327 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.string)= new (thd->mem_root) String(",", 1, &my_charset_latin1);
             if ((yyval.string) == NULL)
@@ -33277,14 +33277,14 @@ yyreduce:
   case 1459:
 
 /* Line 1455 of yacc.c  */
-#line 10332 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10332 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.string) = (yyvsp[(2) - (2)].string); }
     break;
 
   case 1461:
 
 /* Line 1455 of yacc.c  */
-#line 10338 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10338 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             SELECT_LEX *sel= lex->current_select;
@@ -33302,21 +33302,21 @@ yyreduce:
   case 1463:
 
 /* Line 1455 of yacc.c  */
-#line 10355 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10355 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { if (add_gorder_to_list(thd, (yyvsp[(3) - (4)].item),(bool) (yyvsp[(4) - (4)].num))) MYSQL_YYABORT; }
     break;
 
   case 1464:
 
 /* Line 1455 of yacc.c  */
-#line 10357 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10357 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { if (add_gorder_to_list(thd, (yyvsp[(1) - (2)].item),(bool) (yyvsp[(2) - (2)].num))) MYSQL_YYABORT; }
     break;
 
   case 1465:
 
 /* Line 1455 of yacc.c  */
-#line 10362 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10362 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->current_select->inc_in_sum_expr())
@@ -33330,7 +33330,7 @@ yyreduce:
   case 1466:
 
 /* Line 1455 of yacc.c  */
-#line 10371 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10371 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->in_sum_expr--;
             (yyval.item)= (yyvsp[(3) - (3)].item);
@@ -33340,70 +33340,70 @@ yyreduce:
   case 1467:
 
 /* Line 1455 of yacc.c  */
-#line 10379 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10379 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_CHAR; Lex->charset= &my_charset_bin; Lex->dec= 0; }
     break;
 
   case 1468:
 
 /* Line 1455 of yacc.c  */
-#line 10381 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10381 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_CHAR; Lex->dec= 0; }
     break;
 
   case 1469:
 
 /* Line 1455 of yacc.c  */
-#line 10383 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10383 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_CHAR; Lex->charset= national_charset_info; Lex->dec=0; }
     break;
 
   case 1470:
 
 /* Line 1455 of yacc.c  */
-#line 10385 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10385 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_SIGNED_INT; Lex->charset= NULL; Lex->dec=Lex->length= (char*)0; }
     break;
 
   case 1471:
 
 /* Line 1455 of yacc.c  */
-#line 10387 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10387 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_SIGNED_INT; Lex->charset= NULL; Lex->dec=Lex->length= (char*)0; }
     break;
 
   case 1472:
 
 /* Line 1455 of yacc.c  */
-#line 10389 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10389 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_SIGNED_INT; Lex->charset= NULL; Lex->dec=Lex->length= (char*)0; }
     break;
 
   case 1473:
 
 /* Line 1455 of yacc.c  */
-#line 10391 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10391 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_UNSIGNED_INT; Lex->charset= NULL; Lex->dec=Lex->length= (char*)0; }
     break;
 
   case 1474:
 
 /* Line 1455 of yacc.c  */
-#line 10393 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10393 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_UNSIGNED_INT; Lex->charset= NULL; Lex->dec=Lex->length= (char*)0; }
     break;
 
   case 1475:
 
 /* Line 1455 of yacc.c  */
-#line 10395 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10395 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_DATE; Lex->charset= NULL; Lex->dec=Lex->length= (char*)0; }
     break;
 
   case 1476:
 
 /* Line 1455 of yacc.c  */
-#line 10397 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10397 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.cast_type)=ITEM_CAST_TIME;
             LEX *lex= Lex;
@@ -33414,7 +33414,7 @@ yyreduce:
   case 1477:
 
 /* Line 1455 of yacc.c  */
-#line 10403 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10403 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.cast_type)=ITEM_CAST_DATETIME;
             LEX *lex= Lex;
@@ -33425,42 +33425,42 @@ yyreduce:
   case 1478:
 
 /* Line 1455 of yacc.c  */
-#line 10409 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10409 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_DECIMAL; Lex->charset= NULL; }
     break;
 
   case 1479:
 
 /* Line 1455 of yacc.c  */
-#line 10411 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10411 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->charset= NULL; Lex->length= Lex->dec= 0;}
     break;
 
   case 1480:
 
 /* Line 1455 of yacc.c  */
-#line 10413 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10413 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.cast_type)=ITEM_CAST_DOUBLE; }
     break;
 
   case 1481:
 
 /* Line 1455 of yacc.c  */
-#line 10416 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10416 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item_list)= NULL; }
     break;
 
   case 1482:
 
 /* Line 1455 of yacc.c  */
-#line 10417 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10417 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item_list)= (yyvsp[(1) - (1)].item_list);}
     break;
 
   case 1483:
 
 /* Line 1455 of yacc.c  */
-#line 10422 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10422 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item_list)= new (thd->mem_root) List<Item>;
             if ((yyval.item_list) == NULL)
@@ -33472,7 +33472,7 @@ yyreduce:
   case 1484:
 
 /* Line 1455 of yacc.c  */
-#line 10429 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10429 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(1) - (3)].item_list)->push_back((yyvsp[(3) - (3)].item));
             (yyval.item_list)= (yyvsp[(1) - (3)].item_list);
@@ -33482,21 +33482,21 @@ yyreduce:
   case 1485:
 
 /* Line 1455 of yacc.c  */
-#line 10436 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10436 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item_list)= (yyvsp[(1) - (1)].item_list); }
     break;
 
   case 1486:
 
 /* Line 1455 of yacc.c  */
-#line 10437 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10437 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item_list)= (yyvsp[(2) - (3)].item_list); }
     break;
 
   case 1487:
 
 /* Line 1455 of yacc.c  */
-#line 10442 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10442 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item_list)= new (thd->mem_root) List<Item>;
             if ((yyval.item_list) == NULL)
@@ -33508,7 +33508,7 @@ yyreduce:
   case 1488:
 
 /* Line 1455 of yacc.c  */
-#line 10449 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10449 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(1) - (3)].item_list)->push_back((yyvsp[(3) - (3)].item));
             (yyval.item_list)= (yyvsp[(1) - (3)].item_list);
@@ -33518,35 +33518,35 @@ yyreduce:
   case 1489:
 
 /* Line 1455 of yacc.c  */
-#line 10456 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10456 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= NULL; }
     break;
 
   case 1490:
 
 /* Line 1455 of yacc.c  */
-#line 10457 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10457 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item); }
     break;
 
   case 1491:
 
 /* Line 1455 of yacc.c  */
-#line 10461 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10461 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= NULL; }
     break;
 
   case 1492:
 
 /* Line 1455 of yacc.c  */
-#line 10462 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10462 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(2) - (2)].item); }
     break;
 
   case 1493:
 
 /* Line 1455 of yacc.c  */
-#line 10467 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10467 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item_list)= new List<Item>;
             if ((yyval.item_list) == NULL)
@@ -33559,7 +33559,7 @@ yyreduce:
   case 1494:
 
 /* Line 1455 of yacc.c  */
-#line 10475 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10475 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(1) - (5)].item_list)->push_back((yyvsp[(3) - (5)].item));
             (yyvsp[(1) - (5)].item_list)->push_back((yyvsp[(5) - (5)].item));
@@ -33570,14 +33570,14 @@ yyreduce:
   case 1495:
 
 /* Line 1455 of yacc.c  */
-#line 10485 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10485 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.table_list)=(yyvsp[(1) - (1)].table_list); }
     break;
 
   case 1496:
 
 /* Line 1455 of yacc.c  */
-#line 10487 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10487 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (!((yyval.table_list)= lex->current_select->nest_last_join(lex->thd)))
@@ -33591,35 +33591,35 @@ yyreduce:
   case 1497:
 
 /* Line 1455 of yacc.c  */
-#line 10498 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10498 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { MYSQL_YYABORT_UNLESS((yyval.table_list)=(yyvsp[(1) - (1)].table_list)); }
     break;
 
   case 1498:
 
 /* Line 1455 of yacc.c  */
-#line 10509 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10509 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.table_list)=(yyvsp[(1) - (1)].table_list); }
     break;
 
   case 1499:
 
 /* Line 1455 of yacc.c  */
-#line 10510 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10510 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.table_list)=(yyvsp[(3) - (4)].table_list); }
     break;
 
   case 1500:
 
 /* Line 1455 of yacc.c  */
-#line 10516 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10516 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.table_list)=(yyvsp[(1) - (1)].table_list); }
     break;
 
   case 1501:
 
 /* Line 1455 of yacc.c  */
-#line 10518 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10518 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (3)].table_list) && ((yyval.table_list)=(yyvsp[(3) - (3)].table_list)));
           }
@@ -33628,14 +33628,14 @@ yyreduce:
   case 1502:
 
 /* Line 1455 of yacc.c  */
-#line 10538 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10538 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { MYSQL_YYABORT_UNLESS((yyvsp[(1) - (3)].table_list) && ((yyval.table_list)=(yyvsp[(3) - (3)].table_list))); (yyvsp[(3) - (3)].table_list)->straight=(yyvsp[(2) - (3)].num); }
     break;
 
   case 1503:
 
 /* Line 1455 of yacc.c  */
-#line 10541 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10541 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (4)].table_list) && (yyvsp[(3) - (4)].table_list));
             /* Change the current name resolution context to a local context. */
@@ -33648,7 +33648,7 @@ yyreduce:
   case 1504:
 
 /* Line 1455 of yacc.c  */
-#line 10549 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10549 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 	    (yyvsp[(3) - (6)].table_list)->straight=(yyvsp[(2) - (6)].num);
             add_join_on((yyvsp[(3) - (6)].table_list),(yyvsp[(6) - (6)].item));
@@ -33660,7 +33660,7 @@ yyreduce:
   case 1505:
 
 /* Line 1455 of yacc.c  */
-#line 10557 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10557 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (4)].table_list) && (yyvsp[(3) - (4)].table_list));
           }
@@ -33669,7 +33669,7 @@ yyreduce:
   case 1506:
 
 /* Line 1455 of yacc.c  */
-#line 10561 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10561 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
 	    (yyvsp[(3) - (8)].table_list)->straight=(yyvsp[(2) - (8)].num);
             add_join_natural((yyvsp[(1) - (8)].table_list),(yyvsp[(3) - (8)].table_list),(yyvsp[(7) - (8)].string_list),Select); 
@@ -33680,7 +33680,7 @@ yyreduce:
   case 1507:
 
 /* Line 1455 of yacc.c  */
-#line 10567 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10567 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (4)].table_list) && ((yyval.table_list)=(yyvsp[(4) - (4)].table_list)));
 	    (yyvsp[(4) - (4)].table_list)->straight=(yyvsp[(3) - (4)].num);
@@ -33691,7 +33691,7 @@ yyreduce:
   case 1508:
 
 /* Line 1455 of yacc.c  */
-#line 10576 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10576 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (6)].table_list) && (yyvsp[(5) - (6)].table_list));
             /* Change the current name resolution context to a local context. */
@@ -33704,7 +33704,7 @@ yyreduce:
   case 1509:
 
 /* Line 1455 of yacc.c  */
-#line 10584 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10584 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             add_join_on((yyvsp[(5) - (8)].table_list),(yyvsp[(8) - (8)].item));
             Lex->pop_context();
@@ -33717,7 +33717,7 @@ yyreduce:
   case 1510:
 
 /* Line 1455 of yacc.c  */
-#line 10592 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10592 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (5)].table_list) && (yyvsp[(5) - (5)].table_list));
           }
@@ -33726,7 +33726,7 @@ yyreduce:
   case 1511:
 
 /* Line 1455 of yacc.c  */
-#line 10596 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10596 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             add_join_natural((yyvsp[(1) - (10)].table_list),(yyvsp[(5) - (10)].table_list),(yyvsp[(9) - (10)].string_list),Select); 
             (yyvsp[(5) - (10)].table_list)->outer_join|=JOIN_TYPE_LEFT; 
@@ -33737,7 +33737,7 @@ yyreduce:
   case 1512:
 
 /* Line 1455 of yacc.c  */
-#line 10602 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10602 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (6)].table_list) && (yyvsp[(6) - (6)].table_list));
             add_join_natural((yyvsp[(1) - (6)].table_list),(yyvsp[(6) - (6)].table_list),NULL,Select);
@@ -33749,7 +33749,7 @@ yyreduce:
   case 1513:
 
 /* Line 1455 of yacc.c  */
-#line 10612 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10612 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (6)].table_list) && (yyvsp[(5) - (6)].table_list));
             /* Change the current name resolution context to a local context. */
@@ -33762,7 +33762,7 @@ yyreduce:
   case 1514:
 
 /* Line 1455 of yacc.c  */
-#line 10620 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10620 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (!((yyval.table_list)= lex->current_select->convert_right_join()))
@@ -33776,7 +33776,7 @@ yyreduce:
   case 1515:
 
 /* Line 1455 of yacc.c  */
-#line 10629 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10629 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (5)].table_list) && (yyvsp[(5) - (5)].table_list));
           }
@@ -33785,7 +33785,7 @@ yyreduce:
   case 1516:
 
 /* Line 1455 of yacc.c  */
-#line 10633 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10633 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (!((yyval.table_list)= lex->current_select->convert_right_join()))
@@ -33797,7 +33797,7 @@ yyreduce:
   case 1517:
 
 /* Line 1455 of yacc.c  */
-#line 10640 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10640 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (6)].table_list) && (yyvsp[(6) - (6)].table_list));
             add_join_natural((yyvsp[(6) - (6)].table_list),(yyvsp[(1) - (6)].table_list),NULL,Select);
@@ -33810,49 +33810,49 @@ yyreduce:
   case 1518:
 
 /* Line 1455 of yacc.c  */
-#line 10651 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10651 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 0; }
     break;
 
   case 1519:
 
 /* Line 1455 of yacc.c  */
-#line 10652 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10652 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 0; }
     break;
 
   case 1520:
 
 /* Line 1455 of yacc.c  */
-#line 10653 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10653 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 1; }
     break;
 
   case 1521:
 
 /* Line 1455 of yacc.c  */
-#line 10657 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10657 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = (yyvsp[(1) - (1)].num); }
     break;
 
   case 1522:
 
 /* Line 1455 of yacc.c  */
-#line 10658 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10658 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) = 0; }
     break;
 
   case 1523:
 
 /* Line 1455 of yacc.c  */
-#line 10666 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10666 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.string_list)= 0;}
     break;
 
   case 1525:
 
 /* Line 1455 of yacc.c  */
-#line 10672 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10672 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.string_list)= (yyvsp[(3) - (5)].string_list);
           }
@@ -33861,7 +33861,7 @@ yyreduce:
   case 1526:
 
 /* Line 1455 of yacc.c  */
-#line 10686 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10686 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             sel->table_join_options= 0;
@@ -33871,7 +33871,7 @@ yyreduce:
   case 1527:
 
 /* Line 1455 of yacc.c  */
-#line 10691 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10691 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.table_list)= Select->add_table_to_list(thd, (yyvsp[(2) - (5)].table), (yyvsp[(4) - (5)].lex_str_ptr),
                                                 Select->get_table_join_options(),
@@ -33887,7 +33887,7 @@ yyreduce:
   case 1528:
 
 /* Line 1455 of yacc.c  */
-#line 10702 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10702 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             SELECT_LEX *sel= lex->current_select;
@@ -33914,7 +33914,7 @@ yyreduce:
   case 1529:
 
 /* Line 1455 of yacc.c  */
-#line 10742 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10742 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* Use $2 instead of Lex->current_select as derived table will
                alter value of Lex->current_select. */
@@ -33973,7 +33973,7 @@ yyreduce:
   case 1530:
 
 /* Line 1455 of yacc.c  */
-#line 10818 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10818 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(1) - (2)].table_list) && (yyvsp[(2) - (2)].is_not_empty))
             {
@@ -33986,7 +33986,7 @@ yyreduce:
   case 1531:
 
 /* Line 1455 of yacc.c  */
-#line 10828 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10828 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_select_to_union_list(Lex, (bool)(yyvsp[(3) - (3)].num), FALSE))
               MYSQL_YYABORT;
@@ -33996,7 +33996,7 @@ yyreduce:
   case 1532:
 
 /* Line 1455 of yacc.c  */
-#line 10833 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10833 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Remove from the name resolution context stack the context of the
@@ -34009,7 +34009,7 @@ yyreduce:
   case 1533:
 
 /* Line 1455 of yacc.c  */
-#line 10841 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10841 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(1) - (7)].table_list) != NULL)
             {
@@ -34022,7 +34022,7 @@ yyreduce:
   case 1534:
 
 /* Line 1455 of yacc.c  */
-#line 10853 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10853 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             SELECT_LEX * sel= lex->current_select;
@@ -34043,7 +34043,7 @@ yyreduce:
   case 1535:
 
 /* Line 1455 of yacc.c  */
-#line 10872 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10872 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             SELECT_LEX *sel= lex->current_select;
@@ -34056,7 +34056,7 @@ yyreduce:
   case 1536:
 
 /* Line 1455 of yacc.c  */
-#line 10880 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10880 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= NO_MATTER;
           }
@@ -34065,7 +34065,7 @@ yyreduce:
   case 1538:
 
 /* Line 1455 of yacc.c  */
-#line 10889 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10889 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if ((yyvsp[(1) - (1)].select_lex)->init_nested_join(lex->thd))
@@ -34076,7 +34076,7 @@ yyreduce:
   case 1539:
 
 /* Line 1455 of yacc.c  */
-#line 10895 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10895 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             /* for normal joins, $3 != NULL and end_nested_join() != NULL,
@@ -34095,7 +34095,7 @@ yyreduce:
   case 1540:
 
 /* Line 1455 of yacc.c  */
-#line 10911 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10911 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->derived_tables|= DERIVED_SUBQUERY;
@@ -34117,7 +34117,7 @@ yyreduce:
   case 1541:
 
 /* Line 1455 of yacc.c  */
-#line 10928 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10928 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= NO_MATTER;
           }
@@ -34126,14 +34126,14 @@ yyreduce:
   case 1543:
 
 /* Line 1455 of yacc.c  */
-#line 10935 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10935 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.select_lex)= Select; }
     break;
 
   case 1544:
 
 /* Line 1455 of yacc.c  */
-#line 10940 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10940 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -34161,21 +34161,21 @@ yyreduce:
   case 1545:
 
 /* Line 1455 of yacc.c  */
-#line 10965 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10965 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1546:
 
 /* Line 1455 of yacc.c  */
-#line 10966 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10966 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1547:
 
 /* Line 1455 of yacc.c  */
-#line 10971 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10971 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= thd->variables.old_mode ?  INDEX_HINT_MASK_JOIN : INDEX_HINT_MASK_ALL; 
           }
@@ -34184,42 +34184,42 @@ yyreduce:
   case 1548:
 
 /* Line 1455 of yacc.c  */
-#line 10974 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10974 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= INDEX_HINT_MASK_JOIN;  }
     break;
 
   case 1549:
 
 /* Line 1455 of yacc.c  */
-#line 10975 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10975 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= INDEX_HINT_MASK_ORDER; }
     break;
 
   case 1550:
 
 /* Line 1455 of yacc.c  */
-#line 10976 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10976 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= INDEX_HINT_MASK_GROUP; }
     break;
 
   case 1551:
 
 /* Line 1455 of yacc.c  */
-#line 10980 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10980 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.index_hint)= INDEX_HINT_FORCE; }
     break;
 
   case 1552:
 
 /* Line 1455 of yacc.c  */
-#line 10981 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10981 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.index_hint)= INDEX_HINT_IGNORE; }
     break;
 
   case 1553:
 
 /* Line 1455 of yacc.c  */
-#line 10986 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10986 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->set_index_hint_type((yyvsp[(1) - (3)].index_hint), (yyvsp[(3) - (3)].num));
           }
@@ -34228,7 +34228,7 @@ yyreduce:
   case 1555:
 
 /* Line 1455 of yacc.c  */
-#line 10991 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 10991 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->set_index_hint_type(INDEX_HINT_USE, (yyvsp[(3) - (3)].num));
           }
@@ -34237,49 +34237,49 @@ yyreduce:
   case 1560:
 
 /* Line 1455 of yacc.c  */
-#line 11004 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11004 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->alloc_index_hints(thd); }
     break;
 
   case 1562:
 
 /* Line 1455 of yacc.c  */
-#line 11008 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11008 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {  Select->clear_index_hints(); }
     break;
 
   case 1564:
 
 /* Line 1455 of yacc.c  */
-#line 11013 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11013 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->add_index_hint(thd, NULL, 0); }
     break;
 
   case 1565:
 
 /* Line 1455 of yacc.c  */
-#line 11014 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11014 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1566:
 
 /* Line 1455 of yacc.c  */
-#line 11019 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11019 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->add_index_hint(thd, (yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length); }
     break;
 
   case 1567:
 
 /* Line 1455 of yacc.c  */
-#line 11021 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11021 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->add_index_hint(thd, (char *)"PRIMARY", 7); }
     break;
 
   case 1570:
 
 /* Line 1455 of yacc.c  */
-#line 11031 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11031 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.string_list)= new List<String>))
               MYSQL_YYABORT;
@@ -34295,7 +34295,7 @@ yyreduce:
   case 1571:
 
 /* Line 1455 of yacc.c  */
-#line 11042 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11042 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             String *s= new (thd->mem_root) String((const char *) (yyvsp[(3) - (3)].lex_str).str,
                                                     (yyvsp[(3) - (3)].lex_str).length,
@@ -34310,189 +34310,189 @@ yyreduce:
   case 1572:
 
 /* Line 1455 of yacc.c  */
-#line 11054 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11054 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1573:
 
 /* Line 1455 of yacc.c  */
-#line 11055 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11055 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_DAY_HOUR; }
     break;
 
   case 1574:
 
 /* Line 1455 of yacc.c  */
-#line 11056 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11056 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_DAY_MICROSECOND; }
     break;
 
   case 1575:
 
 /* Line 1455 of yacc.c  */
-#line 11057 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11057 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_DAY_MINUTE; }
     break;
 
   case 1576:
 
 /* Line 1455 of yacc.c  */
-#line 11058 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11058 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_DAY_SECOND; }
     break;
 
   case 1577:
 
 /* Line 1455 of yacc.c  */
-#line 11059 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11059 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_HOUR_MICROSECOND; }
     break;
 
   case 1578:
 
 /* Line 1455 of yacc.c  */
-#line 11060 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11060 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_HOUR_MINUTE; }
     break;
 
   case 1579:
 
 /* Line 1455 of yacc.c  */
-#line 11061 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11061 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_HOUR_SECOND; }
     break;
 
   case 1580:
 
 /* Line 1455 of yacc.c  */
-#line 11062 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11062 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_MINUTE_MICROSECOND; }
     break;
 
   case 1581:
 
 /* Line 1455 of yacc.c  */
-#line 11063 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11063 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_MINUTE_SECOND; }
     break;
 
   case 1582:
 
 /* Line 1455 of yacc.c  */
-#line 11064 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11064 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_SECOND_MICROSECOND; }
     break;
 
   case 1583:
 
 /* Line 1455 of yacc.c  */
-#line 11065 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11065 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval)=INTERVAL_YEAR_MONTH; }
     break;
 
   case 1584:
 
 /* Line 1455 of yacc.c  */
-#line 11069 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11069 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_DAY; }
     break;
 
   case 1585:
 
 /* Line 1455 of yacc.c  */
-#line 11070 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11070 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_WEEK; }
     break;
 
   case 1586:
 
 /* Line 1455 of yacc.c  */
-#line 11071 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11071 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_HOUR; }
     break;
 
   case 1587:
 
 /* Line 1455 of yacc.c  */
-#line 11072 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11072 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_MINUTE; }
     break;
 
   case 1588:
 
 /* Line 1455 of yacc.c  */
-#line 11073 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11073 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_MONTH; }
     break;
 
   case 1589:
 
 /* Line 1455 of yacc.c  */
-#line 11074 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11074 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_QUARTER; }
     break;
 
   case 1590:
 
 /* Line 1455 of yacc.c  */
-#line 11075 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11075 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_SECOND; }
     break;
 
   case 1591:
 
 /* Line 1455 of yacc.c  */
-#line 11076 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11076 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_MICROSECOND; }
     break;
 
   case 1592:
 
 /* Line 1455 of yacc.c  */
-#line 11077 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11077 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.interval_time_st)=INTERVAL_YEAR; }
     break;
 
   case 1593:
 
 /* Line 1455 of yacc.c  */
-#line 11081 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11081 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.date_time_type)=MYSQL_TIMESTAMP_DATE;}
     break;
 
   case 1594:
 
 /* Line 1455 of yacc.c  */
-#line 11082 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11082 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.date_time_type)=MYSQL_TIMESTAMP_TIME;}
     break;
 
   case 1595:
 
 /* Line 1455 of yacc.c  */
-#line 11083 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11083 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.date_time_type)=MYSQL_TIMESTAMP_DATETIME;}
     break;
 
   case 1596:
 
 /* Line 1455 of yacc.c  */
-#line 11084 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11084 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.date_time_type)=MYSQL_TIMESTAMP_DATETIME;}
     break;
 
   case 1600:
 
 /* Line 1455 of yacc.c  */
-#line 11094 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11094 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str_ptr)=0; }
     break;
 
   case 1601:
 
 /* Line 1455 of yacc.c  */
-#line 11096 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11096 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.lex_str_ptr)= (LEX_STRING*) sql_memdup(&(yyvsp[(2) - (2)].lex_str),sizeof(LEX_STRING));
             if ((yyval.lex_str_ptr) == NULL)
@@ -34503,14 +34503,14 @@ yyreduce:
   case 1604:
 
 /* Line 1455 of yacc.c  */
-#line 11109 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11109 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->where= 0; }
     break;
 
   case 1605:
 
 /* Line 1455 of yacc.c  */
-#line 11111 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11111 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= IN_WHERE;
           }
@@ -34519,7 +34519,7 @@ yyreduce:
   case 1606:
 
 /* Line 1455 of yacc.c  */
-#line 11115 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11115 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *select= Select;
             select->where= normalize_cond((yyvsp[(3) - (3)].item));
@@ -34532,7 +34532,7 @@ yyreduce:
   case 1608:
 
 /* Line 1455 of yacc.c  */
-#line 11127 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11127 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= IN_HAVING;
           }
@@ -34541,7 +34541,7 @@ yyreduce:
   case 1609:
 
 /* Line 1455 of yacc.c  */
-#line 11131 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11131 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             sel->having= normalize_cond((yyvsp[(3) - (3)].item));
@@ -34554,7 +34554,7 @@ yyreduce:
   case 1610:
 
 /* Line 1455 of yacc.c  */
-#line 11142 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11142 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->escape_used= TRUE;
             (yyval.item)= (yyvsp[(2) - (2)].item);
@@ -34564,7 +34564,7 @@ yyreduce:
   case 1611:
 
 /* Line 1455 of yacc.c  */
-#line 11147 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11147 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->escape_used= FALSE;
             (yyval.item)= ((thd->variables.sql_mode & MODE_NO_BACKSLASH_ESCAPES) ?
@@ -34578,28 +34578,28 @@ yyreduce:
   case 1614:
 
 /* Line 1455 of yacc.c  */
-#line 11168 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11168 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { if (add_group_to_list(thd, (yyvsp[(3) - (4)].item),(bool) (yyvsp[(4) - (4)].num))) MYSQL_YYABORT; }
     break;
 
   case 1615:
 
 /* Line 1455 of yacc.c  */
-#line 11170 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11170 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { if (add_group_to_list(thd, (yyvsp[(1) - (2)].item),(bool) (yyvsp[(2) - (2)].num))) MYSQL_YYABORT; }
     break;
 
   case 1616:
 
 /* Line 1455 of yacc.c  */
-#line 11174 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11174 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1617:
 
 /* Line 1455 of yacc.c  */
-#line 11176 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11176 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               'WITH CUBE' is reserved in the MySQL syntax, but not implemented,
@@ -34624,7 +34624,7 @@ yyreduce:
   case 1618:
 
 /* Line 1455 of yacc.c  */
-#line 11196 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11196 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               'WITH ROLLUP' is needed for backward compatibility,
@@ -34647,7 +34647,7 @@ yyreduce:
   case 1622:
 
 /* Line 1455 of yacc.c  */
-#line 11230 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11230 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             bool ascending= ((yyvsp[(2) - (2)].num) == 1) ? true : false;
             if (add_order_to_list(thd, (yyvsp[(1) - (2)].item), ascending))
@@ -34658,7 +34658,7 @@ yyreduce:
   case 1625:
 
 /* Line 1455 of yacc.c  */
-#line 11248 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11248 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             SELECT_LEX *sel= lex->current_select;
@@ -34694,42 +34694,42 @@ yyreduce:
   case 1627:
 
 /* Line 1455 of yacc.c  */
-#line 11283 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11283 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { if (add_order_to_list(thd, (yyvsp[(3) - (4)].item),(bool) (yyvsp[(4) - (4)].num))) MYSQL_YYABORT; }
     break;
 
   case 1628:
 
 /* Line 1455 of yacc.c  */
-#line 11285 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11285 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { if (add_order_to_list(thd, (yyvsp[(1) - (2)].item),(bool) (yyvsp[(2) - (2)].num))) MYSQL_YYABORT; }
     break;
 
   case 1629:
 
 /* Line 1455 of yacc.c  */
-#line 11289 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11289 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) =  1; }
     break;
 
   case 1630:
 
 /* Line 1455 of yacc.c  */
-#line 11290 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11290 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) =1; }
     break;
 
   case 1631:
 
 /* Line 1455 of yacc.c  */
-#line 11291 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11291 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num) =0; }
     break;
 
   case 1632:
 
 /* Line 1455 of yacc.c  */
-#line 11296 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11296 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             SELECT_LEX *sel= lex->current_select;
@@ -34742,28 +34742,28 @@ yyreduce:
   case 1633:
 
 /* Line 1455 of yacc.c  */
-#line 11303 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11303 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1634:
 
 /* Line 1455 of yacc.c  */
-#line 11307 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11307 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1635:
 
 /* Line 1455 of yacc.c  */
-#line 11308 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11308 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1636:
 
 /* Line 1455 of yacc.c  */
-#line 11313 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11313 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             if (!sel->select_limit->basic_const_item() ||
@@ -34775,7 +34775,7 @@ yyreduce:
   case 1637:
 
 /* Line 1455 of yacc.c  */
-#line 11320 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11320 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
           }
@@ -34784,7 +34784,7 @@ yyreduce:
   case 1638:
 
 /* Line 1455 of yacc.c  */
-#line 11324 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11324 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_LIMIT);
           }
@@ -34793,7 +34793,7 @@ yyreduce:
   case 1639:
 
 /* Line 1455 of yacc.c  */
-#line 11331 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11331 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             sel->select_limit= (yyvsp[(1) - (1)].item);
@@ -34805,7 +34805,7 @@ yyreduce:
   case 1640:
 
 /* Line 1455 of yacc.c  */
-#line 11338 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11338 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             sel->select_limit= (yyvsp[(3) - (3)].item);
@@ -34817,7 +34817,7 @@ yyreduce:
   case 1641:
 
 /* Line 1455 of yacc.c  */
-#line 11345 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11345 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             sel->select_limit= (yyvsp[(1) - (3)].item);
@@ -34829,7 +34829,7 @@ yyreduce:
   case 1642:
 
 /* Line 1455 of yacc.c  */
-#line 11355 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11355 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           Item_splocal *splocal;
           LEX *lex= thd->lex;
@@ -34867,7 +34867,7 @@ yyreduce:
   case 1643:
 
 /* Line 1455 of yacc.c  */
-#line 11388 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11388 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           ((Item_param *) (yyvsp[(1) - (1)].item))->limit_clause_param= TRUE;
         }
@@ -34876,7 +34876,7 @@ yyreduce:
   case 1644:
 
 /* Line 1455 of yacc.c  */
-#line 11392 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11392 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_uint((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if ((yyval.item) == NULL)
@@ -34887,7 +34887,7 @@ yyreduce:
   case 1645:
 
 /* Line 1455 of yacc.c  */
-#line 11398 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11398 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_uint((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if ((yyval.item) == NULL)
@@ -34898,7 +34898,7 @@ yyreduce:
   case 1646:
 
 /* Line 1455 of yacc.c  */
-#line 11404 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11404 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_uint((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if ((yyval.item) == NULL)
@@ -34909,7 +34909,7 @@ yyreduce:
   case 1647:
 
 /* Line 1455 of yacc.c  */
-#line 11413 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11413 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             LEX *lex=Lex;
             lex->limit_rows_examined= (yyvsp[(1) - (1)].item);
@@ -34919,7 +34919,7 @@ yyreduce:
   case 1648:
 
 /* Line 1455 of yacc.c  */
-#line 11420 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11420 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->current_select->select_limit= 0;
@@ -34929,7 +34929,7 @@ yyreduce:
   case 1649:
 
 /* Line 1455 of yacc.c  */
-#line 11425 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11425 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             sel->select_limit= (yyvsp[(2) - (2)].item);
@@ -34941,210 +34941,210 @@ yyreduce:
   case 1650:
 
 /* Line 1455 of yacc.c  */
-#line 11431 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11431 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { my_parse_error(ER(ER_SYNTAX_ERROR)); MYSQL_YYABORT; }
     break;
 
   case 1651:
 
 /* Line 1455 of yacc.c  */
-#line 11432 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11432 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { my_parse_error(ER(ER_SYNTAX_ERROR)); MYSQL_YYABORT; }
     break;
 
   case 1652:
 
 /* Line 1455 of yacc.c  */
-#line 11436 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11436 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.num)= (int) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1653:
 
 /* Line 1455 of yacc.c  */
-#line 11437 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11437 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.num)= -(int) my_strtoll10((yyvsp[(2) - (2)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1654:
 
 /* Line 1455 of yacc.c  */
-#line 11438 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11438 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.num)= -(int) my_strtoll10((yyvsp[(2) - (2)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1655:
 
 /* Line 1455 of yacc.c  */
-#line 11442 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11442 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1656:
 
 /* Line 1455 of yacc.c  */
-#line 11443 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11443 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (ulong) strtol((yyvsp[(1) - (1)].lex_str).str, (char**) 0, 16); }
     break;
 
   case 1657:
 
 /* Line 1455 of yacc.c  */
-#line 11444 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11444 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1658:
 
 /* Line 1455 of yacc.c  */
-#line 11445 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11445 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1659:
 
 /* Line 1455 of yacc.c  */
-#line 11446 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11446 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1660:
 
 /* Line 1455 of yacc.c  */
-#line 11447 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11447 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1661:
 
 /* Line 1455 of yacc.c  */
-#line 11451 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11451 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1662:
 
 /* Line 1455 of yacc.c  */
-#line 11452 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11452 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulong_num)= (ulong) strtol((yyvsp[(1) - (1)].lex_str).str, (char**) 0, 16); }
     break;
 
   case 1663:
 
 /* Line 1455 of yacc.c  */
-#line 11453 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11453 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1664:
 
 /* Line 1455 of yacc.c  */
-#line 11454 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11454 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulong_num)= (ulong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1665:
 
 /* Line 1455 of yacc.c  */
-#line 11455 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11455 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { MYSQL_YYABORT; }
     break;
 
   case 1666:
 
 /* Line 1455 of yacc.c  */
-#line 11459 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11459 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1667:
 
 /* Line 1455 of yacc.c  */
-#line 11460 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11460 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1668:
 
 /* Line 1455 of yacc.c  */
-#line 11461 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11461 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1669:
 
 /* Line 1455 of yacc.c  */
-#line 11462 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11462 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1670:
 
 /* Line 1455 of yacc.c  */
-#line 11463 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11463 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1671:
 
 /* Line 1455 of yacc.c  */
-#line 11467 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11467 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1672:
 
 /* Line 1455 of yacc.c  */
-#line 11468 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11468 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1673:
 
 /* Line 1455 of yacc.c  */
-#line 11469 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11469 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ulonglong_number)= strtoull((yyvsp[(1) - (1)].lex_str).str, (char**) 0, 16); }
     break;
 
   case 1674:
 
 /* Line 1455 of yacc.c  */
-#line 11470 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11470 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { int error; (yyval.ulonglong_number)= (ulonglong) my_strtoll10((yyvsp[(1) - (1)].lex_str).str, (char**) 0, &error); }
     break;
 
   case 1675:
 
 /* Line 1455 of yacc.c  */
-#line 11471 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11471 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { MYSQL_YYABORT; }
     break;
 
   case 1676:
 
 /* Line 1455 of yacc.c  */
-#line 11476 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11476 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { my_parse_error(ER(ER_ONLY_INTEGERS_ALLOWED)); }
     break;
 
   case 1679:
 
 /* Line 1455 of yacc.c  */
-#line 11485 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11485 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.choice)= (yyvsp[(1) - (1)].ulong_num) != 0 ? HA_CHOICE_YES : HA_CHOICE_NO; }
     break;
 
   case 1680:
 
 /* Line 1455 of yacc.c  */
-#line 11486 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11486 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.choice)= HA_CHOICE_UNDEF; }
     break;
 
   case 1682:
 
 /* Line 1455 of yacc.c  */
-#line 11492 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11492 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
 
@@ -35176,21 +35176,21 @@ yyreduce:
   case 1684:
 
 /* Line 1455 of yacc.c  */
-#line 11522 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11522 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1685:
 
 /* Line 1455 of yacc.c  */
-#line 11523 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11523 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1688:
 
 /* Line 1455 of yacc.c  */
-#line 11533 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11533 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_proc_to_list(thd, (yyvsp[(2) - (3)].item)))
               MYSQL_YYABORT;
@@ -35202,7 +35202,7 @@ yyreduce:
   case 1689:
 
 /* Line 1455 of yacc.c  */
-#line 11542 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11542 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (!lex->describe && (!(lex->result= new select_dumpvar())))
@@ -35213,21 +35213,21 @@ yyreduce:
   case 1690:
 
 /* Line 1455 of yacc.c  */
-#line 11548 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11548 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1692:
 
 /* Line 1455 of yacc.c  */
-#line 11553 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11553 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1693:
 
 /* Line 1455 of yacc.c  */
-#line 11558 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11558 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->result) 
@@ -35251,7 +35251,7 @@ yyreduce:
   case 1694:
 
 /* Line 1455 of yacc.c  */
-#line 11577 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11577 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             sp_variable *t;
@@ -35285,7 +35285,7 @@ yyreduce:
   case 1695:
 
 /* Line 1455 of yacc.c  */
-#line 11609 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11609 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (! Lex->parsing_options.allows_select_into)
             {
@@ -35298,7 +35298,7 @@ yyreduce:
   case 1697:
 
 /* Line 1455 of yacc.c  */
-#line 11621 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11621 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
@@ -35311,14 +35311,14 @@ yyreduce:
   case 1698:
 
 /* Line 1455 of yacc.c  */
-#line 11629 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11629 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->exchange->cs= (yyvsp[(4) - (4)].charset); }
     break;
 
   case 1700:
 
 /* Line 1455 of yacc.c  */
-#line 11632 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11632 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (!lex->describe)
@@ -35335,7 +35335,7 @@ yyreduce:
   case 1701:
 
 /* Line 1455 of yacc.c  */
-#line 11644 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11644 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
           }
@@ -35344,7 +35344,7 @@ yyreduce:
   case 1702:
 
 /* Line 1455 of yacc.c  */
-#line 11655 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11655 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_DO;
@@ -35355,7 +35355,7 @@ yyreduce:
   case 1703:
 
 /* Line 1455 of yacc.c  */
-#line 11661 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11661 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->insert_list= (yyvsp[(3) - (3)].item_list);
           }
@@ -35364,7 +35364,7 @@ yyreduce:
   case 1704:
 
 /* Line 1455 of yacc.c  */
-#line 11672 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11672 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_DROP_TABLE;
@@ -35378,21 +35378,21 @@ yyreduce:
   case 1705:
 
 /* Line 1455 of yacc.c  */
-#line 11681 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11681 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1706:
 
 /* Line 1455 of yacc.c  */
-#line 11682 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11682 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1707:
 
 /* Line 1455 of yacc.c  */
-#line 11683 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11683 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Alter_drop *ad= new Alter_drop(Alter_drop::KEY, (yyvsp[(4) - (7)].lex_str).str, (yyvsp[(3) - (7)].num));
@@ -35413,7 +35413,7 @@ yyreduce:
   case 1708:
 
 /* Line 1455 of yacc.c  */
-#line 11699 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11699 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_DROP_DB;
@@ -35425,7 +35425,7 @@ yyreduce:
   case 1709:
 
 /* Line 1455 of yacc.c  */
-#line 11706 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11706 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             sp_name *spname;
@@ -35452,7 +35452,7 @@ yyreduce:
   case 1710:
 
 /* Line 1455 of yacc.c  */
-#line 11728 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11728 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             LEX_STRING db= {0, 0};
@@ -35477,7 +35477,7 @@ yyreduce:
   case 1711:
 
 /* Line 1455 of yacc.c  */
-#line 11748 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11748 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->sphead)
@@ -35494,7 +35494,7 @@ yyreduce:
   case 1712:
 
 /* Line 1455 of yacc.c  */
-#line 11760 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11760 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_DROP_USER;
           }
@@ -35503,7 +35503,7 @@ yyreduce:
   case 1713:
 
 /* Line 1455 of yacc.c  */
-#line 11764 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11764 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_DROP_ROLE;
           }
@@ -35512,7 +35512,7 @@ yyreduce:
   case 1714:
 
 /* Line 1455 of yacc.c  */
-#line 11768 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11768 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_DROP_VIEW;
@@ -35525,14 +35525,14 @@ yyreduce:
   case 1715:
 
 /* Line 1455 of yacc.c  */
-#line 11776 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11776 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1716:
 
 /* Line 1455 of yacc.c  */
-#line 11778 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11778 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->check_exists= (yyvsp[(3) - (4)].num);
             Lex->spname= (yyvsp[(4) - (4)].spname);
@@ -35543,7 +35543,7 @@ yyreduce:
   case 1717:
 
 /* Line 1455 of yacc.c  */
-#line 11784 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11784 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_DROP_TRIGGER;
@@ -35555,7 +35555,7 @@ yyreduce:
   case 1718:
 
 /* Line 1455 of yacc.c  */
-#line 11791 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11791 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_cmd_type= DROP_TABLESPACE;
@@ -35565,7 +35565,7 @@ yyreduce:
   case 1719:
 
 /* Line 1455 of yacc.c  */
-#line 11796 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11796 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->alter_tablespace_info->ts_cmd_type= DROP_LOGFILE_GROUP;
@@ -35575,7 +35575,7 @@ yyreduce:
   case 1720:
 
 /* Line 1455 of yacc.c  */
-#line 11801 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11801 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_DROP_SERVER;
             Lex->check_exists= (yyvsp[(3) - (4)].num);
@@ -35587,7 +35587,7 @@ yyreduce:
   case 1723:
 
 /* Line 1455 of yacc.c  */
-#line 11816 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11816 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(1) - (1)].table), NULL,
                                            TL_OPTION_UPDATING,
@@ -35600,7 +35600,7 @@ yyreduce:
   case 1724:
 
 /* Line 1455 of yacc.c  */
-#line 11827 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11827 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(1) - (2)].table), NULL,
                                            TL_OPTION_UPDATING,
@@ -35615,7 +35615,7 @@ yyreduce:
   case 1727:
 
 /* Line 1455 of yacc.c  */
-#line 11845 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11845 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(1) - (1)].table), NULL,
                                            TL_OPTION_UPDATING | TL_OPTION_ALIAS,
@@ -35628,7 +35628,7 @@ yyreduce:
   case 1728:
 
 /* Line 1455 of yacc.c  */
-#line 11856 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11856 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           Lex->check_exists= FALSE;
           (yyval.num)= 0;
@@ -35638,7 +35638,7 @@ yyreduce:
   case 1729:
 
 /* Line 1455 of yacc.c  */
-#line 11861 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11861 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           Lex->check_exists= TRUE;
           (yyval.num)= 1;
@@ -35648,21 +35648,21 @@ yyreduce:
   case 1730:
 
 /* Line 1455 of yacc.c  */
-#line 11868 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11868 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 1731:
 
 /* Line 1455 of yacc.c  */
-#line 11869 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11869 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 1732:
 
 /* Line 1455 of yacc.c  */
-#line 11877 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11877 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_INSERT;
@@ -35674,7 +35674,7 @@ yyreduce:
   case 1733:
 
 /* Line 1455 of yacc.c  */
-#line 11885 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11885 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->set_lock_for_tables((yyvsp[(3) - (5)].lock_type));
             Lex->current_select= &Lex->select_lex;
@@ -35684,14 +35684,14 @@ yyreduce:
   case 1734:
 
 /* Line 1455 of yacc.c  */
-#line 11890 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11890 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1735:
 
 /* Line 1455 of yacc.c  */
-#line 11895 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11895 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_REPLACE;
@@ -35703,7 +35703,7 @@ yyreduce:
   case 1736:
 
 /* Line 1455 of yacc.c  */
-#line 11902 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11902 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->set_lock_for_tables((yyvsp[(3) - (4)].lock_type));
             Lex->current_select= &Lex->select_lex;
@@ -35713,14 +35713,14 @@ yyreduce:
   case 1737:
 
 /* Line 1455 of yacc.c  */
-#line 11907 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11907 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1738:
 
 /* Line 1455 of yacc.c  */
-#line 11912 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11912 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               If it is SP we do not allow insert optimisation when result of
@@ -35734,14 +35734,14 @@ yyreduce:
   case 1739:
 
 /* Line 1455 of yacc.c  */
-#line 11920 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11920 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lock_type)= TL_WRITE_LOW_PRIORITY; }
     break;
 
   case 1740:
 
 /* Line 1455 of yacc.c  */
-#line 11922 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11922 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           Lex->keyword_delayed_begin_offset= (uint)(YYLIP->get_tok_start() -
                                                     thd->query());
@@ -35754,21 +35754,21 @@ yyreduce:
   case 1741:
 
 /* Line 1455 of yacc.c  */
-#line 11929 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11929 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lock_type)= TL_WRITE; }
     break;
 
   case 1742:
 
 /* Line 1455 of yacc.c  */
-#line 11933 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11933 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lock_type)= (yyvsp[(1) - (1)].lock_type); }
     break;
 
   case 1743:
 
 /* Line 1455 of yacc.c  */
-#line 11935 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11935 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           Lex->keyword_delayed_begin_offset= (uint)(YYLIP->get_tok_start() -
                                                     thd->query());
@@ -35781,21 +35781,21 @@ yyreduce:
   case 1744:
 
 /* Line 1455 of yacc.c  */
-#line 11945 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11945 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1745:
 
 /* Line 1455 of yacc.c  */
-#line 11946 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11946 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1746:
 
 /* Line 1455 of yacc.c  */
-#line 11951 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11951 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->field_list.empty();
@@ -35807,28 +35807,28 @@ yyreduce:
   case 1747:
 
 /* Line 1455 of yacc.c  */
-#line 11959 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11959 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1748:
 
 /* Line 1455 of yacc.c  */
-#line 11960 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11960 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1749:
 
 /* Line 1455 of yacc.c  */
-#line 11961 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11961 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1750:
 
 /* Line 1455 of yacc.c  */
-#line 11963 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11963 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (!(lex->insert_list = new List_item) ||
@@ -35840,63 +35840,63 @@ yyreduce:
   case 1752:
 
 /* Line 1455 of yacc.c  */
-#line 11973 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11973 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->field_list.push_back((yyvsp[(3) - (3)].item)); }
     break;
 
   case 1753:
 
 /* Line 1455 of yacc.c  */
-#line 11974 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11974 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->field_list.push_back((yyvsp[(1) - (1)].item)); }
     break;
 
   case 1754:
 
 /* Line 1455 of yacc.c  */
-#line 11978 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11978 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1755:
 
 /* Line 1455 of yacc.c  */
-#line 11979 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11979 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1756:
 
 /* Line 1455 of yacc.c  */
-#line 11981 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11981 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->set_braces(0);}
     break;
 
   case 1757:
 
 /* Line 1455 of yacc.c  */
-#line 11982 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11982 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1758:
 
 /* Line 1455 of yacc.c  */
-#line 11984 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11984 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->set_braces(1);}
     break;
 
   case 1759:
 
 /* Line 1455 of yacc.c  */
-#line 11985 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 11985 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1764:
 
 /* Line 1455 of yacc.c  */
-#line 12000 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12000 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->field_list.push_back((yyvsp[(1) - (3)].item)) ||
@@ -35908,35 +35908,35 @@ yyreduce:
   case 1765:
 
 /* Line 1455 of yacc.c  */
-#line 12009 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12009 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1766:
 
 /* Line 1455 of yacc.c  */
-#line 12010 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12010 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1767:
 
 /* Line 1455 of yacc.c  */
-#line 12014 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12014 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1768:
 
 /* Line 1455 of yacc.c  */
-#line 12015 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12015 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1769:
 
 /* Line 1455 of yacc.c  */
-#line 12020 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12020 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
               if (!(Lex->insert_list = new List_item))
                 MYSQL_YYABORT;
@@ -35946,7 +35946,7 @@ yyreduce:
   case 1770:
 
 /* Line 1455 of yacc.c  */
-#line 12025 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12025 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->many_values.push_back(lex->insert_list))
@@ -35957,14 +35957,14 @@ yyreduce:
   case 1771:
 
 /* Line 1455 of yacc.c  */
-#line 12033 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12033 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1773:
 
 /* Line 1455 of yacc.c  */
-#line 12039 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12039 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->insert_list->push_back((yyvsp[(3) - (3)].item)))
               MYSQL_YYABORT;
@@ -35974,7 +35974,7 @@ yyreduce:
   case 1774:
 
 /* Line 1455 of yacc.c  */
-#line 12044 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12044 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->insert_list->push_back((yyvsp[(1) - (1)].item)))
               MYSQL_YYABORT;
@@ -35984,14 +35984,14 @@ yyreduce:
   case 1775:
 
 /* Line 1455 of yacc.c  */
-#line 12051 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12051 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item);}
     break;
 
   case 1776:
 
 /* Line 1455 of yacc.c  */
-#line 12053 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12053 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_default_value(Lex->current_context());
             if ((yyval.item) == NULL)
@@ -36002,14 +36002,14 @@ yyreduce:
   case 1778:
 
 /* Line 1455 of yacc.c  */
-#line 12062 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12062 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->duplicates= DUP_UPDATE; }
     break;
 
   case 1780:
 
 /* Line 1455 of yacc.c  */
-#line 12070 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12070 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             mysql_init_select(lex);
@@ -36021,7 +36021,7 @@ yyreduce:
   case 1781:
 
 /* Line 1455 of yacc.c  */
-#line 12078 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12078 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->select_lex.table_list.elements > 1)
@@ -36045,14 +36045,14 @@ yyreduce:
   case 1782:
 
 /* Line 1455 of yacc.c  */
-#line 12096 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12096 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1785:
 
 /* Line 1455 of yacc.c  */
-#line 12106 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12106 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_item_to_list(thd, (yyvsp[(1) - (3)].item)) || add_value_to_list(thd, (yyvsp[(3) - (3)].item)))
               MYSQL_YYABORT;
@@ -36062,7 +36062,7 @@ yyreduce:
   case 1788:
 
 /* Line 1455 of yacc.c  */
-#line 12119 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12119 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           LEX *lex= Lex;
           if (lex->update_list.push_back((yyvsp[(1) - (3)].item)) || 
@@ -36074,21 +36074,21 @@ yyreduce:
   case 1789:
 
 /* Line 1455 of yacc.c  */
-#line 12128 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12128 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lock_type)= TL_WRITE_DEFAULT; }
     break;
 
   case 1790:
 
 /* Line 1455 of yacc.c  */
-#line 12129 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12129 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lock_type)= TL_WRITE_LOW_PRIORITY; }
     break;
 
   case 1791:
 
 /* Line 1455 of yacc.c  */
-#line 12136 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12136 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_DELETE;
@@ -36104,7 +36104,7 @@ yyreduce:
   case 1793:
 
 /* Line 1455 of yacc.c  */
-#line 12151 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12151 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!Select->add_table_to_list(thd, (yyvsp[(2) - (3)].table), NULL, TL_OPTION_UPDATING,
                                            YYPS->m_lock_type,
@@ -36120,21 +36120,21 @@ yyreduce:
   case 1794:
 
 /* Line 1455 of yacc.c  */
-#line 12162 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12162 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1795:
 
 /* Line 1455 of yacc.c  */
-#line 12163 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12163 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1796:
 
 /* Line 1455 of yacc.c  */
-#line 12165 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12165 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             mysql_init_multi_delete(Lex);
             YYPS->m_lock_type= TL_READ_DEFAULT;
@@ -36145,7 +36145,7 @@ yyreduce:
   case 1797:
 
 /* Line 1455 of yacc.c  */
-#line 12171 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12171 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (multi_delete_set_locks_and_link_aux_tables(Lex))
               MYSQL_YYABORT;
@@ -36155,7 +36155,7 @@ yyreduce:
   case 1798:
 
 /* Line 1455 of yacc.c  */
-#line 12176 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12176 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             mysql_init_multi_delete(Lex);
             YYPS->m_lock_type= TL_READ_DEFAULT;
@@ -36166,7 +36166,7 @@ yyreduce:
   case 1799:
 
 /* Line 1455 of yacc.c  */
-#line 12182 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12182 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (multi_delete_set_locks_and_link_aux_tables(Lex))
               MYSQL_YYABORT;
@@ -36176,7 +36176,7 @@ yyreduce:
   case 1804:
 
 /* Line 1455 of yacc.c  */
-#line 12200 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12200 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Table_ident *ti= new Table_ident((yyvsp[(1) - (2)].lex_str));
             if (ti == NULL)
@@ -36194,7 +36194,7 @@ yyreduce:
   case 1805:
 
 /* Line 1455 of yacc.c  */
-#line 12213 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12213 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Table_ident *ti= new Table_ident(thd, (yyvsp[(1) - (4)].lex_str), (yyvsp[(3) - (4)].lex_str), 0);
             if (ti == NULL)
@@ -36212,56 +36212,56 @@ yyreduce:
   case 1806:
 
 /* Line 1455 of yacc.c  */
-#line 12228 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12228 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1807:
 
 /* Line 1455 of yacc.c  */
-#line 12229 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12229 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1808:
 
 /* Line 1455 of yacc.c  */
-#line 12233 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12233 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1809:
 
 /* Line 1455 of yacc.c  */
-#line 12234 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12234 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1810:
 
 /* Line 1455 of yacc.c  */
-#line 12238 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12238 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->options|= OPTION_QUICK; }
     break;
 
   case 1811:
 
 /* Line 1455 of yacc.c  */
-#line 12239 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12239 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { YYPS->m_lock_type= TL_WRITE_LOW_PRIORITY; }
     break;
 
   case 1812:
 
 /* Line 1455 of yacc.c  */
-#line 12240 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12240 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ignore= 1; }
     break;
 
   case 1813:
 
 /* Line 1455 of yacc.c  */
-#line 12245 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12245 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX* lex= Lex;
             lex->sql_command= SQLCOM_TRUNCATE;
@@ -36277,7 +36277,7 @@ yyreduce:
   case 1814:
 
 /* Line 1455 of yacc.c  */
-#line 12256 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12256 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX* lex= thd->lex;
             DBUG_ASSERT(!lex->m_sql_cmd);
@@ -36290,7 +36290,7 @@ yyreduce:
   case 1821:
 
 /* Line 1455 of yacc.c  */
-#line 12280 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12280 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_CPU;
     }
@@ -36299,7 +36299,7 @@ yyreduce:
   case 1822:
 
 /* Line 1455 of yacc.c  */
-#line 12284 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12284 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_MEMORY;
     }
@@ -36308,7 +36308,7 @@ yyreduce:
   case 1823:
 
 /* Line 1455 of yacc.c  */
-#line 12288 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12288 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_BLOCK_IO;
     }
@@ -36317,7 +36317,7 @@ yyreduce:
   case 1824:
 
 /* Line 1455 of yacc.c  */
-#line 12292 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12292 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_CONTEXT;
     }
@@ -36326,7 +36326,7 @@ yyreduce:
   case 1825:
 
 /* Line 1455 of yacc.c  */
-#line 12296 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12296 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_PAGE_FAULTS;
     }
@@ -36335,7 +36335,7 @@ yyreduce:
   case 1826:
 
 /* Line 1455 of yacc.c  */
-#line 12300 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12300 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_IPC;
     }
@@ -36344,7 +36344,7 @@ yyreduce:
   case 1827:
 
 /* Line 1455 of yacc.c  */
-#line 12304 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12304 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_SWAPS;
     }
@@ -36353,7 +36353,7 @@ yyreduce:
   case 1828:
 
 /* Line 1455 of yacc.c  */
-#line 12308 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12308 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_SOURCE;
     }
@@ -36362,7 +36362,7 @@ yyreduce:
   case 1829:
 
 /* Line 1455 of yacc.c  */
-#line 12312 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12312 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_options|= PROFILE_ALL;
     }
@@ -36371,7 +36371,7 @@ yyreduce:
   case 1830:
 
 /* Line 1455 of yacc.c  */
-#line 12319 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12319 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_query_id= 0;
     }
@@ -36380,7 +36380,7 @@ yyreduce:
   case 1831:
 
 /* Line 1455 of yacc.c  */
-#line 12323 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12323 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
       Lex->profile_query_id= atoi((yyvsp[(3) - (3)].lex_str).str);
     }
@@ -36389,7 +36389,7 @@ yyreduce:
   case 1832:
 
 /* Line 1455 of yacc.c  */
-#line 12332 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12332 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->wild=0;
@@ -36403,7 +36403,7 @@ yyreduce:
   case 1833:
 
 /* Line 1455 of yacc.c  */
-#line 12341 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12341 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= NO_MATTER;
           }
@@ -36412,7 +36412,7 @@ yyreduce:
   case 1834:
 
 /* Line 1455 of yacc.c  */
-#line 12348 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12348 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_DATABASES;
@@ -36424,7 +36424,7 @@ yyreduce:
   case 1835:
 
 /* Line 1455 of yacc.c  */
-#line 12355 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12355 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_TABLES;
@@ -36437,7 +36437,7 @@ yyreduce:
   case 1836:
 
 /* Line 1455 of yacc.c  */
-#line 12363 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12363 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_TRIGGERS;
@@ -36450,7 +36450,7 @@ yyreduce:
   case 1837:
 
 /* Line 1455 of yacc.c  */
-#line 12371 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12371 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_EVENTS;
@@ -36463,7 +36463,7 @@ yyreduce:
   case 1838:
 
 /* Line 1455 of yacc.c  */
-#line 12379 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12379 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_TABLE_STATUS;
@@ -36476,7 +36476,7 @@ yyreduce:
   case 1839:
 
 /* Line 1455 of yacc.c  */
-#line 12387 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12387 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_OPEN_TABLES;
@@ -36489,7 +36489,7 @@ yyreduce:
   case 1840:
 
 /* Line 1455 of yacc.c  */
-#line 12395 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12395 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_PLUGINS;
@@ -36501,7 +36501,7 @@ yyreduce:
   case 1841:
 
 /* Line 1455 of yacc.c  */
-#line 12402 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12402 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->ident= (yyvsp[(3) - (3)].lex_str);
             Lex->sql_command= SQLCOM_SHOW_PLUGINS;
@@ -36513,7 +36513,7 @@ yyreduce:
   case 1842:
 
 /* Line 1455 of yacc.c  */
-#line 12409 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12409 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_SHOW_PLUGINS;
             if (prepare_schema_table(thd, Lex, 0, SCH_ALL_PLUGINS))
@@ -36524,21 +36524,21 @@ yyreduce:
   case 1843:
 
 /* Line 1455 of yacc.c  */
-#line 12415 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12415 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_info.db_type= (yyvsp[(2) - (3)].db_type); }
     break;
 
   case 1844:
 
 /* Line 1455 of yacc.c  */
-#line 12417 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12417 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_info.db_type= NULL; }
     break;
 
   case 1845:
 
 /* Line 1455 of yacc.c  */
-#line 12419 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12419 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_FIELDS;
@@ -36552,7 +36552,7 @@ yyreduce:
   case 1846:
 
 /* Line 1455 of yacc.c  */
-#line 12428 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12428 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_SHOW_BINLOGS;
           }
@@ -36561,7 +36561,7 @@ yyreduce:
   case 1847:
 
 /* Line 1455 of yacc.c  */
-#line 12432 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12432 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_SHOW_SLAVE_HOSTS;
           }
@@ -36570,7 +36570,7 @@ yyreduce:
   case 1848:
 
 /* Line 1455 of yacc.c  */
-#line 12436 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12436 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_BINLOG_EVENTS;
@@ -36580,7 +36580,7 @@ yyreduce:
   case 1850:
 
 /* Line 1455 of yacc.c  */
-#line 12441 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12441 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_RELAYLOG_EVENTS;
@@ -36590,7 +36590,7 @@ yyreduce:
   case 1852:
 
 /* Line 1455 of yacc.c  */
-#line 12446 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12446 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_KEYS;
@@ -36604,7 +36604,7 @@ yyreduce:
   case 1853:
 
 /* Line 1455 of yacc.c  */
-#line 12455 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12455 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SHOW_STORAGE_ENGINES;
@@ -36616,7 +36616,7 @@ yyreduce:
   case 1854:
 
 /* Line 1455 of yacc.c  */
-#line 12462 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12462 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SHOW_AUTHORS;
@@ -36626,7 +36626,7 @@ yyreduce:
   case 1855:
 
 /* Line 1455 of yacc.c  */
-#line 12467 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12467 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SHOW_CONTRIBUTORS;
@@ -36636,7 +36636,7 @@ yyreduce:
   case 1856:
 
 /* Line 1455 of yacc.c  */
-#line 12472 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12472 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SHOW_PRIVILEGES;
@@ -36646,42 +36646,42 @@ yyreduce:
   case 1857:
 
 /* Line 1455 of yacc.c  */
-#line 12477 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12477 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (void) create_select_for_variable("warning_count"); }
     break;
 
   case 1858:
 
 /* Line 1455 of yacc.c  */
-#line 12479 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12479 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (void) create_select_for_variable("error_count"); }
     break;
 
   case 1859:
 
 /* Line 1455 of yacc.c  */
-#line 12481 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12481 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command = SQLCOM_SHOW_WARNS;}
     break;
 
   case 1860:
 
 /* Line 1455 of yacc.c  */
-#line 12483 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12483 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command = SQLCOM_SHOW_ERRORS;}
     break;
 
   case 1861:
 
 /* Line 1455 of yacc.c  */
-#line 12485 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12485 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command = SQLCOM_SHOW_PROFILES; }
     break;
 
   case 1862:
 
 /* Line 1455 of yacc.c  */
-#line 12487 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12487 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_PROFILE;
@@ -36693,7 +36693,7 @@ yyreduce:
   case 1863:
 
 /* Line 1455 of yacc.c  */
-#line 12494 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12494 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_STATUS;
@@ -36706,14 +36706,14 @@ yyreduce:
   case 1864:
 
 /* Line 1455 of yacc.c  */
-#line 12502 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12502 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command= SQLCOM_SHOW_PROCESSLIST;}
     break;
 
   case 1865:
 
 /* Line 1455 of yacc.c  */
-#line 12504 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12504 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_VARIABLES;
@@ -36726,7 +36726,7 @@ yyreduce:
   case 1866:
 
 /* Line 1455 of yacc.c  */
-#line 12512 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12512 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_CHARSETS;
@@ -36738,7 +36738,7 @@ yyreduce:
   case 1867:
 
 /* Line 1455 of yacc.c  */
-#line 12519 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12519 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_COLLATIONS;
@@ -36750,7 +36750,7 @@ yyreduce:
   case 1868:
 
 /* Line 1455 of yacc.c  */
-#line 12526 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12526 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_SHOW_GRANTS;
             if (!(Lex->grant_user= (LEX_USER*)thd->alloc(sizeof(LEX_USER))))
@@ -36762,7 +36762,7 @@ yyreduce:
   case 1869:
 
 /* Line 1455 of yacc.c  */
-#line 12533 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12533 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SHOW_GRANTS;
@@ -36773,7 +36773,7 @@ yyreduce:
   case 1870:
 
 /* Line 1455 of yacc.c  */
-#line 12539 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12539 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command=SQLCOM_SHOW_CREATE_DB;
             Lex->create_info.options=(yyvsp[(3) - (4)].num);
@@ -36784,7 +36784,7 @@ yyreduce:
   case 1871:
 
 /* Line 1455 of yacc.c  */
-#line 12545 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12545 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command = SQLCOM_SHOW_CREATE;
@@ -36798,7 +36798,7 @@ yyreduce:
   case 1872:
 
 /* Line 1455 of yacc.c  */
-#line 12554 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12554 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command = SQLCOM_SHOW_CREATE;
@@ -36811,7 +36811,7 @@ yyreduce:
   case 1873:
 
 /* Line 1455 of yacc.c  */
-#line 12562 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12562 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_SHOW_MASTER_STAT;
           }
@@ -36820,7 +36820,7 @@ yyreduce:
   case 1874:
 
 /* Line 1455 of yacc.c  */
-#line 12566 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12566 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_SHOW_SLAVE_STAT;
             Lex->verbose= 1;
@@ -36830,7 +36830,7 @@ yyreduce:
   case 1875:
 
 /* Line 1455 of yacc.c  */
-#line 12571 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12571 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->mi.connection_name= thd->variables.default_master_connection;
@@ -36842,7 +36842,7 @@ yyreduce:
   case 1876:
 
 /* Line 1455 of yacc.c  */
-#line 12578 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12578 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_SHOW_SLAVE_STAT;
             Lex->verbose= 0;
@@ -36852,7 +36852,7 @@ yyreduce:
   case 1877:
 
 /* Line 1455 of yacc.c  */
-#line 12583 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12583 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
            LEX *lex= Lex;
            lex->sql_command= SQLCOM_SHOW_CLIENT_STATS;
@@ -36864,7 +36864,7 @@ yyreduce:
   case 1878:
 
 /* Line 1455 of yacc.c  */
-#line 12590 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12590 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_USER_STATS;
@@ -36876,7 +36876,7 @@ yyreduce:
   case 1879:
 
 /* Line 1455 of yacc.c  */
-#line 12597 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12597 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_TABLE_STATS;
@@ -36888,7 +36888,7 @@ yyreduce:
   case 1880:
 
 /* Line 1455 of yacc.c  */
-#line 12604 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12604 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
              LEX *lex= Lex;
              lex->sql_command= SQLCOM_SHOW_INDEX_STATS;
@@ -36900,7 +36900,7 @@ yyreduce:
   case 1881:
 
 /* Line 1455 of yacc.c  */
-#line 12611 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12611 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -36912,7 +36912,7 @@ yyreduce:
   case 1882:
 
 /* Line 1455 of yacc.c  */
-#line 12618 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12618 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -36924,7 +36924,7 @@ yyreduce:
   case 1883:
 
 /* Line 1455 of yacc.c  */
-#line 12625 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12625 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_CREATE_TRIGGER;
@@ -36935,7 +36935,7 @@ yyreduce:
   case 1884:
 
 /* Line 1455 of yacc.c  */
-#line 12631 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12631 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_STATUS_PROC;
@@ -36947,7 +36947,7 @@ yyreduce:
   case 1885:
 
 /* Line 1455 of yacc.c  */
-#line 12638 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12638 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_SHOW_STATUS_FUNC;
@@ -36959,7 +36959,7 @@ yyreduce:
   case 1886:
 
 /* Line 1455 of yacc.c  */
-#line 12645 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12645 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_SHOW_PROC_CODE;
             Lex->spname= (yyvsp[(3) - (3)].spname);
@@ -36969,7 +36969,7 @@ yyreduce:
   case 1887:
 
 /* Line 1455 of yacc.c  */
-#line 12650 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12650 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_SHOW_FUNC_CODE;
             Lex->spname= (yyvsp[(3) - (3)].spname);
@@ -36979,7 +36979,7 @@ yyreduce:
   case 1888:
 
 /* Line 1455 of yacc.c  */
-#line 12655 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12655 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->spname= (yyvsp[(3) - (3)].spname);
             Lex->sql_command = SQLCOM_SHOW_CREATE_EVENT;
@@ -36989,7 +36989,7 @@ yyreduce:
   case 1889:
 
 /* Line 1455 of yacc.c  */
-#line 12660 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12660 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_SHOW_EXPLAIN;
             if (prepare_schema_table(thd, Lex, 0, SCH_EXPLAIN))
@@ -37001,84 +37001,84 @@ yyreduce:
   case 1890:
 
 /* Line 1455 of yacc.c  */
-#line 12670 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12670 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command= SQLCOM_SHOW_ENGINE_STATUS; }
     break;
 
   case 1891:
 
 /* Line 1455 of yacc.c  */
-#line 12672 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12672 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command= SQLCOM_SHOW_ENGINE_MUTEX; }
     break;
 
   case 1892:
 
 /* Line 1455 of yacc.c  */
-#line 12674 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12674 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command= SQLCOM_SHOW_ENGINE_LOGS; }
     break;
 
   case 1897:
 
 /* Line 1455 of yacc.c  */
-#line 12688 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12688 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.simple_string)= 0; }
     break;
 
   case 1898:
 
 /* Line 1455 of yacc.c  */
-#line 12689 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12689 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.simple_string)= (yyvsp[(2) - (2)].lex_str).str; }
     break;
 
   case 1899:
 
 /* Line 1455 of yacc.c  */
-#line 12693 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12693 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->verbose=0; }
     break;
 
   case 1900:
 
 /* Line 1455 of yacc.c  */
-#line 12694 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12694 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->verbose=1; }
     break;
 
   case 1903:
 
 /* Line 1455 of yacc.c  */
-#line 12703 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12703 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->mi.log_file_name = 0; }
     break;
 
   case 1904:
 
 /* Line 1455 of yacc.c  */
-#line 12704 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12704 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->mi.log_file_name = (yyvsp[(2) - (2)].lex_str).str; }
     break;
 
   case 1905:
 
 /* Line 1455 of yacc.c  */
-#line 12708 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12708 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->mi.pos = 4; /* skip magic number */ }
     break;
 
   case 1906:
 
 /* Line 1455 of yacc.c  */
-#line 12709 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12709 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->mi.pos = (yyvsp[(2) - (2)].ulonglong_number); }
     break;
 
   case 1908:
 
 /* Line 1455 of yacc.c  */
-#line 12715 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12715 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->wild= new (thd->mem_root) String((yyvsp[(2) - (2)].lex_str).str, (yyvsp[(2) - (2)].lex_str).length,
                                                     system_charset_info);
@@ -37090,7 +37090,7 @@ yyreduce:
   case 1909:
 
 /* Line 1455 of yacc.c  */
-#line 12722 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12722 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->where= normalize_cond((yyvsp[(2) - (2)].item));
             if ((yyvsp[(2) - (2)].item))
@@ -37101,7 +37101,7 @@ yyreduce:
   case 1910:
 
 /* Line 1455 of yacc.c  */
-#line 12732 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12732 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             mysql_init_select(lex);
@@ -37117,7 +37117,7 @@ yyreduce:
   case 1911:
 
 /* Line 1455 of yacc.c  */
-#line 12743 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12743 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Select->parsing_place= NO_MATTER;
           }
@@ -37126,14 +37126,14 @@ yyreduce:
   case 1912:
 
 /* Line 1455 of yacc.c  */
-#line 12747 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12747 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->describe|= DESCRIBE_NORMAL; }
     break;
 
   case 1913:
 
 /* Line 1455 of yacc.c  */
-#line 12749 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12749 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->select_lex.options|= SELECT_DESCRIBE;
@@ -37143,42 +37143,42 @@ yyreduce:
   case 1921:
 
 /* Line 1455 of yacc.c  */
-#line 12769 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12769 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1922:
 
 /* Line 1455 of yacc.c  */
-#line 12770 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12770 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->describe|= DESCRIBE_EXTENDED; }
     break;
 
   case 1923:
 
 /* Line 1455 of yacc.c  */
-#line 12771 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12771 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->describe|= DESCRIBE_PARTITIONS; }
     break;
 
   case 1924:
 
 /* Line 1455 of yacc.c  */
-#line 12775 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12775 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1925:
 
 /* Line 1455 of yacc.c  */
-#line 12776 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12776 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->wild= (yyvsp[(1) - (1)].string); }
     break;
 
   case 1926:
 
 /* Line 1455 of yacc.c  */
-#line 12778 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12778 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->wild= new (thd->mem_root) String((const char*) (yyvsp[(1) - (1)].lex_str).str,
                                                     (yyvsp[(1) - (1)].lex_str).length,
@@ -37191,7 +37191,7 @@ yyreduce:
   case 1927:
 
 /* Line 1455 of yacc.c  */
-#line 12792 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12792 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_FLUSH;
@@ -37203,14 +37203,14 @@ yyreduce:
   case 1928:
 
 /* Line 1455 of yacc.c  */
-#line 12799 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12799 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1929:
 
 /* Line 1455 of yacc.c  */
-#line 12804 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12804 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->type|= REFRESH_TABLES;
             /*
@@ -37225,14 +37225,14 @@ yyreduce:
   case 1932:
 
 /* Line 1455 of yacc.c  */
-#line 12818 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12818 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1933:
 
 /* Line 1455 of yacc.c  */
-#line 12820 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12820 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           TABLE_LIST *tables= Lex->query_tables;
           for (; tables; tables= tables->next_global)
@@ -37247,14 +37247,14 @@ yyreduce:
   case 1934:
 
 /* Line 1455 of yacc.c  */
-#line 12833 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12833 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_READ_LOCK | (yyvsp[(4) - (4)].num); }
     break;
 
   case 1935:
 
 /* Line 1455 of yacc.c  */
-#line 12835 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12835 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->query_tables == NULL) // Table list can't be empty
             {
@@ -37268,49 +37268,49 @@ yyreduce:
   case 1938:
 
 /* Line 1455 of yacc.c  */
-#line 12848 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12848 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1939:
 
 /* Line 1455 of yacc.c  */
-#line 12853 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12853 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_ERROR_LOG; }
     break;
 
   case 1940:
 
 /* Line 1455 of yacc.c  */
-#line 12855 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12855 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_ENGINE_LOG; }
     break;
 
   case 1941:
 
 /* Line 1455 of yacc.c  */
-#line 12857 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12857 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_GENERAL_LOG; }
     break;
 
   case 1942:
 
 /* Line 1455 of yacc.c  */
-#line 12859 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12859 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_SLOW_LOG; }
     break;
 
   case 1943:
 
 /* Line 1455 of yacc.c  */
-#line 12861 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12861 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_BINARY_LOG; }
     break;
 
   case 1944:
 
 /* Line 1455 of yacc.c  */
-#line 12863 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12863 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->type & REFRESH_RELAY_LOG)
@@ -37326,28 +37326,28 @@ yyreduce:
   case 1945:
 
 /* Line 1455 of yacc.c  */
-#line 12874 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12874 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_QUERY_CACHE_FREE; }
     break;
 
   case 1946:
 
 /* Line 1455 of yacc.c  */
-#line 12876 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12876 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_HOSTS; }
     break;
 
   case 1947:
 
 /* Line 1455 of yacc.c  */
-#line 12878 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12878 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_GRANT; }
     break;
 
   case 1948:
 
 /* Line 1455 of yacc.c  */
-#line 12880 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12880 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->type|= REFRESH_LOG;
             Lex->relay_log_connection_name.str= (char*) "";
@@ -37358,14 +37358,14 @@ yyreduce:
   case 1949:
 
 /* Line 1455 of yacc.c  */
-#line 12886 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12886 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_STATUS; }
     break;
 
   case 1950:
 
 /* Line 1455 of yacc.c  */
-#line 12888 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12888 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             LEX *lex= Lex;
             if (lex->type & REFRESH_SLAVE)
@@ -37381,84 +37381,84 @@ yyreduce:
   case 1951:
 
 /* Line 1455 of yacc.c  */
-#line 12899 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12899 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_CLIENT_STATS; }
     break;
 
   case 1952:
 
 /* Line 1455 of yacc.c  */
-#line 12901 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12901 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_USER_STATS; }
     break;
 
   case 1953:
 
 /* Line 1455 of yacc.c  */
-#line 12903 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12903 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_TABLE_STATS; }
     break;
 
   case 1954:
 
 /* Line 1455 of yacc.c  */
-#line 12905 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12905 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_INDEX_STATS; }
     break;
 
   case 1955:
 
 /* Line 1455 of yacc.c  */
-#line 12907 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12907 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_MASTER; }
     break;
 
   case 1956:
 
 /* Line 1455 of yacc.c  */
-#line 12909 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12909 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_DES_KEY_FILE; }
     break;
 
   case 1957:
 
 /* Line 1455 of yacc.c  */
-#line 12911 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12911 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_USER_RESOURCES; }
     break;
 
   case 1958:
 
 /* Line 1455 of yacc.c  */
-#line 12915 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12915 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1959:
 
 /* Line 1455 of yacc.c  */
-#line 12916 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12916 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1960:
 
 /* Line 1455 of yacc.c  */
-#line 12920 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12920 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.num)= 0;}
     break;
 
   case 1961:
 
 /* Line 1455 of yacc.c  */
-#line 12921 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12921 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.num)= REFRESH_CHECKPOINT; }
     break;
 
   case 1962:
 
 /* Line 1455 of yacc.c  */
-#line 12925 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12925 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_RESET; lex->type=0;
@@ -37468,56 +37468,56 @@ yyreduce:
   case 1963:
 
 /* Line 1455 of yacc.c  */
-#line 12930 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12930 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1966:
 
 /* Line 1455 of yacc.c  */
-#line 12939 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12939 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_SLAVE; }
     break;
 
   case 1967:
 
 /* Line 1455 of yacc.c  */
-#line 12941 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12941 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 1968:
 
 /* Line 1455 of yacc.c  */
-#line 12942 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12942 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_MASTER; }
     break;
 
   case 1969:
 
 /* Line 1455 of yacc.c  */
-#line 12943 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12943 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->type|= REFRESH_QUERY_CACHE;}
     break;
 
   case 1970:
 
 /* Line 1455 of yacc.c  */
-#line 12947 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12947 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->reset_slave_info.all= false; }
     break;
 
   case 1971:
 
 /* Line 1455 of yacc.c  */
-#line 12948 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12948 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->reset_slave_info.all= true; }
     break;
 
   case 1972:
 
 /* Line 1455 of yacc.c  */
-#line 12953 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12953 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->type=0;
@@ -37528,14 +37528,14 @@ yyreduce:
   case 1973:
 
 /* Line 1455 of yacc.c  */
-#line 12959 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12959 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1975:
 
 /* Line 1455 of yacc.c  */
-#line 12968 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12968 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->to_log = (yyvsp[(2) - (2)].lex_str).str;
           }
@@ -37544,7 +37544,7 @@ yyreduce:
   case 1976:
 
 /* Line 1455 of yacc.c  */
-#line 12972 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12972 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->value_list.empty();
@@ -37556,7 +37556,7 @@ yyreduce:
   case 1977:
 
 /* Line 1455 of yacc.c  */
-#line 12984 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12984 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->value_list.empty();
@@ -37569,7 +37569,7 @@ yyreduce:
   case 1978:
 
 /* Line 1455 of yacc.c  */
-#line 12992 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12992 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->kill_signal= (killed_state) ((yyvsp[(3) - (5)].num) | (yyvsp[(4) - (5)].num));
           }
@@ -37578,49 +37578,49 @@ yyreduce:
   case 1979:
 
 /* Line 1455 of yacc.c  */
-#line 12998 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12998 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (int) KILL_HARD_BIT; }
     break;
 
   case 1980:
 
 /* Line 1455 of yacc.c  */
-#line 12999 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 12999 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (int) KILL_HARD_BIT; }
     break;
 
   case 1981:
 
 /* Line 1455 of yacc.c  */
-#line 13000 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13000 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 1982:
 
 /* Line 1455 of yacc.c  */
-#line 13003 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13003 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (int) KILL_CONNECTION; }
     break;
 
   case 1983:
 
 /* Line 1455 of yacc.c  */
-#line 13004 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13004 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (int) KILL_CONNECTION; }
     break;
 
   case 1984:
 
 /* Line 1455 of yacc.c  */
-#line 13005 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13005 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= (int) KILL_QUERY; }
     break;
 
   case 1985:
 
 /* Line 1455 of yacc.c  */
-#line 13007 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13007 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= (int) KILL_QUERY;
             Lex->kill_type= KILL_TYPE_QUERY;
@@ -37630,7 +37630,7 @@ yyreduce:
   case 1986:
 
 /* Line 1455 of yacc.c  */
-#line 13015 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13015 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
           Lex->value_list.push_front((yyval.item));
          }
@@ -37639,7 +37639,7 @@ yyreduce:
   case 1987:
 
 /* Line 1455 of yacc.c  */
-#line 13019 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13019 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->users_list.push_back((yyvsp[(2) - (2)].lex_user));
             Lex->kill_type= KILL_TYPE_USER;
@@ -37649,14 +37649,14 @@ yyreduce:
   case 1988:
 
 /* Line 1455 of yacc.c  */
-#line 13027 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13027 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->sql_command= SQLCOM_SHUTDOWN; }
     break;
 
   case 1989:
 
 /* Line 1455 of yacc.c  */
-#line 13034 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13034 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command=SQLCOM_CHANGE_DB;
@@ -37667,7 +37667,7 @@ yyreduce:
   case 1990:
 
 /* Line 1455 of yacc.c  */
-#line 13045 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13045 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
 
@@ -37683,7 +37683,7 @@ yyreduce:
   case 1991:
 
 /* Line 1455 of yacc.c  */
-#line 13056 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13056 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_LOAD;
@@ -37698,7 +37698,7 @@ yyreduce:
   case 1992:
 
 /* Line 1455 of yacc.c  */
-#line 13066 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13066 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (!Select->add_table_to_list(thd, (yyvsp[(12) - (13)].table), NULL, TL_OPTION_UPDATING,
@@ -37713,56 +37713,56 @@ yyreduce:
   case 1993:
 
 /* Line 1455 of yacc.c  */
-#line 13076 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13076 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->exchange->cs= (yyvsp[(15) - (15)].charset); }
     break;
 
   case 1994:
 
 /* Line 1455 of yacc.c  */
-#line 13080 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13080 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 1995:
 
 /* Line 1455 of yacc.c  */
-#line 13084 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13084 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.filetype)= FILETYPE_CSV; }
     break;
 
   case 1996:
 
 /* Line 1455 of yacc.c  */
-#line 13085 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13085 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.filetype)= FILETYPE_XML; }
     break;
 
   case 1997:
 
 /* Line 1455 of yacc.c  */
-#line 13089 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13089 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=0;}
     break;
 
   case 1998:
 
 /* Line 1455 of yacc.c  */
-#line 13090 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13090 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=1;}
     break;
 
   case 1999:
 
 /* Line 1455 of yacc.c  */
-#line 13094 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13094 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lock_type)= TL_WRITE_DEFAULT; }
     break;
 
   case 2000:
 
 /* Line 1455 of yacc.c  */
-#line 13096 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13096 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Ignore this option in SP to avoid problem with query cache and
@@ -37775,35 +37775,35 @@ yyreduce:
   case 2001:
 
 /* Line 1455 of yacc.c  */
-#line 13103 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13103 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lock_type)= TL_WRITE_LOW_PRIORITY; }
     break;
 
   case 2002:
 
 /* Line 1455 of yacc.c  */
-#line 13107 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13107 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->duplicates=DUP_ERROR; }
     break;
 
   case 2003:
 
 /* Line 1455 of yacc.c  */
-#line 13108 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13108 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->duplicates=DUP_REPLACE; }
     break;
 
   case 2004:
 
 /* Line 1455 of yacc.c  */
-#line 13109 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13109 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ignore= 1; }
     break;
 
   case 2009:
 
 /* Line 1455 of yacc.c  */
-#line 13124 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13124 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             DBUG_ASSERT(Lex->exchange != 0);
             Lex->exchange->field_term= (yyvsp[(3) - (3)].string);
@@ -37813,7 +37813,7 @@ yyreduce:
   case 2010:
 
 /* Line 1455 of yacc.c  */
-#line 13129 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13129 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             DBUG_ASSERT(lex->exchange != 0);
@@ -37825,7 +37825,7 @@ yyreduce:
   case 2011:
 
 /* Line 1455 of yacc.c  */
-#line 13136 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13136 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             DBUG_ASSERT(Lex->exchange != 0);
             Lex->exchange->enclosed= (yyvsp[(3) - (3)].string);
@@ -37835,7 +37835,7 @@ yyreduce:
   case 2012:
 
 /* Line 1455 of yacc.c  */
-#line 13141 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13141 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             DBUG_ASSERT(Lex->exchange != 0);
             Lex->exchange->escaped= (yyvsp[(3) - (3)].string);
@@ -37845,7 +37845,7 @@ yyreduce:
   case 2017:
 
 /* Line 1455 of yacc.c  */
-#line 13159 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13159 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             DBUG_ASSERT(Lex->exchange != 0);
             Lex->exchange->line_term= (yyvsp[(3) - (3)].string);
@@ -37855,7 +37855,7 @@ yyreduce:
   case 2018:
 
 /* Line 1455 of yacc.c  */
-#line 13164 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13164 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             DBUG_ASSERT(Lex->exchange != 0);
             Lex->exchange->line_start= (yyvsp[(3) - (3)].string);
@@ -37865,21 +37865,21 @@ yyreduce:
   case 2019:
 
 /* Line 1455 of yacc.c  */
-#line 13171 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13171 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 2020:
 
 /* Line 1455 of yacc.c  */
-#line 13173 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13173 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->exchange->line_term = (yyvsp[(4) - (4)].string); }
     break;
 
   case 2022:
 
 /* Line 1455 of yacc.c  */
-#line 13178 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13178 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             DBUG_ASSERT(Lex->exchange != 0);
             Lex->exchange->skip_lines= atol((yyvsp[(2) - (3)].lex_str).str);
@@ -37889,63 +37889,63 @@ yyreduce:
   case 2023:
 
 /* Line 1455 of yacc.c  */
-#line 13185 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13185 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 2024:
 
 /* Line 1455 of yacc.c  */
-#line 13187 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13187 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { }
     break;
 
   case 2025:
 
 /* Line 1455 of yacc.c  */
-#line 13191 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13191 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2026:
 
 /* Line 1455 of yacc.c  */
-#line 13192 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13192 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2027:
 
 /* Line 1455 of yacc.c  */
-#line 13193 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13193 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2028:
 
 /* Line 1455 of yacc.c  */
-#line 13198 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13198 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->field_list.push_back((yyvsp[(3) - (3)].item)); }
     break;
 
   case 2029:
 
 /* Line 1455 of yacc.c  */
-#line 13200 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13200 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->field_list.push_back((yyvsp[(1) - (1)].item)); }
     break;
 
   case 2030:
 
 /* Line 1455 of yacc.c  */
-#line 13204 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13204 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {(yyval.item)= (yyvsp[(1) - (1)].item);}
     break;
 
   case 2031:
 
 /* Line 1455 of yacc.c  */
-#line 13206 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13206 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_user_var_as_out_param((yyvsp[(2) - (2)].lex_str));
             if ((yyval.item) == NULL)
@@ -37956,21 +37956,21 @@ yyreduce:
   case 2032:
 
 /* Line 1455 of yacc.c  */
-#line 13214 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13214 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2033:
 
 /* Line 1455 of yacc.c  */
-#line 13215 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13215 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2036:
 
 /* Line 1455 of yacc.c  */
-#line 13225 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13225 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->update_list.push_back((yyvsp[(1) - (5)].item)) || 
@@ -37983,7 +37983,7 @@ yyreduce:
   case 2037:
 
 /* Line 1455 of yacc.c  */
-#line 13238 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13238 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX_STRING tmp;
             CHARSET_INFO *cs_con= thd->variables.collation_connection;
@@ -38011,7 +38011,7 @@ yyreduce:
   case 2038:
 
 /* Line 1455 of yacc.c  */
-#line 13261 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13261 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             uint repertoire= Lex->text_string_is_7bit ?
                              MY_REPERTOIRE_ASCII : MY_REPERTOIRE_UNICODE30;
@@ -38028,7 +38028,7 @@ yyreduce:
   case 2039:
 
 /* Line 1455 of yacc.c  */
-#line 13273 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13273 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item_string *str= new (thd->mem_root) Item_string((yyvsp[(2) - (2)].lex_str).str,
                                                                 (yyvsp[(2) - (2)].lex_str).length, (yyvsp[(1) - (2)].charset));
@@ -38044,7 +38044,7 @@ yyreduce:
   case 2040:
 
 /* Line 1455 of yacc.c  */
-#line 13284 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13284 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item_string* item= (Item_string*) (yyvsp[(1) - (2)].item);
             item->append((yyvsp[(2) - (2)].lex_str).str, (yyvsp[(2) - (2)].lex_str).length);
@@ -38065,7 +38065,7 @@ yyreduce:
   case 2041:
 
 /* Line 1455 of yacc.c  */
-#line 13303 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13303 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.string)= new (thd->mem_root) String((yyvsp[(1) - (1)].lex_str).str,
                                              (yyvsp[(1) - (1)].lex_str).length,
@@ -38078,7 +38078,7 @@ yyreduce:
   case 2042:
 
 /* Line 1455 of yacc.c  */
-#line 13311 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13311 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *tmp= new (thd->mem_root) Item_hex_hybrid((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if (tmp == NULL)
@@ -38095,7 +38095,7 @@ yyreduce:
   case 2043:
 
 /* Line 1455 of yacc.c  */
-#line 13323 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13323 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *tmp= new (thd->mem_root) Item_hex_string((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if (tmp == NULL)
@@ -38108,7 +38108,7 @@ yyreduce:
   case 2044:
 
 /* Line 1455 of yacc.c  */
-#line 13331 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13331 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *tmp= new (thd->mem_root) Item_bin_string((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if (tmp == NULL)
@@ -38125,7 +38125,7 @@ yyreduce:
   case 2045:
 
 /* Line 1455 of yacc.c  */
-#line 13346 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13346 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -38147,21 +38147,21 @@ yyreduce:
   case 2046:
 
 /* Line 1455 of yacc.c  */
-#line 13365 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13365 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item) = (yyvsp[(1) - (1)].item); }
     break;
 
   case 2047:
 
 /* Line 1455 of yacc.c  */
-#line 13366 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13366 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item) = (yyvsp[(2) - (2)].item_num); }
     break;
 
   case 2048:
 
 /* Line 1455 of yacc.c  */
-#line 13368 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13368 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyvsp[(2) - (2)].item_num)->max_length++;
             (yyval.item)= (yyvsp[(2) - (2)].item_num)->neg();
@@ -38171,28 +38171,28 @@ yyreduce:
   case 2049:
 
 /* Line 1455 of yacc.c  */
-#line 13375 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13375 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item) = (yyvsp[(1) - (1)].item); }
     break;
 
   case 2050:
 
 /* Line 1455 of yacc.c  */
-#line 13376 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13376 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item) = (yyvsp[(1) - (1)].item_num); }
     break;
 
   case 2051:
 
 /* Line 1455 of yacc.c  */
-#line 13377 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13377 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item); }
     break;
 
   case 2052:
 
 /* Line 1455 of yacc.c  */
-#line 13379 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13379 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item) = new (thd->mem_root) Item_null();
             if ((yyval.item) == NULL)
@@ -38204,7 +38204,7 @@ yyreduce:
   case 2053:
 
 /* Line 1455 of yacc.c  */
-#line 13386 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13386 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_int((char*) "FALSE",0,1);
             if ((yyval.item) == NULL)
@@ -38215,7 +38215,7 @@ yyreduce:
   case 2054:
 
 /* Line 1455 of yacc.c  */
-#line 13392 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13392 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_int((char*) "TRUE",1,1);
             if ((yyval.item) == NULL)
@@ -38226,7 +38226,7 @@ yyreduce:
   case 2055:
 
 /* Line 1455 of yacc.c  */
-#line 13398 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13398 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item) = new (thd->mem_root) Item_hex_hybrid((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if ((yyval.item) == NULL)
@@ -38237,7 +38237,7 @@ yyreduce:
   case 2056:
 
 /* Line 1455 of yacc.c  */
-#line 13404 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13404 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item) = new (thd->mem_root) Item_hex_string((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if ((yyval.item) == NULL)
@@ -38248,7 +38248,7 @@ yyreduce:
   case 2057:
 
 /* Line 1455 of yacc.c  */
-#line 13410 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13410 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)= new (thd->mem_root) Item_bin_string((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if ((yyval.item) == NULL)
@@ -38259,7 +38259,7 @@ yyreduce:
   case 2058:
 
 /* Line 1455 of yacc.c  */
-#line 13416 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13416 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *tmp= new (thd->mem_root) Item_hex_string((yyvsp[(2) - (2)].lex_str).str, (yyvsp[(2) - (2)].lex_str).length);
             if (tmp == NULL)
@@ -38293,7 +38293,7 @@ yyreduce:
   case 2059:
 
 /* Line 1455 of yacc.c  */
-#line 13445 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13445 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item *tmp= new (thd->mem_root) Item_bin_string((yyvsp[(2) - (2)].lex_str).str, (yyvsp[(2) - (2)].lex_str).length);
             if (tmp == NULL)
@@ -38326,7 +38326,7 @@ yyreduce:
   case 2060:
 
 /* Line 1455 of yacc.c  */
-#line 13476 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13476 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             int error;
             (yyval.item_num)= new (thd->mem_root)
@@ -38341,7 +38341,7 @@ yyreduce:
   case 2061:
 
 /* Line 1455 of yacc.c  */
-#line 13486 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13486 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             int error;
             (yyval.item_num)= new (thd->mem_root)
@@ -38356,7 +38356,7 @@ yyreduce:
   case 2062:
 
 /* Line 1455 of yacc.c  */
-#line 13496 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13496 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item_num)= new (thd->mem_root) Item_uint((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if ((yyval.item_num) == NULL)
@@ -38367,7 +38367,7 @@ yyreduce:
   case 2063:
 
 /* Line 1455 of yacc.c  */
-#line 13502 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13502 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item_num)= new (thd->mem_root) Item_decimal((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length,
                                                    thd->charset());
@@ -38381,7 +38381,7 @@ yyreduce:
   case 2064:
 
 /* Line 1455 of yacc.c  */
-#line 13511 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13511 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item_num)= new (thd->mem_root) Item_float((yyvsp[(1) - (1)].lex_str).str, (yyvsp[(1) - (1)].lex_str).length);
             if (((yyval.item_num) == NULL) || (thd->is_error()))
@@ -38394,7 +38394,7 @@ yyreduce:
   case 2065:
 
 /* Line 1455 of yacc.c  */
-#line 13523 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13523 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.item)= create_temporal_literal(thd, (yyvsp[(2) - (2)].lex_str).str, (yyvsp[(2) - (2)].lex_str).length, YYCSCL,
                                               MYSQL_TYPE_DATE, true)))
@@ -38405,7 +38405,7 @@ yyreduce:
   case 2066:
 
 /* Line 1455 of yacc.c  */
-#line 13529 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13529 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.item)= create_temporal_literal(thd, (yyvsp[(2) - (2)].lex_str).str, (yyvsp[(2) - (2)].lex_str).length, YYCSCL,
                                               MYSQL_TYPE_TIME, true)))
@@ -38416,7 +38416,7 @@ yyreduce:
   case 2067:
 
 /* Line 1455 of yacc.c  */
-#line 13535 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13535 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.item)= create_temporal_literal(thd, (yyvsp[(2) - (2)].lex_str).str, (yyvsp[(2) - (2)].lex_str).length, YYCSCL,
                                               MYSQL_TYPE_DATETIME, true)))
@@ -38427,21 +38427,21 @@ yyreduce:
   case 2068:
 
 /* Line 1455 of yacc.c  */
-#line 13550 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13550 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)=(yyvsp[(1) - (1)].item); }
     break;
 
   case 2069:
 
 /* Line 1455 of yacc.c  */
-#line 13551 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13551 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)=(yyvsp[(1) - (1)].item); }
     break;
 
   case 2070:
 
 /* Line 1455 of yacc.c  */
-#line 13556 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13556 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             (yyval.item)= new (thd->mem_root) Item_field(Lex->current_context(),
@@ -38455,7 +38455,7 @@ yyreduce:
   case 2071:
 
 /* Line 1455 of yacc.c  */
-#line 13565 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13565 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel= Select;
             const char* schema= thd->client_capabilities & CLIENT_NO_SCHEMA ?
@@ -38472,14 +38472,14 @@ yyreduce:
   case 2072:
 
 /* Line 1455 of yacc.c  */
-#line 13579 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13579 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)=(yyvsp[(1) - (1)].item); }
     break;
 
   case 2073:
 
 /* Line 1455 of yacc.c  */
-#line 13584 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13584 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -38530,14 +38530,14 @@ yyreduce:
   case 2074:
 
 /* Line 1455 of yacc.c  */
-#line 13629 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13629 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item); }
     break;
 
   case 2075:
 
 /* Line 1455 of yacc.c  */
-#line 13634 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13634 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             SELECT_LEX *sel=Select;
             if ((sel->parsing_place != IN_HAVING) ||
@@ -38559,14 +38559,14 @@ yyreduce:
   case 2076:
 
 /* Line 1455 of yacc.c  */
-#line 13650 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13650 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)= (yyvsp[(1) - (1)].item); }
     break;
 
   case 2077:
 
 /* Line 1455 of yacc.c  */
-#line 13655 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13655 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
 
@@ -38649,7 +38649,7 @@ yyreduce:
   case 2078:
 
 /* Line 1455 of yacc.c  */
-#line 13733 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13733 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             SELECT_LEX *sel= lex->current_select;
@@ -38678,7 +38678,7 @@ yyreduce:
   case 2079:
 
 /* Line 1455 of yacc.c  */
-#line 13757 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13757 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             SELECT_LEX *sel= lex->current_select;
@@ -38710,14 +38710,14 @@ yyreduce:
   case 2080:
 
 /* Line 1455 of yacc.c  */
-#line 13786 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13786 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str);}
     break;
 
   case 2081:
 
 /* Line 1455 of yacc.c  */
-#line 13788 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13788 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             TABLE_LIST *table= Select->table_list.first;
             if (my_strcasecmp(table_alias_charset, (yyvsp[(1) - (5)].lex_str).str, table->db))
@@ -38738,7 +38738,7 @@ yyreduce:
   case 2082:
 
 /* Line 1455 of yacc.c  */
-#line 13804 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13804 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             TABLE_LIST *table= Select->table_list.first;
             if (my_strcasecmp(table_alias_charset, (yyvsp[(1) - (3)].lex_str).str, table->alias))
@@ -38753,14 +38753,14 @@ yyreduce:
   case 2083:
 
 /* Line 1455 of yacc.c  */
-#line 13813 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13813 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(2) - (2)].lex_str);}
     break;
 
   case 2084:
 
 /* Line 1455 of yacc.c  */
-#line 13818 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13818 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.table)= new Table_ident((yyvsp[(1) - (1)].lex_str));
             if ((yyval.table) == NULL)
@@ -38771,7 +38771,7 @@ yyreduce:
   case 2085:
 
 /* Line 1455 of yacc.c  */
-#line 13824 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13824 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.table)= new Table_ident(thd, (yyvsp[(1) - (3)].lex_str),(yyvsp[(3) - (3)].lex_str),0);
             if ((yyval.table) == NULL)
@@ -38782,7 +38782,7 @@ yyreduce:
   case 2086:
 
 /* Line 1455 of yacc.c  */
-#line 13830 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13830 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /* For Delphi */
             (yyval.table)= new Table_ident((yyvsp[(2) - (2)].lex_str));
@@ -38794,7 +38794,7 @@ yyreduce:
   case 2087:
 
 /* Line 1455 of yacc.c  */
-#line 13840 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13840 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.table)= new Table_ident((yyvsp[(1) - (2)].lex_str));
             if ((yyval.table) == NULL)
@@ -38805,7 +38805,7 @@ yyreduce:
   case 2088:
 
 /* Line 1455 of yacc.c  */
-#line 13846 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13846 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.table)= new Table_ident(thd, (yyvsp[(1) - (4)].lex_str),(yyvsp[(3) - (4)].lex_str),0);
             if ((yyval.table) == NULL)
@@ -38816,7 +38816,7 @@ yyreduce:
   case 2089:
 
 /* Line 1455 of yacc.c  */
-#line 13855 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13855 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX_STRING db={(char*) any_db,3};
             (yyval.table)= new Table_ident(thd, db,(yyvsp[(1) - (1)].lex_str),0);
@@ -38828,14 +38828,14 @@ yyreduce:
   case 2090:
 
 /* Line 1455 of yacc.c  */
-#line 13864 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13864 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 2091:
 
 /* Line 1455 of yacc.c  */
-#line 13866 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13866 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (thd->charset_is_system_charset)
             {
@@ -38865,7 +38865,7 @@ yyreduce:
   case 2092:
 
 /* Line 1455 of yacc.c  */
-#line 13894 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13894 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (thd->charset_is_system_charset)
               (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str);
@@ -38881,7 +38881,7 @@ yyreduce:
   case 2093:
 
 /* Line 1455 of yacc.c  */
-#line 13908 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13908 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (thd->charset_is_collation_connection)
               (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str);
@@ -38897,7 +38897,7 @@ yyreduce:
   case 2094:
 
 /* Line 1455 of yacc.c  */
-#line 13922 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13922 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (thd->charset_is_character_set_filesystem)
               (yyval.lex_str)= (yyvsp[(1) - (1)].lex_str);
@@ -38914,14 +38914,14 @@ yyreduce:
   case 2095:
 
 /* Line 1455 of yacc.c  */
-#line 13936 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13936 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 2096:
 
 /* Line 1455 of yacc.c  */
-#line 13938 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13938 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.lex_str).str= thd->strmake((yyvsp[(1) - (1)].symbol).str, (yyvsp[(1) - (1)].symbol).length);
             if ((yyval.lex_str).str == NULL)
@@ -38933,14 +38933,14 @@ yyreduce:
   case 2097:
 
 /* Line 1455 of yacc.c  */
-#line 13947 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13947 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str); }
     break;
 
   case 2098:
 
 /* Line 1455 of yacc.c  */
-#line 13949 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13949 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.lex_str).str= thd->strmake((yyvsp[(1) - (1)].symbol).str, (yyvsp[(1) - (1)].symbol).length);
             if ((yyval.lex_str).str == NULL)
@@ -38952,28 +38952,28 @@ yyreduce:
   case 2099:
 
 /* Line 1455 of yacc.c  */
-#line 13958 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13958 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str);}
     break;
 
   case 2100:
 
 /* Line 1455 of yacc.c  */
-#line 13959 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13959 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str);}
     break;
 
   case 2101:
 
 /* Line 1455 of yacc.c  */
-#line 13960 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13960 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_str)=(yyvsp[(1) - (1)].lex_str);}
     break;
 
   case 2102:
 
 /* Line 1455 of yacc.c  */
-#line 13965 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13965 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.lex_user)=(LEX_USER*) thd->alloc(sizeof(st_lex_user))))
               MYSQL_YYABORT;
@@ -38993,7 +38993,7 @@ yyreduce:
   case 2103:
 
 /* Line 1455 of yacc.c  */
-#line 13980 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 13980 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.lex_user)=(LEX_USER*) thd->alloc(sizeof(st_lex_user))))
               MYSQL_YYABORT;
@@ -39030,7 +39030,7 @@ yyreduce:
   case 2104:
 
 /* Line 1455 of yacc.c  */
-#line 14012 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14012 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.lex_user)=(LEX_USER*)thd->calloc(sizeof(LEX_USER))))
               MYSQL_YYABORT;
@@ -39043,7 +39043,7 @@ yyreduce:
   case 2107:
 
 /* Line 1455 of yacc.c  */
-#line 14024 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14024 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
            if ((yyvsp[(1) - (1)].lex_user)->user.str != current_user.str && (yyvsp[(1) - (1)].lex_user)->host.str == 0)
              (yyvsp[(1) - (1)].lex_user)->host= host_not_specified;
@@ -39054,2597 +39054,2597 @@ yyreduce:
   case 2108:
 
 /* Line 1455 of yacc.c  */
-#line 14033 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14033 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2109:
 
 /* Line 1455 of yacc.c  */
-#line 14034 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14034 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2110:
 
 /* Line 1455 of yacc.c  */
-#line 14035 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14035 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2111:
 
 /* Line 1455 of yacc.c  */
-#line 14036 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14036 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2112:
 
 /* Line 1455 of yacc.c  */
-#line 14037 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14037 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2113:
 
 /* Line 1455 of yacc.c  */
-#line 14038 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14038 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2114:
 
 /* Line 1455 of yacc.c  */
-#line 14039 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14039 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2115:
 
 /* Line 1455 of yacc.c  */
-#line 14040 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14040 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2116:
 
 /* Line 1455 of yacc.c  */
-#line 14041 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14041 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2117:
 
 /* Line 1455 of yacc.c  */
-#line 14042 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14042 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2118:
 
 /* Line 1455 of yacc.c  */
-#line 14043 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14043 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2119:
 
 /* Line 1455 of yacc.c  */
-#line 14044 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14044 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2120:
 
 /* Line 1455 of yacc.c  */
-#line 14045 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14045 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2121:
 
 /* Line 1455 of yacc.c  */
-#line 14046 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14046 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2122:
 
 /* Line 1455 of yacc.c  */
-#line 14047 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14047 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2123:
 
 /* Line 1455 of yacc.c  */
-#line 14048 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14048 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2124:
 
 /* Line 1455 of yacc.c  */
-#line 14049 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14049 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2125:
 
 /* Line 1455 of yacc.c  */
-#line 14050 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14050 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2126:
 
 /* Line 1455 of yacc.c  */
-#line 14051 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14051 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2127:
 
 /* Line 1455 of yacc.c  */
-#line 14052 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14052 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2128:
 
 /* Line 1455 of yacc.c  */
-#line 14053 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14053 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2129:
 
 /* Line 1455 of yacc.c  */
-#line 14054 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14054 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2130:
 
 /* Line 1455 of yacc.c  */
-#line 14055 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14055 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2131:
 
 /* Line 1455 of yacc.c  */
-#line 14056 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14056 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2132:
 
 /* Line 1455 of yacc.c  */
-#line 14057 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14057 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2133:
 
 /* Line 1455 of yacc.c  */
-#line 14058 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14058 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2134:
 
 /* Line 1455 of yacc.c  */
-#line 14059 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14059 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2135:
 
 /* Line 1455 of yacc.c  */
-#line 14060 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14060 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2136:
 
 /* Line 1455 of yacc.c  */
-#line 14061 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14061 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2137:
 
 /* Line 1455 of yacc.c  */
-#line 14062 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14062 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2138:
 
 /* Line 1455 of yacc.c  */
-#line 14063 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14063 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2139:
 
 /* Line 1455 of yacc.c  */
-#line 14064 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14064 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2140:
 
 /* Line 1455 of yacc.c  */
-#line 14065 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14065 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2141:
 
 /* Line 1455 of yacc.c  */
-#line 14066 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14066 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2142:
 
 /* Line 1455 of yacc.c  */
-#line 14067 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14067 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2143:
 
 /* Line 1455 of yacc.c  */
-#line 14068 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14068 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2144:
 
 /* Line 1455 of yacc.c  */
-#line 14069 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14069 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2145:
 
 /* Line 1455 of yacc.c  */
-#line 14070 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14070 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2146:
 
 /* Line 1455 of yacc.c  */
-#line 14071 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14071 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2147:
 
 /* Line 1455 of yacc.c  */
-#line 14072 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14072 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2148:
 
 /* Line 1455 of yacc.c  */
-#line 14073 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14073 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2149:
 
 /* Line 1455 of yacc.c  */
-#line 14074 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14074 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2150:
 
 /* Line 1455 of yacc.c  */
-#line 14075 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14075 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2151:
 
 /* Line 1455 of yacc.c  */
-#line 14076 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14076 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2152:
 
 /* Line 1455 of yacc.c  */
-#line 14077 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14077 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2153:
 
 /* Line 1455 of yacc.c  */
-#line 14078 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14078 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2154:
 
 /* Line 1455 of yacc.c  */
-#line 14079 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14079 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2155:
 
 /* Line 1455 of yacc.c  */
-#line 14080 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14080 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2156:
 
 /* Line 1455 of yacc.c  */
-#line 14081 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14081 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2157:
 
 /* Line 1455 of yacc.c  */
-#line 14082 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14082 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2158:
 
 /* Line 1455 of yacc.c  */
-#line 14083 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14083 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2159:
 
 /* Line 1455 of yacc.c  */
-#line 14084 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14084 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2160:
 
 /* Line 1455 of yacc.c  */
-#line 14085 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14085 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2161:
 
 /* Line 1455 of yacc.c  */
-#line 14086 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14086 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2162:
 
 /* Line 1455 of yacc.c  */
-#line 14087 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14087 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2163:
 
 /* Line 1455 of yacc.c  */
-#line 14088 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14088 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2164:
 
 /* Line 1455 of yacc.c  */
-#line 14089 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14089 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2165:
 
 /* Line 1455 of yacc.c  */
-#line 14090 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14090 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2166:
 
 /* Line 1455 of yacc.c  */
-#line 14091 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14091 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2167:
 
 /* Line 1455 of yacc.c  */
-#line 14092 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14092 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2168:
 
 /* Line 1455 of yacc.c  */
-#line 14102 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14102 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2169:
 
 /* Line 1455 of yacc.c  */
-#line 14103 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14103 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2170:
 
 /* Line 1455 of yacc.c  */
-#line 14104 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14104 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2171:
 
 /* Line 1455 of yacc.c  */
-#line 14105 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14105 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2172:
 
 /* Line 1455 of yacc.c  */
-#line 14106 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14106 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2173:
 
 /* Line 1455 of yacc.c  */
-#line 14107 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14107 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2174:
 
 /* Line 1455 of yacc.c  */
-#line 14108 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14108 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2175:
 
 /* Line 1455 of yacc.c  */
-#line 14109 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14109 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2176:
 
 /* Line 1455 of yacc.c  */
-#line 14110 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14110 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2177:
 
 /* Line 1455 of yacc.c  */
-#line 14111 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14111 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2178:
 
 /* Line 1455 of yacc.c  */
-#line 14112 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14112 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2179:
 
 /* Line 1455 of yacc.c  */
-#line 14113 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14113 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2180:
 
 /* Line 1455 of yacc.c  */
-#line 14114 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14114 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2181:
 
 /* Line 1455 of yacc.c  */
-#line 14115 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14115 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2182:
 
 /* Line 1455 of yacc.c  */
-#line 14116 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14116 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2183:
 
 /* Line 1455 of yacc.c  */
-#line 14117 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14117 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2184:
 
 /* Line 1455 of yacc.c  */
-#line 14118 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14118 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2185:
 
 /* Line 1455 of yacc.c  */
-#line 14119 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14119 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2186:
 
 /* Line 1455 of yacc.c  */
-#line 14120 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14120 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2187:
 
 /* Line 1455 of yacc.c  */
-#line 14121 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14121 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2188:
 
 /* Line 1455 of yacc.c  */
-#line 14122 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14122 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2189:
 
 /* Line 1455 of yacc.c  */
-#line 14123 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14123 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2190:
 
 /* Line 1455 of yacc.c  */
-#line 14124 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14124 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2191:
 
 /* Line 1455 of yacc.c  */
-#line 14125 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14125 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2192:
 
 /* Line 1455 of yacc.c  */
-#line 14126 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14126 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2193:
 
 /* Line 1455 of yacc.c  */
-#line 14127 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14127 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2194:
 
 /* Line 1455 of yacc.c  */
-#line 14128 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14128 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2195:
 
 /* Line 1455 of yacc.c  */
-#line 14129 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14129 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2196:
 
 /* Line 1455 of yacc.c  */
-#line 14130 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14130 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2197:
 
 /* Line 1455 of yacc.c  */
-#line 14131 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14131 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2198:
 
 /* Line 1455 of yacc.c  */
-#line 14132 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14132 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2199:
 
 /* Line 1455 of yacc.c  */
-#line 14133 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14133 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2200:
 
 /* Line 1455 of yacc.c  */
-#line 14134 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14134 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2201:
 
 /* Line 1455 of yacc.c  */
-#line 14135 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14135 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2202:
 
 /* Line 1455 of yacc.c  */
-#line 14136 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14136 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2203:
 
 /* Line 1455 of yacc.c  */
-#line 14137 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14137 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2204:
 
 /* Line 1455 of yacc.c  */
-#line 14138 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14138 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2205:
 
 /* Line 1455 of yacc.c  */
-#line 14139 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14139 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2206:
 
 /* Line 1455 of yacc.c  */
-#line 14140 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14140 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2207:
 
 /* Line 1455 of yacc.c  */
-#line 14141 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14141 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2208:
 
 /* Line 1455 of yacc.c  */
-#line 14142 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14142 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2209:
 
 /* Line 1455 of yacc.c  */
-#line 14143 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14143 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2210:
 
 /* Line 1455 of yacc.c  */
-#line 14144 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14144 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2211:
 
 /* Line 1455 of yacc.c  */
-#line 14145 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14145 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2212:
 
 /* Line 1455 of yacc.c  */
-#line 14146 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14146 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2213:
 
 /* Line 1455 of yacc.c  */
-#line 14147 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14147 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2214:
 
 /* Line 1455 of yacc.c  */
-#line 14148 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14148 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2215:
 
 /* Line 1455 of yacc.c  */
-#line 14149 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14149 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2216:
 
 /* Line 1455 of yacc.c  */
-#line 14150 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14150 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2217:
 
 /* Line 1455 of yacc.c  */
-#line 14151 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14151 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2218:
 
 /* Line 1455 of yacc.c  */
-#line 14156 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14156 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2219:
 
 /* Line 1455 of yacc.c  */
-#line 14157 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14157 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2220:
 
 /* Line 1455 of yacc.c  */
-#line 14158 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14158 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2221:
 
 /* Line 1455 of yacc.c  */
-#line 14159 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14159 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2222:
 
 /* Line 1455 of yacc.c  */
-#line 14160 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14160 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2223:
 
 /* Line 1455 of yacc.c  */
-#line 14161 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14161 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2224:
 
 /* Line 1455 of yacc.c  */
-#line 14162 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14162 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2225:
 
 /* Line 1455 of yacc.c  */
-#line 14163 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14163 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2226:
 
 /* Line 1455 of yacc.c  */
-#line 14164 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14164 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2227:
 
 /* Line 1455 of yacc.c  */
-#line 14165 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14165 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2228:
 
 /* Line 1455 of yacc.c  */
-#line 14166 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14166 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2229:
 
 /* Line 1455 of yacc.c  */
-#line 14167 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14167 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2230:
 
 /* Line 1455 of yacc.c  */
-#line 14168 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14168 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2231:
 
 /* Line 1455 of yacc.c  */
-#line 14169 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14169 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2232:
 
 /* Line 1455 of yacc.c  */
-#line 14170 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14170 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2233:
 
 /* Line 1455 of yacc.c  */
-#line 14171 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14171 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2234:
 
 /* Line 1455 of yacc.c  */
-#line 14172 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14172 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2235:
 
 /* Line 1455 of yacc.c  */
-#line 14173 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14173 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2236:
 
 /* Line 1455 of yacc.c  */
-#line 14174 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14174 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2237:
 
 /* Line 1455 of yacc.c  */
-#line 14175 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14175 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2238:
 
 /* Line 1455 of yacc.c  */
-#line 14176 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14176 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2239:
 
 /* Line 1455 of yacc.c  */
-#line 14177 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14177 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2240:
 
 /* Line 1455 of yacc.c  */
-#line 14178 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14178 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2241:
 
 /* Line 1455 of yacc.c  */
-#line 14179 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14179 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2242:
 
 /* Line 1455 of yacc.c  */
-#line 14180 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14180 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2243:
 
 /* Line 1455 of yacc.c  */
-#line 14181 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14181 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2244:
 
 /* Line 1455 of yacc.c  */
-#line 14182 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14182 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2245:
 
 /* Line 1455 of yacc.c  */
-#line 14183 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14183 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2246:
 
 /* Line 1455 of yacc.c  */
-#line 14184 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14184 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2247:
 
 /* Line 1455 of yacc.c  */
-#line 14185 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14185 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2248:
 
 /* Line 1455 of yacc.c  */
-#line 14186 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14186 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2249:
 
 /* Line 1455 of yacc.c  */
-#line 14187 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14187 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2250:
 
 /* Line 1455 of yacc.c  */
-#line 14188 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14188 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2251:
 
 /* Line 1455 of yacc.c  */
-#line 14189 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14189 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2252:
 
 /* Line 1455 of yacc.c  */
-#line 14190 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14190 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2253:
 
 /* Line 1455 of yacc.c  */
-#line 14191 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14191 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2254:
 
 /* Line 1455 of yacc.c  */
-#line 14192 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14192 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2255:
 
 /* Line 1455 of yacc.c  */
-#line 14193 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14193 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2256:
 
 /* Line 1455 of yacc.c  */
-#line 14194 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14194 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2257:
 
 /* Line 1455 of yacc.c  */
-#line 14195 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14195 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2258:
 
 /* Line 1455 of yacc.c  */
-#line 14196 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14196 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2259:
 
 /* Line 1455 of yacc.c  */
-#line 14197 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14197 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2260:
 
 /* Line 1455 of yacc.c  */
-#line 14198 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14198 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2261:
 
 /* Line 1455 of yacc.c  */
-#line 14199 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14199 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2262:
 
 /* Line 1455 of yacc.c  */
-#line 14200 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14200 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2263:
 
 /* Line 1455 of yacc.c  */
-#line 14201 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14201 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2264:
 
 /* Line 1455 of yacc.c  */
-#line 14202 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14202 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2265:
 
 /* Line 1455 of yacc.c  */
-#line 14203 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14203 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2266:
 
 /* Line 1455 of yacc.c  */
-#line 14204 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14204 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2267:
 
 /* Line 1455 of yacc.c  */
-#line 14205 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14205 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2268:
 
 /* Line 1455 of yacc.c  */
-#line 14206 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14206 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2269:
 
 /* Line 1455 of yacc.c  */
-#line 14207 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14207 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2270:
 
 /* Line 1455 of yacc.c  */
-#line 14208 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14208 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2271:
 
 /* Line 1455 of yacc.c  */
-#line 14209 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14209 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2272:
 
 /* Line 1455 of yacc.c  */
-#line 14210 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14210 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2273:
 
 /* Line 1455 of yacc.c  */
-#line 14211 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14211 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2274:
 
 /* Line 1455 of yacc.c  */
-#line 14212 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14212 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2275:
 
 /* Line 1455 of yacc.c  */
-#line 14213 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14213 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2276:
 
 /* Line 1455 of yacc.c  */
-#line 14214 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14214 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2277:
 
 /* Line 1455 of yacc.c  */
-#line 14215 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14215 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2278:
 
 /* Line 1455 of yacc.c  */
-#line 14216 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14216 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2279:
 
 /* Line 1455 of yacc.c  */
-#line 14217 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14217 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2280:
 
 /* Line 1455 of yacc.c  */
-#line 14218 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14218 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2281:
 
 /* Line 1455 of yacc.c  */
-#line 14219 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14219 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2282:
 
 /* Line 1455 of yacc.c  */
-#line 14220 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14220 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2283:
 
 /* Line 1455 of yacc.c  */
-#line 14221 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14221 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2284:
 
 /* Line 1455 of yacc.c  */
-#line 14222 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14222 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2285:
 
 /* Line 1455 of yacc.c  */
-#line 14223 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14223 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2286:
 
 /* Line 1455 of yacc.c  */
-#line 14224 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14224 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2287:
 
 /* Line 1455 of yacc.c  */
-#line 14225 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14225 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2288:
 
 /* Line 1455 of yacc.c  */
-#line 14226 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14226 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2289:
 
 /* Line 1455 of yacc.c  */
-#line 14227 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14227 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2290:
 
 /* Line 1455 of yacc.c  */
-#line 14228 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14228 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2291:
 
 /* Line 1455 of yacc.c  */
-#line 14229 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14229 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2292:
 
 /* Line 1455 of yacc.c  */
-#line 14230 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14230 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2293:
 
 /* Line 1455 of yacc.c  */
-#line 14231 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14231 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2294:
 
 /* Line 1455 of yacc.c  */
-#line 14232 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14232 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2295:
 
 /* Line 1455 of yacc.c  */
-#line 14233 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14233 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2296:
 
 /* Line 1455 of yacc.c  */
-#line 14234 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14234 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2297:
 
 /* Line 1455 of yacc.c  */
-#line 14235 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14235 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2298:
 
 /* Line 1455 of yacc.c  */
-#line 14236 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14236 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2299:
 
 /* Line 1455 of yacc.c  */
-#line 14237 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14237 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2300:
 
 /* Line 1455 of yacc.c  */
-#line 14238 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14238 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2301:
 
 /* Line 1455 of yacc.c  */
-#line 14239 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14239 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2302:
 
 /* Line 1455 of yacc.c  */
-#line 14240 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14240 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2303:
 
 /* Line 1455 of yacc.c  */
-#line 14241 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14241 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2304:
 
 /* Line 1455 of yacc.c  */
-#line 14242 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14242 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2305:
 
 /* Line 1455 of yacc.c  */
-#line 14243 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14243 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2306:
 
 /* Line 1455 of yacc.c  */
-#line 14244 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14244 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2307:
 
 /* Line 1455 of yacc.c  */
-#line 14245 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14245 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2308:
 
 /* Line 1455 of yacc.c  */
-#line 14246 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14246 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2309:
 
 /* Line 1455 of yacc.c  */
-#line 14247 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14247 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2310:
 
 /* Line 1455 of yacc.c  */
-#line 14248 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14248 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2311:
 
 /* Line 1455 of yacc.c  */
-#line 14249 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14249 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2312:
 
 /* Line 1455 of yacc.c  */
-#line 14250 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14250 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2313:
 
 /* Line 1455 of yacc.c  */
-#line 14251 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14251 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2314:
 
 /* Line 1455 of yacc.c  */
-#line 14252 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14252 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2315:
 
 /* Line 1455 of yacc.c  */
-#line 14253 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14253 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2316:
 
 /* Line 1455 of yacc.c  */
-#line 14254 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14254 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2317:
 
 /* Line 1455 of yacc.c  */
-#line 14255 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14255 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2318:
 
 /* Line 1455 of yacc.c  */
-#line 14256 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14256 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2319:
 
 /* Line 1455 of yacc.c  */
-#line 14257 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14257 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2320:
 
 /* Line 1455 of yacc.c  */
-#line 14258 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14258 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2321:
 
 /* Line 1455 of yacc.c  */
-#line 14259 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14259 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2322:
 
 /* Line 1455 of yacc.c  */
-#line 14260 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14260 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2323:
 
 /* Line 1455 of yacc.c  */
-#line 14261 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14261 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2324:
 
 /* Line 1455 of yacc.c  */
-#line 14262 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14262 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2325:
 
 /* Line 1455 of yacc.c  */
-#line 14263 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14263 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2326:
 
 /* Line 1455 of yacc.c  */
-#line 14264 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14264 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2327:
 
 /* Line 1455 of yacc.c  */
-#line 14265 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14265 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2328:
 
 /* Line 1455 of yacc.c  */
-#line 14266 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14266 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2329:
 
 /* Line 1455 of yacc.c  */
-#line 14267 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14267 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2330:
 
 /* Line 1455 of yacc.c  */
-#line 14268 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14268 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2331:
 
 /* Line 1455 of yacc.c  */
-#line 14269 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14269 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2332:
 
 /* Line 1455 of yacc.c  */
-#line 14270 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14270 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2333:
 
 /* Line 1455 of yacc.c  */
-#line 14271 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14271 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2334:
 
 /* Line 1455 of yacc.c  */
-#line 14272 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14272 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2335:
 
 /* Line 1455 of yacc.c  */
-#line 14273 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14273 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2336:
 
 /* Line 1455 of yacc.c  */
-#line 14274 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14274 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2337:
 
 /* Line 1455 of yacc.c  */
-#line 14275 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14275 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2338:
 
 /* Line 1455 of yacc.c  */
-#line 14276 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14276 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2339:
 
 /* Line 1455 of yacc.c  */
-#line 14277 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14277 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2340:
 
 /* Line 1455 of yacc.c  */
-#line 14278 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14278 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2341:
 
 /* Line 1455 of yacc.c  */
-#line 14279 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14279 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2342:
 
 /* Line 1455 of yacc.c  */
-#line 14280 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14280 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2343:
 
 /* Line 1455 of yacc.c  */
-#line 14281 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14281 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2344:
 
 /* Line 1455 of yacc.c  */
-#line 14282 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14282 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2345:
 
 /* Line 1455 of yacc.c  */
-#line 14283 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14283 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2346:
 
 /* Line 1455 of yacc.c  */
-#line 14284 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14284 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2347:
 
 /* Line 1455 of yacc.c  */
-#line 14285 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14285 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2348:
 
 /* Line 1455 of yacc.c  */
-#line 14286 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14286 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2349:
 
 /* Line 1455 of yacc.c  */
-#line 14287 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14287 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2350:
 
 /* Line 1455 of yacc.c  */
-#line 14288 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14288 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2351:
 
 /* Line 1455 of yacc.c  */
-#line 14289 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14289 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2352:
 
 /* Line 1455 of yacc.c  */
-#line 14290 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14290 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2353:
 
 /* Line 1455 of yacc.c  */
-#line 14291 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14291 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2354:
 
 /* Line 1455 of yacc.c  */
-#line 14292 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14292 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2355:
 
 /* Line 1455 of yacc.c  */
-#line 14293 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14293 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2356:
 
 /* Line 1455 of yacc.c  */
-#line 14294 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14294 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2357:
 
 /* Line 1455 of yacc.c  */
-#line 14295 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14295 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2358:
 
 /* Line 1455 of yacc.c  */
-#line 14296 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14296 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2359:
 
 /* Line 1455 of yacc.c  */
-#line 14297 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14297 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2360:
 
 /* Line 1455 of yacc.c  */
-#line 14298 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14298 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2361:
 
 /* Line 1455 of yacc.c  */
-#line 14299 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14299 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2362:
 
 /* Line 1455 of yacc.c  */
-#line 14300 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14300 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2363:
 
 /* Line 1455 of yacc.c  */
-#line 14301 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14301 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2364:
 
 /* Line 1455 of yacc.c  */
-#line 14302 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14302 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2365:
 
 /* Line 1455 of yacc.c  */
-#line 14303 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14303 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2366:
 
 /* Line 1455 of yacc.c  */
-#line 14304 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14304 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2367:
 
 /* Line 1455 of yacc.c  */
-#line 14305 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14305 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2368:
 
 /* Line 1455 of yacc.c  */
-#line 14306 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14306 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2369:
 
 /* Line 1455 of yacc.c  */
-#line 14307 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14307 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2370:
 
 /* Line 1455 of yacc.c  */
-#line 14308 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14308 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2371:
 
 /* Line 1455 of yacc.c  */
-#line 14309 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14309 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2372:
 
 /* Line 1455 of yacc.c  */
-#line 14310 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14310 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2373:
 
 /* Line 1455 of yacc.c  */
-#line 14311 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14311 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2374:
 
 /* Line 1455 of yacc.c  */
-#line 14312 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14312 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2375:
 
 /* Line 1455 of yacc.c  */
-#line 14313 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14313 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2376:
 
 /* Line 1455 of yacc.c  */
-#line 14314 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14314 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2377:
 
 /* Line 1455 of yacc.c  */
-#line 14315 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14315 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2378:
 
 /* Line 1455 of yacc.c  */
-#line 14316 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14316 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2379:
 
 /* Line 1455 of yacc.c  */
-#line 14317 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14317 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2380:
 
 /* Line 1455 of yacc.c  */
-#line 14318 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14318 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2381:
 
 /* Line 1455 of yacc.c  */
-#line 14319 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14319 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2382:
 
 /* Line 1455 of yacc.c  */
-#line 14320 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14320 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2383:
 
 /* Line 1455 of yacc.c  */
-#line 14321 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14321 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2384:
 
 /* Line 1455 of yacc.c  */
-#line 14322 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14322 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2385:
 
 /* Line 1455 of yacc.c  */
-#line 14323 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14323 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2386:
 
 /* Line 1455 of yacc.c  */
-#line 14324 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14324 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2387:
 
 /* Line 1455 of yacc.c  */
-#line 14325 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14325 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2388:
 
 /* Line 1455 of yacc.c  */
-#line 14326 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14326 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2389:
 
 /* Line 1455 of yacc.c  */
-#line 14327 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14327 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2390:
 
 /* Line 1455 of yacc.c  */
-#line 14328 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14328 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2391:
 
 /* Line 1455 of yacc.c  */
-#line 14329 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14329 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2392:
 
 /* Line 1455 of yacc.c  */
-#line 14330 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14330 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2393:
 
 /* Line 1455 of yacc.c  */
-#line 14331 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14331 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2394:
 
 /* Line 1455 of yacc.c  */
-#line 14332 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14332 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2395:
 
 /* Line 1455 of yacc.c  */
-#line 14333 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14333 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2396:
 
 /* Line 1455 of yacc.c  */
-#line 14334 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14334 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2397:
 
 /* Line 1455 of yacc.c  */
-#line 14335 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14335 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2398:
 
 /* Line 1455 of yacc.c  */
-#line 14336 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14336 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2399:
 
 /* Line 1455 of yacc.c  */
-#line 14337 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14337 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2400:
 
 /* Line 1455 of yacc.c  */
-#line 14338 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14338 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2401:
 
 /* Line 1455 of yacc.c  */
-#line 14339 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14339 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2402:
 
 /* Line 1455 of yacc.c  */
-#line 14340 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14340 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2403:
 
 /* Line 1455 of yacc.c  */
-#line 14341 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14341 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2404:
 
 /* Line 1455 of yacc.c  */
-#line 14342 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14342 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2405:
 
 /* Line 1455 of yacc.c  */
-#line 14343 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14343 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2406:
 
 /* Line 1455 of yacc.c  */
-#line 14344 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14344 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2407:
 
 /* Line 1455 of yacc.c  */
-#line 14345 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14345 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2408:
 
 /* Line 1455 of yacc.c  */
-#line 14346 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14346 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2409:
 
 /* Line 1455 of yacc.c  */
-#line 14347 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14347 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2410:
 
 /* Line 1455 of yacc.c  */
-#line 14348 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14348 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2411:
 
 /* Line 1455 of yacc.c  */
-#line 14349 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14349 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2412:
 
 /* Line 1455 of yacc.c  */
-#line 14350 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14350 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2413:
 
 /* Line 1455 of yacc.c  */
-#line 14351 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14351 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2414:
 
 /* Line 1455 of yacc.c  */
-#line 14352 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14352 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2415:
 
 /* Line 1455 of yacc.c  */
-#line 14353 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14353 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2416:
 
 /* Line 1455 of yacc.c  */
-#line 14354 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14354 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2417:
 
 /* Line 1455 of yacc.c  */
-#line 14355 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14355 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2418:
 
 /* Line 1455 of yacc.c  */
-#line 14356 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14356 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2419:
 
 /* Line 1455 of yacc.c  */
-#line 14357 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14357 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2420:
 
 /* Line 1455 of yacc.c  */
-#line 14358 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14358 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2421:
 
 /* Line 1455 of yacc.c  */
-#line 14359 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14359 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2422:
 
 /* Line 1455 of yacc.c  */
-#line 14360 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14360 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2423:
 
 /* Line 1455 of yacc.c  */
-#line 14361 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14361 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2424:
 
 /* Line 1455 of yacc.c  */
-#line 14362 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14362 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2425:
 
 /* Line 1455 of yacc.c  */
-#line 14363 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14363 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2426:
 
 /* Line 1455 of yacc.c  */
-#line 14364 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14364 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2427:
 
 /* Line 1455 of yacc.c  */
-#line 14365 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14365 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2428:
 
 /* Line 1455 of yacc.c  */
-#line 14366 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14366 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2429:
 
 /* Line 1455 of yacc.c  */
-#line 14367 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14367 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2430:
 
 /* Line 1455 of yacc.c  */
-#line 14368 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14368 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2431:
 
 /* Line 1455 of yacc.c  */
-#line 14369 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14369 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2432:
 
 /* Line 1455 of yacc.c  */
-#line 14370 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14370 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2433:
 
 /* Line 1455 of yacc.c  */
-#line 14371 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14371 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2434:
 
 /* Line 1455 of yacc.c  */
-#line 14372 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14372 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2435:
 
 /* Line 1455 of yacc.c  */
-#line 14373 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14373 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2436:
 
 /* Line 1455 of yacc.c  */
-#line 14374 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14374 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2437:
 
 /* Line 1455 of yacc.c  */
-#line 14375 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14375 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2438:
 
 /* Line 1455 of yacc.c  */
-#line 14376 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14376 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2439:
 
 /* Line 1455 of yacc.c  */
-#line 14377 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14377 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2440:
 
 /* Line 1455 of yacc.c  */
-#line 14378 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14378 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2441:
 
 /* Line 1455 of yacc.c  */
-#line 14379 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14379 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2442:
 
 /* Line 1455 of yacc.c  */
-#line 14380 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14380 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2443:
 
 /* Line 1455 of yacc.c  */
-#line 14381 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14381 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2444:
 
 /* Line 1455 of yacc.c  */
-#line 14382 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14382 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2445:
 
 /* Line 1455 of yacc.c  */
-#line 14383 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14383 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2446:
 
 /* Line 1455 of yacc.c  */
-#line 14384 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14384 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2447:
 
 /* Line 1455 of yacc.c  */
-#line 14385 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14385 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2448:
 
 /* Line 1455 of yacc.c  */
-#line 14386 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14386 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2449:
 
 /* Line 1455 of yacc.c  */
-#line 14387 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14387 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2450:
 
 /* Line 1455 of yacc.c  */
-#line 14388 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14388 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2451:
 
 /* Line 1455 of yacc.c  */
-#line 14389 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14389 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2452:
 
 /* Line 1455 of yacc.c  */
-#line 14390 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14390 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2453:
 
 /* Line 1455 of yacc.c  */
-#line 14391 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14391 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2454:
 
 /* Line 1455 of yacc.c  */
-#line 14392 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14392 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2455:
 
 /* Line 1455 of yacc.c  */
-#line 14393 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14393 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2456:
 
 /* Line 1455 of yacc.c  */
-#line 14394 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14394 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2457:
 
 /* Line 1455 of yacc.c  */
-#line 14395 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14395 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2458:
 
 /* Line 1455 of yacc.c  */
-#line 14396 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14396 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2459:
 
 /* Line 1455 of yacc.c  */
-#line 14397 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14397 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2460:
 
 /* Line 1455 of yacc.c  */
-#line 14398 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14398 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2461:
 
 /* Line 1455 of yacc.c  */
-#line 14399 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14399 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2462:
 
 /* Line 1455 of yacc.c  */
-#line 14400 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14400 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2463:
 
 /* Line 1455 of yacc.c  */
-#line 14401 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14401 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2464:
 
 /* Line 1455 of yacc.c  */
-#line 14402 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14402 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2465:
 
 /* Line 1455 of yacc.c  */
-#line 14403 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14403 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2466:
 
 /* Line 1455 of yacc.c  */
-#line 14404 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14404 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2467:
 
 /* Line 1455 of yacc.c  */
-#line 14405 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14405 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2468:
 
 /* Line 1455 of yacc.c  */
-#line 14406 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14406 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2469:
 
 /* Line 1455 of yacc.c  */
-#line 14407 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14407 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2470:
 
 /* Line 1455 of yacc.c  */
-#line 14408 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14408 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2471:
 
 /* Line 1455 of yacc.c  */
-#line 14409 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14409 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2472:
 
 /* Line 1455 of yacc.c  */
-#line 14410 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14410 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2473:
 
 /* Line 1455 of yacc.c  */
-#line 14411 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14411 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2474:
 
 /* Line 1455 of yacc.c  */
-#line 14412 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14412 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2475:
 
 /* Line 1455 of yacc.c  */
-#line 14413 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14413 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2476:
 
 /* Line 1455 of yacc.c  */
-#line 14414 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14414 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2477:
 
 /* Line 1455 of yacc.c  */
-#line 14415 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14415 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2478:
 
 /* Line 1455 of yacc.c  */
-#line 14427 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14427 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SET_OPTION;
@@ -41659,14 +41659,14 @@ yyreduce:
   case 2479:
 
 /* Line 1455 of yacc.c  */
-#line 14437 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14437 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2480:
 
 /* Line 1455 of yacc.c  */
-#line 14444 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14444 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (sp_create_assignment_instr(thd, yychar == YYEMPTY))
               MYSQL_YYABORT;
@@ -41676,7 +41676,7 @@ yyreduce:
   case 2482:
 
 /* Line 1455 of yacc.c  */
-#line 14450 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14450 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->option_type= OPT_DEFAULT;
           }
@@ -41685,7 +41685,7 @@ yyreduce:
   case 2483:
 
 /* Line 1455 of yacc.c  */
-#line 14454 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14454 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (sp_create_assignment_instr(thd, yychar == YYEMPTY))
               MYSQL_YYABORT;
@@ -41695,7 +41695,7 @@ yyreduce:
   case 2484:
 
 /* Line 1455 of yacc.c  */
-#line 14459 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14459 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->option_type= (yyvsp[(1) - (1)].var_type);
           }
@@ -41704,7 +41704,7 @@ yyreduce:
   case 2486:
 
 /* Line 1455 of yacc.c  */
-#line 14469 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14469 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (sp_create_assignment_instr(thd, yychar == YYEMPTY))
               MYSQL_YYABORT; 
@@ -41714,7 +41714,7 @@ yyreduce:
   case 2488:
 
 /* Line 1455 of yacc.c  */
-#line 14475 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14475 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (sp_create_assignment_instr(thd, yychar == YYEMPTY))
               MYSQL_YYABORT; 
@@ -41724,7 +41724,7 @@ yyreduce:
   case 2491:
 
 /* Line 1455 of yacc.c  */
-#line 14489 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14489 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             sp_create_assignment_lex(thd, yychar == YYEMPTY);
           }
@@ -41733,7 +41733,7 @@ yyreduce:
   case 2492:
 
 /* Line 1455 of yacc.c  */
-#line 14493 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14493 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (sp_create_assignment_instr(thd, yychar == YYEMPTY))
               MYSQL_YYABORT; 
@@ -41743,7 +41743,7 @@ yyreduce:
   case 2493:
 
 /* Line 1455 of yacc.c  */
-#line 14498 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14498 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             sp_create_assignment_lex(thd, yychar == YYEMPTY);
           }
@@ -41752,7 +41752,7 @@ yyreduce:
   case 2494:
 
 /* Line 1455 of yacc.c  */
-#line 14502 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14502 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (sp_create_assignment_instr(thd, yychar == YYEMPTY))
               MYSQL_YYABORT; 
@@ -41762,7 +41762,7 @@ yyreduce:
   case 2495:
 
 /* Line 1455 of yacc.c  */
-#line 14511 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14511 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->option_type= (yyvsp[(1) - (1)].var_type);
           }
@@ -41771,84 +41771,84 @@ yyreduce:
   case 2498:
 
 /* Line 1455 of yacc.c  */
-#line 14519 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14519 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_GLOBAL; }
     break;
 
   case 2499:
 
 /* Line 1455 of yacc.c  */
-#line 14520 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14520 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_SESSION; }
     break;
 
   case 2500:
 
 /* Line 1455 of yacc.c  */
-#line 14521 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14521 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_SESSION; }
     break;
 
   case 2501:
 
 /* Line 1455 of yacc.c  */
-#line 14525 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14525 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_SESSION; }
     break;
 
   case 2502:
 
 /* Line 1455 of yacc.c  */
-#line 14526 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14526 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_GLOBAL; }
     break;
 
   case 2503:
 
 /* Line 1455 of yacc.c  */
-#line 14527 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14527 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_SESSION; }
     break;
 
   case 2504:
 
 /* Line 1455 of yacc.c  */
-#line 14528 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14528 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_SESSION; }
     break;
 
   case 2505:
 
 /* Line 1455 of yacc.c  */
-#line 14532 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14532 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_DEFAULT; }
     break;
 
   case 2506:
 
 /* Line 1455 of yacc.c  */
-#line 14533 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14533 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_GLOBAL; }
     break;
 
   case 2507:
 
 /* Line 1455 of yacc.c  */
-#line 14534 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14534 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_SESSION; }
     break;
 
   case 2508:
 
 /* Line 1455 of yacc.c  */
-#line 14535 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14535 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.var_type)=OPT_SESSION; }
     break;
 
   case 2509:
 
 /* Line 1455 of yacc.c  */
-#line 14541 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14541 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -41862,7 +41862,7 @@ yyreduce:
             {
               /*
                 Not in trigger assigning value to new row,
-                and option_type preceeding local variable is illegal.
+                and option_type preceding local variable is illegal.
               */
               my_parse_error(ER(ER_SYNTAX_ERROR));
               MYSQL_YYABORT;
@@ -41873,7 +41873,7 @@ yyreduce:
   case 2510:
 
 /* Line 1455 of yacc.c  */
-#line 14565 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14565 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -41904,7 +41904,7 @@ yyreduce:
   case 2511:
 
 /* Line 1455 of yacc.c  */
-#line 14591 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14591 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Item_func_set_user_var *item;
             item= new (thd->mem_root) Item_func_set_user_var((yyvsp[(2) - (4)].lex_str), (yyvsp[(4) - (4)].item));
@@ -41920,7 +41920,7 @@ yyreduce:
   case 2512:
 
 /* Line 1455 of yacc.c  */
-#line 14602 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14602 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             struct sys_var_with_base tmp= (yyvsp[(4) - (6)].variable);
             /* Lookup if necessary: must be a system variable. */
@@ -41937,7 +41937,7 @@ yyreduce:
   case 2513:
 
 /* Line 1455 of yacc.c  */
-#line 14614 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14614 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             CHARSET_INFO *cs2;
@@ -41955,7 +41955,7 @@ yyreduce:
   case 2514:
 
 /* Line 1455 of yacc.c  */
-#line 14627 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14627 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_pcontext *spc= lex->spcont;
@@ -41975,7 +41975,7 @@ yyreduce:
   case 2515:
 
 /* Line 1455 of yacc.c  */
-#line 14642 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14642 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             CHARSET_INFO *cs2;
@@ -41999,7 +41999,7 @@ yyreduce:
   case 2516:
 
 /* Line 1455 of yacc.c  */
-#line 14661 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14661 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex = Lex;
             set_var_role *var= new set_var_role((yyvsp[(2) - (2)].lex_str));
@@ -42010,7 +42010,7 @@ yyreduce:
   case 2517:
 
 /* Line 1455 of yacc.c  */
-#line 14667 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14667 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             LEX_USER *user;
@@ -42040,7 +42040,7 @@ yyreduce:
   case 2518:
 
 /* Line 1455 of yacc.c  */
-#line 14692 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14692 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             set_var_password *var= new set_var_password((yyvsp[(3) - (5)].lex_user),(yyvsp[(5) - (5)].simple_string));
             if (var == NULL)
@@ -42055,7 +42055,7 @@ yyreduce:
   case 2519:
 
 /* Line 1455 of yacc.c  */
-#line 14705 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14705 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             sp_pcontext *spc= thd->lex->spcont;
             sp_variable *spv;
@@ -42086,7 +42086,7 @@ yyreduce:
   case 2520:
 
 /* Line 1455 of yacc.c  */
-#line 14731 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14731 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (check_reserved_words(&(yyvsp[(1) - (3)].lex_str)))
@@ -42134,7 +42134,7 @@ yyreduce:
   case 2521:
 
 /* Line 1455 of yacc.c  */
-#line 14774 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14774 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             sys_var *tmp=find_sys_var(thd, (yyvsp[(3) - (3)].lex_str).str, (yyvsp[(3) - (3)].lex_str).length);
             if (!tmp)
@@ -42150,7 +42150,7 @@ yyreduce:
   case 2526:
 
 /* Line 1455 of yacc.c  */
-#line 14795 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14795 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Item *item= new (thd->mem_root) Item_int((int32) (yyvsp[(1) - (1)].num));
@@ -42169,7 +42169,7 @@ yyreduce:
   case 2527:
 
 /* Line 1455 of yacc.c  */
-#line 14812 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14812 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             Item *item= new (thd->mem_root) Item_int((int32) (yyvsp[(3) - (3)].tx_isolation));
@@ -42188,56 +42188,56 @@ yyreduce:
   case 2528:
 
 /* Line 1455 of yacc.c  */
-#line 14828 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14828 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= true; }
     break;
 
   case 2529:
 
 /* Line 1455 of yacc.c  */
-#line 14829 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14829 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= false; }
     break;
 
   case 2530:
 
 /* Line 1455 of yacc.c  */
-#line 14833 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14833 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.tx_isolation)= ISO_READ_UNCOMMITTED; }
     break;
 
   case 2531:
 
 /* Line 1455 of yacc.c  */
-#line 14834 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14834 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.tx_isolation)= ISO_READ_COMMITTED; }
     break;
 
   case 2532:
 
 /* Line 1455 of yacc.c  */
-#line 14835 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14835 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.tx_isolation)= ISO_REPEATABLE_READ; }
     break;
 
   case 2533:
 
 /* Line 1455 of yacc.c  */
-#line 14836 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14836 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.tx_isolation)= ISO_SERIALIZABLE; }
     break;
 
   case 2534:
 
 /* Line 1455 of yacc.c  */
-#line 14840 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14840 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.simple_string)=(yyvsp[(1) - (1)].lex_str).str;}
     break;
 
   case 2535:
 
 /* Line 1455 of yacc.c  */
-#line 14842 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14842 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.simple_string)= (yyvsp[(3) - (4)].lex_str).length ? thd->variables.old_passwords ?
               Item_func_old_password::alloc(thd, (yyvsp[(3) - (4)].lex_str).str, (yyvsp[(3) - (4)].lex_str).length) :
@@ -42251,7 +42251,7 @@ yyreduce:
   case 2536:
 
 /* Line 1455 of yacc.c  */
-#line 14851 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14851 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.simple_string)= (yyvsp[(3) - (4)].lex_str).length ? Item_func_old_password::
               alloc(thd, (yyvsp[(3) - (4)].lex_str).str, (yyvsp[(3) - (4)].lex_str).length) :
@@ -42264,21 +42264,21 @@ yyreduce:
   case 2537:
 
 /* Line 1455 of yacc.c  */
-#line 14861 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14861 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)=(yyvsp[(1) - (1)].item); }
     break;
 
   case 2538:
 
 /* Line 1455 of yacc.c  */
-#line 14862 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14862 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.item)=0; }
     break;
 
   case 2539:
 
 /* Line 1455 of yacc.c  */
-#line 14864 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14864 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)=new (thd->mem_root) Item_string("ON",  2, system_charset_info);
             if ((yyval.item) == NULL)
@@ -42289,7 +42289,7 @@ yyreduce:
   case 2540:
 
 /* Line 1455 of yacc.c  */
-#line 14870 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14870 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)=new (thd->mem_root) Item_string("ALL", 3, system_charset_info);
             if ((yyval.item) == NULL)
@@ -42300,7 +42300,7 @@ yyreduce:
   case 2541:
 
 /* Line 1455 of yacc.c  */
-#line 14876 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14876 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.item)=new (thd->mem_root) Item_string("binary", 6, system_charset_info);
             if ((yyval.item) == NULL)
@@ -42311,7 +42311,7 @@ yyreduce:
   case 2542:
 
 /* Line 1455 of yacc.c  */
-#line 14887 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14887 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -42327,14 +42327,14 @@ yyreduce:
   case 2543:
 
 /* Line 1455 of yacc.c  */
-#line 14898 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14898 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2548:
 
 /* Line 1455 of yacc.c  */
-#line 14913 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14913 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             thr_lock_type lock_type= (thr_lock_type) (yyvsp[(3) - (3)].num);
             bool lock_for_write= (lock_type >= TL_WRITE_ALLOW_WRITE);
@@ -42351,21 +42351,21 @@ yyreduce:
   case 2549:
 
 /* Line 1455 of yacc.c  */
-#line 14927 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14927 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= TL_READ_NO_INSERT; }
     break;
 
   case 2550:
 
 /* Line 1455 of yacc.c  */
-#line 14928 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14928 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= TL_WRITE_DEFAULT; }
     break;
 
   case 2551:
 
 /* Line 1455 of yacc.c  */
-#line 14930 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14930 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.num)= (Lex->sphead ? TL_WRITE_DEFAULT : TL_WRITE_CONCURRENT_INSERT);
           }
@@ -42374,21 +42374,21 @@ yyreduce:
   case 2552:
 
 /* Line 1455 of yacc.c  */
-#line 14934 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14934 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= TL_WRITE_LOW_PRIORITY; }
     break;
 
   case 2553:
 
 /* Line 1455 of yacc.c  */
-#line 14935 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14935 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= TL_READ; }
     break;
 
   case 2554:
 
 /* Line 1455 of yacc.c  */
-#line 14940 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14940 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
 
@@ -42404,14 +42404,14 @@ yyreduce:
   case 2555:
 
 /* Line 1455 of yacc.c  */
-#line 14951 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14951 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2556:
 
 /* Line 1455 of yacc.c  */
-#line 14960 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14960 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->sphead)
@@ -42428,7 +42428,7 @@ yyreduce:
   case 2557:
 
 /* Line 1455 of yacc.c  */
-#line 14972 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14972 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->sphead)
@@ -42445,7 +42445,7 @@ yyreduce:
   case 2558:
 
 /* Line 1455 of yacc.c  */
-#line 14984 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 14984 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->sphead)
@@ -42470,7 +42470,7 @@ yyreduce:
   case 2559:
 
 /* Line 1455 of yacc.c  */
-#line 15004 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15004 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->expr_allows_subselect= TRUE;
             /* Stored functions are not supported for HANDLER READ. */
@@ -42486,63 +42486,63 @@ yyreduce:
   case 2560:
 
 /* Line 1455 of yacc.c  */
-#line 15017 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15017 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ident= null_lex_str; }
     break;
 
   case 2561:
 
 /* Line 1455 of yacc.c  */
-#line 15018 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15018 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ident= (yyvsp[(1) - (2)].lex_str); }
     break;
 
   case 2562:
 
 /* Line 1455 of yacc.c  */
-#line 15022 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15022 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ha_read_mode = RFIRST; }
     break;
 
   case 2563:
 
 /* Line 1455 of yacc.c  */
-#line 15023 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15023 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ha_read_mode = RNEXT;  }
     break;
 
   case 2564:
 
 /* Line 1455 of yacc.c  */
-#line 15027 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15027 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ha_read_mode = RFIRST; }
     break;
 
   case 2565:
 
 /* Line 1455 of yacc.c  */
-#line 15028 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15028 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ha_read_mode = RNEXT;  }
     break;
 
   case 2566:
 
 /* Line 1455 of yacc.c  */
-#line 15029 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15029 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ha_read_mode = RPREV;  }
     break;
 
   case 2567:
 
 /* Line 1455 of yacc.c  */
-#line 15030 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15030 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->ha_read_mode = RLAST;  }
     break;
 
   case 2568:
 
 /* Line 1455 of yacc.c  */
-#line 15032 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15032 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->ha_read_mode = RKEY;
@@ -42555,56 +42555,56 @@ yyreduce:
   case 2569:
 
 /* Line 1455 of yacc.c  */
-#line 15040 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15040 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2570:
 
 /* Line 1455 of yacc.c  */
-#line 15044 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15044 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ha_rkey_mode)=HA_READ_KEY_EXACT;   }
     break;
 
   case 2571:
 
 /* Line 1455 of yacc.c  */
-#line 15045 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15045 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ha_rkey_mode)=HA_READ_KEY_OR_NEXT; }
     break;
 
   case 2572:
 
 /* Line 1455 of yacc.c  */
-#line 15046 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15046 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ha_rkey_mode)=HA_READ_KEY_OR_PREV; }
     break;
 
   case 2573:
 
 /* Line 1455 of yacc.c  */
-#line 15047 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15047 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ha_rkey_mode)=HA_READ_AFTER_KEY;   }
     break;
 
   case 2574:
 
 /* Line 1455 of yacc.c  */
-#line 15048 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15048 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.ha_rkey_mode)=HA_READ_BEFORE_KEY;  }
     break;
 
   case 2575:
 
 /* Line 1455 of yacc.c  */
-#line 15055 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15055 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2576:
 
 /* Line 1455 of yacc.c  */
-#line 15060 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15060 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_REVOKE;
@@ -42615,7 +42615,7 @@ yyreduce:
   case 2577:
 
 /* Line 1455 of yacc.c  */
-#line 15066 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15066 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->columns.elements)
@@ -42631,7 +42631,7 @@ yyreduce:
   case 2578:
 
 /* Line 1455 of yacc.c  */
-#line 15077 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15077 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->columns.elements)
@@ -42647,7 +42647,7 @@ yyreduce:
   case 2579:
 
 /* Line 1455 of yacc.c  */
-#line 15088 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15088 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_REVOKE_ALL;
           }
@@ -42656,7 +42656,7 @@ yyreduce:
   case 2580:
 
 /* Line 1455 of yacc.c  */
-#line 15092 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15092 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->users_list.push_front ((yyvsp[(3) - (5)].lex_user));
@@ -42668,7 +42668,7 @@ yyreduce:
   case 2581:
 
 /* Line 1455 of yacc.c  */
-#line 15099 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15099 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command= SQLCOM_REVOKE_ROLE;
             if (Lex->users_list.push_front((yyvsp[(1) - (3)].lex_user)))
@@ -42679,28 +42679,28 @@ yyreduce:
   case 2582:
 
 /* Line 1455 of yacc.c  */
-#line 15108 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15108 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->with_admin_option= true; (yyval.lex_user)= (yyvsp[(4) - (4)].lex_user); }
     break;
 
   case 2583:
 
 /* Line 1455 of yacc.c  */
-#line 15110 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15110 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->with_admin_option= false; (yyval.lex_user)= (yyvsp[(1) - (1)].lex_user); }
     break;
 
   case 2584:
 
 /* Line 1455 of yacc.c  */
-#line 15115 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15115 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2585:
 
 /* Line 1455 of yacc.c  */
-#line 15121 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15121 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_GRANT;
@@ -42711,7 +42711,7 @@ yyreduce:
   case 2586:
 
 /* Line 1455 of yacc.c  */
-#line 15128 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15128 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->columns.elements)
@@ -42727,7 +42727,7 @@ yyreduce:
   case 2587:
 
 /* Line 1455 of yacc.c  */
-#line 15140 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15140 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             if (lex->columns.elements)
@@ -42743,7 +42743,7 @@ yyreduce:
   case 2588:
 
 /* Line 1455 of yacc.c  */
-#line 15151 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15151 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->users_list.push_front ((yyvsp[(3) - (6)].lex_user));
@@ -42755,7 +42755,7 @@ yyreduce:
   case 2589:
 
 /* Line 1455 of yacc.c  */
-#line 15158 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15158 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_GRANT_ROLE;
@@ -42768,35 +42768,35 @@ yyreduce:
   case 2590:
 
 /* Line 1455 of yacc.c  */
-#line 15169 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15169 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->definer = 0; }
     break;
 
   case 2591:
 
 /* Line 1455 of yacc.c  */
-#line 15170 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15170 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->definer = (yyvsp[(3) - (3)].lex_user); }
     break;
 
   case 2592:
 
 /* Line 1455 of yacc.c  */
-#line 15173 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15173 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->with_admin_option= false; }
     break;
 
   case 2593:
 
 /* Line 1455 of yacc.c  */
-#line 15174 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15174 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->with_admin_option= true; }
     break;
 
   case 2594:
 
 /* Line 1455 of yacc.c  */
-#line 15178 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15178 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(1) - (1)].lex_user)))
               MYSQL_YYABORT;
@@ -42806,7 +42806,7 @@ yyreduce:
   case 2595:
 
 /* Line 1455 of yacc.c  */
-#line 15183 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15183 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(3) - (3)].lex_user)))
               MYSQL_YYABORT;
@@ -42816,7 +42816,7 @@ yyreduce:
   case 2596:
 
 /* Line 1455 of yacc.c  */
-#line 15191 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15191 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (!((yyval.lex_user)=(LEX_USER*) thd->calloc(sizeof(LEX_USER))))
               MYSQL_YYABORT;
@@ -42829,7 +42829,7 @@ yyreduce:
   case 2597:
 
 /* Line 1455 of yacc.c  */
-#line 15202 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15202 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if ((yyvsp[(1) - (1)].lex_str).length == 0)
             {
@@ -42854,14 +42854,14 @@ yyreduce:
   case 2601:
 
 /* Line 1455 of yacc.c  */
-#line 15230 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15230 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2602:
 
 /* Line 1455 of yacc.c  */
-#line 15232 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15232 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             Lex->all_privileges= 1; 
             Lex->grant= GLOBAL_ACLS;
@@ -42871,259 +42871,259 @@ yyreduce:
   case 2607:
 
 /* Line 1455 of yacc.c  */
-#line 15250 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15250 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->which_columns = SELECT_ACL;}
     break;
 
   case 2608:
 
 /* Line 1455 of yacc.c  */
-#line 15251 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15251 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2609:
 
 /* Line 1455 of yacc.c  */
-#line 15253 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15253 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->which_columns = INSERT_ACL;}
     break;
 
   case 2610:
 
 /* Line 1455 of yacc.c  */
-#line 15254 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15254 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2611:
 
 /* Line 1455 of yacc.c  */
-#line 15256 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15256 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->which_columns = UPDATE_ACL; }
     break;
 
   case 2612:
 
 /* Line 1455 of yacc.c  */
-#line 15257 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15257 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2613:
 
 /* Line 1455 of yacc.c  */
-#line 15259 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15259 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->which_columns = REFERENCES_ACL;}
     break;
 
   case 2614:
 
 /* Line 1455 of yacc.c  */
-#line 15260 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15260 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2615:
 
 /* Line 1455 of yacc.c  */
-#line 15261 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15261 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= DELETE_ACL;}
     break;
 
   case 2616:
 
 /* Line 1455 of yacc.c  */
-#line 15262 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15262 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2617:
 
 /* Line 1455 of yacc.c  */
-#line 15263 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15263 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= INDEX_ACL;}
     break;
 
   case 2618:
 
 /* Line 1455 of yacc.c  */
-#line 15264 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15264 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= ALTER_ACL;}
     break;
 
   case 2619:
 
 /* Line 1455 of yacc.c  */
-#line 15265 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15265 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= CREATE_ACL;}
     break;
 
   case 2620:
 
 /* Line 1455 of yacc.c  */
-#line 15266 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15266 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= DROP_ACL;}
     break;
 
   case 2621:
 
 /* Line 1455 of yacc.c  */
-#line 15267 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15267 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= EXECUTE_ACL;}
     break;
 
   case 2622:
 
 /* Line 1455 of yacc.c  */
-#line 15268 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15268 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= RELOAD_ACL;}
     break;
 
   case 2623:
 
 /* Line 1455 of yacc.c  */
-#line 15269 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15269 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= SHUTDOWN_ACL;}
     break;
 
   case 2624:
 
 /* Line 1455 of yacc.c  */
-#line 15270 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15270 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= PROCESS_ACL;}
     break;
 
   case 2625:
 
 /* Line 1455 of yacc.c  */
-#line 15271 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15271 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= FILE_ACL;}
     break;
 
   case 2626:
 
 /* Line 1455 of yacc.c  */
-#line 15272 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15272 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= GRANT_ACL;}
     break;
 
   case 2627:
 
 /* Line 1455 of yacc.c  */
-#line 15273 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15273 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= SHOW_DB_ACL;}
     break;
 
   case 2628:
 
 /* Line 1455 of yacc.c  */
-#line 15274 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15274 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= SUPER_ACL;}
     break;
 
   case 2629:
 
 /* Line 1455 of yacc.c  */
-#line 15275 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15275 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= CREATE_TMP_ACL;}
     break;
 
   case 2630:
 
 /* Line 1455 of yacc.c  */
-#line 15276 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15276 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= LOCK_TABLES_ACL; }
     break;
 
   case 2631:
 
 /* Line 1455 of yacc.c  */
-#line 15277 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15277 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= REPL_SLAVE_ACL; }
     break;
 
   case 2632:
 
 /* Line 1455 of yacc.c  */
-#line 15278 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15278 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= REPL_CLIENT_ACL; }
     break;
 
   case 2633:
 
 /* Line 1455 of yacc.c  */
-#line 15279 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15279 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= CREATE_VIEW_ACL; }
     break;
 
   case 2634:
 
 /* Line 1455 of yacc.c  */
-#line 15280 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15280 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= SHOW_VIEW_ACL; }
     break;
 
   case 2635:
 
 /* Line 1455 of yacc.c  */
-#line 15281 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15281 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= CREATE_PROC_ACL; }
     break;
 
   case 2636:
 
 /* Line 1455 of yacc.c  */
-#line 15282 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15282 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= ALTER_PROC_ACL; }
     break;
 
   case 2637:
 
 /* Line 1455 of yacc.c  */
-#line 15283 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15283 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= CREATE_USER_ACL; }
     break;
 
   case 2638:
 
 /* Line 1455 of yacc.c  */
-#line 15284 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15284 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= EVENT_ACL;}
     break;
 
   case 2639:
 
 /* Line 1455 of yacc.c  */
-#line 15285 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15285 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= TRIGGER_ACL; }
     break;
 
   case 2640:
 
 /* Line 1455 of yacc.c  */
-#line 15286 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15286 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= CREATE_TABLESPACE_ACL; }
     break;
 
   case 2641:
 
 /* Line 1455 of yacc.c  */
-#line 15290 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15290 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2642:
 
 /* Line 1455 of yacc.c  */
-#line 15291 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15291 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2645:
 
 /* Line 1455 of yacc.c  */
-#line 15301 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15301 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->x509_subject)
@@ -43138,7 +43138,7 @@ yyreduce:
   case 2646:
 
 /* Line 1455 of yacc.c  */
-#line 15311 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15311 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->x509_issuer)
@@ -43153,7 +43153,7 @@ yyreduce:
   case 2647:
 
 /* Line 1455 of yacc.c  */
-#line 15321 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15321 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (lex->ssl_cipher)
@@ -43168,7 +43168,7 @@ yyreduce:
   case 2648:
 
 /* Line 1455 of yacc.c  */
-#line 15334 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15334 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             size_t dummy;
@@ -43188,7 +43188,7 @@ yyreduce:
   case 2649:
 
 /* Line 1455 of yacc.c  */
-#line 15349 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15349 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->current_select->db = (yyvsp[(1) - (3)].lex_str).str;
@@ -43206,7 +43206,7 @@ yyreduce:
   case 2650:
 
 /* Line 1455 of yacc.c  */
-#line 15362 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15362 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->current_select->db = NULL;
@@ -43224,7 +43224,7 @@ yyreduce:
   case 2651:
 
 /* Line 1455 of yacc.c  */
-#line 15375 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15375 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (!lex->current_select->add_table_to_list(lex->thd, (yyvsp[(1) - (1)].table),NULL,
@@ -43238,7 +43238,7 @@ yyreduce:
   case 2652:
 
 /* Line 1455 of yacc.c  */
-#line 15387 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15387 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(1) - (1)].lex_user)))
               MYSQL_YYABORT;
@@ -43248,7 +43248,7 @@ yyreduce:
   case 2653:
 
 /* Line 1455 of yacc.c  */
-#line 15392 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15392 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(3) - (3)].lex_user)))
               MYSQL_YYABORT;
@@ -43258,7 +43258,7 @@ yyreduce:
   case 2654:
 
 /* Line 1455 of yacc.c  */
-#line 15400 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15400 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(1) - (1)].lex_user)))
               MYSQL_YYABORT;
@@ -43268,7 +43268,7 @@ yyreduce:
   case 2655:
 
 /* Line 1455 of yacc.c  */
-#line 15405 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15405 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(3) - (3)].lex_user)))
               MYSQL_YYABORT;
@@ -43278,7 +43278,7 @@ yyreduce:
   case 2656:
 
 /* Line 1455 of yacc.c  */
-#line 15413 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15413 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(1) - (1)].lex_user)))
               MYSQL_YYABORT;
@@ -43288,7 +43288,7 @@ yyreduce:
   case 2657:
 
 /* Line 1455 of yacc.c  */
-#line 15418 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15418 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (Lex->users_list.push_back((yyvsp[(3) - (3)].lex_user)))
               MYSQL_YYABORT;
@@ -43298,7 +43298,7 @@ yyreduce:
   case 2662:
 
 /* Line 1455 of yacc.c  */
-#line 15429 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15429 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.lex_user)=(yyvsp[(1) - (4)].lex_user); (yyvsp[(1) - (4)].lex_user)->password=(yyvsp[(4) - (4)].lex_str);
             if (Lex->sql_command == SQLCOM_REVOKE)
@@ -43332,7 +43332,7 @@ yyreduce:
   case 2663:
 
 /* Line 1455 of yacc.c  */
-#line 15458 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15458 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             (yyval.lex_user)= (yyvsp[(1) - (5)].lex_user); 
             (yyvsp[(1) - (5)].lex_user)->password= (yyvsp[(5) - (5)].lex_str); 
@@ -43342,7 +43342,7 @@ yyreduce:
   case 2664:
 
 /* Line 1455 of yacc.c  */
-#line 15463 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15463 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.lex_user)= (yyvsp[(1) - (4)].lex_user);
             (yyvsp[(1) - (4)].lex_user)->plugin= (yyvsp[(4) - (4)].lex_str);
@@ -43353,7 +43353,7 @@ yyreduce:
   case 2665:
 
 /* Line 1455 of yacc.c  */
-#line 15469 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15469 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.lex_user)= (yyvsp[(1) - (6)].lex_user);
             (yyvsp[(1) - (6)].lex_user)->plugin= (yyvsp[(4) - (6)].lex_str);
@@ -43364,14 +43364,14 @@ yyreduce:
   case 2666:
 
 /* Line 1455 of yacc.c  */
-#line 15475 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15475 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.lex_user)= (yyvsp[(1) - (1)].lex_user); (yyvsp[(1) - (1)].lex_user)->password= null_lex_str; }
     break;
 
   case 2667:
 
 /* Line 1455 of yacc.c  */
-#line 15480 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15480 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->grant |= lex->which_columns;
@@ -43381,7 +43381,7 @@ yyreduce:
   case 2671:
 
 /* Line 1455 of yacc.c  */
-#line 15494 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15494 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             String *new_str = new (thd->mem_root) String((const char*) (yyvsp[(1) - (1)].lex_str).str,(yyvsp[(1) - (1)].lex_str).length,system_charset_info);
             if (new_str == NULL)
@@ -43411,7 +43411,7 @@ yyreduce:
   case 2673:
 
 /* Line 1455 of yacc.c  */
-#line 15523 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15523 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->ssl_type=SSL_TYPE_SPECIFIED;
           }
@@ -43420,7 +43420,7 @@ yyreduce:
   case 2674:
 
 /* Line 1455 of yacc.c  */
-#line 15527 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15527 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->ssl_type=SSL_TYPE_ANY;
           }
@@ -43429,7 +43429,7 @@ yyreduce:
   case 2675:
 
 /* Line 1455 of yacc.c  */
-#line 15531 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15531 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->ssl_type=SSL_TYPE_X509;
           }
@@ -43438,7 +43438,7 @@ yyreduce:
   case 2676:
 
 /* Line 1455 of yacc.c  */
-#line 15535 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15535 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->ssl_type=SSL_TYPE_NONE;
           }
@@ -43447,49 +43447,49 @@ yyreduce:
   case 2677:
 
 /* Line 1455 of yacc.c  */
-#line 15541 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15541 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2679:
 
 /* Line 1455 of yacc.c  */
-#line 15546 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15546 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2680:
 
 /* Line 1455 of yacc.c  */
-#line 15547 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15547 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= GRANT_ACL;}
     break;
 
   case 2681:
 
 /* Line 1455 of yacc.c  */
-#line 15551 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15551 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2682:
 
 /* Line 1455 of yacc.c  */
-#line 15552 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15552 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2683:
 
 /* Line 1455 of yacc.c  */
-#line 15556 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15556 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->grant |= GRANT_ACL;}
     break;
 
   case 2684:
 
 /* Line 1455 of yacc.c  */
-#line 15558 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15558 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->mqh.questions=(yyvsp[(2) - (2)].ulong_num);
@@ -43500,7 +43500,7 @@ yyreduce:
   case 2685:
 
 /* Line 1455 of yacc.c  */
-#line 15564 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15564 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->mqh.updates=(yyvsp[(2) - (2)].ulong_num);
@@ -43511,7 +43511,7 @@ yyreduce:
   case 2686:
 
 /* Line 1455 of yacc.c  */
-#line 15570 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15570 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->mqh.conn_per_hour= (yyvsp[(2) - (2)].ulong_num);
@@ -43522,7 +43522,7 @@ yyreduce:
   case 2687:
 
 /* Line 1455 of yacc.c  */
-#line 15576 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15576 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->mqh.user_conn= (yyvsp[(2) - (2)].num);
@@ -43533,7 +43533,7 @@ yyreduce:
   case 2688:
 
 /* Line 1455 of yacc.c  */
-#line 15585 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15585 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command = SQLCOM_BEGIN;
@@ -43544,84 +43544,84 @@ yyreduce:
   case 2689:
 
 /* Line 1455 of yacc.c  */
-#line 15590 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15590 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2690:
 
 /* Line 1455 of yacc.c  */
-#line 15594 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15594 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2691:
 
 /* Line 1455 of yacc.c  */
-#line 15595 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15595 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2692:
 
 /* Line 1455 of yacc.c  */
-#line 15600 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15600 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_yes_no_unk)= TVL_UNKNOWN; }
     break;
 
   case 2693:
 
 /* Line 1455 of yacc.c  */
-#line 15601 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15601 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_yes_no_unk)= TVL_NO; }
     break;
 
   case 2694:
 
 /* Line 1455 of yacc.c  */
-#line 15602 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15602 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_yes_no_unk)= TVL_YES; }
     break;
 
   case 2695:
 
 /* Line 1455 of yacc.c  */
-#line 15607 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15607 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_yes_no_unk)= TVL_UNKNOWN; }
     break;
 
   case 2696:
 
 /* Line 1455 of yacc.c  */
-#line 15608 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15608 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_yes_no_unk)= TVL_YES; }
     break;
 
   case 2697:
 
 /* Line 1455 of yacc.c  */
-#line 15609 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15609 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.m_yes_no_unk)= TVL_NO; }
     break;
 
   case 2698:
 
 /* Line 1455 of yacc.c  */
-#line 15613 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15613 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2699:
 
 /* Line 1455 of yacc.c  */
-#line 15614 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15614 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2700:
 
 /* Line 1455 of yacc.c  */
-#line 15619 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15619 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_COMMIT;
@@ -43635,7 +43635,7 @@ yyreduce:
   case 2701:
 
 /* Line 1455 of yacc.c  */
-#line 15631 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15631 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_ROLLBACK;
@@ -43649,7 +43649,7 @@ yyreduce:
   case 2702:
 
 /* Line 1455 of yacc.c  */
-#line 15641 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15641 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_ROLLBACK_TO_SAVEPOINT;
@@ -43660,7 +43660,7 @@ yyreduce:
   case 2703:
 
 /* Line 1455 of yacc.c  */
-#line 15650 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15650 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_SAVEPOINT;
@@ -43671,7 +43671,7 @@ yyreduce:
   case 2704:
 
 /* Line 1455 of yacc.c  */
-#line 15659 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15659 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             lex->sql_command= SQLCOM_RELEASE_SAVEPOINT;
@@ -43682,14 +43682,14 @@ yyreduce:
   case 2705:
 
 /* Line 1455 of yacc.c  */
-#line 15672 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15672 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2707:
 
 /* Line 1455 of yacc.c  */
-#line 15678 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15678 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_select_to_union_list(Lex, (bool)(yyvsp[(2) - (2)].num), TRUE))
               MYSQL_YYABORT;
@@ -43699,7 +43699,7 @@ yyreduce:
   case 2708:
 
 /* Line 1455 of yacc.c  */
-#line 15683 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15683 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               Remove from the name resolution context stack the context of the
@@ -43712,42 +43712,42 @@ yyreduce:
   case 2709:
 
 /* Line 1455 of yacc.c  */
-#line 15693 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15693 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 0; }
     break;
 
   case 2710:
 
 /* Line 1455 of yacc.c  */
-#line 15694 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15694 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 2711:
 
 /* Line 1455 of yacc.c  */
-#line 15695 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15695 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)= 1; }
     break;
 
   case 2712:
 
 /* Line 1455 of yacc.c  */
-#line 15699 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15699 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.is_not_empty)= false; }
     break;
 
   case 2713:
 
 /* Line 1455 of yacc.c  */
-#line 15700 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15700 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.is_not_empty)= true; }
     break;
 
   case 2714:
 
 /* Line 1455 of yacc.c  */
-#line 15704 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15704 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             DBUG_ASSERT(lex->current_select->linkage != GLOBAL_OPTIONS_TYPE);
@@ -43767,7 +43767,7 @@ yyreduce:
   case 2715:
 
 /* Line 1455 of yacc.c  */
-#line 15719 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15719 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             thd->lex->current_select->no_table_names_allowed= 0;
             thd->where= "";
@@ -43777,28 +43777,28 @@ yyreduce:
   case 2718:
 
 /* Line 1455 of yacc.c  */
-#line 15731 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15731 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=1; }
     break;
 
   case 2719:
 
 /* Line 1455 of yacc.c  */
-#line 15732 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15732 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=1; }
     break;
 
   case 2720:
 
 /* Line 1455 of yacc.c  */
-#line 15733 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15733 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { (yyval.num)=0; }
     break;
 
   case 2721:
 
 /* Line 1455 of yacc.c  */
-#line 15738 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15738 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             (yyval.select_lex)= Lex->current_select->master_unit()->first_select();
           }
@@ -43807,7 +43807,7 @@ yyreduce:
   case 2722:
 
 /* Line 1455 of yacc.c  */
-#line 15742 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15742 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             (yyval.select_lex)= Lex->current_select->master_unit()->first_select();
           }
@@ -43816,7 +43816,7 @@ yyreduce:
   case 2724:
 
 /* Line 1455 of yacc.c  */
-#line 15751 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15751 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (add_select_to_union_list(Lex, (bool)(yyvsp[(3) - (3)].num), FALSE))
               MYSQL_YYABORT;
@@ -43826,7 +43826,7 @@ yyreduce:
   case 2725:
 
 /* Line 1455 of yacc.c  */
-#line 15757 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15757 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->pop_context();
             (yyval.select_lex)= (yyvsp[(1) - (6)].select_lex);
@@ -43836,7 +43836,7 @@ yyreduce:
   case 2726:
 
 /* Line 1455 of yacc.c  */
-#line 15766 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15766 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { 
             (yyval.select_lex)= (yyvsp[(2) - (3)].select_lex);
           }
@@ -43845,7 +43845,7 @@ yyreduce:
   case 2727:
 
 /* Line 1455 of yacc.c  */
-#line 15772 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15772 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
             if (!lex->expr_allows_subselect ||
@@ -43869,7 +43869,7 @@ yyreduce:
   case 2728:
 
 /* Line 1455 of yacc.c  */
-#line 15793 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15793 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex=Lex;
 
@@ -43890,14 +43890,14 @@ yyreduce:
   case 2733:
 
 /* Line 1455 of yacc.c  */
-#line 15821 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15821 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->options|= SELECT_STRAIGHT_JOIN; }
     break;
 
   case 2734:
 
 /* Line 1455 of yacc.c  */
-#line 15823 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15823 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (check_simple_select())
               MYSQL_YYABORT;
@@ -43910,28 +43910,28 @@ yyreduce:
   case 2735:
 
 /* Line 1455 of yacc.c  */
-#line 15830 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15830 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->options|= SELECT_DISTINCT; }
     break;
 
   case 2736:
 
 /* Line 1455 of yacc.c  */
-#line 15831 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15831 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->options|= SELECT_SMALL_RESULT; }
     break;
 
   case 2737:
 
 /* Line 1455 of yacc.c  */
-#line 15832 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15832 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->options|= SELECT_BIG_RESULT; }
     break;
 
   case 2738:
 
 /* Line 1455 of yacc.c  */
-#line 15834 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15834 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (check_simple_select())
               MYSQL_YYABORT;
@@ -43942,7 +43942,7 @@ yyreduce:
   case 2739:
 
 /* Line 1455 of yacc.c  */
-#line 15840 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15840 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             if (check_simple_select())
               MYSQL_YYABORT;
@@ -43953,35 +43953,35 @@ yyreduce:
   case 2740:
 
 /* Line 1455 of yacc.c  */
-#line 15845 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15845 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Select->options|= SELECT_ALL; }
     break;
 
   case 2741:
 
 /* Line 1455 of yacc.c  */
-#line 15856 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15856 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2742:
 
 /* Line 1455 of yacc.c  */
-#line 15858 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15858 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2743:
 
 /* Line 1455 of yacc.c  */
-#line 15860 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15860 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2757:
 
 /* Line 1455 of yacc.c  */
-#line 15893 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15893 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             /*
               We have to distinguish missing DEFINER-clause from case when
@@ -43997,7 +43997,7 @@ yyreduce:
   case 2758:
 
 /* Line 1455 of yacc.c  */
-#line 15907 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15907 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             thd->lex->definer= (yyvsp[(3) - (3)].lex_user);
           }
@@ -44006,49 +44006,49 @@ yyreduce:
   case 2759:
 
 /* Line 1455 of yacc.c  */
-#line 15920 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15920 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_algorithm= DTYPE_ALGORITHM_UNDEFINED; }
     break;
 
   case 2760:
 
 /* Line 1455 of yacc.c  */
-#line 15922 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15922 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_algorithm= VIEW_ALGORITHM_MERGE; }
     break;
 
   case 2761:
 
 /* Line 1455 of yacc.c  */
-#line 15924 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15924 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_algorithm= VIEW_ALGORITHM_TMPTABLE; }
     break;
 
   case 2762:
 
 /* Line 1455 of yacc.c  */
-#line 15929 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15929 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_suid= VIEW_SUID_DEFAULT; }
     break;
 
   case 2763:
 
 /* Line 1455 of yacc.c  */
-#line 15931 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15931 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_suid= VIEW_SUID_DEFINER; }
     break;
 
   case 2764:
 
 /* Line 1455 of yacc.c  */
-#line 15933 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15933 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_suid= VIEW_SUID_INVOKER; }
     break;
 
   case 2765:
 
 /* Line 1455 of yacc.c  */
-#line 15938 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15938 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             lex->sql_command= SQLCOM_CREATE_VIEW;
@@ -44065,14 +44065,14 @@ yyreduce:
   case 2767:
 
 /* Line 1455 of yacc.c  */
-#line 15954 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15954 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2769:
 
 /* Line 1455 of yacc.c  */
-#line 15960 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15960 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
               Lex->view_list.push_back((LEX_STRING*)
               sql_memdup(&(yyvsp[(1) - (1)].lex_str), sizeof(LEX_STRING)));
@@ -44082,7 +44082,7 @@ yyreduce:
   case 2770:
 
 /* Line 1455 of yacc.c  */
-#line 15965 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15965 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
               Lex->view_list.push_back((LEX_STRING*)
               sql_memdup(&(yyvsp[(3) - (3)].lex_str), sizeof(LEX_STRING)));
@@ -44092,7 +44092,7 @@ yyreduce:
   case 2771:
 
 /* Line 1455 of yacc.c  */
-#line 15972 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15972 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->parsing_options.allows_variable= FALSE;
@@ -44106,7 +44106,7 @@ yyreduce:
   case 2772:
 
 /* Line 1455 of yacc.c  */
-#line 15981 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 15981 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             uint len= YYLIP->get_cpp_ptr() - lex->create_view_select.str;
@@ -44124,35 +44124,35 @@ yyreduce:
   case 2775:
 
 /* Line 1455 of yacc.c  */
-#line 16002 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16002 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_check= VIEW_CHECK_NONE; }
     break;
 
   case 2776:
 
 /* Line 1455 of yacc.c  */
-#line 16004 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16004 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_check= VIEW_CHECK_CASCADED; }
     break;
 
   case 2777:
 
 /* Line 1455 of yacc.c  */
-#line 16006 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16006 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_check= VIEW_CHECK_CASCADED; }
     break;
 
   case 2778:
 
 /* Line 1455 of yacc.c  */
-#line 16008 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16008 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->create_view_check= VIEW_CHECK_LOCAL; }
     break;
 
   case 2779:
 
 /* Line 1455 of yacc.c  */
-#line 16025 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16025 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $8 */
             Lex->raw_trg_on_table_name_begin= YYLIP->get_tok_start();
           }
@@ -44161,7 +44161,7 @@ yyreduce:
   case 2780:
 
 /* Line 1455 of yacc.c  */
-#line 16031 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16031 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $12 */
             Lex->raw_trg_on_table_name_end= YYLIP->get_tok_start();
           }
@@ -44170,7 +44170,7 @@ yyreduce:
   case 2781:
 
 /* Line 1455 of yacc.c  */
-#line 16036 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16036 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $15 */
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -44204,7 +44204,7 @@ yyreduce:
   case 2782:
 
 /* Line 1455 of yacc.c  */
-#line 16065 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16065 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $17 */
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -44233,7 +44233,7 @@ yyreduce:
   case 2783:
 
 /* Line 1455 of yacc.c  */
-#line 16099 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16099 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             if (is_native_function(thd, & (yyvsp[(4) - (8)].lex_str)))
@@ -44254,7 +44254,7 @@ yyreduce:
   case 2784:
 
 /* Line 1455 of yacc.c  */
-#line 16116 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16116 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             if (is_native_function(thd, & (yyvsp[(3) - (7)].lex_str)))
@@ -44275,7 +44275,7 @@ yyreduce:
   case 2785:
 
 /* Line 1455 of yacc.c  */
-#line 16138 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16138 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $5 */
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -44310,7 +44310,7 @@ yyreduce:
   case 2786:
 
 /* Line 1455 of yacc.c  */
-#line 16169 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16169 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $8 */
             Lex->sphead->m_param_end= YYLIP->get_cpp_tok_start();
           }
@@ -44319,7 +44319,7 @@ yyreduce:
   case 2787:
 
 /* Line 1455 of yacc.c  */
-#line 16173 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16173 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $10 */
             LEX *lex= Lex;
             lex->charset= NULL;
@@ -44333,7 +44333,7 @@ yyreduce:
   case 2788:
 
 /* Line 1455 of yacc.c  */
-#line 16182 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16182 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $12 */
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -44361,7 +44361,7 @@ yyreduce:
   case 2789:
 
 /* Line 1455 of yacc.c  */
-#line 16205 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16205 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { /* $14 */
             LEX *lex= thd->lex;
             Lex_input_stream *lip= YYLIP;
@@ -44374,7 +44374,7 @@ yyreduce:
   case 2790:
 
 /* Line 1455 of yacc.c  */
-#line 16213 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16213 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
             sp_head *sp= lex->sphead;
@@ -44431,7 +44431,7 @@ yyreduce:
   case 2791:
 
 /* Line 1455 of yacc.c  */
-#line 16268 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16268 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp;
@@ -44460,7 +44460,7 @@ yyreduce:
   case 2792:
 
 /* Line 1455 of yacc.c  */
-#line 16292 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16292 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             const char* tmp_param_begin;
 
@@ -44473,7 +44473,7 @@ yyreduce:
   case 2793:
 
 /* Line 1455 of yacc.c  */
-#line 16301 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16301 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
 
@@ -44485,7 +44485,7 @@ yyreduce:
   case 2794:
 
 /* Line 1455 of yacc.c  */
-#line 16308 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16308 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= thd->lex;
 
@@ -44497,7 +44497,7 @@ yyreduce:
   case 2795:
 
 /* Line 1455 of yacc.c  */
-#line 16315 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16315 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             sp_head *sp= lex->sphead;
@@ -44511,7 +44511,7 @@ yyreduce:
   case 2796:
 
 /* Line 1455 of yacc.c  */
-#line 16329 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16329 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_XA_START;
           }
@@ -44520,7 +44520,7 @@ yyreduce:
   case 2797:
 
 /* Line 1455 of yacc.c  */
-#line 16333 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16333 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_XA_END;
           }
@@ -44529,7 +44529,7 @@ yyreduce:
   case 2798:
 
 /* Line 1455 of yacc.c  */
-#line 16337 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16337 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_XA_PREPARE;
           }
@@ -44538,7 +44538,7 @@ yyreduce:
   case 2799:
 
 /* Line 1455 of yacc.c  */
-#line 16341 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16341 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_XA_COMMIT;
           }
@@ -44547,7 +44547,7 @@ yyreduce:
   case 2800:
 
 /* Line 1455 of yacc.c  */
-#line 16345 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16345 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_XA_ROLLBACK;
           }
@@ -44556,7 +44556,7 @@ yyreduce:
   case 2801:
 
 /* Line 1455 of yacc.c  */
-#line 16349 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16349 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             Lex->sql_command = SQLCOM_XA_RECOVER;
           }
@@ -44565,7 +44565,7 @@ yyreduce:
   case 2802:
 
 /* Line 1455 of yacc.c  */
-#line 16356 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16356 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (1)].string)->length() <= MAXGTRIDSIZE);
             if (!(Lex->xid=(XID *)thd->alloc(sizeof(XID))))
@@ -44577,7 +44577,7 @@ yyreduce:
   case 2803:
 
 /* Line 1455 of yacc.c  */
-#line 16363 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16363 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (3)].string)->length() <= MAXGTRIDSIZE && (yyvsp[(3) - (3)].string)->length() <= MAXBQUALSIZE);
             if (!(Lex->xid=(XID *)thd->alloc(sizeof(XID))))
@@ -44589,7 +44589,7 @@ yyreduce:
   case 2804:
 
 /* Line 1455 of yacc.c  */
-#line 16370 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16370 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             MYSQL_YYABORT_UNLESS((yyvsp[(1) - (5)].string)->length() <= MAXGTRIDSIZE && (yyvsp[(3) - (5)].string)->length() <= MAXBQUALSIZE);
             if (!(Lex->xid=(XID *)thd->alloc(sizeof(XID))))
@@ -44601,84 +44601,84 @@ yyreduce:
   case 2805:
 
 /* Line 1455 of yacc.c  */
-#line 16379 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16379 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2806:
 
 /* Line 1455 of yacc.c  */
-#line 16380 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16380 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2807:
 
 /* Line 1455 of yacc.c  */
-#line 16384 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16384 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_NONE;        }
     break;
 
   case 2808:
 
 /* Line 1455 of yacc.c  */
-#line 16385 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16385 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_JOIN;        }
     break;
 
   case 2809:
 
 /* Line 1455 of yacc.c  */
-#line 16386 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16386 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_RESUME;      }
     break;
 
   case 2810:
 
 /* Line 1455 of yacc.c  */
-#line 16390 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16390 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_NONE;        }
     break;
 
   case 2811:
 
 /* Line 1455 of yacc.c  */
-#line 16391 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16391 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_ONE_PHASE;   }
     break;
 
   case 2812:
 
 /* Line 1455 of yacc.c  */
-#line 16396 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16396 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_NONE;        }
     break;
 
   case 2813:
 
 /* Line 1455 of yacc.c  */
-#line 16398 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16398 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_SUSPEND;     }
     break;
 
   case 2815:
 
 /* Line 1455 of yacc.c  */
-#line 16403 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16403 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {}
     break;
 
   case 2816:
 
 /* Line 1455 of yacc.c  */
-#line 16404 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16404 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     { Lex->xa_opt=XA_FOR_MIGRATE; }
     break;
 
   case 2817:
 
 /* Line 1455 of yacc.c  */
-#line 16409 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16409 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_INSTALL_PLUGIN;
@@ -44690,7 +44690,7 @@ yyreduce:
   case 2818:
 
 /* Line 1455 of yacc.c  */
-#line 16416 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16416 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_INSTALL_PLUGIN;
@@ -44702,7 +44702,7 @@ yyreduce:
   case 2819:
 
 /* Line 1455 of yacc.c  */
-#line 16426 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16426 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_UNINSTALL_PLUGIN;
@@ -44713,7 +44713,7 @@ yyreduce:
   case 2820:
 
 /* Line 1455 of yacc.c  */
-#line 16432 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16432 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
             LEX *lex= Lex;
             lex->sql_command= SQLCOM_UNINSTALL_PLUGIN;
@@ -44725,7 +44725,7 @@ yyreduce:
   case 2821:
 
 /* Line 1455 of yacc.c  */
-#line 16443 "/home/buildbot/buildbot/build/sql/sql_yacc.yy"
+#line 16443 "/home/buildbot/bzr/build/sql/sql_yacc.yy"
     {
 	  YYERROR;
 	}
@@ -44734,7 +44734,7 @@ yyreduce:
 
 
 /* Line 1455 of yacc.c  */
-#line 44738 "/home/buildbot/buildbot/build/mkdist/sql/sql_yacc.cc"
+#line 44738 "/home/buildbot/bzr/build/mkdist/sql/sql_yacc.cc"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
