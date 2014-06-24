@@ -3217,6 +3217,14 @@ set_connect_attributes(MYSQL *mysql, char *buff, size_t buf_len)
 }
 
 
+/* NOTE: The *mysql pointer passed to this function must remain usable
+ *    for further connection attempts even if this function returns NULL, due to
+ *    legacy uses including the implemention of MYSQL_OPT_RECONNECT.  In
+ *    particular, the mysql->options structure must remain intact and unfreed.
+ *
+ *    Clients are responsible for calling mysql_close on their MYSQL structs,
+ *    even if this function fails.
+ */
 MYSQL * STDCALL 
 CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
 		       const char *passwd, const char *db,
