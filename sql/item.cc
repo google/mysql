@@ -847,6 +847,7 @@ Item_ident::Item_ident(Name_resolution_context *context_arg,
    cached_table(0), depended_from(0), can_be_depended(TRUE)
 {
   name = (char*) field_name_arg;
+  name_length= field_name_arg ? strlen(field_name_arg) : 0;
 }
 
 
@@ -859,6 +860,7 @@ Item_ident::Item_ident(TABLE_LIST *view_arg, const char *field_name_arg)
    cached_table(NULL), depended_from(NULL), can_be_depended(TRUE)
 {
   name = (char*) field_name_arg;
+  name_length= field_name_arg ? strlen(field_name_arg) : 0;
 }
 
 
@@ -2386,6 +2388,7 @@ Item_field::Item_field(THD *thd, Name_resolution_context *context_arg,
       memory if this item is to be reused.
     */
     name= (char*) orig_field_name;
+    name_length= strlen(orig_field_name);
   }
   set_field(f);
   with_field= 1;

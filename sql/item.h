@@ -2578,7 +2578,7 @@ public:
       divide the max_length with mbmaxlen).
     */
     max_length= str_value.numchars()*cs->mbmaxlen;
-    set_name(str, length, cs);
+    set_name(str, strnlen(str, length), cs);
     decimals=NOT_FIXED_DEC;
     // it is constant => can be used without fix_fields (and frequently used)
     fixed= 1;
