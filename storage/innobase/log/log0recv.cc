@@ -464,17 +464,19 @@ recv_sys_empty_hash(void)
 # ifndef UNIV_LOG_DEBUG
 /********************************************************//**
 Frees the recovery system. */
-static
 void
 recv_sys_debug_free(void)
 /*=====================*/
 {
 	mutex_enter(&(recv_sys->mutex));
 
-	hash_table_free(recv_sys->addr_hash);
-	mem_heap_free(recv_sys->heap);
+	if (recv_sys->addr_hash)
+		hash_table_free(recv_sys->addr_hash);
+	if (recv_sys->heap)
+		mem_heap_free(recv_sys->heap);
 	ut_free(recv_sys->buf);
-	mem_free(recv_sys->last_block_buf_start);
+	if (recv_sys->last_block_buf_start)
+		mem_free(recv_sys->last_block_buf_start);
 
 	recv_sys->buf = NULL;
 	recv_sys->heap = NULL;

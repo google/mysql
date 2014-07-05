@@ -264,6 +264,14 @@ recv_sys_init(
 /*==========*/
 	ulint	available_memory);	/*!< in: available memory in bytes */
 #ifndef UNIV_HOTBACKUP
+# ifndef UNIV_LOG_DEBUG
+/********************************************************//**
+Frees the recovery system. */
+UNIV_INTERN
+void
+recv_sys_debug_free(void);
+/*=====================*/
+# endif
 /********************************************************//**
 Reset the state of the recovery system variables. */
 UNIV_INTERN

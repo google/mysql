@@ -333,7 +333,8 @@ buf_flush_free_flush_rbt(void)
 		ut_a(buf_flush_validate_low(buf_pool));
 #endif /* UNIV_DEBUG || UNIV_BUF_DEBUG */
 
-		rbt_free(buf_pool->flush_rbt);
+		if (buf_pool->flush_rbt)
+			rbt_free(buf_pool->flush_rbt);
 		buf_pool->flush_rbt = NULL;
 
 		buf_flush_list_mutex_exit(buf_pool);

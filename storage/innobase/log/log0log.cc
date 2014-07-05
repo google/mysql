@@ -3712,7 +3712,7 @@ log_shutdown(void)
 	os_event_create();
 #endif /* UNIV_LOG_ARCHIVE */
 
-#ifdef UNIV_LOG_DEBUG
+#ifndef UNIV_LOG_DEBUG
 	recv_sys_debug_free();
 #endif
 
