@@ -707,6 +707,7 @@ mysql_mutex_t
   LOCK_global_system_variables,
   LOCK_user_conn, LOCK_slave_list, LOCK_active_mi,
   LOCK_connection_count, LOCK_error_messages;
+mysql_mutex_t LOCK_cleanup;
 
 mysql_mutex_t LOCK_stats, LOCK_global_user_client_stats,
               LOCK_global_table_stats, LOCK_global_index_stats;
@@ -744,10 +745,11 @@ char *opt_logname, *opt_slow_logname, *opt_bin_logname;
 /* Static variables */
 
 static volatile sig_atomic_t kill_in_progress;
+static volatile sig_atomic_t cleanup_done;
 my_bool opt_stack_trace;
 my_bool opt_expect_abort= 0, opt_bootstrap= 0;
 static my_bool opt_myisam_log;
-static int cleanup_done;
+static my_bool cleanup_started;
 static ulong opt_specialflag;
 static char *opt_binlog_index_name;
 char *mysql_home_ptr, *pidfile_name_ptr;
@@ -870,6 +872,7 @@ PSI_mutex_key key_BINLOG_LOCK_index, key_BINLOG_LOCK_xid_list,
   key_LOCK_error_messages, key_LOG_INFO_lock,
   key_LOCK_thread_count, key_LOCK_thread_cache,
   key_PARTITION_LOCK_auto_inc;
+PSI_mutex_key key_LOCK_cleanup;
 PSI_mutex_key key_RELAYLOG_LOCK_index;
 PSI_mutex_key key_LOCK_slave_state, key_LOCK_binlog_state,
   key_LOCK_rpl_thread, key_LOCK_rpl_thread_pool, key_LOCK_parallel_entry;
@@ -951,7 +954,8 @@ static PSI_mutex_info all_server_mutexes[]=
   { &key_LOCK_binlog_state, "LOCK_binlog_state", 0},
   { &key_LOCK_rpl_thread, "LOCK_rpl_thread", 0},
   { &key_LOCK_rpl_thread_pool, "LOCK_rpl_thread_pool", 0},
-  { &key_LOCK_parallel_entry, "LOCK_parallel_entry", 0}
+  { &key_LOCK_parallel_entry, "LOCK_parallel_entry", 0},
+  { &key_LOCK_cleanup, "LOCK_cleanup", 0}
 };
 
 PSI_rwlock_key key_rwlock_LOCK_grant, key_rwlock_LOCK_logger,
@@ -1943,7 +1947,7 @@ void unireg_end(void)
 
 extern "C" void unireg_abort(int exit_code)
 {
-  DBUG_ENTER("unireg_abort");
+  DBUG_ENTER_NO_RETURN("unireg_abort");
 
   if (opt_help)
     usage();
@@ -1981,8 +1985,15 @@ static void mysqld_exit(int exit_code)
 void clean_up(bool print_message)
 {
   DBUG_PRINT("exit",("clean_up"));
-  if (cleanup_done++)
+  mysql_mutex_lock(&LOCK_cleanup);
+  if (cleanup_started)
+  {
+    mysql_mutex_unlock(&LOCK_cleanup);
     return; /* purecov: inspected */
+  }
+  else
+    cleanup_started= true;
+  mysql_mutex_unlock(&LOCK_cleanup);
 
 #ifdef HAVE_REPLICATION
   // We must call end_slave() as clean_up may have been called during startup
@@ -2087,6 +2098,9 @@ void clean_up(bool print_message)
   mysql_mutex_lock(&LOCK_thread_count);
   DBUG_PRINT("quit", ("got thread count lock"));
   ready_to_exit=1;
+
+  cleanup_done= 1;
+
   /* do the broadcast inside the lock to ensure that my_end() is not called */
   mysql_cond_broadcast(&COND_thread_count);
   mysql_mutex_unlock(&LOCK_thread_count);
@@ -2173,6 +2187,7 @@ static void clean_up_mutexes()
   mysql_mutex_destroy(&LOCK_prepare_ordered);
   mysql_cond_destroy(&COND_prepare_ordered);
   mysql_mutex_destroy(&LOCK_commit_ordered);
+  mysql_mutex_destroy(&LOCK_cleanup);
   DBUG_VOID_RETURN;
 }
 
@@ -4424,6 +4439,7 @@ static int init_thread_environment()
   mysql_mutex_init(key_LOCK_server_started,
                    &LOCK_server_started, MY_MUTEX_INIT_FAST);
   mysql_cond_init(key_COND_server_started, &COND_server_started, NULL);
+  mysql_mutex_init(key_LOCK_cleanup, &LOCK_cleanup, MY_MUTEX_INIT_FAST);
   sp_cache_init();
 #ifdef HAVE_EVENT_SCHEDULER
   Events::init_mutexes();
@@ -8121,6 +8137,7 @@ static int mysql_init_variables(void)
   opt_bootstrap= opt_myisam_log= 0;
   mqh_used= 0;
   kill_in_progress= 0;
+  cleanup_started= 0;
   cleanup_done= 0;
   server_id_supplied= 0;
   test_flags= select_errors= dropping_tables= ha_open_options=0;

@@ -186,7 +186,7 @@ static void free_used_memory(void)
 static void die(const char *fmt, ...)
 {
   va_list args;
-  DBUG_ENTER("die");
+  DBUG_ENTER_NO_RETURN("die");
 
   /* Print the error message */
   fflush(stdout);

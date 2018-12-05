@@ -2578,7 +2578,7 @@ public:
       divide the max_length with mbmaxlen).
     */
     max_length= str_value.numchars()*cs->mbmaxlen;
-    set_name(str, length, cs);
+    set_name(str, strnlen(str, length), cs);
     decimals=NOT_FIXED_DEC;
     // it is constant => can be used without fix_fields (and frequently used)
     fixed= 1;
@@ -2777,6 +2777,16 @@ public:
   Item_empty_string(const char *header,uint length, CHARSET_INFO *cs= NULL) :
     Item_partition_func_safe_string("",0, cs ? cs : &my_charset_utf8_general_ci)
     { name=(char*) header; max_length= length * collation.collation->mbmaxlen; }
+  void make_field(Send_field *field);
+};
+
+class Item_empty_blob :public Item_blob
+{
+public:
+  Item_empty_blob(const char* header, uint length) : Item_blob("", 0) {
+    max_length= length;
+    name=(char*) header;
+  }
   void make_field(Send_field *field);
 };
 

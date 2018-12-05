@@ -89,6 +89,8 @@ end:
 int my_copystat(const char *from, const char *to, int MyFlags)
 {
   MY_STAT statbuf;
+  MY_STAT statbuf_to;
+  gid_t gid;
 
   if (my_stat(from, &statbuf, MyFlags) == NULL)
     return -1;				/* Can't get stat on input file */
@@ -96,8 +98,19 @@ int my_copystat(const char *from, const char *to, int MyFlags)
   if ((statbuf.st_mode & S_IFMT) != S_IFREG)
     return 1;
 
+  if (stat(to, &statbuf_to))
+  {
+    my_errno= errno;
+    if (MyFlags & (MY_FAE+MY_WME))
+      my_error(EE_STAT, MYF(ME_BELL+ME_WAITTANG), from, errno);
+    return -1;
+  }
+  if ((statbuf_to.st_mode & S_IFMT) != S_IFREG)
+    return 1;
+
   /* Copy modes */
-  if (chmod(to, statbuf.st_mode & 07777))
+  if ((statbuf_to.st_mode & 07777) != (statbuf.st_mode & 07777) &&
+      chmod(to, statbuf.st_mode & 07777))
   {
     my_errno= errno;
     if (MyFlags & (MY_FAE+MY_WME))
@@ -112,7 +125,12 @@ int my_copystat(const char *from, const char *to, int MyFlags)
       my_error(EE_LINK_WARNING,MYF(ME_BELL+ME_WAITTANG),from,statbuf.st_nlink);
   }
   /* Copy ownership */
-  if (chown(to, statbuf.st_uid, statbuf.st_gid))
+  if (statbuf.st_gid == statbuf_to.st_gid)
+    gid= -1;
+  else
+    gid= statbuf.st_gid;
+  if ((gid != (gid_t) -1 || statbuf.st_uid != statbuf_to.st_uid) &&
+      chown(to, statbuf.st_uid, gid))
   {
     my_errno= errno;
     if (MyFlags & MY_WME)

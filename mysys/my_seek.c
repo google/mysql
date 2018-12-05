@@ -69,7 +69,7 @@ my_off_t my_seek(File fd, my_off_t pos, int whence, myf MyFlags)
     DBUG_PRINT("error", ("lseek: %llu  errno: %d", (ulonglong) newpos, errno));
     DBUG_RETURN(MY_FILEPOS_ERROR);
   }
-  if ((my_off_t) newpos != pos)
+  if (whence == SEEK_SET && (my_off_t) newpos != pos)
   {
     DBUG_PRINT("exit",("pos: %llu", (ulonglong) newpos));
   }

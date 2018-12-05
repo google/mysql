@@ -59,6 +59,7 @@ int my_copy(const char *from, const char *to, myf MyFlags)
   File from_file,to_file;
   uchar buff[IO_SIZE];
   MY_STAT stat_buff,new_stat_buff;
+  gid_t gid;
   my_bool file_created= 0;
   DBUG_ENTER("my_copy");
   DBUG_PRINT("my",("from %s to %s MyFlags %lu", from, to, MyFlags));
@@ -108,8 +109,18 @@ int my_copy(const char *from, const char *to, myf MyFlags)
 
     if (MyFlags & MY_HOLD_ORIGINAL_MODES && !new_file_stat)
 	DBUG_RETURN(0);			/* File copyed but not stat */
+
+#if !defined(__WIN__)
+    /* Refresh the new_stat_buff */
+    if (!my_stat((char*) to, &new_stat_buff, MYF(0)))
+    {
+      my_errno= errno;
+      goto err;
+    }
+
     /* Copy modes */
-    if (chmod(to, stat_buff.st_mode & 07777))
+    if ((stat_buff.st_mode & 07777) != (new_stat_buff.st_mode & 07777) &&
+        chmod(to, stat_buff.st_mode & 07777))
     {
       my_errno= errno;
       if (MyFlags & MY_WME)
@@ -117,9 +128,14 @@ int my_copy(const char *from, const char *to, myf MyFlags)
       if (MyFlags & MY_FAE)
         goto err;
     }
-#if !defined(__WIN__)
+
     /* Copy ownership */
-    if (chown(to, stat_buff.st_uid, stat_buff.st_gid))
+    if (stat_buff.st_gid == new_stat_buff.st_gid)
+      gid= -1;
+    else
+      gid= stat_buff.st_gid;
+    if ((gid != (gid_t) -1 || stat_buff.st_uid != new_stat_buff.st_uid) &&
+        chown(to, stat_buff.st_uid, gid))
     {
       my_errno= errno;
       if (MyFlags & MY_WME)

@@ -117,8 +117,8 @@ ALTER TABLE t1 ADD PARTITION
 (PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -190,8 +190,8 @@ ALTER TABLE t1 ADD PARTITION
 (PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -263,8 +263,8 @@ ALTER TABLE t1 ADD PARTITION
 (PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -336,8 +336,8 @@ ALTER TABLE t1 ADD PARTITION
 (PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -411,8 +411,8 @@ ALTER TABLE t1 ADD PARTITION
 (PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -486,8 +486,8 @@ ALTER TABLE t1 ADD PARTITION
 (PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -561,8 +561,8 @@ ALTER TABLE t1 ADD PARTITION
 (PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -2170,8 +2170,8 @@ a	b
 ALTER TABLE t1 DROP PARTITION p10;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -2242,8 +2242,8 @@ a	b
 ALTER TABLE t1 DROP PARTITION p10;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -2314,8 +2314,8 @@ a	b
 ALTER TABLE t1 DROP PARTITION p10;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -2379,8 +2379,8 @@ a	b
 ALTER TABLE t1 DROP PARTITION p10;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -2444,8 +2444,8 @@ a	b
 ALTER TABLE t1 DROP PARTITION p10;
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -3830,8 +3830,8 @@ ALTER TABLE t1 REORGANIZE PARTITION p10 INTO
 PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -3904,8 +3904,8 @@ ALTER TABLE t1 REORGANIZE PARTITION p10 INTO
 PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10.MYD
@@ -3978,8 +3978,8 @@ ALTER TABLE t1 REORGANIZE PARTITION p10 INTO
 PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10#TMP#.MYD
@@ -4056,8 +4056,8 @@ ALTER TABLE t1 REORGANIZE PARTITION p10 INTO
 PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10#TMP#.MYD
@@ -4134,8 +4134,8 @@ ALTER TABLE t1 REORGANIZE PARTITION p10 INTO
 PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10#TMP#.MYD
@@ -4212,8 +4212,8 @@ ALTER TABLE t1 REORGANIZE PARTITION p10 INTO
 PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10#TMP#.MYD
@@ -4293,8 +4293,8 @@ ALTER TABLE t1 REORGANIZE PARTITION p10 INTO
 PARTITION p20 VALUES IN (20,21,22,23,24,25,26,27,28,29));
 ERROR HY000: Lost connection to MySQL server during query
 # State after crash (before recovery)
-#sql-t1.frm
-#sql-t1.par
+#sql-temporary.frm
+#sql-temporary.par
 t1#P#p0.MYD
 t1#P#p0.MYI
 t1#P#p10#TMP#.MYD

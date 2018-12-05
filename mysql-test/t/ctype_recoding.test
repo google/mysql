@@ -171,6 +171,26 @@ select * from t1 where a=lpad('xxx',10,' ');
 drop table t1;
 
 #
+# Incorrect DBUG_ASSERT in Item_func_conv_charset constructor.
+#
+create table t1 (
+  id int not null primary key,
+  val varchar(16) collate utf8_general_ci
+);
+create table t2 (
+  id int not null primary key,
+  val varchar(16) collate latin1_swedish_ci
+);
+
+insert into t1 (id, val) values (1, 'xx');
+insert into t2 (id, val) values (1, 'xx');
+
+select (select max(t1.val) from t1 where t1.val = t2.val) as value
+  from t2 group by t2.id;
+
+drop table t1, t2;
+
+#
 # Check more automatic conversion
 #
 set names koi8r;

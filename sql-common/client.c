@@ -195,16 +195,21 @@ int my_connect(my_socket fd, const struct sockaddr *name, uint namelen,
     exactly like the normal connect() call does.
   */
 
-  if (timeout == 0)
-    DBUG_RETURN(connect(fd, (struct sockaddr*) name, namelen));
-
+  if (timeout == 0) {
+    do {
+      res= connect(fd, (struct sockaddr*) name, namelen);
+    } while(res < 0 && errno == EINTR);
+    DBUG_RETURN(res);
+  }
   flags = fcntl(fd, F_GETFL, 0);	  /* Set socket to not block */
 #ifdef O_NONBLOCK
   fcntl(fd, F_SETFL, flags | O_NONBLOCK);  /* and save the flags..  */
 #endif
 
   DBUG_PRINT("info", ("connecting non-blocking"));
-  res= connect(fd, (struct sockaddr*) name, namelen);
+  do {
+    res= connect(fd, (struct sockaddr*) name, namelen);
+  } while(res < 0 && errno == EINTR);
   DBUG_PRINT("info", ("connect result: %d  errno: %d", res, errno));
   s_err= errno;			/* Save the error... */
   fcntl(fd, F_SETFL, flags);
@@ -225,6 +230,8 @@ int my_connect(my_socket fd, const struct sockaddr *name, uint namelen,
 
   We prefer to do this with poll() as there is no limitations with this.
   If not, we will use select()
+
+  If timeout == 0, assume no timeout.
 */
 
 #if !defined(__WIN__)
@@ -234,17 +241,28 @@ static int wait_for_data(my_socket fd, uint timeout)
 #ifdef HAVE_POLL
   struct pollfd ufds;
   int res;
+  time_t start= time(NULL);
+  time_t remaining_timeout;
   DBUG_ENTER("wait_for_data");
 
   DBUG_PRINT("info", ("polling"));
   ufds.fd= fd;
   ufds.events= POLLIN | POLLPRI;
-  if (!(res= poll(&ufds, 1, (int) timeout*1000)))
-  {
-    DBUG_PRINT("info", ("poll timed out"));
-    errno= EINTR;
-    DBUG_RETURN(-1);
-  }
+
+  do {
+    if (timeout != 0) {
+      remaining_timeout = timeout - (time(NULL) - start);
+      if (remaining_timeout <= 0) {
+        errno= EFAULT;
+        DBUG_RETURN(-1);
+      }
+    }
+    if (!(res= poll(&ufds, 1, (int) timeout*1000)))
+    {
+      errno= EINTR;
+      DBUG_RETURN(-1);
+    }
+  } while(res < 0 && errno == EINTR);
   DBUG_PRINT("info",
              ("poll result: %d  errno: %d  revents: 0x%02d  events: 0x%02d",
               res, errno, ufds.revents, ufds.events));
@@ -3199,6 +3217,14 @@ set_connect_attributes(MYSQL *mysql, char *buff, size_t buf_len)
 }
 
 
+/* NOTE: The *mysql pointer passed to this function must remain usable
+ *    for further connection attempts even if this function returns NULL, due to
+ *    legacy uses including the implemention of MYSQL_OPT_RECONNECT.  In
+ *    particular, the mysql->options structure must remain intact and unfreed.
+ *
+ *    Clients are responsible for calling mysql_close on their MYSQL structs,
+ *    even if this function fails.
+ */
 MYSQL * STDCALL 
 CLI_MYSQL_REAL_CONNECT(MYSQL *mysql,const char *host, const char *user,
 		       const char *passwd, const char *db,

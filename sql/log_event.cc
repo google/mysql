@@ -1286,6 +1286,7 @@ int Log_event::read_log_event(IO_CACHE* file, String* packet,
   int result=0;
   char buf[LOG_EVENT_MINIMAL_HEADER_LEN];
   uchar ev_offset= packet->length();
+  DBUG_ASSERT(packet->length() <= 255);
   DBUG_ENTER("Log_event::read_log_event");
 
   if (log_lock)
@@ -1608,6 +1609,7 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
       event_type= new_event_type;
     }
 
+    uint org_event_len= event_len;
     if (alg != BINLOG_CHECKSUM_ALG_UNDEF &&
         (event_type == FORMAT_DESCRIPTION_EVENT ||
          alg != BINLOG_CHECKSUM_ALG_OFF))
@@ -1671,7 +1673,8 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
       ev = new User_var_log_event(buf, event_len, description_event);
       break;
     case FORMAT_DESCRIPTION_EVENT:
-      ev = new Format_description_log_event(buf, event_len, description_event);
+      ev = new Format_description_log_event(buf, org_event_len,
+                                            description_event);
       break;
 #if defined(HAVE_REPLICATION) 
     case PRE_GA_WRITE_ROWS_EVENT:
@@ -4953,7 +4956,6 @@ Format_description_log_event(const char* buf,
   DBUG_PRINT("info", ("common_header_len=%d number_of_event_types=%d",
                       common_header_len, number_of_event_types));
   /* If alloc fails, we'll detect it in is_valid() */
-
   post_header_len= (uint8*) my_memdup((uchar*)buf+ST_COMMON_HEADER_LEN_OFFSET+1,
                                       number_of_event_types*
                                       sizeof(*post_header_len),
@@ -4962,13 +4964,19 @@ Format_description_log_event(const char* buf,
   if (!is_version_before_checksum(&server_version_split))
   {
     /* the last bytes are the checksum alg desc and value (or value's room) */
-    number_of_event_types -= BINLOG_CHECKSUM_ALG_DESC_LEN;
+    DBUG_ASSERT(number_of_event_types >=
+                (BINLOG_CHECKSUM_ALG_DESC_LEN + BINLOG_CHECKSUM_LEN));
+    number_of_event_types -= BINLOG_CHECKSUM_ALG_DESC_LEN + BINLOG_CHECKSUM_LEN;
     checksum_alg= post_header_len[number_of_event_types];
   }
   else
   {
     checksum_alg= (uint8) BINLOG_CHECKSUM_ALG_UNDEF;
   }
+
+  DBUG_ASSERT(checksum_alg == BINLOG_CHECKSUM_ALG_OFF ||
+              checksum_alg == BINLOG_CHECKSUM_ALG_UNDEF ||
+              checksum_alg == BINLOG_CHECKSUM_ALG_CRC32);
 
   DBUG_VOID_RETURN;
 }
@@ -5224,9 +5232,15 @@ uint8 get_checksum_alg(const char* buf, ulong len)
   version[ST_SERVER_VER_LEN - 1]= 0;
   
   do_server_version_split(version, &version_split);
-  ret= Format_description_log_event::is_version_before_checksum(&version_split) ?
-    (uint8) BINLOG_CHECKSUM_ALG_UNDEF :
-    * (uint8*) (buf + len - BINLOG_CHECKSUM_LEN - BINLOG_CHECKSUM_ALG_DESC_LEN);
+  if (Format_description_log_event::is_version_before_checksum(&version_split))
+  {
+    ret= BINLOG_CHECKSUM_ALG_UNDEF;
+  }
+  else
+  {
+    DBUG_ASSERT(len >= (BINLOG_CHECKSUM_LEN - BINLOG_CHECKSUM_ALG_DESC_LEN));
+    ret= (uint8)buf[len - BINLOG_CHECKSUM_LEN - BINLOG_CHECKSUM_ALG_DESC_LEN];
+  }
   DBUG_ASSERT(ret == BINLOG_CHECKSUM_ALG_OFF ||
               ret == BINLOG_CHECKSUM_ALG_UNDEF ||
               ret == BINLOG_CHECKSUM_ALG_CRC32);

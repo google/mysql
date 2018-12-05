@@ -571,16 +571,8 @@ uint build_tmptable_filename(THD* thd, char *buff, size_t bufflen)
 {
   DBUG_ENTER("build_tmptable_filename");
 
-  char *p= strnmov(buff, mysql_tmpdir, bufflen);
-  my_snprintf(p, bufflen - (p - buff), "/%s%lx_%lx_%x",
-              tmp_file_prefix, current_pid,
-              thd->thread_id, thd->tmp_table++);
-
-  if (lower_case_table_names)
-  {
-    /* Convert all except tmpdir to lower case */
-    my_casedn_str(files_charset_info, p);
-  }
+  my_snprintf(buff, bufflen, "%s/%s_ddl_%lx_%lx_%x", mysql_tmpdir, tmp_file_prefix,
+              current_pid, thd->thread_id, thd->tmp_table++);
 
   size_t length= unpack_filename(buff, buff);
   DBUG_PRINT("exit", ("buff: '%s'", buff));
@@ -1744,7 +1736,7 @@ uint build_table_shadow_filename(char *buff, size_t bufflen,
                                  ALTER_PARTITION_PARAM_TYPE *lpt)
 {
   char tmp_name[FN_REFLEN];
-  my_snprintf (tmp_name, sizeof (tmp_name), "%s-%s", tmp_file_prefix,
+  my_snprintf (tmp_name, sizeof (tmp_name), "%s_shadow_%s", tmp_file_prefix,
                lpt->table_name);
   return build_table_filename(buff, bufflen, lpt->db, tmp_name, "", FN_IS_TMP);
 }
@@ -3491,7 +3483,10 @@ mysql_prepare_create_table(THD *thd, HA_CREATE_INFO *create_info,
 	  sql_field->charset=		(dup_field->charset ?
 					 dup_field->charset :
 					 create_info->default_table_charset);
-	  sql_field->length=		dup_field->char_length;
+	  if (sql_field->sql_type == MYSQL_TYPE_ENUM)
+	    sql_field->length=		dup_field->length;
+	  else
+	    sql_field->length=		dup_field->char_length;
           sql_field->pack_length=	dup_field->pack_length;
           sql_field->key_length=	dup_field->key_length;
 	  sql_field->decimals=		dup_field->decimals;
@@ -8994,8 +8989,8 @@ bool mysql_alter_table(THD *thd,char *new_db, char *new_name,
     Rename the old table to temporary name to have a backup in case
     anything goes wrong while renaming the new table.
   */
-  char backup_name[32];
-  my_snprintf(backup_name, sizeof(backup_name), "%s2-%lx-%lx", tmp_file_prefix,
+  char backup_name[FN_REFLEN];
+  my_snprintf(backup_name, sizeof(backup_name), "%s_backup_%lx_%lx", tmp_file_prefix,
               current_pid, thd->thread_id);
   if (lower_case_table_names)
     my_casedn_str(files_charset_info, backup_name);

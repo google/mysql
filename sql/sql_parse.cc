@@ -6389,10 +6389,14 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
             Note that we don't need LOCK_thread_count to modify query_length.
           */
           if (found_semicolon && (ulong) (found_semicolon - thd->query()))
+          {
+            mysql_mutex_lock(&thd->LOCK_thd_data);
             thd->set_query_inner(thd->query(),
                                  (uint32) (found_semicolon -
                                            thd->query() - 1),
                                  thd->charset());
+            mysql_mutex_unlock(&thd->LOCK_thd_data);
+          }
           /* Actually execute the query */
           if (found_semicolon)
           {

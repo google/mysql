@@ -5071,7 +5071,7 @@ bool Discovered_table_list::add_table(const char *tname, size_t tlen)
 
 bool Discovered_table_list::add_file(const char *fname)
 {
-  bool is_temp= strncmp(fname, STRING_WITH_LEN(tmp_file_prefix)) == 0;
+  bool is_temp= strncmp(fname, tmp_file_prefix, tmp_file_prefix_length) == 0;
 
   if (is_temp && !with_temps)
     return 0;
@@ -5596,7 +5596,7 @@ static bool stat_print(THD *thd, const char *type, uint type_len,
   protocol->prepare_for_resend();
   protocol->store(type, type_len, system_charset_info);
   protocol->store(file, file_len, system_charset_info);
-  protocol->store(status, status_len, system_charset_info);
+  protocol->store(status, status_len, &my_charset_bin);
   if (protocol->write())
     return TRUE;
   return FALSE;
@@ -5620,9 +5620,9 @@ bool ha_show_status(THD *thd, handlerton *db_type, enum ha_stat_type stat)
   Protocol *protocol= thd->protocol;
   bool result;
 
-  field_list.push_back(new Item_empty_string("Type",10));
-  field_list.push_back(new Item_empty_string("Name",FN_REFLEN));
-  field_list.push_back(new Item_empty_string("Status",10));
+  field_list.push_back(new Item_empty_string("Type", 10));
+  field_list.push_back(new Item_empty_string("Name", FN_REFLEN));
+  field_list.push_back(new Item_empty_string("Status", 10, &my_charset_bin));
 
   if (protocol->send_result_set_metadata(&field_list,
                             Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))

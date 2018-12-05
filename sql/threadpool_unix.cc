@@ -499,7 +499,7 @@ static void* timer_thread(void *param)
   pool_timer_t* timer=(pool_timer_t *)param;
 
   my_thread_init();
-  DBUG_ENTER("timer_thread");
+  DBUG_ENTER_NO_RETURN("timer_thread");
   timer->next_timeout_check= ULONGLONG_MAX;
   timer->current_microtime= microsecond_interval_timer();
 
@@ -1474,7 +1474,7 @@ static void *worker_main(void *param)
   pthread_detach_this_thread();
   my_thread_init();
   
-  DBUG_ENTER("worker_main");
+  DBUG_ENTER_NO_RETURN("worker_main");
   
   thread_group_t *thread_group = (thread_group_t *)param;
 

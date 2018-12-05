@@ -2505,7 +2505,7 @@ static bool send_show_master_info_header(THD *thd, bool full,
   field_list.push_back(new Item_empty_string("Replicate_Wild_Ignore_Table",
                                              28));
   field_list.push_back(new Item_return_int("Last_Errno", 4, MYSQL_TYPE_LONG));
-  field_list.push_back(new Item_empty_string("Last_Error", 20));
+  field_list.push_back(new Item_empty_blob("Last_Error", MAX_SLAVE_ERRMSG));
   field_list.push_back(new Item_return_int("Skip_Counter", 10,
                                            MYSQL_TYPE_LONG));
   field_list.push_back(new Item_return_int("Exec_Master_Log_Pos", 10,
@@ -2534,7 +2534,7 @@ static bool send_show_master_info_header(THD *thd, bool full,
   field_list.push_back(new Item_return_int("Last_IO_Errno", 4, MYSQL_TYPE_LONG));
   field_list.push_back(new Item_empty_string("Last_IO_Error", 20));
   field_list.push_back(new Item_return_int("Last_SQL_Errno", 4, MYSQL_TYPE_LONG));
-  field_list.push_back(new Item_empty_string("Last_SQL_Error", 20));
+  field_list.push_back(new Item_empty_blob("Last_SQL_Error", MAX_SLAVE_ERRMSG));
   field_list.push_back(new Item_empty_string("Replicate_Ignore_Server_Ids",
                                              FN_REFLEN));
   field_list.push_back(new Item_return_int("Master_Server_Id", sizeof(ulong),
@@ -5806,7 +5806,7 @@ static int connect_to_master(THD* thd, MYSQL* mysql, Master_info* mi,
 #endif
   ulong client_flag= CLIENT_REMEMBER_OPTIONS;
   if (opt_slave_compressed_protocol)
-    client_flag=CLIENT_COMPRESS;                /* We will use compression */
+    client_flag |= CLIENT_COMPRESS;             /* We will use compression */
 
   mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, (char *) &slave_net_timeout);
   mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, (char *) &slave_net_timeout);

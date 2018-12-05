@@ -38,11 +38,6 @@ size_t my_write(File Filedes, const uchar *Buffer, size_t Count, myf MyFlags)
   for (;;)
   {
 #ifdef _WIN32
-    if(Filedes < 0)
-    {
-      my_errno= errno= EBADF;
-      DBUG_RETURN((size_t)-1);
-    }
     writtenbytes= my_win_write(Filedes, Buffer, Count);
 #else
     writtenbytes= write(Filedes, Buffer, Count);

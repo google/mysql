@@ -1,0 +1,160 @@
+#
+# We need the debug
+#
+--source include/have_debug.inc
+
+#
+# Skip embedded
+#
+--source include/not_embedded.inc
+
+#
+# test that SET @@global.debug is thread-safe
+#   as in don't crash :-)
+#
+let $save_debug=`select @@debug`;
+
+--disable_query_log
+--disable_result_log
+--eval set @tmp='$save_debug';
+--enable_query_log
+--enable_result_log
+
+delimiter |;
+CREATE PROCEDURE p1 ()
+begin
+  set @a = 0;
+  while @a < 100 do
+    SET GLOBAL debug='';
+    SET debug='';
+    SET GLOBAL debug='+dkalle';
+    SET debug=@tmp;
+    set @a = @a + 1;
+  end while;
+end;|
+CREATE PROCEDURE p2 ()
+begin
+  set @a = 0;
+  while @a < 100 do
+    select @@debug;
+    set @a = @a + 1;
+  end while;
+end;|
+delimiter ;|
+
+connect (con0,localhost,root,,);
+connect (con1,localhost,root,,);
+connect (con2,localhost,root,,);
+connect (con3,localhost,root,,);
+connect (con4,localhost,root,,);
+connect (con5,localhost,root,,);
+connect (con6,localhost,root,,);
+connect (con7,localhost,root,,);
+connect (con8,localhost,root,,);
+connect (con9,localhost,root,,);
+connect (con10,localhost,root,,);
+connect (con11,localhost,root,,);
+connect (con12,localhost,root,,);
+connect (con13,localhost,root,,);
+connect (con14,localhost,root,,);
+connect (con15,localhost,root,,);
+connect (con16,localhost,root,,);
+connect (con17,localhost,root,,);
+connect (con18,localhost,root,,);
+connect (con19,localhost,root,,);
+
+--disable_query_log
+--disable_result_log
+--connection con0
+send call p1();
+--connection con1
+send call p2();
+--connection con2
+send call p1();
+--connection con3
+send call p2();
+--connection con4
+send call p1();
+--connection con5
+send call p2();
+--connection con6
+send call p1();
+--connection con7
+send call p2();
+--connection con8
+send call p1();
+--connection con9
+send call p2();
+--connection con10
+send call p1();
+--connection con11
+send call p2();
+--connection con12
+send call p1();
+--connection con13
+send call p2();
+--connection con14
+send call p1();
+--connection con15
+send call p2();
+--connection con16
+send call p1();
+--connection con17
+send call p2();
+--connection con18
+send call p1();
+--connection con19
+send call p2();
+
+--connection con0
+reap;
+--connection con1
+reap;
+--connection con2
+reap;
+--connection con3
+reap;
+--connection con4
+reap;
+--connection con5
+reap;
+--connection con6
+reap;
+--connection con7
+reap;
+--connection con8
+reap;
+--connection con9
+reap;
+--connection con10
+reap;
+--connection con11
+reap;
+--connection con12
+reap;
+--connection con13
+reap;
+--connection con14
+reap;
+--connection con15
+reap;
+--connection con16
+reap;
+--connection con17
+reap;
+--connection con18
+reap;
+--connection con19
+reap;
+--enable_result_log
+--enable_query_log
+
+drop procedure p1;
+drop procedure p2;
+
+--echo Resetting global.debug to initial state
+--disable_query_log
+--disable_result_log
+--eval SET GLOBAL debug='$save_debug';
+--enable_result_log
+--enable_query_log

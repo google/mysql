@@ -157,7 +157,7 @@ static void *test_thread_reader(void *arg)
   int param=*((int*) arg);
   my_thread_init();
   {
-    DBUG_ENTER("test_reader");
+    DBUG_ENTER_NO_RETURN("test_reader");
 
     DBUG_PRINT("enter", ("param: %d", param));
 
@@ -181,7 +181,7 @@ static void *test_thread_writer(void *arg)
   int param=*((int*) arg);
   my_thread_init();
   {
-    DBUG_ENTER("test_writer");
+    DBUG_ENTER_NO_RETURN("test_writer");
 
     writer(param);
 
@@ -242,7 +242,7 @@ int main(int argc __attribute__((unused)),
 #endif
 
   {
-  DBUG_ENTER("main");
+  DBUG_ENTER_NO_RETURN("main");
   DBUG_PRINT("info", ("Main thread: %s\n", my_thread_name()));
   plan(number_of_writers + number_of_readers);
   SKIP_BIG_TESTS(number_of_writers + number_of_readers)

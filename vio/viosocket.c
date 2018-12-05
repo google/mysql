@@ -899,6 +899,74 @@ static my_bool socket_peek_read(Vio *vio, uint *bytes)
 
 #endif /* _WIN32 */
 
+#ifndef _WIN32
+/**
+  Wait indefinitely for an I/O event on a pollfd.
+
+  @param pollfd   Pointer to pollfd to poll on.
+
+  @return A three-state value which indicates the operation status.
+  @retval -1  Failure, socket_errno indicates the error.
+  @retval  1  The requested I/O event has occurred.
+*/
+static int poll_infinitely(struct pollfd *pollfd) {
+  int ret;
+  while (1)
+  {
+    ret = poll(pollfd, 1, -1);
+    if (ret < 0)
+    {
+      if (errno == EINTR)
+        continue;
+      return -1;
+    }
+    return ret;
+  }
+}
+
+/**
+  Wait for an I/O event on a pollfd.
+
+  @param pollfd      Pointer to pollfd to poll on.
+  @param timeout_ms  Interval (in milliseconds) to wait for an I/O event.
+                     Waits indefinitely if timeout_ms is less than zero.
+
+  @return A three-state value which indicates the operation status.
+  @retval -1  Failure, socket_errno indicates the error.
+  @retval  0  The wait has timed out.
+  @retval  1  The requested I/O event has occurred.
+*/
+static int poll_with_timeout(struct pollfd *pollfd, int timeout_ms)
+{
+  static const int NANOSECONDS_PER_MILLISECOND = 1000000;
+  int ret;
+  ulonglong now;
+  ulonglong end_time;
+
+  if (timeout_ms < 0)
+    return poll_infinitely(pollfd);
+
+  now= my_interval_timer() / NANOSECONDS_PER_MILLISECOND;
+  end_time= now + timeout_ms;
+
+  while(1)
+  {
+    ret= poll(pollfd, 1, end_time - now);
+    if (ret < 0)
+    {
+      if (errno == EINTR)
+      {
+        now = my_interval_timer() / NANOSECONDS_PER_MILLISECOND;
+        if (now < end_time)
+          continue;
+        return 0;
+      }
+      return -1;
+    }
+    return ret;
+  }
+}
+
 /**
   Wait for an I/O event on a VIO socket.
 
@@ -915,7 +983,6 @@ static my_bool socket_peek_read(Vio *vio, uint *bytes)
   @retval  1  The requested I/O event has occurred.
 */
 
-#ifndef _WIN32
 int vio_io_wait(Vio *vio, enum enum_vio_io_event event, int timeout)
 {
   int ret;
@@ -966,22 +1033,14 @@ int vio_io_wait(Vio *vio, enum enum_vio_io_event event, int timeout)
     Wait for the I/O event and return early in case of
     error or timeout.
   */
-  switch ((ret= poll(&pfd, 1, timeout)))
+  ret= poll_with_timeout(&pfd, timeout);
+
+  if (ret == 0)
+    errno = SOCKET_ETIMEDOUT;
+  else if (ret == 1)
   {
-  case -1:
-    /* On error, -1 is returned. */
-    break;
-  case 0:
-    /*
-      Set errno to indicate a timeout error.
-      (This is not compiled in on WIN32.)
-    */
-    errno= SOCKET_ETIMEDOUT;
-    break;
-  default:
-    /* Ensure that the requested I/O event has completed. */
-    DBUG_ASSERT(pfd.revents & revents);
-    break;
+    if ((pfd.revents & revents) == 0)
+      DBUG_ASSERT(0);
   }
 
   END_SOCKET_WAIT(locker, timeout);

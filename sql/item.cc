@@ -847,6 +847,7 @@ Item_ident::Item_ident(Name_resolution_context *context_arg,
    cached_table(0), depended_from(0), can_be_depended(TRUE)
 {
   name = (char*) field_name_arg;
+  name_length= field_name_arg ? strlen(field_name_arg) : 0;
 }
 
 
@@ -859,6 +860,7 @@ Item_ident::Item_ident(TABLE_LIST *view_arg, const char *field_name_arg)
    cached_table(NULL), depended_from(NULL), can_be_depended(TRUE)
 {
   name = (char*) field_name_arg;
+  name_length= field_name_arg ? strlen(field_name_arg) : 0;
 }
 
 
@@ -2386,6 +2388,7 @@ Item_field::Item_field(THD *thd, Name_resolution_context *context_arg,
       memory if this item is to be reused.
     */
     name= (char*) orig_field_name;
+    name_length= strlen(orig_field_name);
   }
   set_field(f);
   with_field= 1;
@@ -5663,6 +5666,18 @@ enum_field_types Item::string_field_type() const
 void Item_empty_string::make_field(Send_field *tmp_field)
 {
   init_make_field(tmp_field, string_field_type());
+}
+
+void Item_empty_blob::make_field(Send_field *tmp_field)
+{
+  enum_field_types type= MYSQL_TYPE_TINY_BLOB;
+  if (max_length >= 16777216)
+    type= MYSQL_TYPE_LONG_BLOB;
+  else if (max_length >= 65536)
+    type= MYSQL_TYPE_MEDIUM_BLOB;
+  else if (max_length >= 256)
+    type= MYSQL_TYPE_BLOB;
+  init_make_field(tmp_field, type);
 }
 
 

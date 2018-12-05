@@ -2028,3 +2028,32 @@ drop table t1,t2;
 --error ER_TABLE_MUST_HAVE_COLUMNS
 create table t1;
 
+
+--echo # Regression test for https://mariadb.atlassian.net/browse/MDEV-4215
+
+--disable_warnings
+drop table if exists t1;
+drop table if exists t2;
+--enable_warnings
+
+create table t1 (e enum('one', 'two'));
+insert into t1 values ('one');
+create table t2 (e enum('one', 'two')) as select * from t1;
+select * from t2;
+
+# With the bug the following statement return values of column e truncated to
+# 1 character.
+select * from t2 union all select * from t2;
+
+# ... and "alter table" fixed the table so that following select returned
+# correct values for e
+alter table t2 engine=MyISAM;
+select * from t2 union all select * from t2;
+
+# Cleanup
+
+drop table t1;
+drop table t2;
+
+--echo # End of https://mariadb.atlassian.net/browse/MDEV-4215
+

@@ -2360,7 +2360,7 @@ os_file_pread(
 {
 	off_t	offs;
 #if defined(HAVE_PREAD) && !defined(HAVE_BROKEN_PREAD)
-	ssize_t	n_bytes;
+	ssize_t	n_bytes = 0;
 #endif /* HAVE_PREAD && !HAVE_BROKEN_PREAD */
 
 	ut_ad(n);
@@ -2391,7 +2391,17 @@ os_file_pread(
 	os_mutex_exit(os_file_count_mutex);
 #endif /* HAVE_ATOMIC_BUILTINS && UNIV_WORD == 8 */
 
-	n_bytes = pread(file, buf, n, offs);
+	ssize_t ret;
+	do {
+		ret = pread(file, (char*)buf + n_bytes,
+		            (ssize_t)n - n_bytes, offs + (off_t)n_bytes);
+		// Note: technically it's not correct to add ret to n_bytes
+		// when ret == -1. But in this case we'll immediately break out
+		// of the while loop and return -1 further in the function.
+		// In other words n_bytes will be ignored in this case and thus
+		// it's safe to always add ret to n_bytes.
+		n_bytes += ret;
+	} while (ret > 0 && n_bytes < (ssize_t) n);
 
 #if defined(HAVE_ATOMIC_BUILTINS) && UNIV_WORD_SIZE == 8
 	(void) os_atomic_decrement_ulint(&os_n_pending_reads, 1);
@@ -2405,7 +2415,10 @@ os_file_pread(
 	os_mutex_exit(os_file_count_mutex);
 #endif /* !HAVE_ATOMIC_BUILTINS || UNIV_WORD == 8 */
 
-	return(n_bytes);
+	if (ret == -1)
+		return(-1);
+	else
+		return(n_bytes);
 #else
 	{
 		off_t	ret_offset;
@@ -2471,6 +2484,9 @@ os_file_pwrite(
 {
 	ssize_t	ret;
 	off_t	offs;
+#if defined(HAVE_PREAD) && !defined(HAVE_BROKEN_PREAD)
+	ssize_t n_bytes = 0;
+#endif /* HAVE_PREAD && !HAVE_BROKEN_PREAD */
 
 	ut_ad(n);
 	ut_ad(!srv_read_only_mode);
@@ -2501,7 +2517,16 @@ os_file_pwrite(
 	MONITOR_ATOMIC_INC(MONITOR_OS_PENDING_WRITES);
 #endif /* !HAVE_ATOMIC_BUILTINS || UNIV_WORD < 8 */
 
-	ret = pwrite(file, buf, (ssize_t) n, offs);
+	do {
+		ret = pwrite(file, (char*)buf + n_bytes,
+		             (ssize_t)n - n_bytes, offs + (off_t)n_bytes);
+		// Note: technically it's not correct to add ret to n_bytes
+		// when ret == -1. But in this case we'll immediately break out
+		// of the while loop and return -1 further in the function.
+		// In other words n_bytes will be ignored in this case and thus
+		// it's safe to always add ret to n_bytes.
+		n_bytes += ret;
+	} while (ret > 0 && n_bytes < (ssize_t) n);
 
 #if !defined(HAVE_ATOMIC_BUILTINS) || UNIV_WORD_SIZE < 8
 	os_mutex_enter(os_file_count_mutex);
@@ -2515,7 +2540,10 @@ os_file_pwrite(
 	MONITOR_ATOMIC_DEC(MONITOR_OS_PENDING_WRITES);
 #endif /* !HAVE_ATOMIC_BUILTINS || UNIV_WORD < 8 */
 
-	return(ret);
+	if (ret == -1)
+		return(-1);
+	else
+		return(n_bytes);
 #else
 	{
 		off_t	ret_offset;
